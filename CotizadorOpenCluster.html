@@ -858,7 +858,6 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
     </div>
     <div class="f"><label>Email del cliente <span style="color:#e74c3c;font-weight:700;">*</span></label><input id="eCEmail" value="" placeholder="contacto@empresa.cl" oninput="upd()" style="border-color:#e74c3c;" onfocus="this.style.borderColor='var(--sky)'" onblur="if(!this.value)this.style.borderColor='#e74c3c';else this.style.borderColor='#a0c8a0';"></div>
     <div class="g2">
-      <div class="f"><label>ID Licitación <span style="font-weight:400;color:#888">(opcional)</span></label><input id="eLicitacion" value="" placeholder="Ej: 750-12-LP24" oninput="upd()"></div>
       <div class="f"><label>ID CompraÁgil <span style="font-weight:400;color:#888">(opcional)</span></label><input id="eCompraAgil" value="" placeholder="Ej: CA-2024-XXXX" oninput="upd()"></div>
     </div>
 
@@ -1301,22 +1300,14 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
       <div class="f"><label>Email</label><input id="eExecEmail" value="rayen.ogalde@opencluster-tech.cl" oninput="upd()"></div>
     </div>
     <div style="margin-top:8px;">
-      <label class="elabel">Equipo <span style="color:#e74c3c;font-weight:700;">*</span></label>
+      <label class="elabel">Equipo</label>
       <div style="display:flex;gap:8px;margin-top:4px;">
-        <label style="flex:1;display:flex;align-items:center;gap:8px;padding:8px 10px;border:1.5px solid #c8d8f8;border-radius:7px;cursor:pointer;font-size:11px;background:white;transition:all .2s;" id="lblEquipoDif">
-          <input type="radio" name="equipoSelector" value="difusion" onchange="onEquipoChange()" style="accent-color:var(--sky);">
+        <div style="flex:1;display:flex;align-items:center;gap:8px;padding:8px 10px;border:1.5px solid var(--sky);border-radius:7px;font-size:11px;background:#eaf6ff;" id="lblEquipoDif">
           <div>
             <div style="font-weight:700;color:var(--navy);">Difusión</div>
             <div style="font-size:9px;color:#666;">Roberto, Ximena, Maximiliano,<br>Germán, Rayen, William</div>
           </div>
-        </label>
-        <label style="flex:1;display:flex;align-items:center;gap:8px;padding:8px 10px;border:1.5px solid #c8d8f8;border-radius:7px;cursor:pointer;font-size:11px;background:white;transition:all .2s;" id="lblEquipoMP">
-          <input type="radio" name="equipoSelector" value="mercadopublico" onchange="onEquipoChange()" style="accent-color:var(--sky);">
-          <div>
-            <div style="font-weight:700;color:var(--navy);">Mercado Público</div>
-            <div style="font-size:9px;color:#666;">Said, Maximiliano, Julio</div>
-          </div>
-        </label>
+        </div>
       </div>
     </div>
 
@@ -2488,7 +2479,6 @@ function upd() {
         ce=document.getElementById("eCEmail").value,
         cc=document.getElementById("eCCiudad").value,
         cdir=document.getElementById("eCDireccion")?.value.trim()||"";
-  const eLic = document.getElementById("eLicitacion")?.value.trim()||"";
   const eCA  = document.getElementById("eCompraAgil")?.value.trim()||"";
 
   // ── Condiciones ────────────────────────────────────────────────────────
@@ -2696,7 +2686,6 @@ function upd() {
     {label:"RUT",                val:cr},
     {label:"Teléfono",           val:ct},
     {label:"Email",              val:ce},
-    {label:"ID Licitación",      val:eLic},
     {label:"ID CompraÁgil",      val:eCA},
   ].filter(f=>f.val);
 
@@ -2718,10 +2707,8 @@ function upd() {
   const codigos = (()=>{
     const parts=[];
     const oc=document.getElementById("eOC")?.value.trim();
-    const lc=document.getElementById("eLicitacion")?.value.trim();
     const ca=document.getElementById("eCompraAgil")?.value.trim();
     if(oc) parts.push(`<span>OC: ${oc}</span>`);
-    if(lc) parts.push(`<span>Licitación: ${lc}</span>`);
     if(ca) parts.push(`<span>CompraÁgil: ${ca}</span>`);
     return parts.join(" · ");
   })();
@@ -3178,31 +3165,18 @@ function getSufijoCot() {
 
 async function fetchYAsignarNumero() {
   const equipo = getEquipo();
-  const esDifusion = equipo !== "mercadopublico";
+  const esDifusion = true;
   const INICIO_DIF = 3500;
-  const INICIO_MP  = 2000;
 
-  if(!equipo) {
-    alert("⚠️ Debes seleccionar tu equipo en la sección 'Mi Perfil de Ejecutivo' antes de registrar.");
-    document.getElementById("lblEquipoDif")?.scrollIntoView({behavior:"smooth", block:"center"});
-    return null;
-  }
-  
   try {
     const url = SHEET_URL + "?equipo=" + equipo;
     const resp = await fetch(url, {mode: "cors"});
     const data = await resp.json();
-    
-    let numFinal;
-    if(esDifusion) {
-      const correlativo = data.siguiente || INICIO_DIF;
-      const sufijo = getSufijoCot();
-      numFinal = "OC26-" + correlativo + "-" + sufijo;
-    } else {
-      const correlativo = data.siguiente || INICIO_MP;
-      numFinal = "MP26-" + correlativo;
-    }
-    
+
+    const correlativo = data.siguiente || INICIO_DIF;
+    const sufijo = getSufijoCot();
+    const numFinal = "OC26-" + correlativo + "-" + sufijo;
+
     const numEl = document.getElementById("eNum");
     if(numEl) {
       numEl.value = numFinal;
@@ -3217,7 +3191,7 @@ async function fetchYAsignarNumero() {
     const sufijo = getSufijoCot();
     const ahora = new Date();
     const ts = String(ahora.getHours()).padStart(2,"0") + String(ahora.getMinutes()).padStart(2,"0");
-    const fallback = esDifusion ? "OC26-" + INICIO_DIF + ts + "-" + sufijo : "MP26-" + INICIO_MP + ts;
+    const fallback = "OC26-" + INICIO_DIF + ts + "-" + sufijo;
     const numEl = document.getElementById("eNum");
     if(numEl) { 
       numEl.value = fallback; 
@@ -3478,7 +3452,6 @@ function guardarCotizacion() {
       direccion:   document.getElementById("eCDireccion")?.value || "",
       tel:         document.getElementById("eCTel")?.value || "",
       email:       document.getElementById("eCEmail")?.value || "",
-      licitacion:  document.getElementById("eLicitacion")?.value || "",
       compraagil:  document.getElementById("eCompraAgil")?.value || "",
     },
     // Ejecutivo
@@ -3590,7 +3563,6 @@ function cargarCotizacion(input) {
         if(c.direccion)   document.getElementById("eCDireccion").value   = c.direccion;
         if(c.tel)         document.getElementById("eCTel").value         = c.tel;
         if(c.email)       document.getElementById("eCEmail").value       = c.email;
-        if(c.licitacion)  document.getElementById("eLicitacion").value   = c.licitacion;
         if(c.compraagil)  document.getElementById("eCompraAgil").value   = c.compraagil;
       }
       // Ejecutivo
@@ -3709,18 +3681,11 @@ function cargarCotizacion(input) {
 const EXEC_FIELDS = ["eExecNombre","eExecCargo","eExecDepto","eExecTel","eExecEmail"];
 
 function onEquipoChange() {
-  const equipo = document.querySelector('input[name="equipoSelector"]:checked')?.value || "";
-  const lblDif = document.getElementById("lblEquipoDif");
-  const lblMP  = document.getElementById("lblEquipoMP");
-  if(lblDif) lblDif.style.borderColor = equipo === "difusion" ? "var(--sky)" : "#c8d8f8";
-  if(lblDif) lblDif.style.background  = equipo === "difusion" ? "#eaf6ff" : "white";
-  if(lblMP)  lblMP.style.borderColor  = equipo === "mercadopublico" ? "var(--sky)" : "#c8d8f8";
-  if(lblMP)  lblMP.style.background   = equipo === "mercadopublico" ? "#eaf6ff" : "white";
   guardarPerfilEjecutivo();
 }
 
 function getEquipo() {
-  return document.querySelector('input[name="equipoSelector"]:checked')?.value || "difusion";
+  return "difusion";
 }
 
 function guardarPerfilEjecutivo() {
@@ -3729,8 +3694,7 @@ function guardarPerfilEjecutivo() {
     const val = document.getElementById(id)?.value.trim();
     if(val) perfil[id] = val;
   });
-  const equipo = document.querySelector('input[name="equipoSelector"]:checked')?.value || "";
-  if(equipo) perfil["equipo"] = equipo;
+  perfil["equipo"] = "difusion";
   localStorage.setItem("opencluster_perfil_ejecutivo", JSON.stringify(perfil));
 }
 
@@ -3743,10 +3707,7 @@ function cargarPerfilEjecutivo() {
       const el = document.getElementById(id);
       if(el && perfil[id]) el.value = perfil[id];
     });
-    if(perfil["equipo"]) {
-      const radioEquipo = document.querySelector('input[name="equipoSelector"][value="' + perfil["equipo"] + '"]');
-      if(radioEquipo) { radioEquipo.checked = true; onEquipoChange(); }
-    }
+    // Equipo siempre es difusion
     return true;
   } catch(e) { return false; }
 }

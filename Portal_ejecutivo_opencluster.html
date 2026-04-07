@@ -234,6 +234,26 @@ select.login-inp{appearance:none;cursor:pointer;}
 .alert-item-sub{font-size:10px;opacity:.8;}
 
 /* Toast */
+/* Region modal */
+.region-overlay{position:fixed;inset:0;z-index:9998;background:rgba(10,15,30,.85);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.region-overlay.hidden{display:none;}
+.region-box{background:#fff;border-radius:16px;padding:32px 28px;width:440px;max-width:94vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.4);}
+.region-box h2{font-family:'DM Sans',sans-serif;font-size:18px;font-weight:800;color:var(--ink);margin-bottom:4px;}
+.region-box .region-sub{font-size:12px;color:var(--mist);margin-bottom:6px;}
+.region-box .region-urgent{background:var(--ruby-lt);border:1px solid rgba(192,57,43,.2);border-radius:8px;padding:8px 12px;font-size:11px;font-weight:600;color:var(--ruby);margin-bottom:16px;text-align:center;}
+.region-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:18px;}
+.region-opt{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1.5px solid var(--smoke);border-radius:8px;cursor:pointer;transition:.15s;user-select:none;}
+.region-opt:hover{border-color:var(--gold);background:rgba(201,169,110,.05);}
+.region-opt.sel{border-color:var(--gold);background:rgba(201,169,110,.1);}
+.region-opt .region-check{width:18px;height:18px;border-radius:4px;border:2px solid var(--smoke);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:.15s;}
+.region-opt.sel .region-check{background:var(--gold);border-color:var(--gold);}
+.region-opt .region-name{font-size:12px;font-weight:600;color:var(--ink);}
+.region-count{font-size:11px;color:var(--mist);text-align:center;margin-bottom:12px;}
+.region-count strong{color:var(--gold);}
+.region-btn{width:100%;padding:12px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--ink),#2a3040);color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:.2s;}
+.region-btn:hover{background:linear-gradient(135deg,#2a3040,var(--gold));}
+.region-btn:disabled{opacity:.4;cursor:not-allowed;}
+
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);padding:8px 20px;background:var(--ink);color:#fff;border-radius:20px;font-size:12px;font-weight:700;z-index:999;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.25);}
 .toast.on{opacity:1;}
 
@@ -461,6 +481,7 @@ select.login-inp{appearance:none;cursor:pointer;}
                 <option>Cierre</option>
                 <option>Postventa</option>
                 <option>Capacitación</option>
+                <option>Servicio Técnico</option>
               </select>
             </div>
 
@@ -496,6 +517,7 @@ select.login-inp{appearance:none;cursor:pointer;}
 
             <div class="fld"><label>N° Cotización asociada</label><input type="text" id="r-cot" placeholder="Ej: OC26-3505-AT"></div>
             <div class="fld"><label>Notas</label><textarea id="r-notas" rows="3" placeholder="¿Qué pasó? Acuerdos, próximos pasos..."></textarea></div>
+            <div class="fld"><label>Qué mejorar para las próximas</label><textarea id="r-mejorar" rows="2" placeholder="Aspectos a mejorar, lecciones aprendidas..."></textarea></div>
 
             <!-- PRÓXIMO CONTACTO -->
             <div class="prox-box">
@@ -508,6 +530,8 @@ select.login-inp{appearance:none;cursor:pointer;}
                   <span class="accion-btn" onclick="selAccion('Entregar cotización',this)">📄 Entregar cotización</span>
                   <span class="accion-btn" onclick="selAccion('Nueva presentación',this)">🎯 Nueva presentación</span>
                   <span class="accion-btn" onclick="selAccion('Gobierno Regional',this)">🏛 Gobierno Regional</span>
+                  <span class="accion-btn" onclick="selAccion('Lobby',this)">🤝 Lobby</span>
+                  <span class="accion-btn" onclick="selAccion('SENADIS Regional',this)">🏢 SENADIS Regional</span>
                   <span class="accion-btn" onclick="selAccion('Contactar en 1 mes',this)" data-autodate="1m">📆 Contactar en 1 mes</span>
                   <span class="accion-btn" onclick="selAccion('Contactar en 6 meses',this)" data-autodate="6m">🗓 Contactar en 6 meses</span>
                 </div>
@@ -617,6 +641,18 @@ select.login-inp{appearance:none;cursor:pointer;}
 
   </div><!-- /content -->
 </div><!-- /app -->
+
+<!-- REGION MODAL -->
+<div class="region-overlay hidden" id="regionModal">
+  <div class="region-box">
+    <h2>Confirma tus Regiones Asignadas</h2>
+    <div class="region-sub">Selecciona las regiones que atiendes (máximo 5)</div>
+    <div class="region-urgent">URGENTE: No podrás usar el portal hasta confirmar tus regiones.</div>
+    <div class="region-grid" id="regionGrid"></div>
+    <div class="region-count" id="regionCount">Seleccionadas: <strong>0</strong> / 5</div>
+    <button class="region-btn" id="regionBtn" disabled onclick="guardarRegiones()">Confirmar mis regiones</button>
+  </div>
+</div>
 
 <div class="toast" id="toast"></div>
 
@@ -941,6 +977,7 @@ async function iniciarApp(modoDemo=false){
   }
   checkAlertas();
   renderResumen();
+  checkRegiones();
 }
 
 async function recargarDatos(){
@@ -2407,6 +2444,8 @@ function renderReuniones(){
             <span class="accion-btn${proxAccion==='Entregar cotización'?' sel':''}" onclick="selAccionEdit('Entregar cotización',this,'${id}')">📄 Entregar cot.</span>
             <span class="accion-btn${proxAccion==='Nueva presentación'?' sel':''}" onclick="selAccionEdit('Nueva presentación',this,'${id}')">🎯 Presentación</span>
             <span class="accion-btn${proxAccion==='Gobierno Regional'?' sel':''}" onclick="selAccionEdit('Gobierno Regional',this,'${id}')">🏛 Gov. Regional</span>
+            <span class="accion-btn${proxAccion==='Lobby'?' sel':''}" onclick="selAccionEdit('Lobby',this,'${id}')">🤝 Lobby</span>
+            <span class="accion-btn${proxAccion==='SENADIS Regional'?' sel':''}" onclick="selAccionEdit('SENADIS Regional',this,'${id}')">🏢 SENADIS</span>
             <span class="accion-btn" onclick="selAccionEdit('Contactar en 1 mes',this,'${id}',1)">📆 +1 mes</span>
             <span class="accion-btn" onclick="selAccionEdit('Contactar en 6 meses',this,'${id}',6)">🗓 +6 meses</span>
           </div>
@@ -2510,6 +2549,7 @@ async function guardarReunion(){
     resultado:    document.getElementById('r-resultado').value,
     cotizacion:   document.getElementById('r-cot').value,
     notas:        document.getElementById('r-notas').value,
+    mejorar:      document.getElementById('r-mejorar').value,
     prox_accion:  accionSel,
     prox_fecha:   proxFecha,
   };
@@ -2521,14 +2561,14 @@ async function guardarReunion(){
       const local={
         'Prospecto':reunion.nombre,'Institución':reunion.institucion,'Cargo':reunion.cargo,
         'Fecha':reunion.fecha,'Tipo':reunion.tipo,'Resultado':reunion.resultado,
-        'Notas':reunion.notas,'Cotización':reunion.cotizacion,
+        'Notas':reunion.notas,'Qué Mejorar':reunion.mejorar,'Cotización':reunion.cotizacion,
         'Teléfono':reunion.telefono,'Email':reunion.email,
         'Ejecutivos':reunion.ejecutivos,'Creador':reunion.creador,
         'Próximo Contacto':proxFecha,'Próximo Contacto Acción':accionSel,
       };
       REUNIONES.push(local);
       // Limpiar form
-      ['r-nombre','r-inst','r-cargo','r-tel','r-email','r-cot','r-notas','r-prox-fecha'].forEach(id=>{
+      ['r-nombre','r-inst','r-cargo','r-tel','r-email','r-cot','r-notas','r-mejorar','r-prox-fecha'].forEach(id=>{
         const el=document.getElementById(id);if(el)el.value='';
       });
       document.getElementById('r-tipo').value='';
@@ -2574,6 +2614,72 @@ async function actualizarEmail(){
     if(res.ok){toast('✓ Email actualizado','jade');}
     else{toast('⚠ '+res.error,'warn');}
   }catch(ex){toast('Error: '+ex.message,'warn');}
+}
+
+// ════════════════════════════════════════════
+// REGIONES — Modal bloqueante
+// ════════════════════════════════════════════
+const REGIONES_CHILE=[
+  'Arica y Parinacota','Tarapacá','Antofagasta','Atacama','Coquimbo',
+  'Valparaíso','Metropolitana','O\'Higgins','Maule','Ñuble',
+  'Biobío','La Araucanía','Los Ríos','Los Lagos','Aysén','Magallanes'
+];
+let regionesSel=[];
+
+function buildRegionGrid(){
+  const grid=document.getElementById('regionGrid');
+  grid.innerHTML=REGIONES_CHILE.map(r=>`
+    <div class="region-opt" onclick="toggleRegion(this,'${r.replace(/'/g,"\\'")}')">
+      <span class="region-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+      <span class="region-name">${r}</span>
+    </div>`).join('');
+}
+
+function toggleRegion(el,nombre){
+  const idx=regionesSel.indexOf(nombre);
+  if(idx>=0){
+    regionesSel.splice(idx,1);
+    el.classList.remove('sel');
+  } else {
+    if(regionesSel.length>=5){toast('Máximo 5 regiones','warn');return;}
+    regionesSel.push(nombre);
+    el.classList.add('sel');
+  }
+  document.getElementById('regionCount').innerHTML='Seleccionadas: <strong>'+regionesSel.length+'</strong> / 5';
+  document.getElementById('regionBtn').disabled=regionesSel.length===0;
+}
+
+async function guardarRegiones(){
+  if(!regionesSel.length){toast('Selecciona al menos una región','warn');return;}
+  const btn=document.getElementById('regionBtn');
+  btn.disabled=true;btn.textContent='Guardando...';
+  try{
+    const res=await apiPost({
+      accion:'guardar_regiones',
+      ejecutivo:USUARIO,
+      regiones:regionesSel.join(', ')
+    });
+    if(res.ok||API_URL==='PEGA_AQUI_URL_DEL_APPS_SCRIPT'){
+      localStorage.setItem('oc_regiones_ok_'+USUARIO,'1');
+      document.getElementById('regionModal').classList.add('hidden');
+      toast('✓ Regiones confirmadas','jade');
+    } else {
+      toast('⚠ '+(res.error||'Error al guardar'),'warn');
+    }
+  }catch(ex){
+    // Si falla el API, igual guardar local para no bloquear
+    localStorage.setItem('oc_regiones_ok_'+USUARIO,'1');
+    document.getElementById('regionModal').classList.add('hidden');
+    toast('✓ Regiones guardadas localmente','jade');
+  }
+  btn.disabled=false;btn.textContent='Confirmar mis regiones';
+}
+
+function checkRegiones(){
+  if(esMario())return; // Mario no necesita confirmar
+  if(localStorage.getItem('oc_regiones_ok_'+USUARIO))return; // Ya confirmó
+  buildRegionGrid();
+  document.getElementById('regionModal').classList.remove('hidden');
 }
 
 // ════════════════════════════════════════════

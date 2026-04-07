@@ -1382,7 +1382,7 @@ function renderResumen(){
   if(!cotsHoy.length){
     lista.innerHTML='<div style="padding:20px;text-align:center;color:var(--mist);font-size:12px;">Sin cotizaciones este mes aún.</div>';
   } else {
-    lista.innerHTML=cotsHoy.sort((a,b)=>sortFecha(b,a)).map(c=>buildAccCot(c)).join('');
+    lista.innerHTML=cotsHoy.sort((a,b)=>sortFecha(b,a)).map(c=>buildAccCot(c,false,'rs')).join('');
   }
 
   // ── Datos de tendencia (últimos 6 meses) ──
@@ -2095,8 +2095,8 @@ function sortFecha(a,b){
   return 0;
 }
 
-function buildAccCot(c,soloVista){
-  const id='c'+c.num.replace(/[^a-z0-9]/gi,'_');
+function buildAccCot(c,soloVista,prefix){
+  const id=(prefix||'c')+c.num.replace(/[^a-z0-9]/gi,'_');
   const dias=diasSinGestion(c);
   const sinG=c.estado!=='Ganada'&&c.estado!=='Perdida'&&(dias===null||dias>=3);
   const cls=c.estado==='Ganada'?'fl-jade':sinG?'fl-red':c.estado==='En gestión'?'fl-gold':'';
@@ -2277,7 +2277,7 @@ function renderSeguimientos(){
     return db-da;
   });
   lista.innerHTML=`<div style="font-size:12px;color:var(--mist);margin-bottom:12px;">${sinG.length} cotizaciones requieren seguimiento</div>`+
-    sinG.map(c=>buildAccCot(c)).join('');
+    sinG.map(c=>buildAccCot(c,false,'sg')).join('');
 }
 
 // ════════════════════════════════════════════

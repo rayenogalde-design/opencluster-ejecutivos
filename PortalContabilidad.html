@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>OpenCluster Tech — Contabilidad</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Open+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --navy:#001a60;--navy2:#002a90;--sky:#06b3fd;--gold:#C9A96E;--gold-lt:#E8D5A8;
+  --jade:#27ae60;--ruby:#c0392b;--orange:#ff7e00;
+  --bg:#F4F6FB;--text:#1a2535;--muted:#64748b;--border:#d0d8e8;
+  --paper:#fafbfd;--smoke:#e8ecf2;
+}
+body{font-family:'Open Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* ========= LOGIN ========= */
+.login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(170deg,#0A0F1E 0%,var(--navy) 35%,var(--navy2) 60%,var(--sky) 100%);}
+.login-screen.hidden{display:none;}
+.login-box{background:#fff;border-radius:16px;padding:40px 36px;width:380px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+.login-logo{font-family:'Montserrat',sans-serif;font-size:11px;font-weight:700;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;}
+.login-title{font-family:'Montserrat',sans-serif;font-size:20px;font-weight:800;color:var(--navy);margin-bottom:4px;}
+.login-sub{font-size:12px;color:var(--muted);margin-bottom:24px;}
+.login-fld{width:100%;padding:12px 14px;border:2px solid var(--border);border-radius:10px;font-family:'Open Sans',sans-serif;font-size:14px;color:var(--text);outline:none;margin-bottom:12px;transition:border .15s;}
+.login-fld:focus{border-color:var(--sky);}
+.login-btn{width:100%;padding:13px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;font-family:'Montserrat',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:.2s;}
+.login-btn:hover{background:linear-gradient(135deg,var(--navy2),var(--sky));}
+.login-error{font-size:11px;color:var(--ruby);margin-top:8px;display:none;}
+
+/* ========= APP ========= */
+.app{display:none;}
+.app.on{display:block;}
+
+/* Header */
+.app-header{background:linear-gradient(135deg,#0A0F1E,var(--navy),var(--navy2));padding:16px 28px;display:flex;align-items:center;justify-content:space-between;position:relative;}
+.app-header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1.5px;background:linear-gradient(90deg,transparent 5%,var(--gold) 30%,var(--gold-lt) 50%,var(--gold) 70%,transparent 95%);opacity:.4;}
+.app-brand{font-family:'Montserrat',sans-serif;font-size:14px;font-weight:700;color:rgba(255,255,255,.85);letter-spacing:1px;}
+.app-brand span{color:var(--sky);}
+.app-user{display:flex;align-items:center;gap:10px;}
+.app-user-name{font-size:12px;color:rgba(255,255,255,.6);font-weight:600;}
+.app-logout{font-size:10px;color:rgba(255,255,255,.3);background:none;border:1px solid rgba(255,255,255,.12);border-radius:6px;padding:4px 12px;cursor:pointer;font-family:'Open Sans',sans-serif;transition:.15s;}
+.app-logout:hover{color:#fff;border-color:rgba(255,255,255,.3);}
+
+/* Main content */
+.main{max-width:700px;margin:0 auto;padding:32px 20px;}
+.main h2{font-family:'Montserrat',sans-serif;font-size:20px;font-weight:800;color:var(--navy);margin-bottom:4px;}
+.main .main-sub{font-size:13px;color:var(--muted);margin-bottom:28px;}
+
+/* Search box */
+.search-box{background:#fff;border-radius:14px;padding:24px;box-shadow:0 4px 16px rgba(0,26,96,.06);border:1px solid var(--smoke);margin-bottom:20px;}
+.search-box label{font-family:'Montserrat',sans-serif;font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:8px;}
+.search-row{display:flex;gap:10px;}
+.search-input{flex:1;padding:14px 16px;border:2px solid var(--border);border-radius:10px;font-family:'Open Sans',sans-serif;font-size:15px;color:var(--text);outline:none;transition:border .15s;}
+.search-input:focus{border-color:var(--sky);}
+.search-btn{padding:14px 24px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;font-family:'Montserrat',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:.2s;white-space:nowrap;}
+.search-btn:hover{background:linear-gradient(135deg,var(--navy2),var(--sky));}
+.search-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+/* Result card */
+.result-card{background:#fff;border-radius:14px;box-shadow:0 4px 16px rgba(0,26,96,.06);border:1px solid var(--smoke);overflow:hidden;display:none;}
+.result-card.show{display:block;}
+.result-header{background:var(--paper);padding:16px 24px;border-bottom:1px solid var(--smoke);display:flex;align-items:center;justify-content:space-between;}
+.result-num{font-family:'Montserrat',sans-serif;font-size:16px;font-weight:800;color:var(--navy);}
+.result-estado{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;font-family:'Montserrat',sans-serif;}
+.est-enviada{background:rgba(6,179,253,.1);color:var(--sky);}
+.est-gestion{background:rgba(201,169,110,.15);color:#8A6520;}
+.est-ganada{background:rgba(39,174,96,.1);color:var(--jade);}
+.est-perdida{background:rgba(192,57,43,.1);color:var(--ruby);}
+
+.result-grid{display:grid;grid-template-columns:1fr 1fr 1fr;padding:20px 24px;gap:0;}
+.result-cell{padding:10px 0;border-bottom:1px solid var(--smoke);}
+.result-cell:nth-child(3n+1){padding-right:12px;}
+.result-cell:nth-child(3n+2){padding:10px 12px;border-left:1px solid var(--smoke);border-right:1px solid var(--smoke);}
+.result-cell:nth-child(3n){padding-left:12px;}
+.rc-label{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;}
+.rc-value{font-size:13px;font-weight:600;color:var(--text);}
+.rc-value.big{font-size:16px;font-weight:700;color:var(--navy);}
+
+.result-prods{padding:16px 24px;border-top:1px solid var(--smoke);font-size:12px;color:var(--muted);line-height:1.7;}
+.result-prods strong{color:var(--navy);font-size:10px;text-transform:uppercase;letter-spacing:.5px;}
+
+/* Confirm section */
+.confirm-section{padding:20px 24px;border-top:1px solid var(--smoke);background:var(--paper);}
+.confirm-section .confirm-label{font-family:'Montserrat',sans-serif;font-size:11px;font-weight:700;color:var(--navy);margin-bottom:10px;}
+.confirm-check{display:flex;align-items:center;gap:10px;margin-bottom:14px;cursor:pointer;user-select:none;}
+.confirm-check input{width:18px;height:18px;accent-color:var(--jade);}
+.confirm-check span{font-size:13px;font-weight:600;color:var(--text);}
+.confirm-btn{width:100%;padding:14px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--jade),#2ecc71);color:#fff;font-family:'Montserrat',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:.2s;}
+.confirm-btn:hover{opacity:.9;}
+.confirm-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+/* Already confirmed */
+.already-confirmed{padding:16px 24px;border-top:1px solid var(--smoke);background:rgba(39,174,96,.05);text-align:center;}
+.already-confirmed span{font-size:13px;font-weight:700;color:var(--jade);}
+
+/* Error / empty */
+.result-error{background:#fff;border-radius:14px;padding:24px;text-align:center;box-shadow:0 4px 16px rgba(0,26,96,.06);border:1px solid var(--smoke);display:none;}
+.result-error.show{display:block;}
+.result-error span{font-size:14px;font-weight:600;color:var(--ruby);}
+
+/* History */
+.history-section{margin-top:28px;}
+.history-title{font-family:'Montserrat',sans-serif;font-size:13px;font-weight:700;color:var(--navy);margin-bottom:12px;}
+.history-item{background:#fff;border-radius:10px;padding:12px 16px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;border:1px solid var(--smoke);font-size:12px;}
+.history-item .hi-num{font-weight:700;color:var(--navy);}
+.history-item .hi-inst{color:var(--muted);flex:1;margin:0 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.history-item .hi-date{font-size:11px;color:var(--muted);flex-shrink:0;}
+.history-item .hi-status{padding:3px 8px;border-radius:12px;font-size:10px;font-weight:700;margin-left:8px;flex-shrink:0;}
+.hi-pendiente{background:rgba(255,126,0,.1);color:var(--orange);}
+.hi-aprobada{background:rgba(39,174,96,.1);color:var(--jade);}
+
+/* Toast */
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);padding:10px 24px;background:var(--navy);color:#fff;border-radius:20px;font-size:12px;font-weight:700;z-index:999;opacity:0;transition:opacity .25s;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.25);}
+.toast.on{opacity:1;}
+</style>
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">OpenCluster Tech</div>
+    <div class="login-title">Contabilidad</div>
+    <div class="login-sub">Ingresa con tus credenciales</div>
+    <input type="text" class="login-fld" id="loginName" placeholder="Nombre completo" value="Viarly Tabilo">
+    <input type="password" class="login-fld" id="loginPass" placeholder="Contraseña">
+    <button class="login-btn" onclick="doLogin()">Ingresar</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<!-- ===== APP ===== -->
+<div class="app" id="app">
+  <div class="app-header">
+    <div class="app-brand">Open<span>Cluster</span> Tech — Contabilidad</div>
+    <div class="app-user">
+      <span class="app-user-name" id="appUser"></span>
+      <button class="app-logout" onclick="doLogout()">Cerrar sesión</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <h2>Confirmación de Pagos</h2>
+    <div class="main-sub">Ingresa el número de cotización para verificar y confirmar el pago recibido</div>
+
+    <!-- Search -->
+    <div class="search-box">
+      <label>Número de Cotización</label>
+      <div class="search-row">
+        <input type="text" class="search-input" id="searchNum" placeholder="Ej: OC26-3505-AT" onkeydown="if(event.key==='Enter')buscarCot()">
+        <button class="search-btn" id="searchBtn" onclick="buscarCot()">Buscar</button>
+      </div>
+    </div>
+
+    <!-- Result -->
+    <div class="result-card" id="resultCard"></div>
+    <div class="result-error" id="resultError"><span></span></div>
+
+    <!-- History -->
+    <div class="history-section">
+      <div class="history-title">Pagos confirmados hoy</div>
+      <div id="historyList"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API_URL='https://script.google.com/macros/s/AKfycbw8Jy2Gruy8J_spdrvmdRSifW8H99amWZpfVFaXemX2zPB3B4sOrJOwWU-932Tn6a3t/exec';
+const CONTAB_PASS='CONTAB.OCT2026';
+
+let USUARIO='';
+let historial=JSON.parse(localStorage.getItem('oc_contab_hist')||'[]');
+
+/* ========== LOGIN ========== */
+function doLogin(){
+  const name=document.getElementById('loginName').value.trim();
+  const pass=document.getElementById('loginPass').value.trim();
+  const err=document.getElementById('loginError');
+  if(!name||!pass){err.textContent='Ingresa nombre y contraseña';err.style.display='block';return;}
+  if(pass!==CONTAB_PASS){err.textContent='Contraseña incorrecta';err.style.display='block';return;}
+  USUARIO=name;
+  localStorage.setItem('oc_contab_user',name);
+  localStorage.setItem('oc_contab_pass',pass);
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('app').classList.add('on');
+  document.getElementById('appUser').textContent=name;
+  renderHistory();
+}
+
+function doLogout(){
+  localStorage.removeItem('oc_contab_user');
+  localStorage.removeItem('oc_contab_pass');
+  document.getElementById('app').classList.remove('on');
+  document.getElementById('loginScreen').classList.remove('hidden');
+  USUARIO='';
+}
+
+// Auto-login
+(function(){
+  const u=localStorage.getItem('oc_contab_user');
+  const p=localStorage.getItem('oc_contab_pass');
+  if(u&&p===CONTAB_PASS){
+    document.getElementById('loginName').value=u;
+    document.getElementById('loginPass').value=p;
+    doLogin();
+  }
+})();
+
+/* ========== API ========== */
+async function apiPost(data){
+  const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(data)});
+  return r.json();
+}
+
+/* ========== BUSCAR ========== */
+async function buscarCot(){
+  const num=document.getElementById('searchNum').value.trim();
+  if(!num){toast('Ingresa un número de cotización','warn');return;}
+  const btn=document.getElementById('searchBtn');
+  btn.disabled=true;btn.textContent='Buscando...';
+  document.getElementById('resultCard').classList.remove('show');
+  document.getElementById('resultError').classList.remove('show');
+
+  try{
+    const res=await apiPost({accion:'buscar_cotizacion',num:num});
+    if(res.ok&&res.cotizacion){
+      renderResult(res.cotizacion);
+    } else {
+      const errEl=document.getElementById('resultError');
+      errEl.querySelector('span').textContent='Cotización "'+num+'" no encontrada. Verifica el número e intenta de nuevo.';
+      errEl.classList.add('show');
+    }
+  }catch(ex){
+    const errEl=document.getElementById('resultError');
+    errEl.querySelector('span').textContent='Error de conexión. Intenta de nuevo.';
+    errEl.classList.add('show');
+  }
+  btn.disabled=false;btn.textContent='Buscar';
+}
+
+/* ========== RENDER RESULT ========== */
+function renderResult(c){
+  const card=document.getElementById('resultCard');
+  const estCls=c.estado==='Ganada'?'est-ganada':c.estado==='Perdida'?'est-perdida':c.estado==='En gestión'?'est-gestion':'est-enviada';
+  const yaConfirmado=historial.some(h=>h.num===c.num);
+
+  card.innerHTML=`
+    <div class="result-header">
+      <span class="result-num">${esc(c.num)}</span>
+      <span class="result-estado ${estCls}">${esc(c.estado||'Enviada')}</span>
+    </div>
+    <div class="result-grid">
+      <div class="result-cell"><div class="rc-label">Institución</div><div class="rc-value">${esc(c.institucion||'—')}</div></div>
+      <div class="result-cell"><div class="rc-label">Contacto</div><div class="rc-value">${esc(c.cliente||'—')}</div></div>
+      <div class="result-cell"><div class="rc-label">Fecha</div><div class="rc-value">${esc(c.fecha||'—')}</div></div>
+      <div class="result-cell"><div class="rc-label">Ejecutivo</div><div class="rc-value">${esc(c.ejecutivo||'—')}</div></div>
+      <div class="result-cell"><div class="rc-label">Monto Neto</div><div class="rc-value big">${esc(c.neto||'—')}</div></div>
+      <div class="result-cell"><div class="rc-label">Total c/IVA</div><div class="rc-value big">${esc(c.total||'—')}</div></div>
+    </div>
+    ${c.productos?`<div class="result-prods"><strong>Productos</strong><br>${esc(c.productos)}</div>`:''}
+    ${yaConfirmado?`
+      <div class="already-confirmed"><span>Este pago ya fue confirmado</span></div>
+    `:`
+      <div class="confirm-section">
+        <div class="confirm-label">Confirmar recepción de pago</div>
+        <label class="confirm-check">
+          <input type="checkbox" id="confirmCheck" onchange="document.getElementById('confirmBtn').disabled=!this.checked">
+          <span>Confirmo que los datos coinciden con el pago recibido</span>
+        </label>
+        <button class="confirm-btn" id="confirmBtn" disabled onclick="confirmarPago('${esc(c.num)}','${esc(c.institucion||'')}','${esc(c.ejecutivo||'')}','${esc(c.neto||'')}')">Confirmar Pago</button>
+      </div>
+    `}
+  `;
+  card.classList.add('show');
+}
+
+/* ========== CONFIRMAR PAGO ========== */
+async function confirmarPago(num,inst,exec,neto){
+  const btn=document.getElementById('confirmBtn');
+  btn.disabled=true;btn.textContent='Enviando...';
+  try{
+    const res=await apiPost({
+      accion:'confirmar_pago',
+      num:num,
+      institucion:inst,
+      ejecutivo:exec,
+      neto:neto,
+      confirmado_por:USUARIO
+    });
+    if(res.ok){
+      // Agregar al historial local
+      const entry={num:num,inst:inst,exec:exec,neto:neto,fecha:new Date().toLocaleDateString('es-CL'),estado:'Pendiente aprobación'};
+      historial.unshift(entry);
+      localStorage.setItem('oc_contab_hist',JSON.stringify(historial));
+      renderHistory();
+      // Actualizar card
+      const confirmSec=document.querySelector('.confirm-section');
+      if(confirmSec)confirmSec.innerHTML='<div style="text-align:center;padding:4px 0;"><span style="font-size:13px;font-weight:700;color:var(--jade);">Pago confirmado — Enviado a Rayen para aprobación</span></div>';
+      toast('Pago confirmado exitosamente','jade');
+    } else {
+      toast('Error: '+(res.error||'No se pudo confirmar'),'warn');
+      btn.disabled=false;btn.textContent='Confirmar Pago';
+    }
+  }catch(ex){
+    toast('Error de conexión','warn');
+    btn.disabled=false;btn.textContent='Confirmar Pago';
+  }
+}
+
+/* ========== HISTORY ========== */
+function renderHistory(){
+  const el=document.getElementById('historyList');
+  const hoy=new Date().toLocaleDateString('es-CL');
+  const hoyItems=historial.filter(h=>h.fecha===hoy);
+  if(!hoyItems.length){
+    el.innerHTML='<div style="font-size:12px;color:var(--muted);padding:12px;text-align:center;">Sin confirmaciones hoy</div>';
+    return;
+  }
+  el.innerHTML=hoyItems.map(h=>`
+    <div class="history-item">
+      <span class="hi-num">${esc(h.num)}</span>
+      <span class="hi-inst">${esc(h.inst)}</span>
+      <span class="hi-date">${h.fecha}</span>
+      <span class="hi-status hi-pendiente">Pendiente aprobación</span>
+    </div>
+  `).join('');
+}
+
+/* ========== UTILS ========== */
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function toast(msg,tipo){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.style.background=tipo==='warn'?'var(--ruby)':tipo==='jade'?'var(--jade)':'var(--navy)';
+  t.classList.add('on');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),3000);
+}
+</script>
+</body>
+</html>

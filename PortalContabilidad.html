@@ -173,7 +173,9 @@ const API_URL='https://script.google.com/macros/s/AKfycbym8DHl0-eaBH151TDTPb9MMM
 const CONTAB_PASS='CONTAB.OCT2026';
 
 let USUARIO='';
+let COTS_CACHE=[];
 let historial=JSON.parse(localStorage.getItem('oc_contab_hist')||'[]');
+let cotActual=null;
 
 /* ========== LOGIN ========== */
 function doLogin(){
@@ -189,6 +191,7 @@ function doLogin(){
   document.getElementById('app').classList.add('on');
   document.getElementById('appUser').textContent=name;
   renderHistory();
+  cargarCotizaciones();
 }
 
 function doLogout(){
@@ -196,7 +199,7 @@ function doLogout(){
   localStorage.removeItem('oc_contab_pass');
   document.getElementById('app').classList.remove('on');
   document.getElementById('loginScreen').classList.remove('hidden');
-  USUARIO='';
+  USUARIO='';COTS_CACHE=[];
 }
 
 // Auto-login
@@ -210,36 +213,53 @@ function doLogout(){
   }
 })();
 
+/* ========== CARGAR COTIZACIONES (una vez, al inicio) ========== */
+async function cargarCotizaciones(){
+  const btn=document.getElementById('searchBtn');
+  btn.disabled=true;btn.textContent='Cargando datos...';
+  try{
+    const r=await fetch(API_URL+'?accion=datos&equipo=difusion',{mode:'cors',signal:AbortSignal.timeout(12000)});
+    const d=await r.json();
+    if(d.cotizaciones&&d.cotizaciones.length>1){
+      const h=d.cotizaciones[0];
+      function norm(s){return String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');}
+      function col(){for(var a=0;a<arguments.length;a++){for(var i=0;i<h.length;i++){if(norm(h[i]).indexOf(norm(arguments[a]))>=0)return i;}}return -1;}
+      const ci={num:col('cotizacion','ncot'),inst:col('institucion'),cliente:col('nombre cliente','cliente'),fecha:col('fecha'),exec:col('ejecutivo'),neto:col('neto'),total:col('total'),estado:col('estado'),prods:col('productos')};
+      const get=(r,i)=>i>=0&&r[i]!=null?String(r[i]):'';
+      COTS_CACHE=d.cotizaciones.slice(1).map(r=>({
+        num:get(r,ci.num),institucion:get(r,ci.inst),cliente:get(r,ci.cliente),
+        fecha:get(r,ci.fecha),ejecutivo:get(r,ci.exec),
+        neto:get(r,ci.neto),total:get(r,ci.total),
+        estado:get(r,ci.estado)||'Enviada',productos:get(r,ci.prods)
+      })).filter(c=>c.num);
+      toast(COTS_CACHE.length+' cotizaciones cargadas','jade');
+    }
+  }catch(ex){toast('Error cargando datos. Intenta recargar.','warn');}
+  btn.disabled=false;btn.textContent='Buscar';
+}
+
 /* ========== API ========== */
 async function apiPost(data){
   const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(data)});
   return r.json();
 }
 
-/* ========== BUSCAR ========== */
-async function buscarCot(){
-  const num=document.getElementById('searchNum').value.trim();
+/* ========== BUSCAR (local, instantáneo) ========== */
+function buscarCot(){
+  const num=document.getElementById('searchNum').value.trim().toUpperCase();
   if(!num){toast('Ingresa un número de cotización','warn');return;}
-  const btn=document.getElementById('searchBtn');
-  btn.disabled=true;btn.textContent='Buscando...';
   document.getElementById('resultCard').classList.remove('show');
   document.getElementById('resultError').classList.remove('show');
 
-  try{
-    const res=await apiPost({accion:'buscar_cotizacion',num:num});
-    if(res.ok&&res.cotizacion){
-      renderResult(res.cotizacion);
-    } else {
-      const errEl=document.getElementById('resultError');
-      errEl.querySelector('span').textContent='Cotización "'+num+'" no encontrada. Verifica el número e intenta de nuevo.';
-      errEl.classList.add('show');
-    }
-  }catch(ex){
+  const found=COTS_CACHE.find(c=>c.num.toUpperCase()===num);
+  if(found){
+    cotActual=found;
+    renderResult(found);
+  } else {
     const errEl=document.getElementById('resultError');
-    errEl.querySelector('span').textContent='Error de conexión. Intenta de nuevo.';
+    errEl.querySelector('span').textContent='Cotización "'+num+'" no encontrada. Verifica el número.';
     errEl.classList.add('show');
   }
-  btn.disabled=false;btn.textContent='Buscar';
 }
 
 /* ========== RENDER RESULT ========== */
@@ -247,6 +267,10 @@ function renderResult(c){
   const card=document.getElementById('resultCard');
   const estCls=c.estado==='Ganada'?'est-ganada':c.estado==='Perdida'?'est-perdida':c.estado==='En gestión'?'est-gestion':'est-enviada';
   const yaConfirmado=historial.some(h=>h.num===c.num);
+  const numSafe=c.num.replace(/'/g,'');
+  const instSafe=(c.institucion||'').replace(/'/g,'').substring(0,40);
+  const execSafe=(c.ejecutivo||'').replace(/'/g,'');
+  const netoSafe=(c.neto||'').replace(/'/g,'');
 
   card.innerHTML=`
     <div class="result-header">
@@ -271,11 +295,23 @@ function renderResult(c){
           <input type="checkbox" id="confirmCheck" onchange="document.getElementById('confirmBtn').disabled=!this.checked">
           <span>Confirmo que los datos coinciden con el pago recibido</span>
         </label>
-        <button class="confirm-btn" id="confirmBtn" disabled onclick="confirmarPago('${esc(c.num)}','${esc(c.institucion||'')}','${esc(c.ejecutivo||'')}','${esc(c.neto||'')}')">Confirmar Pago</button>
+        <div style="display:flex;gap:8px;margin-top:4px;">
+          <button class="confirm-btn" id="confirmBtn" disabled onclick="confirmarPago('${numSafe}','${instSafe}','${execSafe}','${netoSafe}')" style="flex:1;">Confirmar Pago</button>
+          <button class="confirm-btn" id="discrepBtn" onclick="toggleDiscrepancia()" style="flex:0 0 auto;background:linear-gradient(135deg,var(--orange),#e67e22);padding:14px 18px;">Reportar Discrepancia</button>
+        </div>
+        <div id="discrepForm" style="display:none;margin-top:10px;">
+          <textarea id="discrepMsg" rows="3" placeholder="Describe qué no coincide (ej: monto diferente, cliente distinto...)" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:'Open Sans',sans-serif;font-size:13px;resize:vertical;"></textarea>
+          <button class="confirm-btn" onclick="enviarDiscrepancia('${numSafe}','${instSafe}','${execSafe}','${netoSafe}')" style="margin-top:6px;background:linear-gradient(135deg,var(--orange),#e67e22);">Enviar Reporte</button>
+        </div>
       </div>
     `}
   `;
   card.classList.add('show');
+}
+
+function toggleDiscrepancia(){
+  const f=document.getElementById('discrepForm');
+  f.style.display=f.style.display==='none'?'block':'none';
 }
 
 /* ========== CONFIRMAR PAGO ========== */
@@ -284,31 +320,37 @@ async function confirmarPago(num,inst,exec,neto){
   btn.disabled=true;btn.textContent='Enviando...';
   try{
     const res=await apiPost({
-      accion:'confirmar_pago',
-      num:num,
-      institucion:inst,
-      ejecutivo:exec,
-      neto:neto,
-      confirmado_por:USUARIO
+      accion:'confirmar_pago',num,institucion:inst,ejecutivo:exec,neto,confirmado_por:USUARIO
     });
     if(res.ok){
-      // Agregar al historial local
-      const entry={num:num,inst:inst,exec:exec,neto:neto,fecha:new Date().toLocaleDateString('es-CL'),estado:'Pendiente aprobación'};
+      const entry={num,inst,exec,neto,fecha:new Date().toLocaleDateString('es-CL'),estado:'Pendiente aprobación',tipo:'pago'};
       historial.unshift(entry);
       localStorage.setItem('oc_contab_hist',JSON.stringify(historial));
       renderHistory();
-      // Actualizar card
       const confirmSec=document.querySelector('.confirm-section');
-      if(confirmSec)confirmSec.innerHTML='<div style="text-align:center;padding:4px 0;"><span style="font-size:13px;font-weight:700;color:var(--jade);">Pago confirmado — Enviado a Rayen para aprobación</span></div>';
+      if(confirmSec)confirmSec.innerHTML='<div style="text-align:center;padding:8px 0;"><span style="font-size:13px;font-weight:700;color:var(--jade);">Pago confirmado — Enviado a Rayen para aprobación</span></div>';
       toast('Pago confirmado exitosamente','jade');
-    } else {
-      toast('Error: '+(res.error||'No se pudo confirmar'),'warn');
-      btn.disabled=false;btn.textContent='Confirmar Pago';
-    }
-  }catch(ex){
-    toast('Error de conexión','warn');
-    btn.disabled=false;btn.textContent='Confirmar Pago';
-  }
+    } else {toast('Error: '+(res.error||'No se pudo confirmar'),'warn');btn.disabled=false;btn.textContent='Confirmar Pago';}
+  }catch(ex){toast('Error de conexión','warn');btn.disabled=false;btn.textContent='Confirmar Pago';}
+}
+
+/* ========== REPORTAR DISCREPANCIA ========== */
+async function enviarDiscrepancia(num,inst,exec,neto){
+  const msg=document.getElementById('discrepMsg').value.trim();
+  if(!msg){toast('Describe qué no coincide','warn');return;}
+  try{
+    await apiPost({
+      accion:'confirmar_pago',num,institucion:inst,ejecutivo:exec,neto,
+      confirmado_por:USUARIO+' (DISCREPANCIA: '+msg+')'
+    });
+    const entry={num,inst,exec,neto,fecha:new Date().toLocaleDateString('es-CL'),estado:'Discrepancia',tipo:'discrepancia'};
+    historial.unshift(entry);
+    localStorage.setItem('oc_contab_hist',JSON.stringify(historial));
+    renderHistory();
+    const confirmSec=document.querySelector('.confirm-section');
+    if(confirmSec)confirmSec.innerHTML='<div style="text-align:center;padding:8px 0;"><span style="font-size:13px;font-weight:700;color:var(--orange);">Discrepancia reportada — Rayen la revisará</span></div>';
+    toast('Discrepancia enviada','jade');
+  }catch(ex){toast('Error de conexión','warn');}
 }
 
 /* ========== HISTORY ========== */
@@ -325,7 +367,7 @@ function renderHistory(){
       <span class="hi-num">${esc(h.num)}</span>
       <span class="hi-inst">${esc(h.inst)}</span>
       <span class="hi-date">${h.fecha}</span>
-      <span class="hi-status hi-pendiente">Pendiente aprobación</span>
+      <span class="hi-status ${h.tipo==='discrepancia'?'hi-pendiente':'hi-pendiente'}">${h.tipo==='discrepancia'?'Discrepancia':'Pendiente aprobación'}</span>
     </div>
   `).join('');
 }

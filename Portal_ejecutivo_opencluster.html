@@ -254,6 +254,26 @@ select.login-inp{appearance:none;cursor:pointer;}
 .region-btn:hover{background:linear-gradient(135deg,#2a3040,var(--gold));}
 .region-btn:disabled{opacity:.4;cursor:not-allowed;}
 
+/* Celebration modal */
+.celeb-overlay{position:fixed;inset:0;z-index:9997;background:rgba(10,15,30,.75);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);opacity:0;animation:celebFadeIn .4s forwards;}
+.celeb-overlay.hidden{display:none!important;}
+@keyframes celebFadeIn{to{opacity:1;}}
+.celeb-box{background:#fff;border-radius:20px;padding:36px 32px 28px;width:420px;max-width:92vw;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.3);position:relative;overflow:hidden;transform:scale(.8);animation:celebPop .5s .2s forwards;}
+@keyframes celebPop{to{transform:scale(1);}}
+.celeb-emoji{font-size:56px;margin-bottom:12px;animation:celebBounce 1s ease infinite;}
+@keyframes celebBounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);}}
+.celeb-title{font-family:'DM Sans',sans-serif;font-size:22px;font-weight:800;color:var(--ink);margin-bottom:6px;}
+.celeb-sub{font-size:14px;color:var(--mist);line-height:1.6;margin-bottom:16px;}
+.celeb-amount{font-family:'DM Sans',sans-serif;font-size:28px;font-weight:800;color:var(--jade);margin-bottom:4px;}
+.celeb-detail{font-size:12px;color:var(--mist);margin-bottom:18px;}
+.celeb-btn{padding:14px 32px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--jade),#2ecc71);color:#fff;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:.2s;box-shadow:0 4px 16px rgba(39,174,96,.3);}
+.celeb-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(39,174,96,.4);}
+/* Confetti */
+.confetti-container{position:fixed;inset:0;z-index:9996;pointer-events:none;overflow:hidden;}
+.confetti-container.hidden{display:none!important;}
+.confetti{position:absolute;width:10px;height:10px;top:-20px;animation:confettiFall linear forwards;}
+@keyframes confettiFall{0%{transform:translateY(0) rotate(0deg);opacity:1;}85%{opacity:1;}100%{transform:translateY(100vh) rotate(720deg);opacity:0;}}
+
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);padding:8px 20px;background:var(--ink);color:#fff;border-radius:20px;font-size:12px;font-weight:700;z-index:999;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.25);}
 .toast.on{opacity:1;}
 
@@ -642,6 +662,19 @@ select.login-inp{appearance:none;cursor:pointer;}
   </div><!-- /content -->
 </div><!-- /app -->
 
+<!-- CELEBRATION MODAL -->
+<div class="confetti-container hidden" id="confettiBox"></div>
+<div class="celeb-overlay hidden" id="celebModal">
+  <div class="celeb-box">
+    <div class="celeb-emoji">🎉</div>
+    <div class="celeb-title" id="celebTitle">Felicitaciones!</div>
+    <div class="celeb-sub" id="celebSub"></div>
+    <div class="celeb-amount" id="celebAmount"></div>
+    <div class="celeb-detail" id="celebDetail"></div>
+    <button class="celeb-btn" onclick="dismissCeleb()">Entendido</button>
+  </div>
+</div>
+
 <!-- REGION MODAL -->
 <div class="region-overlay hidden" id="regionModal">
   <div class="region-box">
@@ -978,6 +1011,7 @@ async function iniciarApp(modoDemo=false){
   checkAlertas();
   renderResumen();
   checkRegiones();
+  checkVentasNuevas();
 }
 
 async function recargarDatos(){
@@ -2614,6 +2648,66 @@ async function actualizarEmail(){
     if(res.ok){toast('✓ Email actualizado','jade');}
     else{toast('⚠ '+res.error,'warn');}
   }catch(ex){toast('Error: '+ex.message,'warn');}
+}
+
+// ════════════════════════════════════════════
+// CELEBRACIÓN DE VENTAS
+// ════════════════════════════════════════════
+function checkVentasNuevas(){
+  if(esMario())return;
+  const ganadas=COTS.filter(c=>c.estado==='Ganada');
+  const vistas=JSON.parse(localStorage.getItem('oc_ventas_vistas_'+USUARIO)||'[]');
+  const nuevas=ganadas.filter(c=>!vistas.includes(c.num));
+  if(nuevas.length>0) mostrarCelebracion(nuevas);
+}
+
+function mostrarCelebracion(ventas){
+  const v=ventas[0];
+  const monto=typeof v.neto==='number'?v.neto:parseInt(String(v.neto).replace(/[^0-9]/g,''))||0;
+  document.getElementById('celebTitle').textContent='Felicitaciones!';
+  document.getElementById('celebSub').innerHTML='Se ha registrado la compra de una de tus cotizaciones.<br>Tu esfuerzo y dedicación están dando frutos. Sigue así!';
+  document.getElementById('celebAmount').textContent=monto?'$'+monto.toLocaleString('es-CL'):'';
+  const detalles=[v.num,v.inst||v.cliente||''].filter(Boolean).join(' — ');
+  document.getElementById('celebDetail').textContent=detalles+(ventas.length>1?' (y '+(ventas.length-1)+' más)':'');
+  // Mostrar
+  document.getElementById('celebModal').classList.remove('hidden');
+  lanzarConfetti();
+  // Marcar como vistas
+  const vistas=JSON.parse(localStorage.getItem('oc_ventas_vistas_'+USUARIO)||'[]');
+  ventas.forEach(v=>vistas.push(v.num));
+  localStorage.setItem('oc_ventas_vistas_'+USUARIO,JSON.stringify(vistas));
+}
+
+function lanzarConfetti(){
+  const box=document.getElementById('confettiBox');
+  box.classList.remove('hidden');
+  box.innerHTML='';
+  const colores=['#FFD700','#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#FFEAA7','#DDA0DD','#98D8C8','#F7DC6F','#BB8FCE','#85C1E9','#F1948A'];
+  const formas=['circle','rect','triangle'];
+  for(let i=0;i<80;i++){
+    const el=document.createElement('div');
+    el.className='confetti';
+    const color=colores[Math.floor(Math.random()*colores.length)];
+    const forma=formas[Math.floor(Math.random()*formas.length)];
+    const size=6+Math.random()*10;
+    const left=Math.random()*100;
+    const delay=Math.random()*2;
+    const dur=2+Math.random()*3;
+    el.style.left=left+'%';
+    el.style.width=size+'px';
+    el.style.height=forma==='rect'?size*0.6+'px':size+'px';
+    el.style.background=color;
+    el.style.borderRadius=forma==='circle'?'50%':forma==='triangle'?'0':'2px';
+    if(forma==='triangle'){el.style.width='0';el.style.height='0';el.style.background='transparent';el.style.borderLeft=size/2+'px solid transparent';el.style.borderRight=size/2+'px solid transparent';el.style.borderBottom=size+'px solid '+color;}
+    el.style.animationDelay=delay+'s';
+    el.style.animationDuration=dur+'s';
+    box.appendChild(el);
+  }
+  setTimeout(()=>{box.classList.add('hidden');box.innerHTML='';},6000);
+}
+
+function dismissCeleb(){
+  document.getElementById('celebModal').classList.add('hidden');
 }
 
 // ════════════════════════════════════════════

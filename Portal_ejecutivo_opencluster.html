@@ -2699,11 +2699,18 @@ function checkVentasNuevas(){
 function mostrarCelebracion(ventas){
   const v=ventas[0];
   const monto=typeof v.neto==='number'?v.neto:parseInt(String(v.neto).replace(/[^0-9]/g,''))||0;
+  const cliente=v.inst||v.cliente||'';
+  const fechaCot=v.fecha||'';
+  const mesCot=v.mes||'';
   document.getElementById('celebTitle').textContent='Felicitaciones!';
   document.getElementById('celebSub').innerHTML='Se ha registrado la compra de una de tus cotizaciones.<br>Tu esfuerzo y dedicación están dando frutos. Sigue así!';
   document.getElementById('celebAmount').textContent=monto?'$'+monto.toLocaleString('es-CL'):'';
-  const detalles=[v.num,v.inst||v.cliente||''].filter(Boolean).join(' — ');
-  document.getElementById('celebDetail').textContent=detalles+(ventas.length>1?' (y '+(ventas.length-1)+' más)':'');
+  const lineas=[];
+  if(v.num)lineas.push('Cotización: '+v.num);
+  if(cliente)lineas.push('Cliente: '+cliente);
+  if(fechaCot)lineas.push('Fecha: '+fechaCot+(mesCot?' ('+mesCot+')':''));
+  if(ventas.length>1)lineas.push('(y '+(ventas.length-1)+' venta'+(ventas.length>2?'s':'')+' más)');
+  document.getElementById('celebDetail').innerHTML=lineas.join('<br>');
   // Mostrar
   document.getElementById('celebModal').classList.remove('hidden');
   lanzarConfetti();
@@ -2719,7 +2726,7 @@ function lanzarConfetti(){
   box.innerHTML='';
   const colores=['#FFD700','#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#FFEAA7','#DDA0DD','#98D8C8','#F7DC6F','#BB8FCE','#85C1E9','#F1948A'];
   const formas=['circle','rect','triangle'];
-  for(let i=0;i<80;i++){
+  for(let i=0;i<150;i++){
     const el=document.createElement('div');
     el.className='confetti';
     const color=colores[Math.floor(Math.random()*colores.length)];

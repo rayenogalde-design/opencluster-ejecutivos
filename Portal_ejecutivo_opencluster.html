@@ -1009,11 +1009,12 @@ async function iniciarApp(modoDemo=false){
     checkAlertas();
     renderResumen();
     checkRegiones();
+    checkVentasNuevas(); // revisar desde cache primero
     // Cargar datos frescos en segundo plano
     cargarTodos().then(()=>{
       checkAlertas();
       renderResumen();
-      checkVentasNuevas();
+      checkVentasNuevas(); // revisar de nuevo con datos frescos
     });
   } else {
     toast('⚠ Apps Script no configurado — modo demo','warn');
@@ -2705,12 +2706,15 @@ function mostrarCelebracion(ventas){
   document.getElementById('celebTitle').textContent='Felicitaciones!';
   document.getElementById('celebSub').innerHTML='Se ha registrado la compra de una de tus cotizaciones.<br>Tu esfuerzo y dedicación están dando frutos. Sigue así!';
   document.getElementById('celebAmount').textContent=monto?'$'+monto.toLocaleString('es-CL'):'';
-  const lineas=[];
-  if(v.num)lineas.push('Cotización: '+v.num);
-  if(cliente)lineas.push('Cliente: '+cliente);
-  if(fechaCot)lineas.push('Fecha: '+fechaCot+(mesCot?' ('+mesCot+')':''));
-  if(ventas.length>1)lineas.push('(y '+(ventas.length-1)+' venta'+(ventas.length>2?'s':'')+' más)');
-  document.getElementById('celebDetail').innerHTML=lineas.join('<br>');
+  let detHtml='';
+  if(cliente)detHtml+=`<div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:4px;">${cliente}</div>`;
+  if(v.num)detHtml+=`<div style="font-size:12px;color:var(--mist);">Cotización: ${v.num}</div>`;
+  if(mesCot||fechaCot){
+    const mesLabel=mesCot||'';
+    detHtml+=`<div style="margin-top:8px;padding:6px 14px;background:rgba(6,179,253,.08);border-radius:8px;display:inline-block;font-size:12px;font-weight:700;color:var(--sky);">Esta venta corresponde al mes de ${mesLabel} 2026</div>`;
+  }
+  if(ventas.length>1)detHtml+=`<div style="font-size:11px;color:var(--mist);margin-top:6px;">(y ${ventas.length-1} venta${ventas.length>2?'s':''} más)</div>`;
+  document.getElementById('celebDetail').innerHTML=detHtml;
   // Mostrar
   document.getElementById('celebModal').classList.remove('hidden');
   lanzarConfetti();

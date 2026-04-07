@@ -406,11 +406,11 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
   font-size:6.5pt; color:#aaa; font-weight:400;
   word-break:break-all; display:none;
 }
-/* En impresión mostrar URL como texto para que sea copiable si el link no funciona */
+/* En impresión: link clickeable, URL oculta */
 @media print {
-  .prod-cell-url { display:block; color:#bbb; }
+  .prod-cell-url { display:none !important; }
   .prod-link-txt { color:#555 !important; }
-  .prod-cell-link a { color:#0055aa !important; text-decoration:underline !important; font-weight:700 !important; }
+  .prod-cell-link a { color:#0055aa !important; text-decoration:underline !important; font-weight:600 !important; }
 }
 .prod-cell-top:last-child { padding-bottom:4px; }
 /* Even rows */
@@ -601,7 +601,18 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
     font-variant-ligatures: none !important;
     font-feature-settings: "liga" 0, "clig" 0, "dlig" 0 !important;
     text-rendering: geometricPrecision !important;
+    -webkit-font-smoothing: antialiased !important;
   }
+  /* Reducir peso visual en PDF */
+  .page .nv, .page .tv, .page td, .page .prod-cell-top,
+  .page .prod-cell-desc, .page .prod-link-txt {
+    font-weight: 400 !important;
+  }
+  .page .ptot .tl { font-weight: 600 !important; }
+  .page .ptot .tv { font-weight: 600 !important; }
+  .page .ptot tr.gr .tl, .page .ptot tr.gr .tv { font-weight: 700 !important; }
+  .page .sec { font-weight: 700 !important; }
+  .page .ptitle { font-weight: 700 !important; }
   /* Excepciones para títulos que usan Montserrat */
   .page .ptitle, .page .sec, .page .oferta-especial-banner,
   .page .exec-name, .page .ptot tr.gr.oferta .tl,
@@ -2562,7 +2573,6 @@ function upd() {
           const descPart = textOnly ? `<div class="prod-cell-desc">${textOnly}</div>` : "";
           const linkPart = urls.map(u=>`<div class="prod-cell-link">
             <span class="prod-link-txt">Ver información del producto en nuestra página web — <a href="${u}" target="_blank">AQUÍ</a></span>
-            <span class="prod-cell-url">${u}</span>
           </div>`).join("");
           return descPart + linkPart;
         })()}
@@ -3395,7 +3405,8 @@ async function registrarCotizacion() {
   btn.textContent = "Enviando...";
 
   try {
-    await fetch(SHEET_URL, {
+    // Fire-and-forget: no-cors no devuelve respuesta, no hay que esperar
+    fetch(SHEET_URL, {
       method: "POST",
       mode:   "no-cors",
       headers: {"Content-Type":"application/json"},
@@ -3420,12 +3431,12 @@ async function registrarCotizacion() {
     localStorage.setItem("oc_reg_" + num, new Date().toISOString());
     btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> <span>¡Cotización registrada!</span>`;
     btn.classList.add("enviado");
+    // Cargar siguiente número en paralelo, sin bloquear
+    fetchSiguienteNumero();
     setTimeout(() => {
       btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg> <span>Registrar cotización</span>`;
       btn.classList.remove("enviado");
       btn.disabled = false;
-      // Forzar nuevo número para la próxima cotización
-      fetchSiguienteNumero();
     }, 3000);
   } catch(err) {
     alert("❌ Error al registrar. Revisa tu conexión a internet.");

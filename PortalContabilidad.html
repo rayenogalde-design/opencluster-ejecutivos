@@ -299,9 +299,14 @@ function renderResult(c){
           <button class="confirm-btn" id="confirmBtn" disabled onclick="confirmarPago('${numSafe}','${instSafe}','${execSafe}','${netoSafe}')" style="flex:1;">Confirmar Pago</button>
           <button class="confirm-btn" id="discrepBtn" onclick="toggleDiscrepancia()" style="flex:0 0 auto;background:linear-gradient(135deg,var(--orange),#e67e22);padding:14px 18px;">Reportar Discrepancia</button>
         </div>
-        <div id="discrepForm" style="display:none;margin-top:10px;">
-          <textarea id="discrepMsg" rows="3" placeholder="Describe qué no coincide (ej: monto diferente, cliente distinto...)" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:'Open Sans',sans-serif;font-size:13px;resize:vertical;"></textarea>
-          <button class="confirm-btn" onclick="enviarDiscrepancia('${numSafe}','${instSafe}','${execSafe}','${netoSafe}')" style="margin-top:6px;background:linear-gradient(135deg,var(--orange),#e67e22);">Enviar Reporte</button>
+        <div id="discrepForm" style="display:none;margin-top:12px;background:#fff8f0;border:1.5px solid rgba(255,126,0,.2);border-radius:10px;padding:14px;">
+          <div style="font-family:'Montserrat',sans-serif;font-size:11px;font-weight:700;color:var(--orange);margin-bottom:10px;">Selecciona qué no coincide e ingresa el dato correcto:</div>
+          <div id="discrepFields"></div>
+          <div style="margin-top:8px;">
+            <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:3px;">Comentario adicional (opcional)</label>
+            <textarea id="discrepMsg" rows="2" placeholder="Detalle extra si es necesario..." style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'Open Sans',sans-serif;font-size:12px;resize:vertical;"></textarea>
+          </div>
+          <button class="confirm-btn" onclick="enviarDiscrepancia('${numSafe}','${instSafe}','${execSafe}','${netoSafe}')" style="margin-top:8px;background:linear-gradient(135deg,var(--orange),#e67e22);">Enviar Reporte de Discrepancia</button>
         </div>
       </div>
     `}
@@ -309,9 +314,43 @@ function renderResult(c){
   card.classList.add('show');
 }
 
+const DISCREP_CAMPOS=[
+  {key:'institucion',label:'Institución / Cliente'},
+  {key:'monto_neto',label:'Monto Neto'},
+  {key:'monto_total',label:'Monto Total c/IVA'},
+  {key:'productos',label:'Productos'},
+  {key:'cantidad',label:'Cantidad de productos'},
+  {key:'transporte',label:'Transporte / Envío'},
+  {key:'ejecutivo',label:'Ejecutivo asignado'},
+  {key:'fecha',label:'Fecha de la cotización'},
+  {key:'otro',label:'Otro'},
+];
+
 function toggleDiscrepancia(){
   const f=document.getElementById('discrepForm');
-  f.style.display=f.style.display==='none'?'block':'none';
+  const isHidden=f.style.display==='none';
+  f.style.display=isHidden?'block':'none';
+  if(isHidden) buildDiscrepFields();
+}
+
+function buildDiscrepFields(){
+  const el=document.getElementById('discrepFields');
+  el.innerHTML=DISCREP_CAMPOS.map(c=>`
+    <div style="margin-bottom:6px;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;">
+        <input type="checkbox" id="dc-${c.key}" onchange="toggleDiscrepInput('${c.key}')" style="width:16px;height:16px;accent-color:var(--orange);">
+        <span style="font-size:12px;font-weight:600;color:var(--text);min-width:140px;">${c.label}</span>
+      </label>
+      <input type="text" id="di-${c.key}" placeholder="Ingresa el valor correcto" style="display:none;width:100%;padding:7px 10px;border:1.5px solid rgba(255,126,0,.3);border-radius:6px;font-size:12px;margin-top:4px;margin-left:24px;width:calc(100% - 24px);font-family:'Open Sans',sans-serif;">
+    </div>
+  `).join('');
+}
+
+function toggleDiscrepInput(key){
+  const cb=document.getElementById('dc-'+key);
+  const inp=document.getElementById('di-'+key);
+  inp.style.display=cb.checked?'block':'none';
+  if(cb.checked)inp.focus();
 }
 
 /* ========== CONFIRMAR PAGO ========== */
@@ -336,12 +375,22 @@ async function confirmarPago(num,inst,exec,neto){
 
 /* ========== REPORTAR DISCREPANCIA ========== */
 async function enviarDiscrepancia(num,inst,exec,neto){
+  // Recoger campos marcados
+  const detalles=[];
+  DISCREP_CAMPOS.forEach(c=>{
+    const cb=document.getElementById('dc-'+c.key);
+    const inp=document.getElementById('di-'+c.key);
+    if(cb&&cb.checked){
+      detalles.push(c.label+': '+(inp.value.trim()||'(sin valor)'));
+    }
+  });
   const msg=document.getElementById('discrepMsg').value.trim();
-  if(!msg){toast('Describe qué no coincide','warn');return;}
+  if(!detalles.length&&!msg){toast('Selecciona al menos un campo que no coincide','warn');return;}
+  const detalle=detalles.join(' | ')+(msg?' | Nota: '+msg:'');
   try{
     await apiPost({
       accion:'confirmar_pago',num,institucion:inst,ejecutivo:exec,neto,
-      confirmado_por:USUARIO+' (DISCREPANCIA: '+msg+')'
+      confirmado_por:USUARIO+' (DISCREPANCIA: '+detalle+')'
     });
     const entry={num,inst,exec,neto,fecha:new Date().toLocaleDateString('es-CL'),estado:'Discrepancia',tipo:'discrepancia'};
     historial.unshift(entry);

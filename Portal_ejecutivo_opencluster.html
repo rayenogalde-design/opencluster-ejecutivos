@@ -1004,14 +1004,23 @@ async function iniciarApp(modoDemo=false){
   // Construir chips de ejecutivos
   buildExecChips();
   if(!modoDemo){
-    await cargarTodos();
+    // Cache-first: mostrar datos guardados al instante
+    restaurarCache();
+    checkAlertas();
+    renderResumen();
+    checkRegiones();
+    // Cargar datos frescos en segundo plano
+    cargarTodos().then(()=>{
+      checkAlertas();
+      renderResumen();
+      checkVentasNuevas();
+    });
   } else {
     toast('⚠ Apps Script no configurado — modo demo','warn');
+    checkAlertas();
+    renderResumen();
+    checkRegiones();
   }
-  checkAlertas();
-  renderResumen();
-  checkRegiones();
-  checkVentasNuevas();
 }
 
 async function recargarDatos(){
@@ -1023,6 +1032,30 @@ async function recargarDatos(){
   const tabActiva=document.querySelector('.tab.on')?.dataset?.tab||'resumen';
   renderTab(tabActiva);
   if(btn){btn.textContent='↻ Actualizar';btn.disabled=false;}
+}
+
+function guardarCache(){
+  try{
+    const data={cots:COTS,segs:SEGS,reuniones:REUNIONES,cotsEquipo:COTS_EQUIPO,reusEquipo:REUS_EQUIPO,ts:Date.now()};
+    localStorage.setItem('oc_cache_'+USUARIO,JSON.stringify(data));
+  }catch(e){}
+}
+
+function restaurarCache(){
+  try{
+    const raw=localStorage.getItem('oc_cache_'+USUARIO);
+    if(!raw)return;
+    const data=JSON.parse(raw);
+    // Solo usar cache de menos de 30 minutos
+    if(Date.now()-data.ts>30*60*1000)return;
+    if(data.cots&&data.cots.length){COTS=data.cots;COTS.forEach(c=>{if(!c.segs)c.segs=[];});}
+    if(data.segs)SEGS=data.segs;
+    if(data.reuniones)REUNIONES=data.reuniones;
+    if(data.cotsEquipo)COTS_EQUIPO=data.cotsEquipo;
+    if(data.reusEquipo)REUS_EQUIPO=data.reusEquipo;
+    if(COTS.length)asociarSegs();
+    toast('Datos cargados (cache)','jade');
+  }catch(e){}
 }
 
 async function cargarTodos(){
@@ -1039,7 +1072,8 @@ async function cargarTodos(){
         REUNIONES=procesarTodasReuniones(res.reuniones||[]);
         REUS_EQUIPO=REUNIONES;
       }
-      toast('✓ Datos cargados','jade');
+      toast('✓ Datos actualizados','jade');
+      guardarCache();
     }catch(ex){toast('Error cargando datos: '+ex.message,'warn');}
   } else {
     // Ejecutivo: dos llamadas independientes para mayor resiliencia
@@ -1059,9 +1093,10 @@ async function cargarTodos(){
         REUS_EQUIPO=procesarTodasReuniones(resR.reuniones||[]);
       }
       if(resR.cotizaciones) COTS_EQUIPO=normalizarExecs(procesarCots(resR.cotizaciones));
-      toast('✓ Datos cargados','jade');
+      toast('✓ Datos actualizados','jade');
     }catch(ex){toast('Error cargando datos del equipo: '+ex.message,'warn');}
   }
+  guardarCache();
 }
 
 function procesarCots(rows){

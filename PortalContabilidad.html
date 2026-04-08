@@ -163,6 +163,31 @@ body{font-family:'Open Sans',sans-serif;background:var(--bg);color:var(--text);m
       <div class="history-title">Pagos confirmados hoy</div>
       <div id="historyList"></div>
     </div>
+
+    <!-- Config -->
+    <div style="margin-top:28px;border-top:1px solid var(--border);padding-top:20px;">
+      <div style="font-family:'Montserrat',sans-serif;font-size:13px;font-weight:700;color:var(--navy);margin-bottom:12px;">Configuración</div>
+      <div class="search-box" style="margin-bottom:0;">
+        <div class="f2" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div class="fld"><label>Nueva contraseña</label><input type="password" class="login-fld" id="cfgNewPass" placeholder="Min. 6 caracteres" style="margin-bottom:0;"></div>
+          <div class="fld"><label>Confirmar contraseña</label><input type="password" class="login-fld" id="cfgConfPass" placeholder="Repetir" style="margin-bottom:0;"></div>
+        </div>
+        <div class="fld" style="margin-top:8px;"><label>Email de respaldo</label><input type="email" class="login-fld" id="cfgEmail" placeholder="correo@ejemplo.com" style="margin-bottom:0;"></div>
+        <button class="search-btn" onclick="cambiarPassContab()" style="margin-top:10px;width:100%;">Guardar cambios</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PRIMER LOGIN MODAL -->
+<div class="celeb-overlay hidden" id="primerLoginModal" style="z-index:9998;">
+  <div style="background:#fff;border-radius:16px;padding:32px 28px;width:420px;max-width:92vw;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+    <div style="font-family:'Montserrat',sans-serif;font-size:18px;font-weight:800;color:var(--navy);margin-bottom:6px;">Bienvenida al sistema</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:20px;">Por seguridad, crea tu contraseña personal y registra un email de respaldo.</div>
+    <div class="fld"><label style="text-align:left;display:block;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Nueva contraseña</label><input type="password" class="login-fld" id="plNewPass" placeholder="Mínimo 6 caracteres"></div>
+    <div class="fld"><label style="text-align:left;display:block;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Confirmar contraseña</label><input type="password" class="login-fld" id="plConfPass" placeholder="Repetir"></div>
+    <div class="fld"><label style="text-align:left;display:block;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">Email de respaldo</label><input type="email" class="login-fld" id="plEmail" placeholder="correo@ejemplo.com"></div>
+    <button class="login-btn" onclick="completarPrimerLogin()">Guardar y continuar</button>
   </div>
 </div>
 
@@ -170,28 +195,64 @@ body{font-family:'Open Sans',sans-serif;background:var(--bg);color:var(--text);m
 
 <script>
 const API_URL='https://script.google.com/macros/s/AKfycbym8DHl0-eaBH151TDTPb9MMM7DG-qQQMJrZ1t8uTHlAB9kT8nwyybbbVQUu0m95GfT/exec';
-const CONTAB_PASS='CONTAB.OCT2026';
 
 let USUARIO='';
+let PASS_ACT='';
 let COTS_CACHE=[];
 let historial=JSON.parse(localStorage.getItem('oc_contab_hist')||'[]');
 let cotActual=null;
 
 /* ========== LOGIN ========== */
-function doLogin(){
+async function doLogin(){
   const name=document.getElementById('loginName').value.trim();
   const pass=document.getElementById('loginPass').value.trim();
   const err=document.getElementById('loginError');
   if(!name||!pass){err.textContent='Ingresa nombre y contraseña';err.style.display='block';return;}
-  if(pass!==CONTAB_PASS){err.textContent='Contraseña incorrecta';err.style.display='block';return;}
-  USUARIO=name;
-  localStorage.setItem('oc_contab_user',name);
-  localStorage.setItem('oc_contab_pass',pass);
-  document.getElementById('loginScreen').classList.add('hidden');
-  document.getElementById('app').classList.add('on');
-  document.getElementById('appUser').textContent=name;
-  renderHistory();
-  cargarCotizaciones();
+  err.style.display='none';
+  try{
+    const r=await fetch(API_URL+'?accion=login_ejecutivo&ejecutivo='+encodeURIComponent(name)+'&password='+encodeURIComponent(pass),{mode:'cors',signal:AbortSignal.timeout(10000)});
+    const res=await r.json();
+    if(!res.ok){err.textContent=res.error||'Contraseña incorrecta';err.style.display='block';return;}
+    USUARIO=name;PASS_ACT=pass;
+    localStorage.setItem('oc_contab_user',name);
+    localStorage.setItem('oc_contab_pass',pass);
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('app').classList.add('on');
+    document.getElementById('appUser').textContent=name;
+    renderHistory();
+    cargarCotizaciones();
+    if(res.primerLogin)document.getElementById('primerLoginModal').classList.remove('hidden');
+  }catch(ex){err.textContent='Error de conexión. Intenta de nuevo.';err.style.display='block';}
+}
+
+async function completarPrimerLogin(){
+  const np=document.getElementById('plNewPass').value;
+  const cp=document.getElementById('plConfPass').value;
+  const em=document.getElementById('plEmail').value.trim();
+  if(np.length<6){toast('La contraseña debe tener al menos 6 caracteres','warn');return;}
+  if(np!==cp){toast('Las contraseñas no coinciden','warn');return;}
+  try{
+    await apiPost({accion:'cambiar_password',ejecutivo:USUARIO,nueva_password:np,email:em});
+    PASS_ACT=np;
+    localStorage.setItem('oc_contab_pass',np);
+    document.getElementById('primerLoginModal').classList.add('hidden');
+    toast('Contraseña actualizada','jade');
+  }catch(ex){toast('Error al guardar','warn');}
+}
+
+async function cambiarPassContab(){
+  const np=document.getElementById('cfgNewPass').value;
+  const cp=document.getElementById('cfgConfPass').value;
+  const em=document.getElementById('cfgEmail').value.trim();
+  if(np&&np.length<6){toast('La contraseña debe tener al menos 6 caracteres','warn');return;}
+  if(np&&np!==cp){toast('Las contraseñas no coinciden','warn');return;}
+  try{
+    await apiPost({accion:'cambiar_password',ejecutivo:USUARIO,nueva_password:np||PASS_ACT,email:em});
+    if(np){PASS_ACT=np;localStorage.setItem('oc_contab_pass',np);}
+    document.getElementById('cfgNewPass').value='';
+    document.getElementById('cfgConfPass').value='';
+    toast('Cambios guardados','jade');
+  }catch(ex){toast('Error al guardar','warn');}
 }
 
 function doLogout(){
@@ -199,14 +260,14 @@ function doLogout(){
   localStorage.removeItem('oc_contab_pass');
   document.getElementById('app').classList.remove('on');
   document.getElementById('loginScreen').classList.remove('hidden');
-  USUARIO='';COTS_CACHE=[];
+  USUARIO='';PASS_ACT='';COTS_CACHE=[];
 }
 
 // Auto-login
 (function(){
   const u=localStorage.getItem('oc_contab_user');
   const p=localStorage.getItem('oc_contab_pass');
-  if(u&&p===CONTAB_PASS){
+  if(u&&p){
     document.getElementById('loginName').value=u;
     document.getElementById('loginPass').value=p;
     doLogin();

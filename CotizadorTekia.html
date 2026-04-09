@@ -125,11 +125,39 @@ body{font-family:'Open Sans',sans-serif;background:var(--bg);color:var(--text);m
   .cot{box-shadow:none!important;width:100%!important;margin:0!important;min-height:0!important;}
   @page{size:letter;margin:0;}
 }
+/* Login overlay */
+.tk-login{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:linear-gradient(170deg,#0A0F1E 0%,#023e8a 40%,#00b4d8 100%);}
+.tk-login.hidden{display:none;}
+.tk-login-box{background:#fff;border-radius:16px;padding:40px 36px;width:380px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+.tk-login-box h2{font-family:'Montserrat',sans-serif;font-size:18px;font-weight:800;color:#023e8a;margin-bottom:4px;}
+.tk-login-box p{font-size:12px;color:#64748b;margin-bottom:20px;}
+.tk-login-box input,.tk-login-box select{width:100%;padding:12px 14px;border:2px solid #d0d8e8;border-radius:10px;font-family:'Open Sans',sans-serif;font-size:14px;color:#1a2535;outline:none;margin-bottom:12px;}
+.tk-login-box input:focus,.tk-login-box select:focus{border-color:#00b4d8;}
+.tk-login-box button{width:100%;padding:13px;border:none;border-radius:10px;background:linear-gradient(135deg,#023e8a,#0096c7);color:#fff;font-family:'Montserrat',sans-serif;font-size:14px;font-weight:700;cursor:pointer;}
+.tk-login-box button:hover{background:linear-gradient(135deg,#0096c7,#00b4d8);}
+.tk-login-err{font-size:11px;color:#c0392b;margin-top:8px;display:none;}
 </style>
 </head>
 <body>
 
-<div class="editor">
+<!-- LOGIN -->
+<div class="tk-login" id="tkLogin">
+  <div class="tk-login-box">
+    <h2>Cotizador Tekia</h2>
+    <p>Ingresa con tus credenciales</p>
+    <select id="tkUser">
+      <option value="">-- Seleccionar --</option>
+      <option value="Julio Rios">Julio Rios</option>
+      <option value="Said Aviles">Said Aviles</option>
+      <option value="Maximiliano Astudillo">Maximiliano Astudillo</option>
+    </select>
+    <input type="password" id="tkPass" placeholder="Contraseña">
+    <button onclick="tkDoLogin()">Ingresar</button>
+    <div class="tk-login-err" id="tkErr"></div>
+  </div>
+</div>
+
+<div class="editor" id="tkApp" style="display:none;">
   <!-- SIDEBAR -->
   <div class="sidebar">
     <div class="sb-header">
@@ -255,6 +283,59 @@ body{font-family:'Open Sans',sans-serif;background:var(--bg);color:var(--text);m
 </div>
 
 <script>
+/* ========== LOGIN TEKIA ========== */
+const TK_API='https://script.google.com/macros/s/AKfycbym8DHl0-eaBH151TDTPb9MMM7DG-qQQMJrZ1t8uTHlAB9kT8nwyybbbVQUu0m95GfT/exec';
+const TK_PASS_INICIAL='TEKIA.OCT2026';
+
+async function tkDoLogin(){
+  const name=document.getElementById('tkUser').value;
+  const pass=document.getElementById('tkPass').value;
+  const err=document.getElementById('tkErr');
+  if(!name||!pass){err.textContent='Selecciona usuario e ingresa contraseña';err.style.display='block';return;}
+  err.style.display='none';
+  // Check cached login
+  const cached=localStorage.getItem('oc_tk_user');
+  const cachedP=localStorage.getItem('oc_tk_pass');
+  if(cached===name&&cachedP===pass&&localStorage.getItem('oc_tk_verified')){
+    tkEnter(name);return;
+  }
+  try{
+    const r=await fetch(TK_API+'?accion=login_ejecutivo&ejecutivo='+encodeURIComponent(name)+'&password='+encodeURIComponent(pass),{mode:'cors',signal:AbortSignal.timeout(12000)});
+    const res=await r.json();
+    if(!res.ok){err.textContent=res.error||'Contraseña incorrecta';err.style.display='block';return;}
+    localStorage.setItem('oc_tk_user',name);
+    localStorage.setItem('oc_tk_pass',pass);
+    localStorage.setItem('oc_tk_verified','1');
+    tkEnter(name);
+    if(res.primerLogin)alert('Bienvenido/a '+name+'.\n\nPor seguridad, cambia tu contraseña en el Portal del Ejecutivo.');
+  }catch(ex){err.textContent='Error de conexion. Intenta de nuevo.';err.style.display='block';}
+}
+
+function tkEnter(name){
+  document.getElementById('tkLogin').classList.add('hidden');
+  document.getElementById('tkApp').style.display='flex';
+  // Pre-fill ejecutivo si es Maxi
+  if(name==='Maximiliano Astudillo'){
+    document.getElementById('execSelect').value='maxi';
+  } else {
+    document.getElementById('execSelect').value='otro';
+    document.getElementById('execCustom').style.display='block';
+    document.getElementById('execNombre').value=name.toUpperCase();
+  }
+  renderCot();
+}
+
+// Auto-login
+(function(){
+  const u=localStorage.getItem('oc_tk_user');
+  const p=localStorage.getItem('oc_tk_pass');
+  if(u&&p&&localStorage.getItem('oc_tk_verified')){
+    document.getElementById('tkUser').value=u;
+    document.getElementById('tkPass').value=p;
+    tkEnter(u);
+  }
+})();
+
 /* ========== STATE ========== */
 let products=[{nombre:'',precio:0,cantidad:1}];
 let svcTipo='Instalación, transporte y capacitación';

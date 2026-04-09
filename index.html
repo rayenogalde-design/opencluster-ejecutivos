@@ -110,6 +110,19 @@
   .update-dismiss{width:100%;padding:12px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--navy),#0a2e8a);color:#fff;font-family:'Montserrat',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:.2s;margin-top:4px;}
   .update-dismiss:hover{background:linear-gradient(135deg,#0a2e8a,var(--sky));}
 
+  /* Central login */
+  .central-login{position:fixed;inset:0;z-index:9998;display:flex;align-items:center;justify-content:center;background:linear-gradient(170deg,#0A0F1E 0%,var(--navy) 35%,#0a2e8a 60%,var(--sky) 100%);}
+  .central-login.hidden{display:none;}
+  .central-login-box{background:#fff;border-radius:16px;padding:40px 36px;width:380px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+  .central-login-box h2{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--navy);margin-bottom:4px;}
+  .central-login-box p{font-size:12px;color:var(--subtle);margin-bottom:20px;}
+  .central-login-box select,.central-login-box input{width:100%;padding:12px 14px;border:2px solid #d0d8e8;border-radius:10px;font-family:'Open Sans',sans-serif;font-size:14px;color:#1a2535;outline:none;margin-bottom:12px;}
+  .central-login-box select:focus,.central-login-box input:focus{border-color:var(--sky);}
+  .central-login-box button{width:100%;padding:13px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--navy),#0a2e8a);color:#fff;font-family:'Montserrat',sans-serif;font-size:14px;font-weight:700;cursor:pointer;}
+  .central-login-box .cl-err{font-size:11px;color:#c0392b;margin-top:6px;display:none;}
+  .cl-logout{position:fixed;top:16px;right:16px;z-index:100;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);padding:6px 14px;border-radius:8px;font-size:10px;font-weight:600;cursor:pointer;font-family:'Open Sans',sans-serif;}
+  .cl-logout:hover{background:rgba(255,255,255,.25);color:#fff;}
+
   @media(max-width:480px){
     .header{padding:40px 16px 0;}
     .title-section h1{font-size:30px;}
@@ -123,7 +136,32 @@
 </head>
 <body>
 
-<div class="page">
+<!-- LOGIN CENTRAL -->
+<div class="central-login" id="centralLogin">
+  <div class="central-login-box">
+    <h2>Central de Ejecutivos</h2>
+    <p>Ingresa con tus credenciales</p>
+    <select id="clUser">
+      <option value="">-- Seleccionar --</option>
+      <option value="Rayen Ogalde">Rayen Ogalde</option>
+      <option value="German Alvarado">German Alvarado</option>
+      <option value="William Marin">William Marin</option>
+      <option value="Roberto Caceres">Roberto Caceres</option>
+      <option value="Ximena Romero">Ximena Romero</option>
+      <option value="Maximiliano Astudillo">Maximiliano Astudillo</option>
+      <option value="Mario Ogalde">Mario Ogalde</option>
+      <option value="Julio Rios">Julio Rios</option>
+      <option value="Said Aviles">Said Aviles</option>
+      <option value="Viarly Tabilo">Viarly Tabilo</option>
+    </select>
+    <input type="password" id="clPass" placeholder="Contraseña" onkeydown="if(event.key==='Enter')clDoLogin()">
+    <button onclick="clDoLogin()">Ingresar</button>
+    <div class="cl-err" id="clErr"></div>
+  </div>
+</div>
+
+<div class="page" id="centralPage" style="display:none;">
+<button class="cl-logout" onclick="clLogout()">Cerrar sesion</button>
 
   <div class="hero-bg"></div>
 
@@ -144,7 +182,7 @@
 
   <div class="cards">
 
-    <a class="card" href="Portal_ejecutivo_opencluster.html">
+    <a class="card" href="Portal_ejecutivo_opencluster.html" id="cardPortal">
       <div class="card-stripe stripe-navy"></div>
       <div class="card-body">
         <div class="card-icon icon-portal">
@@ -168,7 +206,7 @@
       </div>
     </a>
 
-    <a class="card" href="CotizadorOpenCluster.html">
+    <a class="card" href="CotizadorOpenCluster.html" id="cardCotizadorOC">
       <div class="card-stripe stripe-gold"></div>
       <div class="card-body">
         <div class="card-icon icon-cotiz">
@@ -193,7 +231,7 @@
       </div>
     </a>
 
-    <a class="card" href="CotizadorTekia.html">
+    <a class="card" href="CotizadorTekia.html" id="cardTekia">
       <div class="card-stripe" style="background:linear-gradient(180deg,#00b4d8,#0096c7);"></div>
       <div class="card-body">
         <div class="card-icon" style="background:linear-gradient(135deg,#e0f7ff,#b3ecff);">
@@ -208,6 +246,28 @@
           <div class="card-label">Cotizaciones Tekia</div>
           <div class="card-title">Cotizador Tekia</div>
           <div class="card-desc">Genera cotizaciones con el formato y diseño de Tekia Limitada</div>
+        </div>
+        <div class="card-arrow">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 18l6-6-6-6"/>
+          </svg>
+        </div>
+      </div>
+    </a>
+
+    <a class="card" href="PortalContabilidad.html" id="cardContabilidad" style="display:none;">
+      <div class="card-stripe" style="background:linear-gradient(180deg,#27ae60,#1e8449);"></div>
+      <div class="card-body">
+        <div class="card-icon" style="background:linear-gradient(135deg,#e8f8f0,#c6f0d9);">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#1e8449" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="5" width="20" height="14" rx="2"/>
+            <line x1="2" y1="10" x2="22" y2="10"/>
+          </svg>
+        </div>
+        <div class="card-text">
+          <div class="card-label">Informe de compras</div>
+          <div class="card-title">Contabilidad</div>
+          <div class="card-desc">Confirmacion de pagos recibidos y seguimiento de ventas</div>
         </div>
         <div class="card-arrow">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -241,7 +301,7 @@
       </div>
     </a>
 
-    <a class="card" href="INSTRUCCIONES_EJECUTIVOS.html">
+    <a class="card" href="INSTRUCCIONES_EJECUTIVOS.html" id="cardInstrucciones">
       <div class="card-stripe stripe-sage"></div>
       <div class="card-body">
         <div class="card-icon icon-instr">
@@ -291,27 +351,92 @@
 </div>
 
 <script>
-// ── Update notification system ──
-// Cambiar UPDATE_VERSION cada vez que se agregue algo importante (tabs, cards)
-var UPDATE_VERSION = '2026-04-09-cotizador';
+// ── Login Central ──
+var CL_API='https://script.google.com/macros/s/AKfycbym8DHl0-eaBH151TDTPb9MMM7DG-qQQMJrZ1t8uTHlAB9kT8nwyybbbVQUu0m95GfT/exec';
 
-(function(){
-  if(localStorage.getItem('oc_update_seen') === UPDATE_VERSION){
-    document.getElementById('updateModal').classList.add('hidden');
+var ROLES={
+  'Rayen Ogalde':['cardPortal','cardCotizadorOC','cardTekia','cardContabilidad','cardDashboard','cardInstrucciones'],
+  'Mario Ogalde':['cardPortal','cardCotizadorOC','cardTekia','cardInstrucciones'],
+  'German Alvarado':['cardPortal','cardCotizadorOC','cardTekia','cardInstrucciones'],
+  'William Marin':['cardPortal','cardCotizadorOC','cardTekia','cardInstrucciones'],
+  'Roberto Caceres':['cardPortal','cardCotizadorOC','cardTekia','cardInstrucciones'],
+  'Ximena Romero':['cardPortal','cardCotizadorOC','cardTekia','cardInstrucciones'],
+  'Maximiliano Astudillo':['cardPortal','cardCotizadorOC','cardTekia','cardInstrucciones'],
+  'Julio Rios':['cardTekia'],
+  'Said Aviles':['cardTekia'],
+  'Viarly Tabilo':['cardContabilidad'],
+};
+
+async function clDoLogin(){
+  var name=document.getElementById('clUser').value;
+  var pass=document.getElementById('clPass').value;
+  var err=document.getElementById('clErr');
+  if(!name||!pass){err.textContent='Selecciona usuario e ingresa contraseña';err.style.display='block';return;}
+  err.style.display='none';
+  // Cache check
+  if(localStorage.getItem('oc_central_user')===name&&localStorage.getItem('oc_central_pass')===pass&&localStorage.getItem('oc_central_ok')){
+    clEnter(name);return;
   }
-})();
+  try{
+    var r=await fetch(CL_API+'?accion=login_ejecutivo&ejecutivo='+encodeURIComponent(name)+'&password='+encodeURIComponent(pass),{mode:'cors',signal:AbortSignal.timeout(12000)});
+    var res=await r.json();
+    if(!res.ok){err.textContent=res.error||'Contraseña incorrecta';err.style.display='block';return;}
+    localStorage.setItem('oc_central_user',name);
+    localStorage.setItem('oc_central_pass',pass);
+    localStorage.setItem('oc_central_ok','1');
+    // Sync con portal
+    localStorage.setItem('oc_portal_user',name);
+    localStorage.setItem('oc_portal_pass',pass);
+    clEnter(name);
+  }catch(ex){err.textContent='Error de conexion. Intenta de nuevo.';err.style.display='block';}
+}
+
+function clEnter(name){
+  document.getElementById('centralLogin').classList.add('hidden');
+  document.getElementById('centralPage').style.display='';
+  // Ocultar todas las cards
+  ['cardPortal','cardCotizadorOC','cardTekia','cardContabilidad','cardDashboard','cardInstrucciones'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el)el.style.display='none';
+  });
+  // Mostrar solo las que corresponden al rol
+  var cards=ROLES[name]||['cardPortal','cardCotizadorOC','cardTekia','cardInstrucciones'];
+  cards.forEach(function(id){
+    var el=document.getElementById(id);
+    if(el)el.style.display='';
+  });
+  // Check novedades (solo para ejecutivos que ven el cotizador OC)
+  if(cards.indexOf('cardCotizadorOC')>=0){
+    if(localStorage.getItem('oc_update_seen')!==UPDATE_VERSION){
+      document.getElementById('updateModal').classList.remove('hidden');
+    }
+  }
+}
+
+function clLogout(){
+  localStorage.removeItem('oc_central_user');
+  localStorage.removeItem('oc_central_pass');
+  localStorage.removeItem('oc_central_ok');
+  document.getElementById('centralLogin').classList.remove('hidden');
+  document.getElementById('centralPage').style.display='none';
+}
+
+// ── Update notification system ──
+var UPDATE_VERSION = '2026-04-09-cotizador';
 
 function dismissUpdate(){
   localStorage.setItem('oc_update_seen', UPDATE_VERSION);
   document.getElementById('updateModal').classList.add('hidden');
 }
 
-// Mostrar Dashboard solo para Rayen
+// Auto-login
 (function(){
-  var user=localStorage.getItem('oc_portal_user');
-  if(user&&user.toLowerCase().indexOf('rayen')>=0){
-    var card=document.getElementById('cardDashboard');
-    if(card)card.style.display='';
+  var u=localStorage.getItem('oc_central_user');
+  var p=localStorage.getItem('oc_central_pass');
+  if(u&&p&&localStorage.getItem('oc_central_ok')){
+    document.getElementById('clUser').value=u;
+    document.getElementById('clPass').value=p;
+    clEnter(u);
   }
 })();
 </script>

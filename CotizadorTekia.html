@@ -208,6 +208,39 @@ body{font-family:'Open Sans',sans-serif;background:var(--bg);color:var(--text);m
       </div>
     </div>
 
+    <!-- Condiciones de venta -->
+    <div class="sb-section">
+      <div class="sb-title">Condiciones de Venta</div>
+      <div id="condDefault" style="font-size:11px;color:var(--muted);line-height:1.8;margin-bottom:8px;">
+        Validez: 60 días · Pago: Transferencia · 50/50 · Plazo: A convenir · Garantía: 6 meses
+      </div>
+      <button class="btn-add" onclick="toggleCondiciones()" id="btnCondiciones" style="margin-bottom:8px;">Personalizar condiciones</button>
+      <div id="condCustom" style="display:none;">
+        <div class="fld"><label>Validez de cotización</label><input type="text" id="condValidez" value="60 días corridos" oninput="renderCot()"></div>
+        <div class="fld"><label>Método de pago</label><input type="text" id="condMetodo" value="Transferencia electrónica" oninput="renderCot()"></div>
+        <div class="fld"><label>Condiciones de pago</label><input type="text" id="condPago" value="50% contra OC, 50% contra entrega" oninput="renderCot()"></div>
+        <div class="fld"><label>Plazo de entrega</label><input type="text" id="condPlazo" value="A convenir" oninput="renderCot()"></div>
+        <div class="fld"><label>Garantía legal</label><input type="text" id="condGarantia" value="6 meses" oninput="renderCot()"></div>
+      </div>
+    </div>
+
+    <!-- Datos del ejecutivo -->
+    <div class="sb-section">
+      <div class="sb-title">Datos de Contacto</div>
+      <div class="fld">
+        <label>Ejecutivo</label>
+        <select id="execSelect" onchange="cambiarEjecutivo()" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;">
+          <option value="maxi">Maximiliano Astudillo Mejias</option>
+          <option value="otro">Otro ejecutivo...</option>
+        </select>
+      </div>
+      <div id="execCustom" style="display:none;">
+        <div class="fld"><label>Nombre completo</label><input type="text" id="execNombre" placeholder="Nombre del ejecutivo" oninput="renderCot()"></div>
+        <div class="fld"><label>Número de contacto</label><input type="text" id="execTel" placeholder="+569..." oninput="renderCot()"></div>
+        <div class="fld"><label>Correo electrónico</label><input type="text" id="execEmail" placeholder="correo@..." oninput="renderCot()"></div>
+      </div>
+    </div>
+
     <!-- Actions -->
     <div class="sb-section">
       <button class="btn-pdf" onclick="window.print()">GUARDAR COMO PDF</button>
@@ -225,6 +258,57 @@ body{font-family:'Open Sans',sans-serif;background:var(--bg);color:var(--text);m
 /* ========== STATE ========== */
 let products=[{nombre:'',precio:0,cantidad:1}];
 let svcTipo='Instalación, transporte y capacitación';
+let condCustomMode=false;
+const EXEC_DEFAULT={nombre:'MAXIMILIANO ASTUDILLO MEJIAS',tel:'+56940213164',email:''};
+let execData={...EXEC_DEFAULT};
+
+function toggleCondiciones(){
+  condCustomMode=!condCustomMode;
+  document.getElementById('condCustom').style.display=condCustomMode?'block':'none';
+  document.getElementById('condDefault').style.display=condCustomMode?'none':'';
+  document.getElementById('btnCondiciones').textContent=condCustomMode?'Usar valores por defecto':'Personalizar condiciones';
+  renderCot();
+}
+
+function cambiarEjecutivo(){
+  const sel=document.getElementById('execSelect').value;
+  if(sel==='maxi'){
+    execData={...EXEC_DEFAULT};
+    document.getElementById('execCustom').style.display='none';
+  } else {
+    document.getElementById('execCustom').style.display='block';
+    const n=document.getElementById('execNombre').value;
+    if(!n)execData={nombre:'',tel:'',email:''};
+  }
+  renderCot();
+}
+
+function getExecData(){
+  const sel=document.getElementById('execSelect').value;
+  if(sel==='maxi')return EXEC_DEFAULT;
+  return{
+    nombre:document.getElementById('execNombre').value.trim().toUpperCase()||'',
+    tel:document.getElementById('execTel').value.trim()||'',
+    email:document.getElementById('execEmail').value.trim()||''
+  };
+}
+
+function getCondiciones(){
+  if(!condCustomMode)return{
+    validez:'60 días corridos',
+    metodo:'Transferencia electrónica',
+    pago:'50% contra OC, 50% contra entrega',
+    plazo:'A convenir',
+    garantia:'6 meses'
+  };
+  return{
+    validez:document.getElementById('condValidez').value||'60 días corridos',
+    metodo:document.getElementById('condMetodo').value||'Transferencia electrónica',
+    pago:document.getElementById('condPago').value||'50% contra OC, 50% contra entrega',
+    plazo:document.getElementById('condPlazo').value||'A convenir',
+    garantia:document.getElementById('condGarantia').value||'6 meses'
+  };
+}
 
 /* ========== WAVE SVG ========== */
 const WAVE_TOP=`<svg viewBox="0 0 800 100" xmlns="http://www.w3.org/2000/svg" class="wave-top" preserveAspectRatio="none">
@@ -393,17 +477,12 @@ function renderCot(){
     </div>
 
     <div class="cot-conditions">
-      Esta cotización tiene <strong>validez de 60 días corridos.</strong><br>
-      Método de pago: Transferencia electrónica.<br>
-      50% contra OC, 50% contra entrega.<br>
-      Plazo de entrega: A convenir<br>
-      Garantía legal: 6 meses
+      ${(()=>{const c=getCondiciones();return`Esta cotización tiene <strong>validez de ${esc(c.validez)}.</strong><br>Método de pago: ${esc(c.metodo)}.<br>${esc(c.pago)}.<br>Plazo de entrega: ${esc(c.plazo)}<br>Garantía legal: ${esc(c.garantia)}`;})()}
     </div>
 
     <div class="cot-bottom">
       <div class="cot-contact">
-        DATOS DE CONTACTO PARA DUDAS: MAXIMILIANO ASTUDILLO MEJIAS<br>
-        NUMERO: +56940213164
+        ${(()=>{const e=getExecData();let txt='DATOS DE CONTACTO PARA DUDAS: '+esc(e.nombre);if(e.tel)txt+='<br>NUMERO: '+esc(e.tel);if(e.email)txt+='<br>EMAIL: '+esc(e.email);return txt;})()}
       </div>
       ${WAVE_BOTTOM}
     </div>

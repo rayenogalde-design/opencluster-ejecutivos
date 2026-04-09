@@ -1196,12 +1196,25 @@ function procesarReuniones(rows){
 // ════════════════════════════════════════════
 function checkAlertas(){
   const hoyD=hoyDate();
-  // 1. Cotizaciones sin seguimiento 3+ días
+  // 1. Cotizaciones que necesitan seguimiento
+  // Regla: alerta aparece cada 3 días sin gestión HASTA que tengan 3 seguimientos
+  // Después de 3 seguimientos, no más alertas
+  // A los 40 días de la cotización, preguntar si se da por perdida
   const sinGestion=COTS.filter(c=>{
-    if(c.estado==='Ganada'||c.estado==='Perdida')return false;
+    if(c.estado==='Ganada'||c.estado==='Perdida'||c.estado==='Cancelada')return false;
+    const numSegs=c.segs?c.segs.length:0;
+    if(numSegs>=3)return false; // Ya tiene 3+ seguimientos, no más alertas
     const dias=diasSinGestion(c);
     if(dias===null)return !c.gestion; // nunca gestionada
     return dias>=3;
+  });
+  // 1b. Cotizaciones con 40+ días para preguntar estado
+  const viejas=COTS.filter(c=>{
+    if(c.estado==='Ganada'||c.estado==='Perdida'||c.estado==='Cancelada')return false;
+    const fechaCot=parseDate(c.fecha);
+    if(!fechaCot)return false;
+    const diasCot=Math.floor((hoyD-fechaCot)/(1000*60*60*24));
+    return diasCot>=40;
   });
   // 2. Reuniones con próximo contacto vencido o de hoy
   const proxVencidas=REUNIONES.filter(r=>{
@@ -1212,12 +1225,13 @@ function checkAlertas(){
     return d<=hoyD;
   });
 
-  const total=sinGestion.length+proxVencidas.length;
+  const total=sinGestion.length+proxVencidas.length+viejas.length;
   // Badges en tabs
   const badgeSeg=document.getElementById('tab-badge-seg');
   const badgeReu=document.getElementById('tab-badge-reu');
   const tabReu=document.querySelector('[data-tab=reuniones]');
-  if(sinGestion.length>0){badgeSeg.textContent=sinGestion.length;badgeSeg.style.display='inline-flex';}
+  if(sinGestion.length+viejas.length>0){badgeSeg.textContent=sinGestion.length+viejas.length;badgeSeg.style.display='inline-flex';}
+  else{badgeSeg.style.display='none';}
   if(proxVencidas.length>0){
     badgeReu.textContent=proxVencidas.length;badgeReu.style.display='inline-flex';
     if(tabReu)tabReu.classList.add('hot');
@@ -1230,6 +1244,7 @@ function checkAlertas(){
     const partes=[];
     if(proxVencidas.length>0)partes.push(`${proxVencidas.length} acción${proxVencidas.length>1?'es':''} de reunión pendiente${proxVencidas.length>1?'s':''}`);
     if(sinGestion.length>0)partes.push(`${sinGestion.length} cotización${sinGestion.length>1?'es':''} sin gestión (+3 días)`);
+    if(viejas.length>0)partes.push(`${viejas.length} cotización${viejas.length>1?'es':''} con +40 días sin cierre`);
     document.getElementById('alert-banner-text').textContent='🔔 Tienes: '+partes.join(' · ');
     document.getElementById('alert-banner').classList.add('on');
   }
@@ -1248,6 +1263,14 @@ function checkAlertas(){
     items.push(`<div class="alert-item">
       <div><div class="alert-item-label">📋 Sin gestión: ${c.inst||c.cliente||c.num}</div>
       <div class="alert-item-sub">${c.num} · ${dias!==null?dias+' días sin gestión':'nunca gestionada'}</div></div>
+    </div>`);
+  });
+  viejas.slice(0,3).forEach(c=>{
+    const fechaCot=parseDate(c.fecha);
+    const diasCot=fechaCot?Math.floor((hoyD-fechaCot)/(1000*60*60*24)):0;
+    items.push(`<div class="alert-item">
+      <div><div class="alert-item-label">⏰ +${diasCot} dias: ${c.inst||c.cliente||c.num}</div>
+      <div class="alert-item-sub">${c.num} · ¿Esta cotizacion se da por perdida o sigue activa?</div></div>
     </div>`);
   });
   if(items.length>0){
@@ -1404,8 +1427,12 @@ function renderResumen(){
   const ganHoy=cotsHoy.filter(c=>c.estado==='Ganada');
   const montoGanHoy=ganHoy.reduce((s,c)=>s+c.neto,0);
   const tasaHoy=cotsHoy.length?Math.round(ganHoy.length/cotsHoy.length*100):0;
-  const sinG=COTS.filter(c=>c.estado!=='Ganada'&&c.estado!=='Perdida'&&diasSinGestion(c)>=7||
-    (c.estado!=='Ganada'&&c.estado!=='Perdida'&&!c.gestion)).length;
+  const sinG=COTS.filter(c=>{
+    if(c.estado==='Ganada'||c.estado==='Perdida'||c.estado==='Cancelada')return false;
+    if(c.segs&&c.segs.length>=3)return false;
+    const dias=diasSinGestion(c);
+    return dias===null?!c.gestion:dias>=3;
+  }).length;
   const ctSMmes=cotsHoy.filter(esSM).length;
   const ctATmes=cotsHoy.filter(esAT).length;
   const ctFNDRmes=cotsHoy.filter(c=>c.fndr==='Sí').length;
@@ -2371,7 +2398,11 @@ function togMarioExec(id){
 // SEGUIMIENTOS (tab)
 // ════════════════════════════════════════════
 function renderSeguimientos(){
-  const sinG=COTS.filter(c=>c.estado!=='Ganada'&&c.estado!=='Perdida');
+  const sinG=COTS.filter(c=>{
+    if(c.estado==='Ganada'||c.estado==='Perdida'||c.estado==='Cancelada')return false;
+    if(c.segs&&c.segs.length>=3)return false; // 3+ seguimientos = no más alertas
+    return true;
+  });
   const lista=document.getElementById('seg-list');
   if(!sinG.length){
     lista.innerHTML='<div style="text-align:center;padding:36px;color:var(--mist);font-size:13px;background:#fff;border-radius:10px;border:1px solid var(--smoke);">🎉 ¡Excelente! Todas tus cotizaciones están gestionadas.</div>';

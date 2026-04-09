@@ -3408,31 +3408,36 @@ async function registrarCotizacion() {
   btn.textContent = "Enviando...";
 
   try {
-    // Fire-and-forget: no-cors no devuelve respuesta, no hay que esperar
+    // Determinar si es reemplazo o nuevo registro
+    const esReemplazo=_modoReemplazo;
+    const datosEnvio={
+      num, fecha, ejecutivo, cliente,
+      equipo: getEquipo(),
+      institucion: inst, ciudad, email,
+      telefono: document.getElementById("eCTel")?.value.trim() || "",
+      neto_productos: "$" + netoProductos.toLocaleString("es-CL"),
+      iva_productos:  "$" + ivaProductos.toLocaleString("es-CL"),
+      transporte: document.getElementById("chkEnvioGratuito")?.checked
+        ? "Envío gratuito"
+        : costoTransporte > 0
+          ? "$" + Math.round(costoTransporte).toLocaleString("es-CL") + " (" + transporteDesc + ")"
+          : "No incluido",
+      productos: prods, sala: salaDesc, estado: "Enviada",
+      fndr: getFndrData().esFndr ? "Sí" : "No",
+      fndr_region: getFndrData().region
+    };
+    if(esReemplazo) datosEnvio.accion='reemplazar_cotizacion';
     fetch(SHEET_URL, {
       method: "POST",
       mode:   "no-cors",
       headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({
-        num, fecha, ejecutivo, cliente,
-        equipo: getEquipo(),
-        institucion: inst, ciudad, email,
-        telefono: document.getElementById("eCTel")?.value.trim() || "",
-        neto_productos: "$" + netoProductos.toLocaleString("es-CL"),
-        iva_productos:  "$" + ivaProductos.toLocaleString("es-CL"),
-        transporte: document.getElementById("chkEnvioGratuito")?.checked
-          ? "Envío gratuito"
-          : costoTransporte > 0
-            ? "$" + Math.round(costoTransporte).toLocaleString("es-CL") + " (" + transporteDesc + ")"
-            : "No incluido",
-        productos: prods, sala: salaDesc, estado: "Enviada",
-        fndr: getFndrData().esFndr ? "Sí" : "No",
-        fndr_region: getFndrData().region
-      })
+      body: JSON.stringify(datosEnvio)
     });
     // Guardar número en localStorage para bloquear futuros duplicados
     localStorage.setItem("oc_reg_" + num, new Date().toISOString());
-    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> <span>¡Cotización registrada!</span>`;
+    _modoReemplazo=false;
+    btn.style.background="";
+    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> <span>${esReemplazo?'Cotización reemplazada!':'Cotización registrada!'}</span>`;
     btn.classList.add("enviado");
     // Cargar siguiente número en paralelo, sin bloquear
     fetchSiguienteNumero();
@@ -3683,7 +3688,8 @@ function cargarCotizacion(input) {
       const banner = document.createElement("div");
       banner.id = "bannerCotCargada";
       banner.style.cssText = "position:fixed;top:16px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,#059669,#047857);color:white;padding:14px 24px;border-radius:12px;font-family:Montserrat,sans-serif;font-size:13px;font-weight:700;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.2);text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center;";
-      banner.innerHTML = `<div>Cotización ${d.num||""} cargada correctamente<br><span style="font-size:11px;font-weight:500;opacity:.85;">${nProds} producto${nProds!==1?"s":""} · ${nConImg} foto${nConImg!==1?"s":""} recuperadas</span></div><div style="display:flex;gap:8px;"><button onclick="crearNuevaDesdeCargada()" style="padding:8px 18px;background:#fff;color:#047857;border:none;border-radius:8px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.15);">Crear Nueva Cotización</button><button onclick="this.closest('#bannerCotCargada').remove()" style="padding:8px 14px;background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:8px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:600;cursor:pointer;">Cerrar</button></div>`;
+      window._cotCargadaNum=d.num||'';
+      banner.innerHTML = `<div>Cotización ${d.num||""} cargada correctamente<br><span style="font-size:11px;font-weight:500;opacity:.85;">${nProds} producto${nProds!==1?"s":""} · ${nConImg} foto${nConImg!==1?"s":""} recuperadas</span></div><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;"><button onclick="crearNuevaDesdeCargada()" style="padding:8px 18px;background:#fff;color:#047857;border:none;border-radius:8px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.15);">Crear Nueva Cotización</button><button onclick="reemplazarCotizacion()" style="padding:8px 18px;background:#fff;color:#c0392b;border:none;border-radius:8px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.15);">Reemplazar Cotización</button><button onclick="this.closest('#bannerCotCargada').remove()" style="padding:8px 14px;background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:8px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:600;cursor:pointer;">Cerrar</button></div>`;
       document.body.appendChild(banner);
     } catch(err) {
       showToast("❌ Error al cargar el archivo. Asegúrate de que sea un archivo JSON de cotización válido.", "error");
@@ -3719,6 +3725,29 @@ async function crearNuevaDesdeCargada() {
   confirmBanner.innerHTML = "Nueva cotización: <span style='color:#06b3fd;'>" + numEl.value + "</span><br><span style='font-size:11px;font-weight:500;opacity:.85;'>Datos de productos mantenidos · Fecha actualizada a hoy</span>";
   document.body.appendChild(confirmBanner);
   setTimeout(()=>confirmBanner.remove(), 5000);
+  upd();
+}
+
+// ── Reemplazar cotización original ───────────────────────────────────────
+let _modoReemplazo=false;
+
+function reemplazarCotizacion(){
+  const num=window._cotCargadaNum||document.getElementById("eNum").value;
+  if(!num){showToast("No hay cotización cargada para reemplazar","error");return;}
+  const ok=confirm("⚠️ ADVERTENCIA\n\nSe reemplazarán todos los datos de la cotización N° "+num+" por los datos ajustados en esta cotización.\n\nEsta acción no se puede deshacer.\n\n¿Deseas continuar?");
+  if(!ok)return;
+  // Quitar banner
+  const banner=document.getElementById("bannerCotCargada");
+  if(banner)banner.remove();
+  // Activar modo reemplazo
+  _modoReemplazo=true;
+  // Cambiar botón de registrar
+  const btnReg=document.getElementById("btnRegistrar");
+  if(btnReg)btnReg.innerHTML=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg> <span>Reemplazar Cotización ${num}</span>`;
+  btnReg.style.background="linear-gradient(135deg,#c0392b,#e74c3c)";
+  // Quitar bloqueo de duplicado para este número
+  localStorage.removeItem("oc_reg_"+num);
+  showToast("Modo reemplazo activado para "+num+". Edita los datos y presiona Reemplazar.","ok");
   upd();
 }
 

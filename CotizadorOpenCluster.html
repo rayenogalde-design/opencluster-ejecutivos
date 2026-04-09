@@ -3674,18 +3674,45 @@ function cargarCotizacion(input) {
       const nConImg = d.productos ? d.productos.filter(p=>p.img).length : 0;
       const resumen = `Cotización ${d.num||""} cargada · ${nProds} producto${nProds!==1?"s":""} · ${nConImg} foto${nConImg!==1?"s":""}`;
       showToast("✓ " + resumen, "ok");
-      // Banner visible en pantalla (además del toast) para mayor claridad
+      // Banner con botón "Crear Nueva Cotización"
+      const oldBanner = document.getElementById("bannerCotCargada");
+      if(oldBanner) oldBanner.remove();
       const banner = document.createElement("div");
-      banner.style.cssText = "position:fixed;top:16px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,#059669,#047857);color:white;padding:12px 24px;border-radius:10px;font-family:Montserrat,sans-serif;font-size:13px;font-weight:700;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.2);text-align:center;";
-      banner.innerHTML = "✓ Cotización cargada correctamente<br><span style=\"font-size:11px;font-weight:500;opacity:.85;\">" + nProds + " productos · " + nConImg + " foto" + (nConImg!==1?"s":"") + " recuperadas</span>";
-      document.body.appendChild(banner);
-      setTimeout(()=>banner.remove(), 4000);
+      banner.id = "bannerCotCargada";
+      banner.style.cssText = "position:fixed;top:16px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,#059669,#047857);color:white;padding:14px 24px;border-radius:12px;font-family:Montserrat,sans-serif;font-size:13px;font-weight:700;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.2);text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center;";
+      banner.innerHTML = `<div>Cotización ${d.num||""} cargada correctamente<br><span style="font-size:11px;font-weight:500;opacity:.85;">${nProds} producto${nProds!==1?"s":""} · ${nConImg} foto${nConImg!==1?"s":""} recuperadas</span></div><div style="display:flex;gap:8px;"><button onclick="crearNuevaDesdeCargada()" style="padding:8px 18px;background:#fff;color:#047857;border:none;border-radius:8px;font-family:Montserrat,sans-serif;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.15);">Crear Nueva Cotización</button><button onclick="this.closest('#bannerCotCargada').remove()" style="padding:8px 14px;background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:8px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:600;cursor:pointer;">Cerrar</button></div>`;
     } catch(err) {
       showToast("❌ Error al cargar el archivo. Asegúrate de que sea un archivo JSON de cotización válido.", "error");
     }
     input.value = ""; // reset para poder cargar el mismo archivo de nuevo
   };
   reader.readAsText(file);
+}
+
+// ── Crear nueva cotización desde una cargada ─────────────────────────────
+async function crearNuevaDesdeCargada() {
+  // Quitar banner
+  const banner = document.getElementById("bannerCotCargada");
+  if(banner) banner.remove();
+  // Obtener nuevo número
+  const numEl = document.getElementById("eNum");
+  numEl.value = "";
+  numEl.placeholder = "Generando nuevo número...";
+  try {
+    await fetchSiguienteNumero();
+  } catch(e) {
+    numEl.value = "OC26-NUEVO-" + Date.now().toString().slice(-4);
+  }
+  // Limpiar fecha a hoy
+  document.getElementById("eFecha").value = new Date().toISOString().split("T")[0];
+  // Mostrar confirmación
+  showToast("✓ Nueva cotización creada con número " + numEl.value + ". Los datos del producto se mantienen.", "ok");
+  const confirmBanner = document.createElement("div");
+  confirmBanner.style.cssText = "position:fixed;top:16px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,var(--navy),#002a90);color:white;padding:12px 24px;border-radius:10px;font-family:Montserrat,sans-serif;font-size:13px;font-weight:700;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.2);text-align:center;";
+  confirmBanner.innerHTML = "Nueva cotización: <span style='color:#06b3fd;'>" + numEl.value + "</span><br><span style='font-size:11px;font-weight:500;opacity:.85;'>Datos de productos mantenidos · Fecha actualizada a hoy</span>";
+  document.body.appendChild(confirmBanner);
+  setTimeout(()=>confirmBanner.remove(), 5000);
+  upd();
 }
 
 // ── Guardar/cargar perfil ejecutivo en localStorage ──────────────────────

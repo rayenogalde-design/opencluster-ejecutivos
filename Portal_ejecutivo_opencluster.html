@@ -493,21 +493,61 @@ select.login-inp{appearance:none;cursor:pointer;}
 
             <div class="fld">
               <label>Tipo de Reunión *</label>
-              <select id="r-tipo">
+              <select id="r-tipo" onchange="onTipoReunionChange()">
                 <option value="">— Seleccionar —</option>
-                <option>Presentación empresa</option>
-                <option>Demostración</option>
-                <option>Seguimiento</option>
-                <option>Cierre</option>
-                <option>Postventa</option>
-                <option>Capacitación</option>
-                <option>Servicio Técnico</option>
+                <optgroup label="Pre-venta">
+                  <option>Presentación empresa</option>
+                  <option>Demostración</option>
+                  <option>Lobby</option>
+                  <option>SENADIS Regional</option>
+                  <option>GORE Regional</option>
+                  <option>FNDR</option>
+                  <option>Preparación Proyecto</option>
+                </optgroup>
+                <optgroup label="Venta">
+                  <option>Cierre</option>
+                  <option>Seguimiento</option>
+                </optgroup>
+                <optgroup label="Post-venta">
+                  <option>Capacitación</option>
+                  <option>Servicio Técnico</option>
+                  <option>Postventa</option>
+                </optgroup>
               </select>
             </div>
+
+            <!-- Sub-opciones dinámicas según tipo -->
+            <div id="r-subopcion" style="display:none;margin-bottom:10px;"></div>
 
             <div class="f2">
               <div class="fld"><label>Fecha *</label><input type="date" id="r-fecha"></div>
               <div class="fld"><label>Hora</label><input type="time" id="r-hora"></div>
+            </div>
+
+            <div class="f2">
+              <div class="fld"><label>Ciudad</label><input type="text" id="r-ciudad" placeholder="Ciudad"></div>
+              <div class="fld">
+                <label>Región</label>
+                <select id="r-region">
+                  <option value="">— Seleccionar —</option>
+                  <option>Arica y Parinacota</option>
+                  <option>Tarapacá</option>
+                  <option>Antofagasta</option>
+                  <option>Atacama</option>
+                  <option>Coquimbo</option>
+                  <option>Valparaíso</option>
+                  <option>Metropolitana</option>
+                  <option>O'Higgins</option>
+                  <option>Maule</option>
+                  <option>Ñuble</option>
+                  <option>Biobío</option>
+                  <option>La Araucanía</option>
+                  <option>Los Ríos</option>
+                  <option>Los Lagos</option>
+                  <option>Aysén</option>
+                  <option>Magallanes</option>
+                </select>
+              </div>
             </div>
 
             <div class="fld">
@@ -552,6 +592,7 @@ select.login-inp{appearance:none;cursor:pointer;}
                   <span class="accion-btn" onclick="selAccion('Gobierno Regional',this)">🏛 Gobierno Regional</span>
                   <span class="accion-btn" onclick="selAccion('Lobby',this)">🤝 Lobby</span>
                   <span class="accion-btn" onclick="selAccion('SENADIS Regional',this)">🏢 SENADIS Regional</span>
+                  <span class="accion-btn" onclick="selAccion('Reunión de Capacitación',this)">🎓 Capacitación</span>
                   <span class="accion-btn" onclick="selAccion('Contactar en 1 mes',this)" data-autodate="1m">📆 Contactar en 1 mes</span>
                   <span class="accion-btn" onclick="selAccion('Contactar en 6 meses',this)" data-autodate="6m">🗓 Contactar en 6 meses</span>
                 </div>
@@ -703,6 +744,7 @@ const TEAM = [
   {full:'Germán Alvarado', short:'Germán'},
   {full:'William',         short:'William'},
   {full:'Mario',           short:'Mario'},
+  {full:'Hernán',          short:'Hernán'},
 ];
 
 // ════════════════════════════════════════════
@@ -2535,8 +2577,9 @@ function renderReuniones(){
           ${proxAccion?`<div style="font-size:12.5px;font-weight:700;color:var(--ink);">${proxAccion}</div>`:''}
           ${proxFecha?`<div style="font-size:11.5px;color:${proxVencida?'var(--ruby)':'var(--mist)'};font-weight:600;">📅 ${proxFecha}${proxVencida?' · ¡VENCIDA!':''}</div>`:''}
         </div>`:''}
-        ${esCreador?`<div style="margin-top:10px;padding-top:8px;display:flex;justify-content:flex-end;">
-          <button onclick="eliminarReunion(${i},this)" style="padding:5px 13px;background:var(--ruby-lt);color:var(--ruby);border:1px solid rgba(192,57,43,.2);border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">🗑 Eliminar reunión</button>
+        ${esCreador?`<div style="margin-top:10px;padding-top:8px;display:flex;justify-content:space-between;gap:8px;">
+          <button onclick="cargarReunionParaEdit(${REUNIONES.length-1-i},this)" style="padding:5px 13px;background:var(--sapp-lt);color:var(--sapp);border:1px solid rgba(26,95,168,.2);border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">✎ Editar reunión</button>
+          <button onclick="eliminarReunion(${i},this)" style="padding:5px 13px;background:var(--ruby-lt);color:var(--ruby);border:1px solid rgba(192,57,43,.2);border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">🗑 Eliminar</button>
         </div>
         <div style="margin-top:10px;border-top:1px solid var(--smoke);padding-top:10px;" id="edit-prox-${id}">
           <div style="font-size:9.5px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px;">Actualizar próximo contacto</div>
@@ -2547,6 +2590,7 @@ function renderReuniones(){
             <span class="accion-btn${proxAccion==='Gobierno Regional'?' sel':''}" onclick="selAccionEdit('Gobierno Regional',this,'${id}')">🏛 Gov. Regional</span>
             <span class="accion-btn${proxAccion==='Lobby'?' sel':''}" onclick="selAccionEdit('Lobby',this,'${id}')">🤝 Lobby</span>
             <span class="accion-btn${proxAccion==='SENADIS Regional'?' sel':''}" onclick="selAccionEdit('SENADIS Regional',this,'${id}')">🏢 SENADIS</span>
+            <span class="accion-btn${proxAccion==='Reunión de Capacitación'?' sel':''}" onclick="selAccionEdit('Reunión de Capacitación',this,'${id}')">🎓 Capacitación</span>
             <span class="accion-btn" onclick="selAccionEdit('Contactar en 1 mes',this,'${id}',1)">📆 +1 mes</span>
             <span class="accion-btn" onclick="selAccionEdit('Contactar en 6 meses',this,'${id}',6)">🗓 +6 meses</span>
           </div>
@@ -2628,6 +2672,112 @@ async function eliminarReunion(idx,btn){
 // ════════════════════════════════════════════
 // GUARDAR REUNIÓN
 // ════════════════════════════════════════════
+// ════════════════════════════════════════════
+// EDITAR REUNIÓN — cargar datos al formulario
+// ════════════════════════════════════════════
+let _editReuIdx=-1;
+let _editReuNum='';
+
+function cargarReunionParaEdit(idx,btn){
+  const r=REUNIONES[idx];
+  if(!r)return;
+  _editReuIdx=idx;
+  _editReuNum=r['Num Reunion']||r['num']||'';
+  // Llenar campos
+  document.getElementById('r-tipo').value=r['Tipo']||'';
+  onTipoReunionChange();
+  setTimeout(()=>{
+    const sv=document.getElementById('r-subval');
+    if(sv&&r['Sub Detalle'])sv.value=r['Sub Detalle'];
+  },100);
+  document.getElementById('r-fecha').value=r['Fecha']||'';
+  document.getElementById('r-hora').value=r['Hora']||'';
+  document.getElementById('r-ciudad').value=r['Ciudad']||'';
+  document.getElementById('r-region').value=r['Región']||r['Region']||'';
+  document.getElementById('r-nombre').value=r['Prospecto']||r['Nombre']||'';
+  document.getElementById('r-inst').value=r['Institución']||r['Institucion']||'';
+  document.getElementById('r-cargo').value=r['Cargo']||'';
+  document.getElementById('r-tel').value=r['Teléfono']||r['Telefono']||'';
+  document.getElementById('r-email').value=r['Email']||'';
+  document.getElementById('r-resultado').value=r['Resultado']||'';
+  document.getElementById('r-cot').value=r['Cotización']||r['Cotizacion']||'';
+  document.getElementById('r-notas').value=r['Notas']||'';
+  document.getElementById('r-mejorar').value=r['Qué Mejorar']||r['Que Mejorar']||'';
+  document.getElementById('r-prox-fecha').value=r['Próximo Contacto']||r['ProximaFecha']||'';
+  accionSel=r['Próximo Contacto Acción']||r['Accion']||'';
+  document.querySelectorAll('#r-accion-btns .accion-btn').forEach(b=>{
+    b.classList.toggle('sel',b.textContent.replace(/[^a-zA-Z0-9 ]/g,'').trim().includes(accionSel.replace(/[^a-zA-Z0-9 ]/g,'').trim()));
+  });
+  // Scroll al formulario
+  document.querySelector('.form-wrap')?.scrollIntoView({behavior:'smooth'});
+  // Cambiar botón
+  const btnReu=document.getElementById('btn-reu');
+  btnReu.textContent='Actualizar Reunión';
+  btnReu.style.background='linear-gradient(135deg,#1a5fa8,#0a2e8a)';
+  // Banner de aviso
+  const old=document.getElementById('editBanner');
+  if(old)old.remove();
+  const banner=document.createElement('div');
+  banner.id='editBanner';
+  banner.style.cssText='background:linear-gradient(90deg,#1a5fa8,#0a2e8a);color:#fff;padding:10px 14px;border-radius:8px;font-size:12px;font-weight:700;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;';
+  banner.innerHTML=`<span>✎ Editando reunión: ${r['Prospecto']||r['Nombre']||'—'}</span><button onclick="cancelarEdit()" style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);color:#fff;padding:4px 10px;border-radius:6px;font-size:10px;cursor:pointer;font-family:inherit;">Cancelar</button>`;
+  const formWrap=document.querySelector('.form-wrap');
+  formWrap.insertBefore(banner,formWrap.firstChild);
+}
+
+function cancelarEdit(){
+  _editReuIdx=-1;
+  _editReuNum='';
+  ['r-nombre','r-inst','r-cargo','r-tel','r-email','r-cot','r-notas','r-mejorar','r-prox-fecha','r-ciudad'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+  document.getElementById('r-tipo').value='';
+  document.getElementById('r-region').value='';
+  document.getElementById('r-resultado').value='';
+  document.getElementById('r-subopcion').style.display='none';
+  document.getElementById('r-subopcion').innerHTML='';
+  accionSel='';
+  document.querySelectorAll('#r-accion-btns .accion-btn').forEach(b=>b.classList.remove('sel'));
+  document.getElementById('editBanner')?.remove();
+  const btnReu=document.getElementById('btn-reu');
+  btnReu.textContent='Guardar Reunión';
+  btnReu.style.background='';
+}
+
+// ════════════════════════════════════════════
+// TIPO DE REUNIÓN — Sub-opciones dinámicas
+// ════════════════════════════════════════════
+const REGIONES_CHILE=['Arica y Parinacota','Tarapacá','Antofagasta','Atacama','Coquimbo','Valparaíso','Metropolitana',"O'Higgins",'Maule','Ñuble','Biobío','La Araucanía','Los Ríos','Los Lagos','Aysén','Magallanes'];
+const FNDR_CONCEPTOS=['Búsqueda de instituciones','Preparación de proyecto','Coordinación de documentos','Término de proyecto','Presentación empresa','Acuerdo alianza estratégica'];
+
+function onTipoReunionChange(){
+  const tipo=document.getElementById('r-tipo').value;
+  const sub=document.getElementById('r-subopcion');
+  if(!sub)return;
+  if(tipo==='FNDR'){
+    sub.style.display='block';
+    sub.innerHTML=`<label style="font-size:10px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;display:block;">Concepto FNDR</label>
+      <select id="r-subval" style="width:100%;padding:8px 10px;border:1.5px solid var(--smoke);border-radius:7px;font-size:12px;">
+        <option value="">— Seleccionar —</option>
+        ${FNDR_CONCEPTOS.map(c=>`<option>${c}</option>`).join('')}
+      </select>`;
+  } else if(tipo==='GORE Regional'||tipo==='SENADIS Regional'){
+    sub.style.display='block';
+    sub.innerHTML=`<label style="font-size:10px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;display:block;">Región</label>
+      <select id="r-subval" style="width:100%;padding:8px 10px;border:1.5px solid var(--smoke);border-radius:7px;font-size:12px;">
+        <option value="">— Seleccionar —</option>
+        ${REGIONES_CHILE.map(r=>`<option>${r}</option>`).join('')}
+      </select>`;
+  } else if(tipo==='Preparación Proyecto'){
+    sub.style.display='block';
+    sub.innerHTML=`<label style="font-size:10px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;display:block;">¿A qué fondo está postulando la institución?</label>
+      <input type="text" id="r-subval" placeholder="Ej: FNDR, SENADIS, FONDEF, etc." style="width:100%;padding:8px 10px;border:1.5px solid var(--smoke);border-radius:7px;font-size:12px;">`;
+  } else {
+    sub.style.display='none';
+    sub.innerHTML='';
+  }
+}
+
 async function guardarReunion(){
   const nombre=document.getElementById('r-nombre').value.trim();
   const tipo=document.getElementById('r-tipo').value;
@@ -2635,11 +2785,17 @@ async function guardarReunion(){
   if(!tipo){toast('Selecciona el tipo de reunión','warn');return;}
   const execs=getExecsSeleccionados();
   const proxFecha=document.getElementById('r-prox-fecha').value;
+  const subDetalle=document.getElementById('r-subval')?document.getElementById('r-subval').value:'';
+  const esEdicion=_editReuIdx>=0;
   const reunion={
-    accion:       'registrar_reunion',
+    accion:       esEdicion?'actualizar_reunion':'registrar_reunion',
+    num_reunion:  esEdicion?_editReuNum:'',
     fecha:        document.getElementById('r-fecha').value,
     hora:         document.getElementById('r-hora').value,
     tipo,
+    sub_detalle:  subDetalle,
+    ciudad:       document.getElementById('r-ciudad').value,
+    region:       document.getElementById('r-region').value,
     ejecutivos:   execs.join(', '),
     creador:      USUARIO,
     nombre,
@@ -2661,27 +2817,40 @@ async function guardarReunion(){
     if(res.ok||API_URL==='PEGA_AQUI_URL_DEL_APPS_SCRIPT'){
       const local={
         'Prospecto':reunion.nombre,'Institución':reunion.institucion,'Cargo':reunion.cargo,
-        'Fecha':reunion.fecha,'Tipo':reunion.tipo,'Resultado':reunion.resultado,
+        'Fecha':reunion.fecha,'Tipo':reunion.tipo,'Sub Detalle':reunion.sub_detalle,
+        'Ciudad':reunion.ciudad,'Región':reunion.region,
+        'Resultado':reunion.resultado,
         'Notas':reunion.notas,'Qué Mejorar':reunion.mejorar,'Cotización':reunion.cotizacion,
         'Teléfono':reunion.telefono,'Email':reunion.email,
         'Ejecutivos':reunion.ejecutivos,'Creador':reunion.creador,
         'Próximo Contacto':proxFecha,'Próximo Contacto Acción':accionSel,
       };
-      REUNIONES.push(local);
+      if(esEdicion){
+        // Reemplazar en REUNIONES
+        REUNIONES[_editReuIdx]={...REUNIONES[_editReuIdx],...local};
+      } else {
+        REUNIONES.push(local);
+      }
       // Limpiar form
-      ['r-nombre','r-inst','r-cargo','r-tel','r-email','r-cot','r-notas','r-mejorar','r-prox-fecha'].forEach(id=>{
+      _editReuIdx=-1;_editReuNum='';
+      document.getElementById('editBanner')?.remove();
+      ['r-nombre','r-inst','r-cargo','r-tel','r-email','r-cot','r-notas','r-mejorar','r-prox-fecha','r-ciudad'].forEach(id=>{
         const el=document.getElementById(id);if(el)el.value='';
       });
       document.getElementById('r-tipo').value='';
+      document.getElementById('r-region').value='';
       document.getElementById('r-resultado').value='';
+      document.getElementById('r-subopcion').style.display='none';
+      document.getElementById('r-subopcion').innerHTML='';
       document.querySelectorAll('.accion-btn').forEach(b=>b.classList.remove('sel'));
       accionSel='';
       checkAlertas();
       renderReuniones();
-      toast('✓ Reunión guardada en Google Sheet','jade');
+      toast(esEdicion?'✓ Reunión actualizada':'✓ Reunión guardada','jade');
     }else{toast('⚠ '+(res.error||'Error al guardar'),'warn');}
   }catch(ex){toast('Error: '+ex.message,'warn');}
   btn.disabled=false;btn.textContent='Guardar Reunión';
+  btn.style.background='';
 }
 
 // ════════════════════════════════════════════

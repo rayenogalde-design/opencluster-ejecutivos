@@ -404,6 +404,7 @@ select.login-inp{appearance:none;cursor:pointer;}
     <div class="tab" data-tab="cotizaciones" onclick="goTab('cotizaciones',this)">Cotizaciones</div>
     <div class="tab" data-tab="reuniones" onclick="goTab('reuniones',this)" style="font-weight:700;">Reuniones <span class="tab-badge" id="tab-badge-reu" style="display:none">0</span></div>
     <div class="tab" data-tab="seguimientos" onclick="goTab('seguimientos',this)">Seg. Pendientes <span class="tab-badge" id="tab-badge-seg" style="display:none">0</span></div>
+    <div class="tab" data-tab="faq" onclick="goTab('faq',this)">Preguntas Frecuentes</div>
     <div class="tab" data-tab="productos" onclick="goTab('productos',this)" style="display:none;">Productos</div>
     <div class="tab" data-tab="metricas" onclick="goTab('metricas',this)" style="display:none;">Métricas Anuales</div>
     <div class="tab" data-tab="config" onclick="goTab('config',this)">Configuración</div>
@@ -578,6 +579,7 @@ select.login-inp{appearance:none;cursor:pointer;}
             <div class="fld"><label>N° Cotización asociada</label><input type="text" id="r-cot" placeholder="Ej: OC26-3505-AT"></div>
             <div class="fld"><label>Notas</label><textarea id="r-notas" rows="3" placeholder="¿Qué pasó? Acuerdos, próximos pasos..."></textarea></div>
             <div class="fld"><label>Qué mejorar para las próximas</label><textarea id="r-mejorar" rows="2" placeholder="Aspectos a mejorar, lecciones aprendidas..."></textarea></div>
+            <div class="fld"><label>¿Tienes una pregunta frecuente?</label><textarea id="r-faq" rows="2" placeholder="Si surgió una pregunta que podria ser útil para todos, escríbela aquí. Mario la responderá."></textarea></div>
 
             <!-- PRÓXIMO CONTACTO -->
             <div class="prox-box">
@@ -636,6 +638,13 @@ select.login-inp{appearance:none;cursor:pointer;}
       <div class="sec-hd"><h2>Seguimientos</h2><p>Cotizaciones que requieren atención</p></div>
       <div class="hairline"></div>
       <div id="seg-list"></div>
+    </div>
+
+    <!-- FAQ - PREGUNTAS FRECUENTES -->
+    <div class="sec" id="s-faq">
+      <div class="sec-hd"><h2>Preguntas Frecuentes</h2><p>Base de conocimiento del equipo — respuestas publicadas por Mario</p></div>
+      <div class="hairline"></div>
+      <div id="faq-list"></div>
     </div>
 
     <!-- PRODUCTOS (solo Mario) -->
@@ -1003,8 +1012,48 @@ function renderTab(id){
   else if(id==='cotizaciones')renderCotizaciones();
   else if(id==='reuniones')renderReuniones();
   else if(id==='seguimientos')renderSeguimientos();
+  else if(id==='faq')renderFAQ();
   else if(id==='productos')renderProductos();
   else if(id==='metricas')renderMetricasAnuales();
+}
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ════════════════════════════════════════════
+// FAQ — Preguntas Frecuentes
+// ════════════════════════════════════════════
+let FAQS=[];
+async function cargarFAQs(){
+  try{
+    const r=await fetch(API_URL+'?accion=datos_faq',{mode:'cors',signal:AbortSignal.timeout(10000)});
+    const d=await r.json();
+    if(d.faqs&&d.faqs.length>1){
+      const h=d.faqs[0];
+      FAQS=d.faqs.slice(1).map(row=>{
+        const o={};h.forEach((k,i)=>{o[k]=row[i]!==undefined?String(row[i]):'';});
+        return o;
+      }).filter(f=>f['Pregunta']);
+    }
+  }catch(e){console.warn('Error cargando FAQs:',e);}
+}
+
+function renderFAQ(){
+  const lista=document.getElementById('faq-list');
+  cargarFAQs().then(()=>{
+    // Solo preguntas publicadas
+    const pub=FAQS.filter(f=>f['Estado']==='Publicada');
+    if(!pub.length){
+      lista.innerHTML='<div style="text-align:center;padding:36px;color:var(--mist);font-size:13px;background:#fff;border-radius:10px;border:1px solid var(--smoke);">Aún no hay preguntas publicadas. Las que escribas en el formulario de reuniones apareceran aquí cuando Mario las responda.</div>';
+      return;
+    }
+    lista.innerHTML=pub.map(f=>`
+      <div style="background:#fff;border-radius:10px;padding:16px 18px;margin-bottom:10px;border:1px solid var(--smoke);">
+        <div style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;color:var(--ink);margin-bottom:6px;">❓ ${esc(f['Pregunta'])}</div>
+        <div style="font-size:12px;color:var(--ink);line-height:1.6;background:var(--paper);border-radius:8px;padding:10px 12px;border-left:3px solid var(--sapp);">${esc(f['Respuesta'])}</div>
+        <div style="font-size:10px;color:var(--mist);margin-top:6px;">Pregunta: ${esc(f['Ejecutivo']||'')} · Respuesta: Mario · ${esc(f['Fecha Respuesta']||'')}</div>
+      </div>
+    `).join('');
+  });
 }
 
 // ════════════════════════════════════════════
@@ -2807,6 +2856,7 @@ async function guardarReunion(){
     cotizacion:   document.getElementById('r-cot').value,
     notas:        document.getElementById('r-notas').value,
     mejorar:      document.getElementById('r-mejorar').value,
+    faq_pregunta: document.getElementById('r-faq').value,
     prox_accion:  accionSel,
     prox_fecha:   proxFecha,
   };
@@ -2831,10 +2881,14 @@ async function guardarReunion(){
       } else {
         REUNIONES.push(local);
       }
+      // Si hay pregunta frecuente, guardarla por separado
+      if(reunion.faq_pregunta&&reunion.faq_pregunta.trim()){
+        apiPost({accion:'guardar_faq',pregunta:reunion.faq_pregunta,ejecutivo:USUARIO}).catch(()=>{});
+      }
       // Limpiar form
       _editReuIdx=-1;_editReuNum='';
       document.getElementById('editBanner')?.remove();
-      ['r-nombre','r-inst','r-cargo','r-tel','r-email','r-cot','r-notas','r-mejorar','r-prox-fecha','r-ciudad'].forEach(id=>{
+      ['r-nombre','r-inst','r-cargo','r-tel','r-email','r-cot','r-notas','r-mejorar','r-faq','r-prox-fecha','r-ciudad'].forEach(id=>{
         const el=document.getElementById(id);if(el)el.value='';
       });
       document.getElementById('r-tipo').value='';

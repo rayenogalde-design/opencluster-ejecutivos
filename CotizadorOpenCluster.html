@@ -1792,15 +1792,36 @@ const COORDS = {
   "villarrica":[-72.2333,-39.2833],"valdivia":[-73.2458,-39.8142],"panguipulli":[-72.3333,-39.6333]
 };
 
+// Geocoder: busca coordenadas de cualquier ciudad chilena via Nominatim
+const _geocodeCache = {};
+async function geocodeCity(city) {
+  const key = normCity(city);
+  if(COORDS[key]) return COORDS[key];
+  if(_geocodeCache[key]) return _geocodeCache[key];
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city+', Chile')}&format=json&limit=1&countrycodes=cl`;
+    const res = await fetch(url, {headers:{'Accept':'application/json'}});
+    const data = await res.json();
+    if(data && data.length > 0) {
+      const coord = [parseFloat(data[0].lon), parseFloat(data[0].lat)];
+      _geocodeCache[key] = coord;
+      COORDS[key] = coord; // Cache también en COORDS
+      return coord;
+    }
+  } catch(e) { console.warn('Geocoder error:', e); }
+  return null;
+}
+
 async function getDistanciaOSRM(orig, dest) {
   const a = normCity(orig), b = normCity(dest);
   const cacheKey = a+"-"+b;
   if(_distCache[cacheKey]) return _distCache[cacheKey];
   if(_distCache[b+"-"+a]) return _distCache[b+"-"+a];
 
-  const coordO = COORDS[a] || COORDS["belloto"];
-  const coordD = COORDS[b];
-  if(!coordD) return null; // ciudad no en COORDS, usar fallback
+  // Geocodificar ambas ciudades
+  let coordO = COORDS[a] || await geocodeCity(orig) || COORDS["belloto"];
+  let coordD = COORDS[b] || await geocodeCity(dest);
+  if(!coordD) return null;
 
   try {
     const url = `https://router.project-osrm.org/route/v1/driving/${coordO[0]},${coordO[1]};${coordD[0]},${coordD[1]}?overview=false`;

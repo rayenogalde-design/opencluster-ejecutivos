@@ -778,6 +778,7 @@ let filtroResumenMesP = '';
 let filtroProductosMes = '';
 
 const esMario = () => USUARIO === 'Mario';
+const esAdmin = () => USUARIO === 'Mario' || USUARIO === 'Rayen Ogalde';
 
 // ════════════════════════════════════════════
 // HELPERS
@@ -1171,8 +1172,11 @@ async function cargarTodos(){
     }catch(ex){toast('Error cargando datos: '+ex.message,'warn');}
   } else {
     // Ejecutivo: dos llamadas independientes para mayor resiliencia
+    // Rayen carga TODAS las cotizaciones (es admin)
+    const accionCots=esAdmin()?'datos':'datos_ejecutivo';
+    const paramsCots=esAdmin()?{accion:'datos',equipo:'difusion'}:{accion:'datos_ejecutivo',ejecutivo:USUARIO};
     try{
-      const res=await apiGet({accion:'datos_ejecutivo',ejecutivo:USUARIO});
+      const res=await apiGet(paramsCots);
       if(res.cotizaciones){
         COTS=normalizarExecs(procesarCots(res.cotizaciones));
         SEGS=procesarSegs(res.seguimientos||[]);

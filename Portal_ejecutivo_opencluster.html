@@ -1247,13 +1247,20 @@ function procesarSegs(rows){
   const h=rows[0];
   return rows.slice(1).map(r=>{
     const o={};h.forEach((k,i)=>{o[k]=r[i]!==undefined?String(r[i]):'';});
+    // Normalizar: siempre tener 'N° Cotización' como clave principal
+    if(!o['N° Cotización']&&o['Num Cotizacion'])o['N° Cotización']=o['Num Cotizacion'];
+    if(!o['N° Cotización']&&o['NumCotizacion'])o['N° Cotización']=o['NumCotizacion'];
     return o;
-  }).filter(r=>r['N° Cotización']);
+  }).filter(r=>r['N° Cotización']||r['Num Cotizacion']);
 }
 
 function asociarSegs(){
   COTS.forEach(c=>{
-    c.segs=SEGS.filter(s=>String(s['N° Cotización']).trim()===c.num.trim());
+    const n=c.num.trim();
+    c.segs=SEGS.filter(s=>{
+      const sn=String(s['N° Cotización']||s['Num Cotizacion']||s['NumCotizacion']||s['num']||s['Num']||'').trim();
+      return sn===n;
+    });
   });
 }
 
@@ -2532,15 +2539,19 @@ async function guardarSeg(numCot,accId,instLabel,fechaCot){
       estado, comentario, tipo_contacto:tipo
     });
     if(res.ok){
-      const cot=COTS.find(c=>c.num===numCot);
+      const numTrim=numCot.trim();
+      const cot=COTS.find(c=>c.num.trim()===numTrim||c.num.trim().replace(/\s+/g,'')===numTrim.replace(/\s+/g,''));
       const hoyStr=new Date().toLocaleDateString('es-CL');
-      if(cot){cot.estado=estado;cot.gestion=hoyStr;}
-      SEGS.push({'N° Cotización':numCot,'Estado':estado,'Fecha Seguimiento':hoyStr,'Comentario':comentario,'Tipo Contacto':tipo});
+      if(cot){cot.estado=estado;cot.gestion=hoyStr;cot.razon=comentario;}
+      SEGS.push({'N° Cotización':numCot,'Estado':estado,'Fecha Seguimiento':hoyStr,'Comentario':comentario,'Tipo Contacto':tipo,'Ejecutivo':USUARIO});
       asociarSegs();
       document.getElementById('segf-'+accId).style.display='none';
       toast('✓ Seguimiento guardado','jade');
       checkAlertas();
       renderCotizaciones();
+      renderSeguimientos();
+      // Guardar en cache local para persistir entre recargas
+      try{localStorage.setItem('oc_cots_cache',JSON.stringify({cots:COTS,segs:SEGS,ts:Date.now()}));}catch(e){}
     }else{toast('⚠ '+res.error,'warn');}
   }catch(ex){toast('Error: '+ex.message,'warn');}
   if(btn){btn.disabled=false;btn.textContent='Guardar seguimiento →';}
@@ -2754,9 +2765,12 @@ function cargarReunionParaEdit(idx,btn){
   // Normalizar fecha a YYYY-MM-DD (el input type=date lo exige)
   function toDateInput(v){
     if(!v)return '';
+    // Ya está en YYYY-MM-DD
     if(/^\d{4}-\d{2}-\d{2}/.test(v))return v.substring(0,10);
+    // DD/MM/YYYY o DD-MM-YYYY
     const m1=v.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
     if(m1)return m1[3]+'-'+m1[2].padStart(2,'0')+'-'+m1[1].padStart(2,'0');
+    // MM/DD/YYYY (formato US que a veces devuelve Sheets)
     const d=new Date(v);
     if(!isNaN(d))return d.toISOString().split('T')[0];
     return v;
@@ -2764,8 +2778,10 @@ function cargarReunionParaEdit(idx,btn){
   // Normalizar hora a HH:MM
   function toTimeInput(v){
     if(!v)return '';
+    // Ya es HH:MM o HH:MM:SS
     const m1=v.match(/(\d{1,2}):(\d{2})/);
     if(m1)return m1[1].padStart(2,'0')+':'+m1[2];
+    // Date object serializado "...T14:30:00..."
     const d=new Date(v);
     if(!isNaN(d))return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');
     return v;

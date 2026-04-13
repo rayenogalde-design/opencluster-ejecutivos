@@ -1367,7 +1367,13 @@ async function fetchDatosSheet() {
     if (nuevas.length) { COTS = normalizarExecs(nuevas); okCots = true; }
     // Reuniones desde el mismo llamado
     if (d.reuniones) {
-      const nuevasReu = toArr(d.reuniones).map((r,i) => rowToReu(r,i)).filter(r => r.nombre || r.fecha);
+      const TIPOS_VALIDOS=['presentaci','demostraci','lobby','senadis','gore','fndr','preparaci','cierre','seguimiento','capacitaci','servicio','postventa'];
+      const nuevasReu = toArr(d.reuniones).map((r,i) => rowToReu(r,i)).filter(r => {
+        if(!r.fecha || !r.nombre) return false;
+        if(!r.tipo) return false;
+        const tLow=r.tipo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+        return TIPOS_VALIDOS.some(t=>tLow.includes(t));
+      });
       if (nuevasReu.length) {
         reuniones = nuevasReu;
         localStorage.setItem('oc_reu', JSON.stringify(reuniones));
@@ -1393,7 +1399,13 @@ async function fetchDatosSheet() {
       try {
         const filas = await leerPestana(tab);
         if (filas.length) {
-          const nuevas = filas.map(rowToReu).filter(r => r.nombre || r.fecha);
+          const TIPOS_V2=['presentaci','demostraci','lobby','senadis','gore','fndr','preparaci','cierre','seguimiento','capacitaci','servicio','postventa'];
+          const nuevas = filas.map(rowToReu).filter(r => {
+            if(!r.fecha || !r.nombre) return false;
+            if(!r.tipo) return false;
+            const tL=r.tipo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+            return TIPOS_V2.some(t=>tL.includes(t));
+          });
           if (nuevas.length) {
             reuniones = nuevas;
             localStorage.setItem('oc_reu', JSON.stringify(reuniones));
@@ -2851,6 +2863,7 @@ function importarReuCSV(input) {
     try {
       const rows = parseCsv(e.target.result);
       if (!rows.length) { toast('CSV vacío o sin datos','warn'); return; }
+      const TIPOS_V3=['presentaci','demostraci','lobby','senadis','gore','fndr','preparaci','cierre','seguimiento','capacitaci','servicio','postventa'];
       reuniones = rows.map((r,i) => ({
         id: Date.now()+i,
         fecha:       r['Fecha']||r['fecha']||'',
@@ -2865,7 +2878,12 @@ function importarReuCSV(input) {
         resultado:   r['Resultado']||'',
         cotizacion:  r['Cotización']||r['Cotizacion']||'',
         notas:       r['Notas']||'',
-      })).filter(r => r.nombre || r.fecha);
+      })).filter(r => {
+        if(!r.fecha || !r.nombre) return false;
+        if(!r.tipo) return false;
+        const tL=r.tipo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+        return TIPOS_V3.some(t=>tL.includes(t));
+      });
       localStorage.setItem('oc_reu', JSON.stringify(reuniones));
       document.getElementById('pip-reu').textContent = reuniones.length;
       renderReunionLista();

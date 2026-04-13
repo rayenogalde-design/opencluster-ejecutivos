@@ -7,275 +7,201 @@
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FNDR Tracker — OpenCluster Tech</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Montserrat:wght@400;600;700;800&display=swap');
-
 *{margin:0;padding:0;box-sizing:border-box;}
 :root{
   --navy:#001a60;--sky:#06b3fd;--gold:#C9A96E;--gold-lt:#E8D5A8;
   --orange:#ff7e00;--pale:#eaf6ff;--bg:#F4F6FB;
   --text:#1a2535;--subtle:#64748b;
-  --green:#22c55e;--red:#ef4444;--gray:#94a3b8;
+  --green:#22c55e;--red:#ef4444;--gray:#94a3b8;--blue:#3b82f6;
   --card:#fff;--radius:14px;--shadow:0 2px 12px rgba(0,26,96,.07);
 }
-body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;overflow-x:hidden;color:var(--text);}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
 
-/* ── Hero Background ── */
-.hero-bg{position:fixed;top:0;left:0;right:0;height:320px;
-  background:linear-gradient(170deg,#0A0F1E 0%,var(--navy) 35%,#0a2e8a 60%,var(--sky) 100%);
-  z-index:0;}
-.hero-bg::before{content:'';position:absolute;bottom:60px;left:0;right:0;height:1.5px;
-  background:linear-gradient(90deg,transparent 5%,var(--gold) 30%,var(--gold-lt) 50%,var(--gold) 70%,transparent 95%);opacity:.35;}
-.hero-bg::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:100px;
-  background:linear-gradient(to bottom,transparent,var(--bg));}
+/* ── HEADER ── */
+.header{background:linear-gradient(135deg,var(--navy) 0%,#002a80 50%,#001040 100%);color:#fff;padding:28px 32px 24px;position:relative;overflow:hidden;}
+.header::after{content:'';position:absolute;top:-60%;right:-10%;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(6,179,253,.12) 0%,transparent 70%);pointer-events:none;}
+.header-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;position:relative;z-index:1;}
+.header-brand{display:flex;align-items:center;gap:14px;}
+.header-logo{width:38px;height:38px;}
+.header h1{font-family:'Montserrat',sans-serif;font-size:1.45rem;font-weight:800;letter-spacing:-.3px;}
+.header h1 span{color:var(--sky);font-weight:600;}
+.header-right{display:flex;align-items:center;gap:18px;font-size:.88rem;}
+.header-user{background:rgba(255,255,255,.1);padding:6px 14px;border-radius:8px;font-weight:500;}
+.header-back{color:var(--sky);text-decoration:none;font-weight:600;display:flex;align-items:center;gap:5px;transition:color .2s;}
+.header-back:hover{color:#fff;}
+.header-back svg{width:16px;height:16px;}
 
-.page{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:0 20px;}
+/* ── CONTAINER ── */
+.container{max-width:1100px;margin:0 auto;padding:24px 20px 60px;}
 
-/* ── Top Bar ── */
-.top-bar{display:flex;justify-content:space-between;align-items:center;padding:16px 0;opacity:0;animation:fadeUp .6s .1s forwards;}
-.top-bar a{color:rgba(255,255,255,.6);text-decoration:none;font-size:13px;font-weight:500;transition:color .2s;display:flex;align-items:center;gap:6px;}
-.top-bar a:hover{color:#fff;}
-.top-bar .user-tag{color:var(--gold-lt);font-size:12px;font-weight:600;letter-spacing:.5px;}
+/* ── COUNTDOWN ── */
+.countdown-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;margin-bottom:32px;}
+.countdown-card{background:var(--card);border-radius:var(--radius);padding:22px 26px;box-shadow:var(--shadow);border-left:5px solid var(--sky);display:flex;flex-direction:column;gap:8px;}
+.countdown-card.urgent{border-left-color:var(--red);}
+.countdown-card.closed{border-left-color:var(--gray);opacity:.7;}
+.countdown-label{font-family:'Montserrat',sans-serif;font-weight:700;font-size:1rem;color:var(--navy);}
+.countdown-region{font-size:.82rem;color:var(--subtle);font-weight:500;}
+.countdown-timer{display:flex;gap:10px;margin-top:4px;}
+.countdown-unit{text-align:center;}
+.countdown-num{font-family:'Montserrat',sans-serif;font-size:1.55rem;font-weight:800;color:var(--navy);line-height:1;}
+.countdown-card.urgent .countdown-num{color:var(--red);}
+.countdown-lbl{font-size:.65rem;color:var(--subtle);text-transform:uppercase;letter-spacing:.5px;margin-top:2px;}
+.countdown-closed{font-family:'Montserrat',sans-serif;font-size:1.2rem;font-weight:800;color:var(--gray);letter-spacing:1px;}
 
-/* ── Header ── */
-.header{text-align:center;padding:20px 0 40px;opacity:0;animation:fadeUp .7s .2s forwards;}
-.brand-line{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:20px;}
-.brand-bar{width:40px;height:1.5px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);}
-.brand-diamond{width:6px;height:6px;background:var(--gold);transform:rotate(45deg);flex-shrink:0;}
-.brand-text{font-family:'Montserrat',sans-serif;font-size:10px;letter-spacing:4px;color:rgba(255,255,255,.6);text-transform:uppercase;font-weight:700;}
-.header h1{font-family:'Montserrat',sans-serif;font-size:34px;font-weight:800;color:#fff;letter-spacing:-.5px;}
-.header h1 span{color:var(--gold-lt);font-weight:600;}
-.header .sub{font-size:14px;color:rgba(255,255,255,.45);margin-top:8px;font-weight:400;}
+/* ── SECTION TITLES ── */
+.section-title{font-family:'Montserrat',sans-serif;font-size:1.2rem;font-weight:800;color:var(--navy);margin-bottom:18px;display:flex;align-items:center;gap:10px;}
+.section-title svg{width:22px;height:22px;flex-shrink:0;}
+.section-subtitle{font-size:.85rem;color:var(--subtle);font-weight:400;margin-left:4px;}
 
-/* ── Countdown Section ── */
-.countdowns{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;margin-bottom:32px;opacity:0;animation:fadeUp .7s .35s forwards;}
-.countdown-card{background:var(--card);border-radius:var(--radius);padding:28px 24px;box-shadow:var(--shadow);border:1px solid rgba(0,26,96,.06);position:relative;overflow:hidden;}
-.countdown-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--navy),var(--sky));}
-.countdown-card.urgent::before{background:linear-gradient(90deg,var(--red),var(--orange));}
-.countdown-card.closed::before{background:var(--gray);}
-.countdown-card .fund-name{font-family:'Montserrat',sans-serif;font-size:16px;font-weight:700;color:var(--navy);margin-bottom:4px;}
-.countdown-card .fund-region{font-size:12px;color:var(--subtle);margin-bottom:16px;}
-.countdown-card .timer{display:flex;gap:12px;justify-content:center;}
-.timer-unit{text-align:center;}
-.timer-unit .num{font-family:'Montserrat',sans-serif;font-size:32px;font-weight:800;color:var(--navy);line-height:1;min-width:52px;display:block;}
-.timer-unit .lbl{font-size:10px;color:var(--subtle);text-transform:uppercase;letter-spacing:1px;margin-top:4px;display:block;}
-.countdown-card.urgent .timer-unit .num{color:var(--red);}
-.countdown-card.closed .timer-unit .num{color:var(--gray);font-size:20px;}
-.closed-label{font-family:'Montserrat',sans-serif;font-size:22px;font-weight:800;color:var(--gray);text-align:center;padding:12px 0;letter-spacing:2px;}
+/* ── PROVINCE CARDS ── */
+.province-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:18px;margin-bottom:40px;}
+.province-card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;transition:box-shadow .25s;}
+.province-card:hover{box-shadow:0 4px 20px rgba(0,26,96,.12);}
+.province-card-head{padding:18px 22px 14px;border-bottom:1px solid #f0f2f8;}
+.province-name{font-family:'Montserrat',sans-serif;font-size:1.08rem;font-weight:700;color:var(--navy);}
+.province-fund{font-size:.78rem;color:var(--subtle);margin-top:2px;font-weight:500;}
+.province-owner{font-size:.75rem;color:var(--sky);font-weight:600;margin-top:4px;display:flex;align-items:center;gap:4px;}
+.province-owner svg{width:13px;height:13px;}
+.province-card-body{padding:16px 22px 20px;}
 
-/* ── Progress Bar ── */
-.progress-section{margin-bottom:28px;opacity:0;animation:fadeUp .7s .45s forwards;}
-.progress-card{background:var(--card);border-radius:var(--radius);padding:20px 24px;box-shadow:var(--shadow);border:1px solid rgba(0,26,96,.06);}
-.progress-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
-.progress-header .title{font-family:'Montserrat',sans-serif;font-size:14px;font-weight:700;color:var(--navy);}
-.progress-header .count{font-size:13px;color:var(--subtle);font-weight:600;}
-.progress-track{height:10px;background:#e8ecf4;border-radius:5px;overflow:hidden;}
-.progress-fill{height:100%;border-radius:5px;background:linear-gradient(90deg,var(--sky),var(--green));transition:width .6s ease;}
+/* ── STATUS CHIPS ── */
+.status-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+.status-chip{padding:6px 14px;border-radius:20px;font-size:.78rem;font-weight:600;cursor:pointer;border:2px solid transparent;transition:all .2s;display:flex;align-items:center;gap:6px;user-select:none;}
+.status-chip .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.status-chip.s-pendiente{background:#f1f5f9;color:#64748b;border-color:#e2e8f0;}
+.status-chip.s-pendiente .dot{background:var(--gray);}
+.status-chip.s-contacto{background:#fff7ed;color:#c2410c;border-color:#fed7aa;}
+.status-chip.s-contacto .dot{background:var(--orange);}
+.status-chip.s-conversacion{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe;}
+.status-chip.s-conversacion .dot{background:var(--blue);}
+.status-chip.s-confirmado{background:#f0fdf4;color:#15803d;border-color:#bbf7d0;}
+.status-chip.s-confirmado .dot{background:var(--green);}
+.status-chip.active{box-shadow:0 0 0 2px rgba(6,179,253,.35);transform:scale(1.04);}
+.status-chip.s-pendiente.active{border-color:#94a3b8;background:#e2e8f0;}
+.status-chip.s-contacto.active{border-color:var(--orange);background:#ffedd5;}
+.status-chip.s-conversacion.active{border-color:var(--blue);background:#dbeafe;}
+.status-chip.s-confirmado.active{border-color:var(--green);background:#dcfce7;}
 
-/* ── Fund Section ── */
-.fund-section{margin-bottom:32px;opacity:0;animation:fadeUp .7s .55s forwards;}
-.fund-section-title{font-family:'Montserrat',sans-serif;font-size:18px;font-weight:700;color:var(--navy);margin-bottom:16px;display:flex;align-items:center;gap:10px;}
-.fund-section-title .dot{width:10px;height:10px;border-radius:50%;background:var(--sky);flex-shrink:0;}
+/* ── SUB-FIELDS ── */
+.sub-fields{display:none;margin-top:12px;padding:14px 16px;background:#f8fafc;border-radius:10px;border:1px solid #e8ecf4;}
+.sub-fields.visible{display:block;animation:fadeIn .25s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:none;}}
+.field-group{margin-bottom:12px;}
+.field-group:last-child{margin-bottom:0;}
+.field-label{font-size:.75rem;font-weight:600;color:var(--navy);margin-bottom:5px;display:block;}
+.field-input{width:100%;padding:8px 12px;border:1px solid #d4dae8;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.85rem;color:var(--text);background:#fff;transition:border-color .2s;}
+.field-input:focus{outline:none;border-color:var(--sky);box-shadow:0 0 0 3px rgba(6,179,253,.12);}
+textarea.field-input{resize:vertical;min-height:60px;}
+.radio-group{display:flex;flex-wrap:wrap;gap:6px;}
+.radio-pill{position:relative;}
+.radio-pill input{position:absolute;opacity:0;pointer-events:none;}
+.radio-pill label{display:block;padding:5px 12px;border:1px solid #d4dae8;border-radius:16px;font-size:.78rem;cursor:pointer;transition:all .2s;background:#fff;color:var(--subtle);font-weight:500;}
+.radio-pill input:checked+label{background:var(--navy);color:#fff;border-color:var(--navy);}
 
-/* ── Province Cards ── */
-.prov-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-bottom:12px;}
-.prov-card{background:var(--card);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);border:1px solid rgba(0,26,96,.06);transition:transform .2s,box-shadow .2s;position:relative;overflow:hidden;}
-.prov-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,26,96,.1);}
-.prov-card.confirmed{border-color:var(--green);border-width:2px;}
-.prov-card.confirmed::after{content:'';position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;animation:goldBurst .8s ease-out forwards;opacity:0;}
-.prov-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
-.prov-name{font-family:'Montserrat',sans-serif;font-size:15px;font-weight:700;color:var(--navy);}
-.prov-exec{font-size:12px;color:var(--subtle);margin-top:2px;}
-.status-badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px;white-space:nowrap;}
-.status-badge .sdot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
-.status-pendiente{background:#f1f5f9;color:#64748b;}.status-pendiente .sdot{background:#94a3b8;}
-.status-contacto{background:#fff7ed;color:#c2410c;}.status-contacto .sdot{background:var(--orange);}
-.status-conversacion{background:#eff6ff;color:#1d4ed8;}.status-conversacion .sdot{background:var(--sky);}
-.status-confirmado{background:#f0fdf4;color:#15803d;}.status-confirmado .sdot{background:var(--green);}
+/* ── PROGRESS BAR ── */
+.progress-section{margin-bottom:32px;}
+.progress-bar-wrap{background:#e2e8f0;border-radius:10px;height:14px;overflow:hidden;margin-top:8px;}
+.progress-bar-fill{height:100%;border-radius:10px;background:linear-gradient(90deg,var(--sky),var(--green));transition:width .5s ease;}
+.progress-text{font-size:.82rem;color:var(--subtle);font-weight:500;margin-top:6px;}
 
-.prov-details{margin-top:12px;padding-top:10px;border-top:1px solid #f1f5f9;font-size:13px;color:var(--text);}
-.prov-details label{font-size:11px;color:var(--subtle);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px;font-weight:600;}
-.prov-details .detail-row{display:flex;gap:16px;margin-bottom:6px;}
-.prov-details input,.prov-details select{font-family:'DM Sans',sans-serif;font-size:13px;padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;width:100%;outline:none;transition:border-color .2s;}
-.prov-details input:focus,.prov-details select:focus{border-color:var(--sky);}
+/* ── TEAM RESULTS ── */
+.team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;margin-bottom:32px;}
+.team-card{background:var(--card);border-radius:var(--radius);padding:18px 22px;box-shadow:var(--shadow);border-left:4px solid var(--sky);}
+.team-card.status-contacto{border-left-color:var(--orange);}
+.team-card.status-conversacion{border-left-color:var(--blue);}
+.team-card.status-confirmado{border-left-color:var(--gold);background:linear-gradient(135deg,#fffbf0 0%,#fff8e7 100%);animation:goldPulse 3s ease-in-out infinite;}
+@keyframes goldPulse{0%,100%{box-shadow:0 2px 12px rgba(201,169,110,.12);}50%{box-shadow:0 4px 24px rgba(201,169,110,.28);}}
+.team-card-exec{font-weight:700;font-size:.9rem;color:var(--navy);margin-bottom:2px;}
+.team-card-prov{font-size:.82rem;color:var(--subtle);margin-bottom:6px;}
+.team-card-status{display:inline-flex;align-items:center;gap:5px;font-size:.75rem;font-weight:600;padding:3px 10px;border-radius:12px;margin-bottom:6px;}
+.team-card-status.ts-contacto{background:#fff7ed;color:#c2410c;}
+.team-card-status.ts-conversacion{background:#eff6ff;color:#1d4ed8;}
+.team-card-status.ts-confirmado{background:#f0fdf4;color:#15803d;}
+.team-card-institution{font-size:.82rem;color:var(--text);font-weight:500;}
+.team-card-celebration{font-size:.88rem;color:#92700c;font-weight:600;line-height:1.45;margin-top:8px;}
 
-.prov-actions{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;}
-.btn-status{font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;padding:5px 12px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;color:var(--text);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:4px;}
-.btn-status:hover{border-color:var(--sky);background:#eff6ff;color:var(--navy);}
-.btn-status.active{border-color:var(--sky);background:var(--sky);color:#fff;}
+/* ── EMPTY STATE ── */
+.empty-state{text-align:center;padding:40px 20px;color:var(--subtle);font-size:.9rem;}
+.empty-state svg{width:48px;height:48px;margin-bottom:12px;opacity:.4;}
 
-/* ── Celebrations ── */
-.celebrations-section{margin-bottom:32px;}
-.celebrations-section .section-title{font-family:'Montserrat',sans-serif;font-size:18px;font-weight:700;color:var(--navy);margin-bottom:16px;display:flex;align-items:center;gap:10px;}
-.celeb-card{background:linear-gradient(135deg,#fffbf0,#fff9e8);border:2px solid var(--gold-lt);border-radius:var(--radius);padding:18px 20px;margin-bottom:10px;position:relative;overflow:hidden;animation:slideIn .4s ease;}
-.celeb-card::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;background:var(--gold);}
-.celeb-card .celeb-text{font-size:14px;color:var(--text);font-weight:500;padding-left:8px;}
-.celeb-card .celeb-text strong{color:var(--navy);font-weight:700;}
-.celeb-card .celeb-meta{font-size:11px;color:var(--subtle);margin-top:6px;padding-left:8px;}
-.no-celebs{color:var(--subtle);font-size:13px;font-style:italic;}
+/* ── ESPECIALES TAG ── */
+.tag-especial{display:inline-block;padding:2px 8px;border-radius:6px;font-size:.68rem;font-weight:600;background:#fef3c7;color:#92400e;margin-left:6px;vertical-align:middle;}
 
-/* ── Updates Feed ── */
-.updates-section{margin-bottom:48px;}
-.updates-section .section-title{font-family:'Montserrat',sans-serif;font-size:18px;font-weight:700;color:var(--navy);margin-bottom:16px;display:flex;align-items:center;gap:10px;}
-.update-form{background:var(--card);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow);border:1px solid rgba(0,26,96,.06);margin-bottom:16px;}
-.update-form .form-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;}
-.update-form .field{display:flex;flex-direction:column;gap:4px;flex:1;min-width:140px;}
-.update-form .field.wide{flex:2;min-width:200px;}
-.update-form label{font-size:11px;color:var(--subtle);font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
-.update-form input,.update-form select,.update-form textarea{font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;outline:none;transition:border-color .2s;}
-.update-form input:focus,.update-form select:focus,.update-form textarea:focus{border-color:var(--sky);}
-.update-form textarea{resize:vertical;min-height:40px;}
-.btn-submit{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;padding:8px 20px;border:none;border-radius:8px;background:var(--navy);color:#fff;cursor:pointer;transition:all .2s;white-space:nowrap;align-self:flex-end;}
-.btn-submit:hover{background:#0a2e8a;transform:translateY(-1px);}
-
-.update-item{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid #f1f5f9;}
-.update-item:last-child{border-bottom:none;}
-.update-dot{width:10px;height:10px;border-radius:50%;background:var(--sky);margin-top:5px;flex-shrink:0;}
-.update-content .update-header{font-size:13px;font-weight:600;color:var(--navy);}
-.update-content .update-header span{color:var(--subtle);font-weight:400;margin-left:6px;font-size:12px;}
-.update-content .update-body{font-size:13px;color:var(--text);margin-top:4px;line-height:1.5;}
-.update-content .update-prov{font-size:11px;color:var(--sky);font-weight:600;margin-top:2px;}
-.no-updates{color:var(--subtle);font-size:13px;font-style:italic;padding:12px 0;}
-
-/* ── Footer ── */
-.footer{text-align:center;padding:24px 0 40px;color:var(--subtle);font-size:12px;opacity:.6;}
-
-/* ── Animations ── */
-@keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
-@keyframes slideIn{from{opacity:0;transform:translateX(-20px);}to{opacity:1;transform:translateX(0);}}
-@keyframes goldBurst{
-  0%{opacity:.6;background:radial-gradient(circle at center,rgba(201,169,110,.3),transparent 70%);}
-  100%{opacity:0;background:radial-gradient(circle at center,rgba(201,169,110,0),transparent 70%);}
-}
-@keyframes confirmPulse{
-  0%{box-shadow:0 0 0 0 rgba(34,197,94,.4);}
-  70%{box-shadow:0 0 0 14px rgba(34,197,94,0);}
-  100%{box-shadow:0 0 0 0 rgba(34,197,94,0);}
-}
-.prov-card.just-confirmed{animation:confirmPulse .8s ease-out;}
-
-/* ── SVG Icons inline ── */
-.icon{width:16px;height:16px;fill:currentColor;flex-shrink:0;}
-
-/* ── Responsive ── */
-@media(max-width:640px){
-  .header h1{font-size:24px;}
-  .countdowns{grid-template-columns:1fr;}
-  .prov-grid{grid-template-columns:1fr;}
-  .timer-unit .num{font-size:24px;min-width:40px;}
-  .update-form .form-row{flex-direction:column;}
-  .update-form .field,.update-form .field.wide{min-width:100%;}
-  .prov-details .detail-row{flex-direction:column;gap:8px;}
+/* ── RESPONSIVE ── */
+@media(max-width:680px){
+  .header{padding:20px 16px 18px;}
+  .header h1{font-size:1.15rem;}
+  .header-inner{flex-direction:column;align-items:flex-start;gap:10px;}
+  .header-right{width:100%;justify-content:space-between;}
+  .container{padding:16px 12px 48px;}
+  .countdown-row{grid-template-columns:1fr;}
+  .province-grid,.team-grid{grid-template-columns:1fr;}
+  .status-chips{gap:5px;}
+  .status-chip{padding:5px 10px;font-size:.72rem;}
 }
 </style>
 </head>
 <body>
 
-<div class="hero-bg"></div>
-
-<div class="page">
-  <!-- Top Bar -->
-  <div class="top-bar">
-    <a href="index.html" id="backLink">
-      <svg class="icon" viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
-      Volver a Central
-    </a>
-    <span class="user-tag" id="userTag"></span>
-  </div>
-
-  <!-- Header -->
-  <div class="header">
-    <div class="brand-line">
-      <span class="brand-bar"></span>
-      <span class="brand-diamond"></span>
-      <span class="brand-text">OpenCluster Tech</span>
-      <span class="brand-diamond"></span>
-      <span class="brand-bar"></span>
+<!-- ── HEADER ── -->
+<div class="header">
+  <div class="header-inner">
+    <div class="header-brand">
+      <svg class="header-logo" viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="18" stroke="#06b3fd" stroke-width="2.5"/><circle cx="20" cy="20" r="8" fill="#06b3fd" opacity=".3"/><circle cx="20" cy="20" r="4" fill="#fff"/><circle cx="20" cy="10" r="2.5" fill="#C9A96E"/><circle cx="28.5" cy="25" r="2.5" fill="#C9A96E"/><circle cx="11.5" cy="25" r="2.5" fill="#C9A96E"/></svg>
+      <h1>FNDR <span>Fondos Activos</span></h1>
     </div>
-    <h1>FNDR <span>&#8212; Fondos Activos</span></h1>
-    <div class="sub">Seguimiento de postulaciones a Fondos Nacionales de Desarrollo Regional</div>
-  </div>
-
-  <!-- Countdowns -->
-  <div class="countdowns" id="countdowns"></div>
-
-  <!-- Progress Bar -->
-  <div class="progress-section">
-    <div class="progress-card">
-      <div class="progress-header">
-        <span class="title">Cobertura de Provincias</span>
-        <span class="count" id="progressCount">0 de 0</span>
-      </div>
-      <div class="progress-track">
-        <div class="progress-fill" id="progressFill" style="width:0%"></div>
-      </div>
+    <div class="header-right">
+      <div class="header-user" id="headerUser"></div>
+      <a href="index.html" class="header-back">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 3L5 8l5 5"/></svg>
+        Volver a Central
+      </a>
     </div>
   </div>
+</div>
 
-  <!-- Fund Sections (province cards) -->
-  <div id="fundSections"></div>
+<div class="container">
+  <!-- Countdown timers -->
+  <div class="countdown-row" id="countdownRow"></div>
 
-  <!-- Celebrations -->
-  <div class="celebrations-section" id="celebSection">
+  <!-- Progress -->
+  <div class="progress-section" id="progressSection">
     <div class="section-title">
-      <svg class="icon" viewBox="0 0 24 24" style="color:var(--gold);width:20px;height:20px;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.27 5.82 21 7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-      Proyectos Confirmados
+      <svg viewBox="0 0 22 22" fill="none" stroke="var(--navy)" stroke-width="2"><rect x="2" y="6" width="18" height="12" rx="2"/><path d="M6 6V4a4 4 0 018 0v2"/></svg>
+      Progreso General
     </div>
-    <div id="celebFeed"></div>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressFill"></div></div>
+    <div class="progress-text" id="progressText"></div>
   </div>
 
-  <!-- Quick Updates -->
-  <div class="updates-section">
-    <div class="section-title">
-      <svg class="icon" viewBox="0 0 24 24" style="color:var(--sky);width:20px;height:20px;"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
-      Actualizaciones
-    </div>
-    <div class="update-form" id="updateForm">
-      <div class="form-row">
-        <div class="field">
-          <label>Provincia / Asignaci&oacute;n</label>
-          <select id="updProv"></select>
-        </div>
-        <div class="field wide">
-          <label>Comentario</label>
-          <input type="text" id="updText" placeholder="Breve actualizaci&oacute;n..." maxlength="200">
-        </div>
-        <button class="btn-submit" onclick="postUpdate()">
-          <svg class="icon" viewBox="0 0 24 24" style="width:14px;height:14px;margin-right:4px;vertical-align:middle;fill:#fff;"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-          Publicar
-        </button>
-      </div>
-    </div>
-    <div id="updatesFeed"></div>
-  </div>
+  <!-- Your provinces -->
+  <div id="mySection"></div>
 
-  <div class="footer">OpenCluster Tech &mdash; FNDR Tracker</div>
+  <!-- Team results -->
+  <div id="teamSection"></div>
 </div>
 
 <script>
-// ═══════════════════════════════════════════════
-// CONFIG & DATA
-// ═══════════════════════════════════════════════
-
-const API_URL = 'https://script.google.com/macros/s/AKfycbwuH9VDimIFZUIYe0FSGR5kvSXT-UlcNmCL-BjW1oIiGoBhJBr_RnXJbQJmbxiCMGo4/exec';
-const STORAGE_KEY = 'oc_fndr_data';
-
-const USUARIO = localStorage.getItem('oc_portal_user') || localStorage.getItem('oc_central_user') || '';
-
+/* ══════════════════════════════════════════
+   CONFIG
+   ══════════════════════════════════════════ */
 const FONDOS = [
   {
     id: 'valparaiso',
-    nombre: 'FNDR Valpara\u00edso',
-    region: 'Valpara\u00edso',
+    nombre: 'FNDR Valparaiso',
+    region: 'Valparaiso',
     cierre: '2026-04-22T23:59:00-04:00',
     provincias: [
-      { nombre: 'Valparaíso', ejecutivo: 'Rayen Ogalde' },
+      { nombre: 'Valparaiso', ejecutivo: 'Rayen Ogalde' },
       { nombre: 'Marga Marga', ejecutivo: 'Rayen Ogalde' },
-      { nombre: 'San Antonio', ejecutivo: 'Roberto Cáceres' },
-      { nombre: 'Petorca', ejecutivo: 'Roberto Cáceres' },
-      { nombre: 'Los Andes', ejecutivo: 'William Marín' },
-      { nombre: 'Quillota', ejecutivo: 'William Marín' },
-      { nombre: 'San Felipe', ejecutivo: 'Germán Alvarado' },
+      { nombre: 'San Antonio', ejecutivo: 'Roberto Caceres' },
+      { nombre: 'Petorca', ejecutivo: 'Roberto Caceres' },
+      { nombre: 'Los Andes', ejecutivo: 'William Marin' },
+      { nombre: 'Quillota', ejecutivo: 'William Marin' },
+      { nombre: 'San Felipe', ejecutivo: 'German Alvarado' },
       { nombre: 'Isla de Pascua', ejecutivo: 'Maximiliano Astudillo' },
     ]
   },
@@ -289,422 +215,536 @@ const FONDOS = [
 ];
 
 const ESPECIALES = [
-  { nombre: 'Universidades Públicas de Valparaíso', ejecutivo: 'William Marín', fondo: 'valparaiso' }
+  { nombre: 'Universidades Publicas de Valparaiso', ejecutivo: 'William Marin', fondo: 'valparaiso' }
 ];
 
-const STATUS_LIST = [
-  { key: 'pendiente', label: 'Pendiente', css: 'status-pendiente' },
-  { key: 'contacto', label: 'En contacto', css: 'status-contacto' },
-  { key: 'conversacion', label: 'En conversaci\u00f3n', css: 'status-conversacion' },
-  { key: 'confirmado', label: 'Proyecto confirmado', css: 'status-confirmado' }
+// Display names (with accents) for UI rendering
+const DISPLAY_NAMES = {
+  'valparaiso': 'FNDR Valparaíso',
+  'santiago': 'FNDR Santiago'
+};
+const DISPLAY_PROVINCIAS = {
+  'Valparaiso': 'Valparaíso',
+  'Marga Marga': 'Marga Marga',
+  'San Antonio': 'San Antonio',
+  'Petorca': 'Petorca',
+  'Los Andes': 'Los Andes',
+  'Quillota': 'Quillota',
+  'San Felipe': 'San Felipe',
+  'Isla de Pascua': 'Isla de Pascua',
+  'Universidades Publicas de Valparaiso': 'Universidades Públicas de Valparaíso'
+};
+const DISPLAY_REGIONES = {
+  'Valparaiso': 'Valparaíso',
+  'Metropolitana': 'Metropolitana'
+};
+const DISPLAY_EJECUTIVOS = {
+  'rayen ogalde': 'Rayen Ogalde',
+  'roberto caceres': 'Roberto Cáceres',
+  'william marin': 'William Marín',
+  'german alvarado': 'Germán Alvarado',
+  'maximiliano astudillo': 'Maximiliano Astudillo'
+};
+
+const API_URL = 'https://script.google.com/macros/s/AKfycbwuH9VDimIFZUIYe0FSGR5kvSXT-UlcNmCL-BjW1oIiGoBhJBr_RnXJbQJmbxiCMGo4/exec';
+
+const STORAGE_KEY = 'oc_fndr_data';
+
+const STATUSES = [
+  { id: 'pendiente', label: 'Pendiente', css: 's-pendiente' },
+  { id: 'contacto', label: 'Contacto realizado', css: 's-contacto' },
+  { id: 'conversacion', label: 'En conversación', css: 's-conversacion' },
+  { id: 'confirmado', label: 'Proyecto confirmado', css: 's-confirmado' }
 ];
 
-const STATUS_ORDER = { pendiente: 0, contacto: 1, conversacion: 2, confirmado: 3 };
-const TIPO_LABELS = { AT: 'Ayudas T\u00e9cnicas', SM: 'Sala Multisensorial' };
+/* ══════════════════════════════════════════
+   USER DETECTION
+   ══════════════════════════════════════════ */
+function normName(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+}
 
-// ═══════════════════════════════════════════════
-// DATA LAYER (localStorage now, API later)
-// ═══════════════════════════════════════════════
+const USUARIO_RAW = localStorage.getItem('oc_portal_user') || localStorage.getItem('oc_central_user') || '';
+const USUARIO = normName(USUARIO_RAW);
+const IS_ADMIN = USUARIO === normName('Rayen Ogalde');
 
-function defaultData() {
-  const provincias = {};
-  const celebraciones = [];
-  const actualizaciones = [];
-  FONDOS.forEach(f => {
-    f.provincias.forEach(p => {
-      const key = f.id + '::' + p.nombre;
-      provincias[key] = {
-        fondo: f.id,
-        nombre: p.nombre,
-        ejecutivo: p.ejecutivo,
-        status: 'pendiente',
-        institucion: '',
-        tipo: '',
-        especial: false
+function displayUser(raw) {
+  const n = normName(raw);
+  return DISPLAY_EJECUTIVOS[n] || raw || 'Usuario';
+}
+
+document.getElementById('headerUser').textContent = displayUser(USUARIO_RAW);
+
+/* ══════════════════════════════════════════
+   DATA PERSISTENCE
+   ══════════════════════════════════════════ */
+let DATA = { provinces: {}, updates: [] };
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      DATA = {
+        provinces: parsed.provinces || {},
+        updates: parsed.updates || []
       };
-    });
-  });
-  ESPECIALES.forEach(e => {
-    const key = e.fondo + '::esp::' + e.nombre;
-    provincias[key] = {
-      fondo: e.fondo,
-      nombre: e.nombre,
-      ejecutivo: e.ejecutivo,
-      status: 'pendiente',
-      institucion: '',
-      tipo: '',
-      especial: true
-    };
-  });
-  return { provincias, celebraciones, actualizaciones };
-}
-
-async function loadData() {
-  // Future: return (await fetch(API_URL + '?action=getFndr')).json();
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) {
-    const d = defaultData();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
-    return d;
-  }
-  const data = JSON.parse(raw);
-  // Merge any new provinces from config that aren't in stored data
-  const def = defaultData();
-  Object.keys(def.provincias).forEach(key => {
-    if (!data.provincias[key]) {
-      data.provincias[key] = def.provincias[key];
     }
+  } catch (e) {
+    console.warn('FNDR loadData error', e);
+  }
+  return DATA;
+}
+
+function saveData() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA));
+  } catch (e) {
+    console.warn('FNDR saveData error', e);
+  }
+}
+
+function getProvinceKey(fondoId, provNombre) {
+  return fondoId + '/' + provNombre;
+}
+
+function getProvinceData(key) {
+  return DATA.provinces[key] || { status: 'pendiente' };
+}
+
+function setProvinceData(key, fields) {
+  if (!DATA.provinces[key]) DATA.provinces[key] = { status: 'pendiente' };
+  Object.assign(DATA.provinces[key], fields);
+  saveData();
+}
+
+function pushUpdate(ejecutivo, provincia, fondoId, status, extra) {
+  DATA.updates.push({
+    ejecutivo: ejecutivo,
+    provincia: provincia,
+    fondo: fondoId,
+    status: status,
+    institucion: extra.institucion || '',
+    tipo: extra.tipo || '',
+    fecha: new Date().toISOString(),
+    mensaje: extra.mensaje || ''
   });
-  if (!data.celebraciones) data.celebraciones = [];
-  if (!data.actualizaciones) data.actualizaciones = [];
-  return data;
+  saveData();
 }
 
-async function saveData(data) {
-  // Future: await fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'saveFndr', data }) });
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+/* ══════════════════════════════════════════
+   BUILD ALL PROVINCE ENTRIES
+   ══════════════════════════════════════════ */
+function getAllProvinces() {
+  const list = [];
+  for (const f of FONDOS) {
+    for (const p of f.provincias) {
+      list.push({
+        key: getProvinceKey(f.id, p.nombre),
+        fondoId: f.id,
+        fondoNombre: DISPLAY_NAMES[f.id] || f.nombre,
+        region: DISPLAY_REGIONES[f.region] || f.region,
+        nombre: p.nombre,
+        displayNombre: DISPLAY_PROVINCIAS[p.nombre] || p.nombre,
+        ejecutivo: p.ejecutivo,
+        especial: false
+      });
+    }
+  }
+  for (const e of ESPECIALES) {
+    const fondo = FONDOS.find(f => f.id === e.fondo);
+    list.push({
+      key: getProvinceKey(e.fondo, e.nombre),
+      fondoId: e.fondo,
+      fondoNombre: DISPLAY_NAMES[e.fondo] || (fondo ? fondo.nombre : e.fondo),
+      region: fondo ? (DISPLAY_REGIONES[fondo.region] || fondo.region) : '',
+      nombre: e.nombre,
+      displayNombre: DISPLAY_PROVINCIAS[e.nombre] || e.nombre,
+      ejecutivo: e.ejecutivo,
+      especial: true
+    });
+  }
+  return list;
 }
 
-// ═══════════════════════════════════════════════
-// STATE
-// ═══════════════════════════════════════════════
-
-let DATA = null;
-
-// ═══════════════════════════════════════════════
-// USER PERMISSIONS
-// ═══════════════════════════════════════════════
-
-function canEdit(ejecutivo) {
-  if (!USUARIO) return false;
-  const u = USUARIO.toLowerCase().trim();
-  const e = ejecutivo.toLowerCase().trim();
-  // Rayen can edit everything
-  if (u === 'rayen' || u.includes('rayen') || u.includes('ogalde')) return true;
-  // Match by first name or full name
-  const eParts = e.split(' ');
-  return u === e || eParts.some(part => part.length > 2 && u.includes(part.toLowerCase()));
-}
-
-// ═══════════════════════════════════════════════
-// COUNTDOWN TIMERS
-// ═══════════════════════════════════════════════
-
+/* ══════════════════════════════════════════
+   COUNTDOWN TIMERS
+   ══════════════════════════════════════════ */
 function renderCountdowns() {
-  const container = document.getElementById('countdowns');
-  container.innerHTML = '';
-  FONDOS.forEach(f => {
+  const row = document.getElementById('countdownRow');
+  row.innerHTML = '';
+  for (const f of FONDOS) {
     const card = document.createElement('div');
     card.className = 'countdown-card';
     card.id = 'cd-' + f.id;
     card.innerHTML = `
-      <div class="fund-name">${f.nombre}</div>
-      <div class="fund-region">Regi\u00f3n de ${f.region}</div>
-      <div class="timer" id="timer-${f.id}"></div>
+      <div class="countdown-label">${DISPLAY_NAMES[f.id] || f.nombre}</div>
+      <div class="countdown-region">Región de ${DISPLAY_REGIONES[f.region] || f.region} — Cierre: ${formatDateShort(f.cierre)}</div>
+      <div class="countdown-timer" id="cdt-${f.id}"></div>
     `;
-    container.appendChild(card);
-  });
-  updateCountdowns();
+    row.appendChild(card);
+  }
+  tickCountdowns();
 }
 
-function updateCountdowns() {
+function formatDateShort(iso) {
+  const d = new Date(iso);
+  const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear() + ', ' +
+    String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+
+function tickCountdowns() {
   const now = Date.now();
-  FONDOS.forEach(f => {
+  for (const f of FONDOS) {
     const target = new Date(f.cierre).getTime();
     const diff = target - now;
     const card = document.getElementById('cd-' + f.id);
-    const timerEl = document.getElementById('timer-' + f.id);
-    if (!card || !timerEl) return;
-
-    card.classList.remove('urgent', 'closed');
-
+    const timer = document.getElementById('cdt-' + f.id);
     if (diff <= 0) {
-      card.classList.add('closed');
-      timerEl.innerHTML = '<div class="closed-label">CERRADO</div>';
-      return;
+      card.className = 'countdown-card closed';
+      timer.innerHTML = '<div class="countdown-closed">CERRADO</div>';
+      continue;
     }
-
     const days = Math.floor(diff / 86400000);
     const hrs = Math.floor((diff % 86400000) / 3600000);
     const mins = Math.floor((diff % 3600000) / 60000);
     const secs = Math.floor((diff % 60000) / 1000);
+    card.className = 'countdown-card' + (days < 7 ? ' urgent' : '');
+    timer.innerHTML =
+      unit(days, 'días') + unit(hrs, 'hrs') + unit(mins, 'min') + unit(secs, 'seg');
+  }
+}
+function unit(n, l) {
+  return '<div class="countdown-unit"><div class="countdown-num">' + n + '</div><div class="countdown-lbl">' + l + '</div></div>';
+}
 
-    if (days < 7) card.classList.add('urgent');
-
-    timerEl.innerHTML = `
-      <div class="timer-unit"><span class="num">${days}</span><span class="lbl">d\u00edas</span></div>
-      <div class="timer-unit"><span class="num">${String(hrs).padStart(2,'0')}</span><span class="lbl">horas</span></div>
-      <div class="timer-unit"><span class="num">${String(mins).padStart(2,'0')}</span><span class="lbl">min</span></div>
-      <div class="timer-unit"><span class="num">${String(secs).padStart(2,'0')}</span><span class="lbl">seg</span></div>
+/* ══════════════════════════════════════════
+   RENDER MY PROVINCES
+   ══════════════════════════════════════════ */
+function renderMyProvinces() {
+  const section = document.getElementById('mySection');
+  const all = getAllProvinces();
+  let mine;
+  if (IS_ADMIN) {
+    mine = all; // admin sees everything
+  } else {
+    mine = all.filter(p => normName(p.ejecutivo) === USUARIO);
+  }
+  if (mine.length === 0 && USUARIO) {
+    section.innerHTML = `
+      <div class="section-title">
+        <svg viewBox="0 0 22 22" fill="none" stroke="var(--navy)" stroke-width="2"><path d="M11 2L2 7l9 5 9-5-9-5z"/><path d="M2 12l9 5 9-5"/><path d="M2 17l9 5 9-5"/></svg>
+        Tus Provincias Asignadas
+      </div>
+      <div class="empty-state">
+        <svg viewBox="0 0 48 48" fill="none" stroke="var(--subtle)" stroke-width="2"><circle cx="24" cy="24" r="20"/><path d="M16 28s3 4 8 4 8-4 8-4"/><circle cx="18" cy="20" r="2" fill="var(--subtle)"/><circle cx="30" cy="20" r="2" fill="var(--subtle)"/></svg>
+        <p>No tienes provincias asignadas en los fondos activos.</p>
+      </div>
     `;
-  });
-}
-
-// ═══════════════════════════════════════════════
-// PROVINCE CARDS
-// ═══════════════════════════════════════════════
-
-function renderFundSections() {
-  const container = document.getElementById('fundSections');
-  container.innerHTML = '';
-  FONDOS.forEach(f => {
-    const provKeys = Object.keys(DATA.provincias).filter(k => DATA.provincias[k].fondo === f.id);
-    if (provKeys.length === 0) return;
-
-    const section = document.createElement('div');
-    section.className = 'fund-section';
-    section.innerHTML = `<div class="fund-section-title"><span class="dot"></span>${f.nombre}</div>`;
-
-    const grid = document.createElement('div');
-    grid.className = 'prov-grid';
-
-    provKeys.forEach(key => {
-      const p = DATA.provincias[key];
-      const statusInfo = STATUS_LIST.find(s => s.key === p.status) || STATUS_LIST[0];
-      const showDetails = STATUS_ORDER[p.status] >= 2;
-      const editable = canEdit(p.ejecutivo);
-      const isConfirmed = p.status === 'confirmado';
-
-      const card = document.createElement('div');
-      card.className = 'prov-card' + (isConfirmed ? ' confirmed' : '');
-      card.id = 'card-' + key.replace(/[^a-zA-Z0-9]/g, '_');
-
-      let detailsHTML = '';
-      if (showDetails || isConfirmed) {
-        detailsHTML = `
-          <div class="prov-details">
-            <div class="detail-row">
-              <div style="flex:2">
-                <label>Instituci\u00f3n</label>
-                <input type="text" value="${escapeAttr(p.institucion)}" ${editable ? '' : 'disabled'}
-                  onchange="updateField('${escapeAttr(key)}','institucion',this.value)" placeholder="Nombre instituci\u00f3n">
-              </div>
-              <div style="flex:1">
-                <label>Tipo</label>
-                <select ${editable ? '' : 'disabled'} onchange="updateField('${escapeAttr(key)}','tipo',this.value)">
-                  <option value="">--</option>
-                  <option value="AT" ${p.tipo==='AT'?'selected':''}>AT - Ayudas T\u00e9cnicas</option>
-                  <option value="SM" ${p.tipo==='SM'?'selected':''}>SM - Sala Multisensorial</option>
-                </select>
-              </div>
-            </div>
-          </div>`;
-      }
-
-      let actionsHTML = '';
-      if (editable) {
-        actionsHTML = '<div class="prov-actions">';
-        STATUS_LIST.forEach(s => {
-          actionsHTML += `<button class="btn-status ${p.status === s.key ? 'active' : ''}"
-            onclick="changeStatus('${escapeAttr(key)}','${s.key}')">${s.label}</button>`;
-        });
-        actionsHTML += '</div>';
-      }
-
-      card.innerHTML = `
-        <div class="prov-top">
-          <div>
-            <div class="prov-name">${p.especial ? '<svg class="icon" viewBox="0 0 24 24" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;fill:var(--gold);"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.27 5.82 21 7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>' : ''}${p.nombre}</div>
-            <div class="prov-exec">${p.ejecutivo}</div>
-          </div>
-          <span class="status-badge ${statusInfo.css}"><span class="sdot"></span>${statusInfo.label}</span>
-        </div>
-        ${detailsHTML}
-        ${actionsHTML}
-      `;
-      grid.appendChild(card);
-    });
-
-    section.appendChild(grid);
-    container.appendChild(section);
-  });
-}
-
-// ═══════════════════════════════════════════════
-// STATUS CHANGE
-// ═══════════════════════════════════════════════
-
-async function changeStatus(key, newStatus) {
-  const p = DATA.provincias[key];
-  if (!p) return;
-  const oldStatus = p.status;
-  p.status = newStatus;
-
-  if (newStatus === 'confirmado' && oldStatus !== 'confirmado') {
-    DATA.celebraciones.unshift({
-      ejecutivo: p.ejecutivo,
-      provincia: p.nombre,
-      institucion: p.institucion || '(por definir)',
-      tipo: p.tipo || '?',
-      fecha: new Date().toISOString()
-    });
+    return;
+  }
+  if (!USUARIO) {
+    section.innerHTML = `
+      <div class="empty-state">
+        <svg viewBox="0 0 48 48" fill="none" stroke="var(--subtle)" stroke-width="2"><circle cx="24" cy="24" r="20"/><path d="M18 18l12 12M30 18L18 30"/></svg>
+        <p>No se detectó usuario. Ingresa desde el portal para ver tus provincias.</p>
+      </div>
+    `;
+    return;
   }
 
-  await saveData(DATA);
-  renderFundSections();
-  renderProgress();
-  renderCelebrations();
+  let html = `
+    <div class="section-title">
+      <svg viewBox="0 0 22 22" fill="none" stroke="var(--navy)" stroke-width="2"><path d="M11 2L2 7l9 5 9-5-9-5z"/><path d="M2 12l9 5 9-5"/><path d="M2 17l9 5 9-5"/></svg>
+      ${IS_ADMIN ? 'Todas las Provincias' : 'Tus Provincias Asignadas'}
+      <span class="section-subtitle">${displayUser(USUARIO_RAW)}</span>
+    </div>
+    <div class="province-grid">
+  `;
+  for (const p of mine) {
+    html += buildProvinceCard(p, IS_ADMIN);
+  }
+  html += '</div>';
+  section.innerHTML = html;
+  attachProvinceEvents();
+}
 
-  if (newStatus === 'confirmado' && oldStatus !== 'confirmado') {
-    const cardId = 'card-' + key.replace(/[^a-zA-Z0-9]/g, '_');
-    const cardEl = document.getElementById(cardId);
-    if (cardEl) {
-      cardEl.classList.add('just-confirmed');
-      setTimeout(() => cardEl.classList.remove('just-confirmed'), 1000);
+function buildProvinceCard(p, showOwner) {
+  const data = getProvinceData(p.key);
+  const status = data.status || 'pendiente';
+  const sid = statusIndex(status);
+
+  let ownerHtml = '';
+  if (showOwner) {
+    ownerHtml = `<div class="province-owner">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3 3-5 6-5s6 2 6 5"/></svg>
+      ${displayUser(p.ejecutivo)}
+    </div>`;
+  }
+
+  let especialTag = p.especial ? '<span class="tag-especial">Especial</span>' : '';
+
+  let chips = '';
+  for (let i = 0; i < STATUSES.length; i++) {
+    const s = STATUSES[i];
+    const active = s.id === status ? ' active' : '';
+    chips += `<div class="status-chip ${s.css}${active}" data-key="${esc(p.key)}" data-status="${s.id}">
+      <span class="dot"></span>${s.label}
+    </div>`;
+  }
+
+  let subFieldsHtml = '';
+  // Contacto fields
+  subFieldsHtml += `<div class="sub-fields${sid >= 1 ? ' visible' : ''}" data-key="${esc(p.key)}" data-panel="contacto">
+    <div class="field-group">
+      <label class="field-label">Medio de contacto</label>
+      <div class="radio-group">
+        ${radioOption(p.key, 'medio', 'Email', data.medio)}
+        ${radioOption(p.key, 'medio', 'Llamada telefonica', data.medio)}
+        ${radioOption(p.key, 'medio', 'Presencial', data.medio)}
+        ${radioOption(p.key, 'medio', 'Otro', data.medio)}
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Fecha de contacto</label>
+      <input type="date" class="field-input" data-key="${esc(p.key)}" data-field="fecha" value="${esc(data.fecha || '')}">
+    </div>
+  </div>`;
+
+  // Conversacion fields
+  subFieldsHtml += `<div class="sub-fields${sid >= 2 ? ' visible' : ''}" data-key="${esc(p.key)}" data-panel="conversacion">
+    <div class="field-group">
+      <label class="field-label">Nombre del contacto</label>
+      <input type="text" class="field-input" data-key="${esc(p.key)}" data-field="contactoNombre" value="${esc(data.contactoNombre || '')}" placeholder="Nombre completo">
+    </div>
+    <div class="field-group">
+      <label class="field-label">Cargo</label>
+      <input type="text" class="field-input" data-key="${esc(p.key)}" data-field="cargo" value="${esc(data.cargo || '')}" placeholder="Ej: Director, Jefe de Adquisiciones">
+    </div>
+    <div class="field-group">
+      <label class="field-label">Institución</label>
+      <input type="text" class="field-input" data-key="${esc(p.key)}" data-field="institucion" value="${esc(data.institucion || '')}" placeholder="Nombre de la institución">
+    </div>
+    <div class="field-group">
+      <label class="field-label">Tipo de proyecto</label>
+      <div class="radio-group">
+        ${radioOption(p.key, 'tipo', 'Ayudas Tecnicas', data.tipo)}
+        ${radioOption(p.key, 'tipo', 'Sala Multisensorial', data.tipo)}
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Notas</label>
+      <textarea class="field-input" data-key="${esc(p.key)}" data-field="notas" placeholder="Observaciones, detalles de la conversación...">${esc(data.notas || '')}</textarea>
+    </div>
+  </div>`;
+
+  // Confirmado fields
+  subFieldsHtml += `<div class="sub-fields${sid >= 3 ? ' visible' : ''}" data-key="${esc(p.key)}" data-panel="confirmado">
+    <div class="field-group">
+      <label class="field-label">Monto estimado (opcional)</label>
+      <input type="number" class="field-input" data-key="${esc(p.key)}" data-field="monto" value="${esc(data.monto || '')}" placeholder="$0">
+    </div>
+  </div>`;
+
+  return `
+    <div class="province-card" data-key="${esc(p.key)}">
+      <div class="province-card-head">
+        <div class="province-name">${p.displayNombre}${especialTag}</div>
+        <div class="province-fund">${p.fondoNombre} — Región de ${p.region}</div>
+        ${ownerHtml}
+      </div>
+      <div class="province-card-body">
+        <div class="status-chips">${chips}</div>
+        ${subFieldsHtml}
+      </div>
+    </div>
+  `;
+}
+
+function radioOption(key, field, value, current) {
+  const id = 'r-' + normName(key + field + value).replace(/[^a-z0-9]/g, '');
+  const checked = normName(current) === normName(value) ? 'checked' : '';
+  return `<div class="radio-pill">
+    <input type="radio" name="radio-${esc(key)}-${field}" id="${id}" value="${esc(value)}" ${checked} data-key="${esc(key)}" data-field="${field}">
+    <label for="${id}">${value === 'Llamada telefonica' ? 'Llamada telefónica' : (value === 'Ayudas Tecnicas' ? 'Ayudas Técnicas' : value)}</label>
+  </div>`;
+}
+
+function statusIndex(id) {
+  return STATUSES.findIndex(s => s.id === id);
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ══════════════════════════════════════════
+   EVENT HANDLERS
+   ══════════════════════════════════════════ */
+function attachProvinceEvents() {
+  // Status chip clicks
+  document.querySelectorAll('.status-chip').forEach(chip => {
+    chip.addEventListener('click', function() {
+      const key = this.dataset.key;
+      const newStatus = this.dataset.status;
+      const oldData = getProvinceData(key);
+      const oldIdx = statusIndex(oldData.status || 'pendiente');
+      const newIdx = statusIndex(newStatus);
+
+      // Update status
+      setProvinceData(key, { status: newStatus });
+
+      // Push update if advancing
+      if (newIdx > oldIdx) {
+        const prov = getAllProvinces().find(p => p.key === key);
+        if (prov) {
+          const d = getProvinceData(key);
+          pushUpdate(prov.ejecutivo, prov.displayNombre, prov.fondoId, newStatus, {
+            institucion: d.institucion || '',
+            tipo: d.tipo || '',
+            mensaje: ''
+          });
+        }
+      }
+
+      // Re-render
+      renderMyProvinces();
+      renderTeamResults();
+      renderProgress();
+    });
+  });
+
+  // Field inputs
+  document.querySelectorAll('.field-input').forEach(input => {
+    const ev = input.tagName === 'TEXTAREA' ? 'input' : 'change';
+    input.addEventListener(ev, function() {
+      const key = this.dataset.key;
+      const field = this.dataset.field;
+      if (key && field) {
+        const obj = {};
+        obj[field] = this.value;
+        setProvinceData(key, obj);
+        renderTeamResults(); // update team view if institution changes
+      }
+    });
+    if (input.type === 'text' || input.type === 'number') {
+      input.addEventListener('input', function() {
+        const key = this.dataset.key;
+        const field = this.dataset.field;
+        if (key && field) {
+          const obj = {};
+          obj[field] = this.value;
+          setProvinceData(key, obj);
+        }
+      });
+    }
+  });
+
+  // Radio buttons
+  document.querySelectorAll('.radio-pill input[type="radio"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+      const key = this.dataset.key;
+      const field = this.dataset.field;
+      if (key && field) {
+        const obj = {};
+        obj[field] = this.value;
+        setProvinceData(key, obj);
+      }
+    });
+  });
+}
+
+/* ══════════════════════════════════════════
+   TEAM RESULTS
+   ══════════════════════════════════════════ */
+function renderTeamResults() {
+  const section = document.getElementById('teamSection');
+  const all = getAllProvinces();
+  const results = [];
+
+  for (const p of all) {
+    // Skip own provinces in team view (unless admin)
+    if (!IS_ADMIN && normName(p.ejecutivo) === USUARIO) continue;
+    const data = getProvinceData(p.key);
+    const si = statusIndex(data.status || 'pendiente');
+    if (si >= 1) {
+      results.push({ prov: p, data: data, si: si });
     }
   }
-}
 
-async function updateField(key, field, value) {
-  const p = DATA.provincias[key];
-  if (!p) return;
-  p[field] = value;
-  // Also update the celebration if it exists for this province
-  if (field === 'institucion' || field === 'tipo') {
-    DATA.celebraciones.forEach(c => {
-      if (c.provincia === p.nombre && c.ejecutivo === p.ejecutivo) {
-        if (field === 'institucion') c.institucion = value;
-        if (field === 'tipo') c.tipo = value;
+  // Sort: confirmado first, then conversacion, then contacto
+  results.sort((a, b) => b.si - a.si);
+
+  let html = `
+    <div class="section-title" style="margin-top:16px;">
+      <svg viewBox="0 0 22 22" fill="none" stroke="var(--navy)" stroke-width="2"><circle cx="8" cy="7" r="4"/><path d="M1 19c0-4 3-7 7-7s7 3 7 7"/><circle cx="17" cy="8" r="3"/><path d="M16 13c2.5 0 5 2 5 5"/></svg>
+      Resultados del Equipo
+    </div>
+  `;
+
+  if (results.length === 0) {
+    html += `<div class="empty-state">
+      <svg viewBox="0 0 48 48" fill="none" stroke="var(--subtle)" stroke-width="2"><rect x="6" y="10" width="36" height="28" rx="3"/><path d="M6 18h36"/><circle cx="16" cy="28" r="3"/><circle cx="32" cy="28" r="3"/></svg>
+      <p>Aún no hay actualizaciones del equipo.</p>
+    </div>`;
+  } else {
+    html += '<div class="team-grid">';
+    for (const r of results) {
+      const statusLabel = STATUSES[r.si].label;
+      const statusCss = r.data.status;
+      let cardClass = 'team-card status-' + statusCss;
+      let content = '';
+
+      content += `<div class="team-card-exec">${displayUser(r.prov.ejecutivo)}</div>`;
+      content += `<div class="team-card-prov">${r.prov.displayNombre} — ${r.prov.fondoNombre}</div>`;
+      content += `<div class="team-card-status ts-${statusCss}"><span class="dot" style="width:7px;height:7px;border-radius:50%;display:inline-block;background:currentColor;"></span>${statusLabel}</div>`;
+
+      if (r.data.institucion) {
+        content += `<div class="team-card-institution">${esc(r.data.institucion)}</div>`;
       }
-    });
+
+      if (statusCss === 'confirmado') {
+        const tipoDisplay = r.data.tipo === 'Ayudas Tecnicas' ? 'Ayudas Técnicas' : (r.data.tipo || 'un proyecto FNDR');
+        content += `<div class="team-card-celebration">${displayUser(r.prov.ejecutivo)} ya se encuentra de camino a un proyecto FNDR para ${tipoDisplay}${r.data.institucion ? ' con ' + esc(r.data.institucion) : ''} en ${r.prov.displayNombre}.</div>`;
+      }
+
+      html += `<div class="${cardClass}">${content}</div>`;
+    }
+    html += '</div>';
   }
-  await saveData(DATA);
-  renderCelebrations();
+
+  section.innerHTML = html;
 }
 
-// ═══════════════════════════════════════════════
-// PROGRESS BAR
-// ═══════════════════════════════════════════════
-
+/* ══════════════════════════════════════════
+   PROGRESS BAR
+   ══════════════════════════════════════════ */
 function renderProgress() {
-  const allProvs = Object.values(DATA.provincias);
-  const total = allProvs.length;
-  const covered = allProvs.filter(p => STATUS_ORDER[p.status] >= 1).length;
-  const pct = total > 0 ? Math.round((covered / total) * 100) : 0;
-  document.getElementById('progressCount').textContent = covered + ' de ' + total;
+  const all = getAllProvinces();
+  const total = all.length;
+  let active = 0;
+  for (const p of all) {
+    const data = getProvinceData(p.key);
+    if (statusIndex(data.status || 'pendiente') >= 1) active++;
+  }
+  const pct = total > 0 ? Math.round((active / total) * 100) : 0;
   document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').textContent =
+    active + ' de ' + total + ' provincias con avance (' + pct + '%)';
 }
 
-// ═══════════════════════════════════════════════
-// CELEBRATIONS
-// ═══════════════════════════════════════════════
+/* ══════════════════════════════════════════
+   INIT
+   ══════════════════════════════════════════ */
+loadData();
+renderCountdowns();
+renderMyProvinces();
+renderTeamResults();
+renderProgress();
 
-function renderCelebrations() {
-  const feed = document.getElementById('celebFeed');
-  if (DATA.celebraciones.length === 0) {
-    feed.innerHTML = '<div class="no-celebs">A\u00fan no hay proyectos confirmados.</div>';
-    return;
-  }
-  feed.innerHTML = DATA.celebraciones.map(c => {
-    const tipoLabel = TIPO_LABELS[c.tipo] || c.tipo || '';
-    const dateStr = c.fecha ? new Date(c.fecha).toLocaleDateString('es-CL', { day:'numeric', month:'short', year:'numeric' }) : '';
-    return `<div class="celeb-card">
-      <div class="celeb-text"><strong>${c.ejecutivo}</strong> tiene proyecto confirmado en <strong>${c.provincia}</strong>! ${c.institucion} va por <strong>${tipoLabel || '(tipo por definir)'}</strong></div>
-      <div class="celeb-meta">${dateStr}</div>
-    </div>`;
-  }).join('');
-}
-
-// ═══════════════════════════════════════════════
-// QUICK UPDATES
-// ═══════════════════════════════════════════════
-
-function populateUpdateSelect() {
-  const sel = document.getElementById('updProv');
-  sel.innerHTML = '<option value="">Seleccionar...</option>';
-  FONDOS.forEach(f => {
-    f.provincias.forEach(p => {
-      sel.innerHTML += `<option value="${f.id}::${p.nombre}">${p.nombre} (${f.nombre})</option>`;
-    });
-  });
-  ESPECIALES.forEach(e => {
-    sel.innerHTML += `<option value="${e.fondo}::esp::${e.nombre}">${e.nombre}</option>`;
-  });
-}
-
-async function postUpdate() {
-  const prov = document.getElementById('updProv').value;
-  const text = document.getElementById('updText').value.trim();
-  if (!prov || !text) return;
-
-  const provData = DATA.provincias[prov];
-  const nombre = USUARIO || (provData ? provData.ejecutivo : 'An\u00f3nimo');
-
-  DATA.actualizaciones.unshift({
-    nombre: nombre,
-    provincia: provData ? provData.nombre : prov,
-    texto: text,
-    fecha: new Date().toISOString()
-  });
-
-  await saveData(DATA);
-  document.getElementById('updText').value = '';
-  document.getElementById('updProv').value = '';
-  renderUpdates();
-}
-
-function renderUpdates() {
-  const feed = document.getElementById('updatesFeed');
-  if (DATA.actualizaciones.length === 0) {
-    feed.innerHTML = '<div class="no-updates">Sin actualizaciones a\u00fan.</div>';
-    return;
-  }
-  feed.innerHTML = DATA.actualizaciones.slice(0, 30).map(u => {
-    const dateStr = u.fecha ? new Date(u.fecha).toLocaleDateString('es-CL', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : '';
-    return `<div class="update-item">
-      <div class="update-dot"></div>
-      <div class="update-content">
-        <div class="update-header">${u.nombre}<span>${dateStr}</span></div>
-        <div class="update-prov">${u.provincia}</div>
-        <div class="update-body">${escapeHTML(u.texto)}</div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-// ═══════════════════════════════════════════════
-// UTILS
-// ═══════════════════════════════════════════════
-
-function escapeHTML(str) {
-  const d = document.createElement('div');
-  d.textContent = str || '';
-  return d.innerHTML;
-}
-
-function escapeAttr(str) {
-  return (str || '').replace(/&/g,'&amp;').replace(/'/g,'&#39;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-// ═══════════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════════
-
-async function init() {
-  // User tag
-  const userTag = document.getElementById('userTag');
-  if (USUARIO) {
-    userTag.textContent = USUARIO;
-  }
-
-  // Show/hide update form based on login
-  if (!USUARIO) {
-    document.getElementById('updateForm').style.display = 'none';
-  }
-
-  DATA = await loadData();
-
-  renderCountdowns();
-  setInterval(updateCountdowns, 1000);
-
-  renderFundSections();
-  renderProgress();
-  renderCelebrations();
-  populateUpdateSelect();
-  renderUpdates();
-}
-
-init();
+// Tick countdown every second
+setInterval(tickCountdowns, 1000);
 </script>
 </body>
 </html>

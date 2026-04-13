@@ -144,9 +144,9 @@
     <select id="clUser">
       <option value="">-- Seleccionar --</option>
       <option value="Rayen Ogalde">Rayen Ogalde</option>
-      <option value="German Alvarado">German Alvarado</option>
-      <option value="William Marin">William Marin</option>
-      <option value="Roberto Caceres">Roberto Caceres</option>
+      <option value="Germán Alvarado">Germán Alvarado</option>
+      <option value="William Marín">William Marín</option>
+      <option value="Roberto Cáceres">Roberto Cáceres</option>
       <option value="Ximena Romero">Ximena Romero</option>
       <option value="Maximiliano Astudillo">Maximiliano Astudillo</option>
       <option value="Mario Ogalde">Mario Ogalde</option>
@@ -358,9 +358,9 @@ var CL_API='https://script.google.com/macros/s/AKfycbwdU9xdu_qtWBB0ZiyaFLZerYEqd
 var ROLES={
   'Rayen Ogalde':['cardPortal','cardCotizadorOC','cardTekia','cardContabilidad','cardDashboard','cardInstrucciones'],
   'Mario Ogalde':['cardPortal','cardCotizadorOC','cardTekia','cardInstrucciones'],
-  'German Alvarado':['cardPortal','cardCotizadorOC','cardTekia','cardInstrucciones'],
-  'William Marin':['cardPortal','cardCotizadorOC','cardTekia','cardInstrucciones'],
-  'Roberto Caceres':['cardPortal','cardCotizadorOC','cardTekia','cardInstrucciones'],
+  'Germán Alvarado':['cardPortal','cardCotizadorOC','cardTekia','cardInstrucciones'],
+  'William Marín':['cardPortal','cardCotizadorOC','cardTekia','cardInstrucciones'],
+  'Roberto Cáceres':['cardPortal','cardCotizadorOC','cardTekia','cardInstrucciones'],
   'Ximena Romero':['cardPortal','cardCotizadorOC','cardTekia','cardInstrucciones'],
   'Maximiliano Astudillo':['cardPortal','cardCotizadorOC','cardTekia','cardInstrucciones'],
   'Julio Rios':['cardTekia'],
@@ -400,8 +400,14 @@ function clEnter(name){
     var el=document.getElementById(id);
     if(el)el.style.display='none';
   });
-  // Mostrar solo las que corresponden al rol
-  var cards=ROLES[name]||['cardPortal','cardCotizadorOC','cardTekia','cardInstrucciones'];
+  // Mostrar solo las que corresponden al rol (buscar con y sin acentos)
+  var norm=function(s){return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();};
+  var cards=ROLES[name];
+  if(!cards){
+    var nk=norm(name);
+    for(var k in ROLES){if(norm(k)===nk){cards=ROLES[k];break;}}
+  }
+  if(!cards)cards=['cardPortal','cardCotizadorOC','cardTekia','cardInstrucciones'];
   cards.forEach(function(id){
     var el=document.getElementById(id);
     if(el)el.style.display='';

@@ -597,16 +597,19 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
   * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; font-variant-ligatures:none !important; font-feature-settings:"liga" 0,"clig" 0,"dlig" 0 !important; }
   /* Forzar fuente del sistema sin ligaduras problemáticas */
   .page, .page * {
-    font-family: Arial, Helvetica, sans-serif !important;
+    font-family: 'Segoe UI', Calibri, Arial, Helvetica, sans-serif !important;
     font-variant-ligatures: none !important;
-    font-feature-settings: "liga" 0, "clig" 0, "dlig" 0 !important;
+    font-feature-settings: "liga" 0, "clig" 0, "dlig" 0, "kern" 0 !important;
     text-rendering: geometricPrecision !important;
     -webkit-font-smoothing: antialiased !important;
+    font-style: normal !important;
+    letter-spacing: 0.01px !important;
   }
   /* Reducir peso visual en PDF */
   .page .nv, .page .tv, .page td, .page .prod-cell-top,
   .page .prod-cell-desc, .page .prod-link-txt {
     font-weight: 400 !important;
+    font-style: normal !important;
   }
   .page .ptot .tl { font-weight: 600 !important; }
   .page .ptot .tv { font-weight: 600 !important; }
@@ -625,7 +628,7 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
   .prod-cell-link a { color:#0055aa !important; text-decoration:underline !important; font-weight:700 !important; font-size:8pt !important; font-style:normal !important; }
   .prod-link-txt { display:inline !important; color:#555 !important; font-size:8pt !important; }
   body, html { margin:0 !important; padding:0 !important; background:white !important; }
-  .editor, .ed-foot, .img-zoom-ctrl { display:none !important; }
+  .editor, .ed-foot, .img-zoom-ctrl, #btnDuplicar { display:none !important; }
   .preview {
     display:block !important;
     margin:0 !important; padding:0 !important;
@@ -1483,6 +1486,20 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
     <button class="bgen" onclick="printDoc()">Guardar como PDF</button>
   </div>
 </div>
+
+<!-- ════ BOTÓN DUPLICAR ════ -->
+<button id="btnDuplicar" onclick="duplicarParaMismoCliente()" style="
+  position:fixed;top:14px;right:20px;z-index:100;
+  background:linear-gradient(135deg,#001a60,#0a2e8a);color:white;
+  border:none;border-radius:10px;padding:10px 18px;
+  font-family:'Open Sans',sans-serif;font-size:12px;font-weight:700;
+  cursor:pointer;display:flex;align-items:center;gap:8px;
+  box-shadow:0 4px 16px rgba(0,26,96,.25);transition:transform .15s,box-shadow .15s;
+" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 20px rgba(0,26,96,.35)'"
+   onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(0,26,96,.25)'">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+  Nueva cotización para mismo cliente
+</button>
 
 <!-- ════ PREVIEW ════ -->
 <div class="preview">
@@ -3755,6 +3772,21 @@ async function crearNuevaDesdeCargada() {
   confirmBanner.innerHTML = "Nueva cotización: <span style='color:#06b3fd;'>" + numEl.value + "</span><br><span style='font-size:11px;font-weight:500;opacity:.85;'>Datos de productos mantenidos · Fecha actualizada a hoy</span>";
   document.body.appendChild(confirmBanner);
   setTimeout(()=>confirmBanner.remove(), 5000);
+  upd();
+}
+
+// ── Nueva cotización para mismo cliente ──────────────────────────────────
+function duplicarParaMismoCliente(){
+  if(!confirm('Se creará una nueva cotización manteniendo todos los datos actuales (cliente, productos, condiciones).\n\nEl número se asignará al momento de registrar.\n\n¿Continuar?'))return;
+  const numEl=document.getElementById('eNum');
+  if(numEl){numEl.value='';numEl.placeholder='Se asignará al registrar...';numEl.style.color='#aaa';}
+  document.getElementById('eFecha').value=new Date().toISOString().split('T')[0];
+  const banner=document.getElementById('bannerCotCargada');
+  if(banner)banner.remove();
+  _modoReemplazo=false;
+  const btnReg=document.getElementById('btnRegistrar');
+  if(btnReg)btnReg.innerHTML=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg> <span>Registrar Nueva Cotización</span>`;
+  showToast('Nueva cotización creada. Modifica lo que necesites y registra cuando esté lista.','ok');
   upd();
 }
 

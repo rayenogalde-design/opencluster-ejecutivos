@@ -1172,11 +1172,8 @@ async function cargarTodos(){
     }catch(ex){toast('Error cargando datos: '+ex.message,'warn');}
   } else {
     // Ejecutivo: dos llamadas independientes para mayor resiliencia
-    // Rayen carga TODAS las cotizaciones (es admin)
-    const accionCots=esAdmin()?'datos':'datos_ejecutivo';
-    const paramsCots=esAdmin()?{accion:'datos',equipo:'difusion'}:{accion:'datos_ejecutivo',ejecutivo:USUARIO};
     try{
-      const res=await apiGet(paramsCots);
+      const res=await apiGet({accion:'datos_ejecutivo',ejecutivo:USUARIO});
       if(res.cotizaciones){
         COTS=normalizarExecs(procesarCots(res.cotizaciones));
         SEGS=procesarSegs(res.seguimientos||[]);
@@ -2474,12 +2471,76 @@ function buildSegHist(c){
       ? `<div class="seg-tl"><div class="seg-entry latest"><div class="seg-d">${c.gestion}</div>${tagE(c.estado)}<div class="seg-t">${c.razon||''}</div></div></div>`
       : '<div style="font-size:11px;color:var(--ruby);font-weight:600;">Sin seguimiento registrado.</div>';
   }
-  const todos=segs.map(s=>({fecha:s['Fecha Seguimiento']||s['Fecha']||'',estado:s['Estado']||'En gestión',comentario:s['Comentario']||'',tipo:s['Tipo Contacto']||''}));
-  return`<div class="seg-tl">${[...todos].reverse().map((s,i)=>`<div class="seg-entry${i===0?' latest':''}">
-    <div class="seg-d">${s.fecha}${s.tipo?' · '+s.tipo:''}</div>
+  const numCot=c.num;
+  const todos=segs.map((s,idx)=>({
+    fecha:s['Fecha Seguimiento']||s['Fecha']||'',
+    estado:s['Estado']||'En gestión',
+    comentario:s['Comentario']||'',
+    tipo:s['Tipo Contacto']||'',
+    idx
+  }));
+  return`<div class="seg-tl">${[...todos].reverse().map((s,i)=>{
+    const eid='sedit-'+numCot.replace(/[^a-z0-9]/gi,'_')+'-'+s.idx;
+    return`<div class="seg-entry${i===0?' latest':''}">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div class="seg-d">${s.fecha}${s.tipo?' · '+s.tipo:''}</div>
+      <button onclick="editarSeg('${eid}','${numCot}',${s.idx})" style="font-size:9px;font-weight:700;color:var(--sapp);background:var(--sapp-lt);border:1px solid rgba(26,95,168,.2);border-radius:5px;padding:2px 8px;cursor:pointer;font-family:inherit;">Editar</button>
+    </div>
     ${tagE(s.estado)}
     ${s.comentario?`<div class="seg-t">${s.comentario}</div>`:''}
-  </div>`).join('')}</div>`;
+    <div id="${eid}" style="display:none;margin-top:8px;padding:10px;background:var(--paper);border-radius:8px;border:1px solid var(--smoke);">
+      <div class="f2" style="margin-bottom:6px;">
+        <div class="fld" style="margin-bottom:0;"><label>Estado</label>
+          <select id="${eid}-est"><option${s.estado==='En gestión'?' selected':''}>En gestión</option><option${s.estado==='Enviada'?' selected':''}>Enviada</option><option${s.estado==='Ganada'?' selected':''}>Ganada</option><option${s.estado==='Perdida'?' selected':''}>Perdida</option><option${s.estado==='Cancelada'?' selected':''}>Cancelada</option></select>
+        </div>
+        <div class="fld" style="margin-bottom:0;"><label>Tipo contacto</label>
+          <select id="${eid}-tipo"><option${s.tipo==='Llamada'?' selected':''}>Llamada</option><option${s.tipo==='Email'?' selected':''}>Email</option><option${s.tipo==='Reunion'?' selected':''}>Reunion</option><option${s.tipo==='WhatsApp'?' selected':''}>WhatsApp</option><option${s.tipo==='Visita'?' selected':''}>Visita</option></select>
+        </div>
+      </div>
+      <div class="fld" style="margin-bottom:6px;"><label>Comentario</label><textarea id="${eid}-com" rows="2">${s.comentario}</textarea></div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn-primary" style="flex:1;padding:6px;font-size:11px;" onclick="guardarEditSeg('${numCot}',${s.idx},'${eid}')">Guardar cambios</button>
+        <button class="btn-sec" style="padding:6px;font-size:11px;" onclick="document.getElementById('${eid}').style.display='none'">Cancelar</button>
+      </div>
+    </div>
+  </div>`;
+  }).join('')}</div>`;
+}
+
+function editarSeg(eid){
+  const el=document.getElementById(eid);
+  if(el)el.style.display=el.style.display==='none'?'block':'none';
+}
+
+async function guardarEditSeg(numCot,segIdx,eid){
+  const est=document.getElementById(eid+'-est')?.value||'';
+  const tipo=document.getElementById(eid+'-tipo')?.value||'';
+  const com=document.getElementById(eid+'-com')?.value||'';
+  const cot=COTS.find(c=>c.num.trim()===numCot.trim());
+  if(!cot||!cot.segs[segIdx]){toast('Seguimiento no encontrado','warn');return;}
+  // Actualizar local
+  cot.segs[segIdx]['Estado']=est;
+  cot.segs[segIdx]['Tipo Contacto']=tipo;
+  cot.segs[segIdx]['Comentario']=com;
+  // Si es el último seguimiento, actualizar estado de la cotización
+  if(segIdx===cot.segs.length-1){cot.estado=est;cot.razon=com;}
+  // Enviar al backend
+  try{
+    await apiPost({
+      accion:'editar_seguimiento',
+      num:numCot,
+      seg_index:segIdx,
+      estado:est,
+      tipo_contacto:tipo,
+      comentario:com,
+      ejecutivo:USUARIO
+    });
+  }catch(e){console.warn('Error actualizando seguimiento:',e);}
+  document.getElementById(eid).style.display='none';
+  toast('Seguimiento actualizado','jade');
+  renderCotizaciones();
+  renderSeguimientos();
+  checkAlertas();
 }
 
 function togAcc(id){

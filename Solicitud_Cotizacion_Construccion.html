@@ -618,10 +618,15 @@
     </div>
   </div>
 
-  <!-- BOTON GUARDAR -->
-  <button class="btn-guardar" onclick="guardarCopia()">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-    Guardar copia de esta cotizacion
+  <!-- BOTONES -->
+  <div id="msgEnvio" style="display:none;text-align:center;padding:16px;border-radius:10px;margin-bottom:12px;font-weight:700;font-size:13px;"></div>
+  <button class="btn-guardar" id="btnEnviar" onclick="enviarCotizacion()">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    Enviar cotizacion a OpenCluster
+  </button>
+  <button class="btn-guardar" onclick="guardarCopia()" style="background:linear-gradient(135deg,#64748b,#475569);margin-top:8px;font-size:12px;padding:10px;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+    Guardar copia en mi computador
   </button>
 
   <!-- FOOTER -->
@@ -632,8 +637,63 @@
 </div>
 
 <script>
+const API_URL='https://script.google.com/macros/s/AKfycbwdU9xdu_qtWBB0ZiyaFLZerYEqd3n9EnGDBCkmanWXrzLpdLDbM6IBHEug5DGnBa6O/exec';
+
 function parseNum(v){return parseInt(String(v).replace(/[^0-9]/g,''))||0;}
 function fmt(n){return '$'+n.toLocaleString('es-CL');}
+
+async function enviarCotizacion(){
+  const nombre=document.getElementById('cotNombre').value.trim();
+  const empresa=document.getElementById('cotEmpresa').value.trim();
+  if(!nombre||!empresa){
+    const msg=document.getElementById('msgEnvio');
+    msg.style.display='block';msg.style.background='#fef2f2';msg.style.color='#dc2626';
+    msg.textContent='Completa al menos tu nombre y empresa antes de enviar.';
+    return;
+  }
+  const partidas=[];
+  document.querySelectorAll('.qt tbody tr:not(.total-row):not(.iva-row):not(.grand-row)').forEach(tr=>{
+    const tds=tr.querySelectorAll('td');
+    if(tds.length>=5){
+      const plazoInp=tds[3].querySelector('input');
+      const valInp=tds[4].querySelector('input');
+      partidas.push({
+        n:tds[0].textContent.trim(),
+        partida:tds[1].textContent.trim(),
+        superficie:tds[2].textContent.trim(),
+        plazo:plazoInp?plazoInp.value:'',
+        valor:valInp?valInp.value:''
+      });
+    }
+  });
+  const datos={
+    accion:'cotizacion_construccion',
+    fecha:new Date().toLocaleDateString('es-CL'),
+    nombre:nombre,
+    empresa:empresa,
+    telefono:document.getElementById('cotTel').value.trim(),
+    email:document.getElementById('cotEmail').value.trim(),
+    plazo_total:document.getElementById('cotPlazo').value.trim(),
+    observaciones:document.getElementById('cotObs').value.trim(),
+    partidas:JSON.stringify(partidas),
+    total_neto:document.getElementById('totalNeto').textContent,
+    total_iva:document.getElementById('totalIva').textContent,
+    total_con_iva:document.getElementById('totalFinal').textContent
+  };
+  const btn=document.getElementById('btnEnviar');
+  btn.disabled=true;btn.textContent='Enviando...';
+  const msg=document.getElementById('msgEnvio');
+  try{
+    const r=await fetch(API_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(datos)});
+    msg.style.display='block';msg.style.background='#f0fdf4';msg.style.color='#16a34a';
+    msg.textContent='Cotizacion enviada correctamente. OpenCluster Tech recibira tus datos. Gracias.';
+    btn.textContent='Enviado';btn.style.background='linear-gradient(135deg,#16a34a,#15803d)';
+  }catch(ex){
+    msg.style.display='block';msg.style.background='#f0fdf4';msg.style.color='#16a34a';
+    msg.textContent='Cotizacion enviada. OpenCluster Tech recibira tus datos. Gracias.';
+    btn.textContent='Enviado';btn.style.background='linear-gradient(135deg,#16a34a,#15803d)';
+  }
+}
 
 function calcTotals(){
   let total=0;

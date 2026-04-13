@@ -591,6 +591,8 @@ select.login-inp{appearance:none;cursor:pointer;}
                   <span class="accion-btn" onclick="selAccion('Llamar',this)">📞 Llamar</span>
                   <span class="accion-btn" onclick="selAccion('Entregar cotización',this)">📄 Entregar cotización</span>
                   <span class="accion-btn" onclick="selAccion('Nueva presentación',this)">🎯 Nueva presentación</span>
+                  <span class="accion-btn" onclick="selAccion('Nueva Reunión',this)">🤝 Nueva Reunión</span>
+                  <span class="accion-btn" onclick="selAccion('Visita a Instalaciones',this)">🏢 Visita a Instalaciones</span>
                   <span class="accion-btn" onclick="selAccion('Gobierno Regional',this)">🏛 Gobierno Regional</span>
                   <span class="accion-btn" onclick="selAccion('Lobby',this)">🤝 Lobby</span>
                   <span class="accion-btn" onclick="selAccion('SENADIS Regional',this)">🏢 SENADIS Regional</span>
@@ -743,7 +745,7 @@ select.login-inp{appearance:none;cursor:pointer;}
 // ════════════════════════════════════════════
 // CONFIGURACIÓN — URL DEL APPS SCRIPT
 // ════════════════════════════════════════════
-const API_URL = 'https://script.google.com/macros/s/AKfycbym8DHl0-eaBH151TDTPb9MMM7DG-qQQMJrZ1t8uTHlAB9kT8nwyybbbVQUu0m95GfT/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbyTRbHxqsZ39vvWm-12cD-81ow7LEGzoZdWSLhpZGJpYlcJXddfy1Dl3GaBRoqGv2uK/exec';
 
 const TEAM = [
   {full:'Rayen Ogalde',    short:'Rayen'},
@@ -2594,9 +2596,13 @@ function renderReuniones(){
 
   lista.innerHTML=[...reus].reverse().map((r,i)=>{
     const id='rv'+i;
+    const realIdx=REUNIONES.indexOf(r);
     const creador=r['Creador']||r['Ejecutivo']||'';
-    const esCreador=creador.toLowerCase().includes(miNombre.toLowerCase())||
-                    creador.toLowerCase().includes(miShort.toLowerCase());
+    const cLow=creador.toLowerCase().trim();
+    const nLow=miNombre.toLowerCase().trim();
+    const sLow=miShort.toLowerCase().trim();
+    const esCreador=!cLow||cLow.includes(nLow)||cLow.includes(sLow)||
+                    nLow.includes(cLow)||sLow.includes(cLow);
     const proxFecha=r['Próximo Contacto']||r['ProximaFecha']||'';
     const proxAccion=r['Próximo Contacto Acción']||r['Accion']||'';
     const proxVencida=proxFecha&&parseDate(proxFecha)<=hoyD;
@@ -2627,7 +2633,7 @@ function renderReuniones(){
           ${proxFecha?`<div style="font-size:11.5px;color:${proxVencida?'var(--ruby)':'var(--mist)'};font-weight:600;">📅 ${proxFecha}${proxVencida?' · ¡VENCIDA!':''}</div>`:''}
         </div>`:''}
         ${esCreador?`<div style="margin-top:10px;padding-top:8px;display:flex;justify-content:space-between;gap:8px;">
-          <button onclick="cargarReunionParaEdit(${REUNIONES.length-1-i},this)" style="padding:5px 13px;background:var(--sapp-lt);color:var(--sapp);border:1px solid rgba(26,95,168,.2);border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">✎ Editar reunión</button>
+          <button onclick="cargarReunionParaEdit(${realIdx},this)" style="padding:5px 13px;background:var(--sapp-lt);color:var(--sapp);border:1px solid rgba(26,95,168,.2);border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">✎ Editar reunión</button>
           <button onclick="eliminarReunion(${i},this)" style="padding:5px 13px;background:var(--ruby-lt);color:var(--ruby);border:1px solid rgba(192,57,43,.2);border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">🗑 Eliminar</button>
         </div>
         <div style="margin-top:10px;border-top:1px solid var(--smoke);padding-top:10px;" id="edit-prox-${id}">
@@ -2636,6 +2642,8 @@ function renderReuniones(){
             <span class="accion-btn${proxAccion==='Llamar'?' sel':''}" onclick="selAccionEdit('Llamar',this,'${id}')">📞 Llamar</span>
             <span class="accion-btn${proxAccion==='Entregar cotización'?' sel':''}" onclick="selAccionEdit('Entregar cotización',this,'${id}')">📄 Entregar cot.</span>
             <span class="accion-btn${proxAccion==='Nueva presentación'?' sel':''}" onclick="selAccionEdit('Nueva presentación',this,'${id}')">🎯 Presentación</span>
+            <span class="accion-btn${proxAccion==='Nueva Reunión'?' sel':''}" onclick="selAccionEdit('Nueva Reunión',this,'${id}')">🤝 Nueva Reunión</span>
+            <span class="accion-btn${proxAccion==='Visita a Instalaciones'?' sel':''}" onclick="selAccionEdit('Visita a Instalaciones',this,'${id}')">🏢 Visita Inst.</span>
             <span class="accion-btn${proxAccion==='Gobierno Regional'?' sel':''}" onclick="selAccionEdit('Gobierno Regional',this,'${id}')">🏛 Gov. Regional</span>
             <span class="accion-btn${proxAccion==='Lobby'?' sel':''}" onclick="selAccionEdit('Lobby',this,'${id}')">🤝 Lobby</span>
             <span class="accion-btn${proxAccion==='SENADIS Regional'?' sel':''}" onclick="selAccionEdit('SENADIS Regional',this,'${id}')">🏢 SENADIS</span>
@@ -2729,34 +2737,80 @@ let _editReuNum='';
 
 function cargarReunionParaEdit(idx,btn){
   const r=REUNIONES[idx];
-  if(!r)return;
+  if(!r){toast('Reunión no encontrada','warn');return;}
+  // Helper: busca valor con múltiples variantes de nombre (con/sin acento, mayús/minús)
+  const F=(...keys)=>{
+    for(const k of keys){if(r[k]!==undefined&&r[k]!==''&&r[k]!==null)return String(r[k]);}
+    const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    for(const k in r){
+      const nk=norm(k);
+      if(keys.some(key=>norm(key)===nk)&&r[k])return String(r[k]);
+    }
+    return '';
+  };
+  // Normalizar fecha a YYYY-MM-DD (el input type=date lo exige)
+  function toDateInput(v){
+    if(!v)return '';
+    if(/^\d{4}-\d{2}-\d{2}/.test(v))return v.substring(0,10);
+    const m1=v.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+    if(m1)return m1[3]+'-'+m1[2].padStart(2,'0')+'-'+m1[1].padStart(2,'0');
+    const d=new Date(v);
+    if(!isNaN(d))return d.toISOString().split('T')[0];
+    return v;
+  }
+  // Normalizar hora a HH:MM
+  function toTimeInput(v){
+    if(!v)return '';
+    const m1=v.match(/(\d{1,2}):(\d{2})/);
+    if(m1)return m1[1].padStart(2,'0')+':'+m1[2];
+    const d=new Date(v);
+    if(!isNaN(d))return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');
+    return v;
+  }
   _editReuIdx=idx;
-  _editReuNum=r['Num Reunion']||r['num']||'';
+  _editReuNum=F('Num Reunion','N° Reunión','NumReunion','num reunion','num','N°Reunion');
   // Llenar campos
-  document.getElementById('r-tipo').value=r['Tipo']||'';
+  document.getElementById('r-tipo').value=F('Tipo','tipo');
   onTipoReunionChange();
   setTimeout(()=>{
     const sv=document.getElementById('r-subval');
-    if(sv&&r['Sub Detalle'])sv.value=r['Sub Detalle'];
+    if(sv)sv.value=F('Sub Detalle','sub detalle','subDetalle');
   },100);
-  document.getElementById('r-fecha').value=r['Fecha']||'';
-  document.getElementById('r-hora').value=r['Hora']||'';
-  document.getElementById('r-ciudad').value=r['Ciudad']||'';
-  document.getElementById('r-region').value=r['Región']||r['Region']||'';
-  document.getElementById('r-nombre').value=r['Prospecto']||r['Nombre']||'';
-  document.getElementById('r-inst').value=r['Institución']||r['Institucion']||'';
-  document.getElementById('r-cargo').value=r['Cargo']||'';
-  document.getElementById('r-tel').value=r['Teléfono']||r['Telefono']||'';
-  document.getElementById('r-email').value=r['Email']||'';
-  document.getElementById('r-resultado').value=r['Resultado']||'';
-  document.getElementById('r-cot').value=r['Cotización']||r['Cotizacion']||'';
-  document.getElementById('r-notas').value=r['Notas']||'';
-  document.getElementById('r-mejorar').value=r['Qué Mejorar']||r['Que Mejorar']||'';
-  document.getElementById('r-prox-fecha').value=r['Próximo Contacto']||r['ProximaFecha']||'';
-  accionSel=r['Próximo Contacto Acción']||r['Accion']||'';
+  document.getElementById('r-fecha').value=toDateInput(F('Fecha','fecha'));
+  document.getElementById('r-hora').value=toTimeInput(F('Hora','hora'));
+  document.getElementById('r-ciudad').value=F('Ciudad','ciudad');
+  document.getElementById('r-region').value=F('Región','Region','region');
+  document.getElementById('r-nombre').value=F('Prospecto','Nombre','nombre','prospecto');
+  document.getElementById('r-inst').value=F('Institución','Institucion','institucion');
+  document.getElementById('r-cargo').value=F('Cargo','cargo');
+  document.getElementById('r-tel').value=F('Teléfono','Telefono','telefono');
+  document.getElementById('r-email').value=F('Email','email');
+  // Resultado — intentar match exacto, si no, buscar por contenido
+  const resVal=F('Resultado','resultado');
+  const selRes=document.getElementById('r-resultado');
+  selRes.value=resVal;
+  if(!selRes.value&&resVal){
+    const resLow=resVal.toLowerCase();
+    [...selRes.options].forEach(o=>{if(o.value.toLowerCase()===resLow||o.textContent.toLowerCase()===resLow)selRes.value=o.value;});
+  }
+  document.getElementById('r-cot').value=F('Cotización','Cotizacion','cotizacion');
+  document.getElementById('r-notas').value=F('Notas','notas');
+  document.getElementById('r-mejorar').value=F('Qué Mejorar','Que Mejorar','mejorar');
+  document.getElementById('r-prox-fecha').value=toDateInput(F('Próximo Contacto','ProximaFecha','Prox Fecha','prox fecha'));
+  accionSel=F('Próximo Contacto Acción','Accion','Prox Accion','prox accion');
   document.querySelectorAll('#r-accion-btns .accion-btn').forEach(b=>{
     b.classList.toggle('sel',b.textContent.replace(/[^a-zA-Z0-9 ]/g,'').trim().includes(accionSel.replace(/[^a-zA-Z0-9 ]/g,'').trim()));
   });
+  // Restaurar ejecutivos participantes (chips)
+  const execsStr=F('Ejecutivos','ejecutivos');
+  if(execsStr){
+    const execsArr=execsStr.split(',').map(s=>s.trim().toLowerCase());
+    document.querySelectorAll('#r-execs .exec-chip').forEach(chip=>{
+      const name=chip.dataset.name.toLowerCase();
+      const isSel=execsArr.some(e=>e.includes(name)||name.includes(e));
+      chip.classList.toggle('sel',isSel);
+    });
+  }
   // Scroll al formulario
   document.querySelector('.form-wrap')?.scrollIntoView({behavior:'smooth'});
   // Cambiar botón
@@ -3013,11 +3067,6 @@ function dismissCeleb(){
 // ════════════════════════════════════════════
 // REGIONES — Modal bloqueante
 // ════════════════════════════════════════════
-const REGIONES_CHILE=[
-  'Arica y Parinacota','Tarapacá','Antofagasta','Atacama','Coquimbo',
-  'Valparaíso','Metropolitana','O\'Higgins','Maule','Ñuble',
-  'Biobío','La Araucanía','Los Ríos','Los Lagos','Aysén','Magallanes'
-];
 let regionesSel=[];
 
 function buildRegionGrid(){

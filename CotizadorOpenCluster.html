@@ -1413,6 +1413,7 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
         <label><input type="radio" name="condpago" value="100% contraentrega de los productos." onchange="upd()"> 100% Contraentrega</label>
         <label><input type="radio" name="condpago" value="50% contra OC, 50% contra entrega." onchange="upd()"> 50% OC / 50% contraentrega</label>
         <label><input type="radio" name="condpago" value="100% pago previo a envío." onchange="upd()"> 100% Pago previo a envío</label>
+        <label><input type="radio" name="condpago" value="Pago a 30 días vía Orden de Compra." onchange="upd()"> Pago a 30 días vía OC</label>
         <label><input type="radio" name="condpago" value="__otro__" onchange="upd()"> Otra</label>
       </div>
       <textarea class="cond-otro" id="otroPago" placeholder="Especifica las condiciones de pago..." oninput="upd()" style="display:none"></textarea>
@@ -1424,6 +1425,9 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
         <label><input type="radio" name="plazo" value="Plazo de entrega: 7 a 10 días desde pago." onchange="upd()"> 7 a 10 días desde pago</label>
         <label><input type="radio" name="plazo" value="Plazo de entrega: 7 a 10 días desde primer pago." onchange="upd()"> 7 a 10 días desde primer pago</label>
         <label><input type="radio" name="plazo" value="Plazo de entrega: máximo 15 días hábiles." onchange="upd()" checked> 15 días hábiles (máximo)</label>
+        <label><input type="radio" name="plazo" value="Plazo de entrega: 5 días hábiles a contar de recepción Orden de Compra." onchange="upd()"> 5 días hábiles desde recepción OC</label>
+        <label><input type="radio" name="plazo" value="Plazo de entrega: 7 a 10 días hábiles desde recepción Orden de Compra." onchange="upd()"> 7-10 días hábiles desde recepción OC</label>
+        <label><input type="radio" name="plazo" value="Plazo de entrega: 15 a 20 días hábiles desde recepción Orden de Compra." onchange="upd()"> 15-20 días hábiles desde recepción OC</label>
         <label><input type="radio" name="plazo" value="Plazo de entrega: 30 días corridos desde orden de compra." onchange="upd()"> 30 días desde OC</label>
         <label><input type="radio" name="plazo" value="Plazo de entrega: 60 días corridos desde orden de compra." onchange="upd()"> 60 días desde OC</label>
         <label><input type="radio" name="plazo" value="Plazo de entrega: 90 días corridos desde orden de compra." onchange="upd()"> 90 días desde OC</label>
@@ -1438,6 +1442,7 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
       <div class="cond-opts">
         <label><input type="checkbox" id="chkNoEnvio" onchange="if(this.checked){var g=document.getElementById('chkEnvioGratuito');if(g)g.checked=false;var s=document.getElementById('seccionEnvio');if(s)s.style.display='block';}upd()"> Esta cotización no contempla el costo de envío</label>
         <label><input type="checkbox" id="chkEnvioIncluido" onchange="upd()"> Envío incluido en el precio</label>
+        <label><input type="checkbox" id="chkEnvioStarken" onchange="upd()"> Envío mediante Starken</label>
       </div>
     </div>
 
@@ -2554,9 +2559,11 @@ function upd() {
   const noEnvioCond      = document.getElementById("chkNoEnvio")?.checked;
   const envioIncluidoCond = document.getElementById("chkEnvioIncluido")?.checked;
   const envioGratuitoCond = document.getElementById("chkEnvioGratuito")?.checked;
+  const envioStarkenCond  = document.getElementById("chkEnvioStarken")?.checked;
   if(noEnvioCond && !envioGratuitoCond) condLines.push("Esta cotización no contempla el costo de envío.");
   if(envioGratuitoCond) condLines.push("Envío incluido — el despacho no tiene costo adicional en esta cotización.");
   if(envioIncluidoCond) condLines.push("El costo de envío está incluido en el precio de los productos.");
+  if(envioStarkenCond)  condLines.push("Para estos productos se considera envío mediante Starken.");
 
   const notaAd=document.getElementById("condNotaAdicional")?.value.trim();
   if(notaAd) condLines.push("Nota: "+notaAd);
@@ -3516,6 +3523,7 @@ function guardarCotizacion() {
       nota:      document.getElementById("condNotaAdicional")?.value || "",
       no_envio:  document.getElementById("chkNoEnvio")?.checked || false,
       envio_incluido: document.getElementById("chkEnvioIncluido")?.checked || false,
+      envio_starken: document.getElementById("chkEnvioStarken")?.checked || false,
       oferta:    document.getElementById("chkOfertaEspecial")?.checked || false,
     },
     // Envío
@@ -3633,6 +3641,7 @@ function cargarCotizacion(input) {
         if(cn.nota)           document.getElementById("condNotaAdicional").value = cn.nota;
         if(document.getElementById("chkNoEnvio"))       document.getElementById("chkNoEnvio").checked       = cn.no_envio || false;
         if(document.getElementById("chkEnvioIncluido")) document.getElementById("chkEnvioIncluido").checked = cn.envio_incluido || false;
+        if(document.getElementById("chkEnvioStarken"))  document.getElementById("chkEnvioStarken").checked  = cn.envio_starken || false;
         if(document.getElementById("chkOfertaEspecial")) document.getElementById("chkOfertaEspecial").checked = cn.oferta || false;
       }
       // Envío

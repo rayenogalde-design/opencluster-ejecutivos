@@ -431,6 +431,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);d
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>Aprobación Pagos
       <span class="pip hot" id="pip-pagos" style="display:none">0</span>
     </div>
+    <div class="nav-item" id="nav-faqs" onclick="goSec('faqs',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Preguntas Frecuentes
+      <span class="pip hot" id="pip-faqs" style="display:none">0</span>
+    </div>
     <div class="nav-item" id="nav-alertas" onclick="goSec('alertas',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Alertas
       <span class="pip hot">6</span>
@@ -752,6 +756,38 @@ body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);d
           </div>
         </div>
       </div>
+
+      <!-- GRAFICOS DE REUNIONES -->
+      <div style="margin-top:18px;">
+        <div class="card" style="margin-bottom:15px;">
+          <div class="card-hd"><h3>Reuniones por Categoría</h3><span class="badge b-gold">Pre-venta · Venta · Post-venta</span></div>
+          <div class="card-body"><div class="chart-box h220"><canvas id="ch-reu-categoria"></canvas></div></div>
+        </div>
+        <div class="g2" style="margin-bottom:15px;">
+          <div class="card" style="margin-bottom:0;">
+            <div class="card-hd"><h3>Pre-venta · Detalle por tipo</h3></div>
+            <div class="card-body"><div class="chart-box h220"><canvas id="ch-reu-preventa"></canvas></div></div>
+          </div>
+          <div class="card" style="margin-bottom:0;">
+            <div class="card-hd"><h3>Venta · Detalle por tipo</h3></div>
+            <div class="card-body"><div class="chart-box h220"><canvas id="ch-reu-venta"></canvas></div></div>
+          </div>
+        </div>
+        <div class="g2" style="margin-bottom:15px;">
+          <div class="card" style="margin-bottom:0;">
+            <div class="card-hd"><h3>Post-venta · Detalle por tipo</h3></div>
+            <div class="card-body"><div class="chart-box h220"><canvas id="ch-reu-postventa"></canvas></div></div>
+          </div>
+          <div class="card" style="margin-bottom:0;">
+            <div class="card-hd"><h3>Reuniones por Ejecutivo</h3></div>
+            <div class="card-body"><div class="chart-box h220"><canvas id="ch-reu-exec"></canvas></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><h3>Acompañantes en Reuniones</h3><span class="badge b-gold">Equipo colaborativo</span></div>
+          <div class="card-body"><div class="chart-box h220"><canvas id="ch-reu-acompanantes"></canvas></div></div>
+        </div>
+      </div>
     </section>
 
     <!-- FNDR -->
@@ -812,6 +848,25 @@ body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);d
             <div class="alert-item"><div class="alert-dot" style="background:var(--mist)"></div><div><div class="alert-title">3 ejecutivos sin actividad en Marzo</div><div class="alert-sub">Roberto, Germán y William</div></div></div>
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- PREGUNTAS FRECUENTES -->
+    <section class="sec" id="s-faqs">
+      <div class="sec-hd"><h2>Preguntas Frecuentes</h2><p>Preguntas de los ejecutivos. Responde y publica para que todo el equipo las vea.</p></div>
+      <div class="hairline"></div>
+      <div class="kpis k3" id="faqs-kpis"></div>
+      <div class="card">
+        <div class="card-hd"><h3>Pendientes de Responder</h3><span class="badge b-ruby" id="faqs-pending-badge">0</span></div>
+        <div class="card-body flush" id="faqs-pending-list"></div>
+      </div>
+      <div class="card" style="margin-top:15px;">
+        <div class="card-hd"><h3>Respondidas (sin publicar)</h3><span class="badge b-gold" id="faqs-resp-badge">0</span></div>
+        <div class="card-body flush" id="faqs-resp-list"></div>
+      </div>
+      <div class="card" style="margin-top:15px;">
+        <div class="card-hd"><h3>Publicadas</h3><span class="badge b-jade" id="faqs-pub-badge">0</span></div>
+        <div class="card-body flush" id="faqs-pub-list"></div>
       </div>
     </section>
 
@@ -885,6 +940,7 @@ const TITLES = {
   perdidas:    ['Análisis de Pérdidas',   '¿Por qué perdemos cotizaciones?'],
   alertas:     ['Alertas',               'Situaciones que requieren atención inmediata'],
   pagos:       ['Aprobación de Pagos',   'Confirma ventas y asigna porcentajes a ejecutivos'],
+  faqs:        ['Preguntas Frecuentes',  'Responde y publica las preguntas de los ejecutivos'],
 };
 
 function goSec(id, el) {
@@ -941,7 +997,7 @@ function renderSec(id) {
     estadisticas:renderEstadisticas, seguimientos:renderSeguimientos,
     anuales:renderAnuales, grandes:renderGrandes, regiones:renderRegiones,
     productos:renderProductos, reuniones:renderReuniones,
-    fndr:renderFndr, perdidas:renderPerdidas, pagos:renderPagos,
+    fndr:renderFndr, perdidas:renderPerdidas, pagos:renderPagos, faqs:renderFaqs,
   };
   if (fn[id]) fn[id]();
 }
@@ -1076,7 +1132,7 @@ const RAZONES = [
 ];
 
 // ═══ Apps Script — fuente principal (siempre datos en vivo) ═══
-const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbym8DHl0-eaBH151TDTPb9MMM7DG-qQQMJrZ1t8uTHlAB9kT8nwyybbbVQUu0m95GfT/exec";
+const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbyTRbHxqsZ39vvWm-12cD-81ow7LEGzoZdWSLhpZGJpYlcJXddfy1Dl3GaBRoqGv2uK/exec";
 
 // ═══ Google Sheet — fallback vía gviz si Apps Script falla ═══
 const SHEET_ID = "1sIZcID1Ei5kdGjLBSiJoDioGPlblvAzvDPIT6q2OBt8";
@@ -2647,6 +2703,9 @@ function renderReuniones(){
     });
   }
 
+  // Generar graficos de reuniones
+  setTimeout(renderGraficosReuniones,100);
+
   // Build resultado buttons (only once)
   const rb=document.getElementById('res-btns');
   if(rb&&!rb.querySelector('.reu-btn')){
@@ -3021,6 +3080,224 @@ async function aprobarPago(idx,id){
 }
 
 // ════════════════════════════════════════════
+// PREGUNTAS FRECUENTES
+// ════════════════════════════════════════════
+let FAQS=[];
+
+async function cargarFaqs(){
+  try{
+    const r=await fetch(URL_SCRIPT+'?accion=datos_faq',{mode:'cors',signal:AbortSignal.timeout(10000)});
+    const d=await r.json();
+    if(d.faqs&&d.faqs.length>1){
+      const h=d.faqs[0];
+      FAQS=d.faqs.slice(1).map(row=>{
+        const o={};h.forEach((k,i)=>{o[k]=row[i]!==undefined?String(row[i]):'';});
+        return o;
+      }).filter(f=>f['Pregunta']);
+    }
+    const pend=FAQS.filter(f=>f['Estado']==='Pendiente').length;
+    const pip=document.getElementById('pip-faqs');
+    if(pip){pip.textContent=pend;pip.style.display=pend?'':'none';}
+  }catch(e){console.warn('Error cargando FAQs:',e);}
+}
+
+function renderFaqs(){
+  cargarFaqs().then(()=>{
+    const pend=FAQS.filter(f=>f['Estado']==='Pendiente');
+    const resp=FAQS.filter(f=>f['Estado']==='Respondida');
+    const pub=FAQS.filter(f=>f['Estado']==='Publicada');
+
+    document.getElementById('faqs-kpis').innerHTML=`
+      <div class="kpi kr"><div class="kpi-lbl">Pendientes</div><div class="kpi-val">${pend.length}</div><div class="kpi-sub">Requieren tu respuesta</div></div>
+      <div class="kpi kg"><div class="kpi-lbl">Respondidas</div><div class="kpi-val">${resp.length}</div><div class="kpi-sub">Listas para publicar</div></div>
+      <div class="kpi kj"><div class="kpi-lbl">Publicadas</div><div class="kpi-val">${pub.length}</div><div class="kpi-sub">Visibles al equipo</div></div>
+    `;
+    document.getElementById('faqs-pending-badge').textContent=pend.length;
+    document.getElementById('faqs-resp-badge').textContent=resp.length;
+    document.getElementById('faqs-pub-badge').textContent=pub.length;
+
+    // Pendientes
+    const pendEl=document.getElementById('faqs-pending-list');
+    if(!pend.length){
+      pendEl.innerHTML='<div style="padding:20px;text-align:center;color:var(--mist);font-size:12px;">Sin preguntas pendientes</div>';
+    } else {
+      pendEl.innerHTML=pend.map((f,i)=>`
+        <div style="padding:14px 17px;border-bottom:1px solid var(--smoke);">
+          <div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:6px;">❓ ${esc(f['Pregunta'])}</div>
+          <div style="font-size:10px;color:var(--mist);margin-bottom:8px;">De: ${esc(f['Ejecutivo']||'')} · ${esc(f['Fecha Pregunta']||'')}</div>
+          <textarea id="faq-resp-${f['ID']}" rows="3" placeholder="Escribe tu respuesta..." style="width:100%;padding:8px 10px;border:1.5px solid var(--smoke);border-radius:6px;font-family:'DM Sans',sans-serif;font-size:12px;resize:vertical;"></textarea>
+          <button onclick="responderFaq('${f['ID']}')" style="margin-top:6px;padding:7px 14px;background:var(--sapp);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">Guardar Respuesta</button>
+        </div>
+      `).join('');
+    }
+
+    // Respondidas (sin publicar)
+    const respEl=document.getElementById('faqs-resp-list');
+    if(!resp.length){
+      respEl.innerHTML='<div style="padding:20px;text-align:center;color:var(--mist);font-size:12px;">Sin respuestas pendientes de publicar</div>';
+    } else {
+      respEl.innerHTML=resp.map(f=>`
+        <div style="padding:14px 17px;border-bottom:1px solid var(--smoke);">
+          <div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:4px;">❓ ${esc(f['Pregunta'])}</div>
+          <div style="font-size:11px;color:var(--ink2);background:var(--paper);padding:8px 10px;border-radius:6px;border-left:3px solid var(--sapp);margin-bottom:8px;">${esc(f['Respuesta'])}</div>
+          <div style="display:flex;gap:8px;">
+            <button onclick="publicarFaq('${f['ID']}')" style="padding:7px 14px;background:var(--jade);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">✓ Publicar</button>
+            <button onclick="editarFaq('${f['ID']}')" style="padding:7px 14px;background:var(--paper);color:var(--mist);border:1px solid var(--smoke);border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Editar</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Publicadas
+    const pubEl=document.getElementById('faqs-pub-list');
+    if(!pub.length){
+      pubEl.innerHTML='<div style="padding:20px;text-align:center;color:var(--mist);font-size:12px;">Sin preguntas publicadas</div>';
+    } else {
+      pubEl.innerHTML=pub.map(f=>`
+        <div style="padding:12px 17px;border-bottom:1px solid var(--smoke);">
+          <div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:4px;">${esc(f['Pregunta'])}</div>
+          <div style="font-size:11px;color:var(--ink2);margin-bottom:4px;">${esc(f['Respuesta'])}</div>
+          <div style="font-size:9px;color:var(--mist);">Publicada · ${esc(f['Fecha Respuesta']||'')}</div>
+        </div>
+      `).join('');
+    }
+  });
+}
+
+async function responderFaq(id){
+  const resp=document.getElementById('faq-resp-'+id)?.value.trim();
+  if(!resp){alert('Escribe una respuesta');return;}
+  try{
+    await fetch(URL_SCRIPT,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({accion:'responder_faq',id,respuesta:resp})});
+    const f=FAQS.find(x=>x['ID']===id);
+    if(f){f['Estado']='Respondida';f['Respuesta']=resp;f['Fecha Respuesta']=new Date().toLocaleDateString('es-CL');}
+    renderFaqs();
+  }catch(e){alert('Error: '+e.message);}
+}
+
+async function publicarFaq(id){
+  try{
+    await fetch(URL_SCRIPT,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({accion:'publicar_faq',id})});
+    const f=FAQS.find(x=>x['ID']===id);
+    if(f)f['Estado']='Publicada';
+    renderFaqs();
+  }catch(e){alert('Error: '+e.message);}
+}
+
+function editarFaq(id){
+  const f=FAQS.find(x=>x['ID']===id);
+  if(!f)return;
+  const nueva=prompt('Editar respuesta:',f['Respuesta']);
+  if(nueva!==null&&nueva.trim()){
+    fetch(URL_SCRIPT,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({accion:'responder_faq',id,respuesta:nueva.trim()})});
+    f['Respuesta']=nueva.trim();
+    renderFaqs();
+  }
+}
+
+// ════════════════════════════════════════════
+// GRAFICOS DE REUNIONES (por categoría, tipo, ejecutivo, acompañantes)
+// ════════════════════════════════════════════
+const TIPOS_CATEGORIAS={
+  'Pre-venta':['Presentación empresa','Demostración','Lobby','SENADIS Regional','GORE Regional','FNDR','Preparación Proyecto','Presentación'],
+  'Venta':['Cierre','Seguimiento'],
+  'Post-venta':['Capacitación','Servicio Técnico','Postventa','Reunión de Capacitación']
+};
+
+function categoriaDeTipo(tipo){
+  for(const cat in TIPOS_CATEGORIAS){
+    if(TIPOS_CATEGORIAS[cat].some(t=>String(tipo).toLowerCase().includes(t.toLowerCase())))return cat;
+  }
+  return null;
+}
+
+function renderGraficosReuniones(){
+  if(!reuniones||!reuniones.length){
+    ['ch-reu-categoria','ch-reu-preventa','ch-reu-venta','ch-reu-postventa','ch-reu-exec','ch-reu-acompanantes'].forEach(id=>{
+      if(charts[id]){try{charts[id].destroy();}catch(e){}delete charts[id];}
+    });
+    return;
+  }
+
+  // Contar por categoría
+  const porCat={'Pre-venta':0,'Venta':0,'Post-venta':0};
+  const porTipo={};
+  const porExec={};
+  const acompPairs={};
+  reuniones.forEach(r=>{
+    const tipo=r.tipo||r['Tipo']||'';
+    const cat=categoriaDeTipo(tipo);
+    if(cat)porCat[cat]++;
+    if(tipo){
+      if(!porTipo[cat])porTipo[cat]={};
+      porTipo[cat][tipo]=(porTipo[cat][tipo]||0)+1;
+    }
+    const execsStr=r.ejecutivos||r['Ejecutivos']||'';
+    const execs=execsStr.split(',').map(s=>s.trim()).filter(Boolean);
+    execs.forEach(e=>{porExec[e]=(porExec[e]||0)+1;});
+    // Acompañantes: pares de ejecutivos en la misma reunión
+    if(execs.length>=2){
+      for(let i=0;i<execs.length;i++){
+        for(let j=i+1;j<execs.length;j++){
+          const pair=[execs[i],execs[j]].sort().join(' + ');
+          acompPairs[pair]=(acompPairs[pair]||0)+1;
+        }
+      }
+    }
+  });
+
+  // 1. Gráfico por categoría (ordenado mayor a menor)
+  const catEntries=Object.entries(porCat).sort((a,b)=>b[1]-a[1]);
+  mkChart('ch-reu-categoria',{
+    type:'bar',
+    data:{labels:catEntries.map(e=>e[0]),datasets:[{data:catEntries.map(e=>e[1]),backgroundColor:['#C9A96E','#1A5FA8','#2A7A5A'],borderWidth:0,borderRadius:5}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1,font:{size:9}}}}}
+  });
+
+  // 2-4. Gráficos por tipo dentro de cada categoría (mayor a menor)
+  ['Pre-venta','Venta','Post-venta'].forEach((cat,i)=>{
+    const id=i===0?'ch-reu-preventa':i===1?'ch-reu-venta':'ch-reu-postventa';
+    const tipos=porTipo[cat]||{};
+    const entries=Object.entries(tipos).sort((a,b)=>b[1]-a[1]);
+    if(!entries.length){
+      if(charts[id]){try{charts[id].destroy();}catch(e){}delete charts[id];}
+      const el=document.getElementById(id);
+      if(el){const ctx=el.getContext('2d');ctx.clearRect(0,0,el.width,el.height);ctx.font='12px DM Sans';ctx.fillStyle='#999';ctx.textAlign='center';ctx.fillText('Sin datos',el.width/2,el.height/2);}
+      return;
+    }
+    const colors=['#C9A96E','#1A5FA8','#2A7A5A','#8A5A2A','#7A3A8A','#C0392B','#E67E22'];
+    mkChart(id,{
+      type:'bar',
+      data:{labels:entries.map(e=>e[0]),datasets:[{data:entries.map(e=>e[1]),backgroundColor:entries.map((_,idx)=>colors[idx%colors.length]),borderWidth:0,borderRadius:4}]},
+      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1,font:{size:8}}},y:{ticks:{font:{size:9}}}}}
+    });
+  });
+
+  // 5. Reuniones por ejecutivo (mayor a menor, dorado al top)
+  const execEntries=Object.entries(porExec).sort((a,b)=>b[1]-a[1]);
+  if(execEntries.length){
+    mkChart('ch-reu-exec',{
+      type:'bar',
+      data:{labels:execEntries.map(e=>e[0]),datasets:[{data:execEntries.map(e=>e[1]),backgroundColor:execEntries.map((_,i)=>i===0?'#C9A96E':'#1A5FA8'),borderWidth:0,borderRadius:4}]},
+      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1,font:{size:9}}},y:{ticks:{font:{size:9}}}}}
+    });
+  }
+
+  // 6. Acompañantes (pares, mayor a menor)
+  const acompEntries=Object.entries(acompPairs).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  if(acompEntries.length){
+    mkChart('ch-reu-acompanantes',{
+      type:'bar',
+      data:{labels:acompEntries.map(e=>e[0]),datasets:[{data:acompEntries.map(e=>e[1]),backgroundColor:acompEntries.map((_,i)=>i===0?'#C9A96E':'#2A7A5A'),borderWidth:0,borderRadius:4}]},
+      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1,font:{size:9}}},y:{ticks:{font:{size:8}}}}}
+    });
+  }
+}
+
+// ════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════
 (function(){
@@ -3043,9 +3320,11 @@ async function aprobarPago(idx,id){
   // Cargar datos frescos en segundo plano
   fetchDatosSheet();
   cargarPagos();
+  cargarFaqs();
   // Auto-refresh cada 5 minutos
   setInterval(fetchDatosSheet, 5 * 60 * 1000);
   setInterval(cargarPagos, 5 * 60 * 1000);
+  setInterval(cargarFaqs, 5 * 60 * 1000);
 })();
 </script>
 </body>

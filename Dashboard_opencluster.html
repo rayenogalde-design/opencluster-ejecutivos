@@ -419,6 +419,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);d
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>Productos
     </div>
     <div class="sb-grp">Especial</div>
+    <div class="nav-item" id="nav-contactos" onclick="goSec('contactos',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>Primer Contacto
+    </div>
     <div class="nav-item" id="nav-reuniones" onclick="goSec('reuniones',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 11h-6M20 8v6"/></svg>Reuniones
       <span class="pip" id="pip-reu">0</span>
@@ -741,6 +744,28 @@ body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);d
     </section>
 
     <!-- REUNIONES -->
+    <!-- PRIMER CONTACTO -->
+    <section class="sec" id="s-contactos">
+      <div class="sec-hd"><h2>Primer Contacto</h2><p>Contactos iniciales del equipo — antes de reuniones</p></div>
+      <div class="hairline"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;" id="pc-exec-filter"></div>
+      <div class="kpis k3" style="margin-bottom:16px;" id="pc-kpis"></div>
+      <div class="g2" style="margin-bottom:16px;">
+        <div class="card" style="margin-bottom:0;">
+          <div class="card-hd"><h3>Contactos por resultado</h3></div>
+          <div class="card-body"><div class="chart-box h220"><canvas id="ch-pc-resultado"></canvas></div></div>
+        </div>
+        <div class="card" style="margin-bottom:0;">
+          <div class="card-hd"><h3>Contactos por ejecutivo</h3></div>
+          <div class="card-body"><div class="chart-box h220"><canvas id="ch-pc-exec"></canvas></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><h3>Detalle de contactos</h3><span class="badge b-gold" id="pc-total-badge">0 contactos</span></div>
+        <div class="card-body" style="max-height:500px;overflow-y:auto;" id="pc-dash-lista"></div>
+      </div>
+    </section>
+
     <section class="sec" id="s-reuniones">
       <div class="sec-hd"><h2>Reuniones</h2><p>Registra y consulta reuniones del equipo comercial</p></div>
       <div class="hairline"></div>
@@ -1030,7 +1055,7 @@ function renderSec(id) {
     resumen:renderResumen, novedades:renderNovedades, ejecutivos:renderEjecutivos,
     estadisticas:renderEstadisticas, seguimientos:renderSeguimientos,
     anuales:renderAnuales, grandes:renderGrandes, regiones:renderRegiones,
-    productos:renderProductos, funnel:renderFunnel, reuniones:renderReuniones,
+    productos:renderProductos, funnel:renderFunnel, contactos:renderContactosDash, reuniones:renderReuniones,
     fndr:renderFndr, perdidas:renderPerdidas, pagos:renderPagos, faqs:renderFaqs,
   };
   if (fn[id]) fn[id]();
@@ -1413,6 +1438,14 @@ async function fetchDatosSheet() {
         localStorage.setItem('oc_reu', JSON.stringify(reuniones));
         document.getElementById('pip-reu').textContent = reuniones.length;
         okReu = true;
+      }
+    }
+    // Contactos
+    if (d.contactos) {
+      const nuevosPC = procesarContactos(d.contactos);
+      if (nuevosPC.length) {
+        contactosDash = nuevosPC;
+        localStorage.setItem('oc_dash_contactos', JSON.stringify(contactosDash));
       }
     }
   } catch(e) { console.warn('Apps Script:', e.message); }
@@ -3268,6 +3301,93 @@ function categoriaDeTipo(tipo){
     if(TIPOS_CATEGORIAS[cat].some(t=>String(tipo).toLowerCase().includes(t.toLowerCase())))return cat;
   }
   return null;
+}
+
+// ════════════════════════════════════════════
+// PRIMER CONTACTO — Dashboard
+// ════════════════════════════════════════════
+let contactosDash=[];
+let pcFiltroExec='todos';
+
+function procesarContactos(rows){
+  if(!rows||rows.length<2)return[];
+  const h=rows[0];
+  return rows.slice(1).map(r=>{
+    const o={};h.forEach((k,i)=>{o[k]=r[i]!==undefined?String(r[i]):'';});
+    return o;
+  }).filter(r=>r['Nombre']||r['Ejecutivo']);
+}
+
+function renderContactosDash(){
+  const PASTEL=['#F4A7BB','#C3B1E1','#A8D8C8','#A7C7E7','#FCCEB5','#F7E1A0','#E8A0BF','#B5CDA3'];
+  let data=[...contactosDash];
+
+  // Filtro por ejecutivo
+  const execs=[...new Set(data.map(c=>c['Ejecutivo']||'Sin asignar'))].sort();
+  const filterDiv=document.getElementById('pc-exec-filter');
+  if(filterDiv){
+    filterDiv.innerHTML=`<button onclick="pcFiltroExec='todos';renderContactosDash()" style="padding:6px 14px;border-radius:7px;border:1.5px solid ${pcFiltroExec==='todos'?'var(--navy)':'var(--smoke)'};background:${pcFiltroExec==='todos'?'var(--navy)':'#fff'};color:${pcFiltroExec==='todos'?'#fff':'var(--subtle)'};font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Todos</button>`+
+    execs.map(e=>`<button onclick="pcFiltroExec='${e.replace(/'/g,"\\'")}';renderContactosDash()" style="padding:6px 14px;border-radius:7px;border:1.5px solid ${pcFiltroExec===e?'var(--navy)':'var(--smoke)'};background:${pcFiltroExec===e?'var(--navy)':'#fff'};color:${pcFiltroExec===e?'#fff':'var(--subtle)'};font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">${e.split(' ')[0]}</button>`).join('');
+  }
+  if(pcFiltroExec!=='todos')data=data.filter(c=>(c['Ejecutivo']||'')==pcFiltroExec);
+
+  // KPIs
+  const kpis=document.getElementById('pc-kpis');
+  if(kpis){
+    const total=data.length;
+    const aceptaron=data.filter(c=>(c['Resultado']||'').toLowerCase().includes('acept')).length;
+    const noResp=data.filter(c=>(c['Resultado']||'').toLowerCase().includes('no respon')).length;
+    kpis.innerHTML=`
+      <div class="kpi"><div class="kpi-val">${total}</div><div class="kpi-lbl">Contactos</div></div>
+      <div class="kpi"><div class="kpi-val" style="color:var(--jade);">${aceptaron}</div><div class="kpi-lbl">Aceptaron reunión</div></div>
+      <div class="kpi"><div class="kpi-val" style="color:var(--ruby);">${noResp}</div><div class="kpi-lbl">Sin respuesta</div></div>
+    `;
+  }
+
+  // Gráfico por resultado
+  const porRes={};
+  data.forEach(c=>{const r=c['Resultado']||'Sin dato';porRes[r]=(porRes[r]||0)+1;});
+  const resEntries=Object.entries(porRes).sort((a,b)=>b[1]-a[1]);
+  if(resEntries.length){
+    mkChart('ch-pc-resultado',{
+      type:'doughnut',
+      data:{labels:resEntries.map(e=>e[0]),datasets:[{data:resEntries.map(e=>e[1]),backgroundColor:resEntries.map((_,i)=>PASTEL[i%PASTEL.length]),borderWidth:2,borderColor:'#fff',hoverOffset:6}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'right',labels:{font:{size:10,weight:'500'},padding:8,boxWidth:12,usePointStyle:true,pointStyle:'circle'}}},cutout:'55%'}
+    });
+  }
+
+  // Gráfico por ejecutivo
+  const porExec={};
+  data.forEach(c=>{const e=c['Ejecutivo']||'Sin asignar';porExec[e]=(porExec[e]||0)+1;});
+  const execEntries=Object.entries(porExec).sort((a,b)=>b[1]-a[1]);
+  if(execEntries.length){
+    mkChart('ch-pc-exec',{
+      type:'doughnut',
+      data:{labels:execEntries.map(e=>e[0].split(' ')[0]),datasets:[{data:execEntries.map(e=>e[1]),backgroundColor:execEntries.map((_,i)=>PASTEL[i%PASTEL.length]),borderWidth:2,borderColor:'#fff',hoverOffset:6}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'right',labels:{font:{size:10,weight:'500'},padding:8,boxWidth:12,usePointStyle:true,pointStyle:'circle'}}},cutout:'55%'}
+    });
+  }
+
+  // Lista detallada
+  const badge=document.getElementById('pc-total-badge');
+  if(badge)badge.textContent=data.length+' contactos';
+  const lista=document.getElementById('pc-dash-lista');
+  if(lista){
+    if(!data.length){lista.innerHTML='<div style="text-align:center;padding:24px;color:var(--subtle);font-size:12px;">Sin contactos registrados.</div>';return;}
+    lista.innerHTML=[...data].reverse().map(c=>{
+      const resColor=(c['Resultado']||'').includes('cept')?'var(--jade)':(c['Resultado']||'').includes('No resp')||(c['Resultado']||'').includes('echaz')?'var(--ruby)':'var(--amber)';
+      const fecha=c['Fecha']||'';
+      return`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--smoke);">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:12px;font-weight:700;color:var(--ink);">${c['Nombre']||'—'} <span style="font-size:10px;color:var(--subtle);font-weight:500;">· ${c['Institucion']||''}</span></div>
+          <div style="font-size:10px;color:var(--subtle);margin-top:2px;">${fecha} · ${c['Medio']||''} · ${c['Ejecutivo']||''}</div>
+          ${c['Email']?`<div style="font-size:10px;margin-top:2px;"><a href="mailto:${c['Email']}" style="color:var(--sapp);text-decoration:none;font-weight:600;">${c['Email']}</a></div>`:''}
+          ${c['Telefono']?`<div style="font-size:10px;"><a href="tel:${c['Telefono']}" style="color:var(--sapp);text-decoration:none;font-weight:600;">${c['Telefono']}</a></div>`:''}
+        </div>
+        <span style="font-size:9px;font-weight:700;color:${resColor};background:${resColor}15;padding:3px 8px;border-radius:5px;white-space:nowrap;">${c['Resultado']||'—'}</span>
+      </div>`;
+    }).join('');
+  }
 }
 
 function renderFunnel(){

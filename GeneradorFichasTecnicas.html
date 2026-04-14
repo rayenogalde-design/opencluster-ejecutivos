@@ -308,7 +308,9 @@ body{font-family:'Open Sans',sans-serif;background:var(--bg);color:var(--text);m
   .f-bottomline{display:none!important;}
   .f-footer-preview{display:none!important;}
   .page-break-marker{display:none!important;}
+  .page-break-spacer{display:block!important;height:0!important;padding:0!important;margin:0!important;overflow:hidden!important;}
   .f-images{page-break-inside:avoid!important;}
+  img{page-break-inside:avoid!important;break-inside:avoid!important;}
   /* Table trick: thead/tfoot repeat on every page */
   .print-wrap{display:table!important;width:100%!important;}
   .print-wrap-body{display:table-row-group!important;}
@@ -316,7 +318,7 @@ body{font-family:'Open Sans',sans-serif;background:var(--bg);color:var(--text);m
   .print-footer-inner{padding:0 5mm;}
   .print-footer-text{text-align:center;padding:2px 0 1px;font-family:'Open Sans',sans-serif;font-size:6.5pt;color:#8a96aa;}
   .print-footer-line{height:4px;background:linear-gradient(90deg,#06b3fd,#001a60);margin-top:2px;}
-  @page{size:letter;margin:4mm 5mm 2mm;}
+  @page{size:letter;margin:5mm 5mm 18mm;}
 }
 </style>
 </head>
@@ -2006,35 +2008,41 @@ function updateSpacer(val){
 /* ========== GUARDAR PDF ========== */
 async function guardarPDF(){
   const btn=document.getElementById('btnPdf');
-  btn.textContent='Generando PDF...';btn.disabled=true;
-  const isLocal=location.protocol==='http:'||location.protocol==='https:';
-  if(isLocal&&typeof html2pdf!=='undefined'){
-    try{
-      await generarPDF();
-      btn.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> GUARDAR COMO PDF';
-      btn.disabled=false;
-      return;
-    }catch(ex){console.error('html2pdf error:',ex);}
-  }
-  // Fallback: window.print
+  btn.textContent='Preparando...';btn.disabled=true;
   const ficha=document.getElementById('ficha');
   const prev=ficha.style.transform;
   ficha.style.transform='none';
   ficha.style.marginBottom='0';
   ficha.classList.add('pdf-mode');
+  // Ocultar spacers visuales, dejar solo page-break CSS
+  ficha.querySelectorAll('.page-break-spacer').forEach(el=>{
+    el.dataset._bk=el.innerHTML;el.dataset._h=el.style.height;
+    el.innerHTML='';el.style.height='0';el.style.padding='0';el.style.margin='0';
+    el.style.overflow='hidden';el.style.pageBreakBefore='always';el.style.breakBefore='page';
+  });
+  ficha.querySelectorAll('.f-footer-preview,.page-break-marker,.block-x,.f-edit-hint').forEach(el=>{el.dataset._d=el.style.display;el.style.display='none';});
   const titulo=getTitle()||'Ficha_Tecnica';
-  const nombreLimpio=titulo.replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ ]/g,'').replace(/\s+/g,'');
+  const nombreLimpio=titulo.replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ ]/g,'').replace(/\s+/g,'_');
   const prevTitle=document.title;
   document.title=nombreLimpio+'_OpenCluster-Tech';
   window.scrollTo(0,0);
+  btn.textContent='Abriendo impresion...';
   setTimeout(()=>{
     window.print();
     document.title=prevTitle;
     ficha.style.transform=prev;
     ficha.classList.remove('pdf-mode');
+    // Restaurar spacers
+    ficha.querySelectorAll('.page-break-spacer').forEach(el=>{
+      el.innerHTML=el.dataset._bk||'';el.style.height=el.dataset._h||'';
+      el.style.padding='';el.style.margin='';el.style.overflow='';
+      el.style.pageBreakBefore='';el.style.breakBefore='';
+      delete el.dataset._bk;delete el.dataset._h;
+    });
+    ficha.querySelectorAll('.f-footer-preview,.page-break-marker,.block-x,.f-edit-hint').forEach(el=>{el.style.display=el.dataset._d||'';delete el.dataset._d;});
     btn.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> GUARDAR COMO PDF';
     btn.disabled=false;
-  },150);
+  },200);
 }
 
 /* ========== GENERAR PDF (html2pdf) ========== */

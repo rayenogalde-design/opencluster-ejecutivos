@@ -2859,26 +2859,56 @@ function renderReunionLista(){
       </div>
     </div>`;return;
   }
-  const resCls={Exitosa:'t-gan',Reagendar:'t-si',Pendiente:'t-env','Sin interés':'t-per'};
+  // Formatear fecha chilena
+  function fmtFechaCL(f){
+    if(!f)return '';
+    const s=String(f).trim();
+    if(s.includes('T')){const d=new Date(s);if(!isNaN(d))return d.toLocaleDateString('es-CL',{day:'numeric',month:'short',year:'numeric'});}
+    const m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if(m){const d=new Date(+m[1],+m[2]-1,+m[3]);return d.toLocaleDateString('es-CL',{day:'numeric',month:'short',year:'numeric'});}
+    const m2=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+    if(m2){const d=new Date(+m2[3],+m2[2]-1,+m2[1]);return d.toLocaleDateString('es-CL',{day:'numeric',month:'short',year:'numeric'});}
+    return s;
+  }
+  // Separar creador y acompañantes
+  function sepExecs(execStr,creador){
+    const all=(execStr||'').split(',').map(s=>s.trim()).filter(Boolean);
+    const cr=creador||(all.length?all[0]:'');
+    const acomp=all.filter(e=>e!==cr);
+    return {creador:cr,acompanantes:acomp};
+  }
+
+  const resCls={Exitosa:'t-gan',Reagendar:'t-si',Pendiente:'t-env','Sin interés':'t-per','Posible cliente':'t-si'};
   lista.innerHTML=reuniones.map(r=>{
     const id='reu'+r.id;
+    const {creador,acompanantes}=sepExecs(r.ejecutivos,r.creador);
+    const fechaBonita=fmtFechaCL(r.fecha);
     return `<div class="reu-card">
       <div class="reu-card-hd" onclick="toggleAcc('${id}')">
-        <span class="reu-tipo">${r.tipo}</span>
-        <div class="reu-info"><div class="reu-nombre">${r.nombre}</div><div class="reu-exec">${r.ejecutivos}${r.institucion?' · '+r.institucion:''}</div></div>
+        <span class="reu-tipo">${r.tipo||'—'}</span>
+        <div class="reu-info">
+          <div class="reu-nombre">${r.nombre||'—'}</div>
+          <div style="font-size:10px;color:var(--mist);margin-top:1px;">
+            <span style="font-weight:700;color:var(--sapp);">${creador}</span>${acompanantes.length?' <span style="color:var(--subtle);font-weight:400;">con '+acompanantes.join(', ')+'</span>':''}
+          </div>
+        </div>
         <div style="text-align:right;flex-shrink:0;">
-          <div style="font-size:11px;font-weight:700;color:var(--ink);">${r.fecha}</div>
-          <div style="margin-top:2px;"><span class="tag ${resCls[r.resultado]||'t-env'}">${r.resultado}</span></div>
+          <div style="font-size:11px;font-weight:600;color:var(--ink);">${fechaBonita}</div>
+          <div style="margin-top:3px;"><span class="tag ${resCls[r.resultado]||'t-env'}">${r.resultado||'—'}</span></div>
         </div>
         <span class="acc-chev" id="chev-${id}" style="margin-left:6px;">▾</span>
       </div>
-      <div class="acc-body" id="${id}" style="padding:10px 12px;">
-        ${r.hora?`<div style="font-size:11px;color:var(--mist);margin-bottom:3px;">Hora: ${r.hora}</div>`:''}
-        ${r.telefono?`<div style="font-size:11px;margin-bottom:2px;"><strong>Tel:</strong> ${r.telefono}</div>`:''}
-        ${r.email?`<div style="font-size:11px;margin-bottom:2px;"><strong>Email:</strong> ${r.email}</div>`:''}
-        ${r.cotizacion?`<div style="font-size:11px;margin-bottom:2px;"><strong>Cotización:</strong> <span class="tag t-si">${r.cotizacion}</span></div>`:''}
-        ${r.notas?`<div style="margin-top:7px;font-size:11.5px;line-height:1.5;background:var(--paper);border-radius:5px;padding:7px 9px;">${r.notas}</div>`:''}
-        <div style="margin-top:7px;text-align:right;">
+      <div class="acc-body" id="${id}" style="padding:12px 14px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+          ${r.institucion?`<div style="font-size:11px;"><span style="color:var(--mist);font-weight:600;">Institución:</span> ${r.institucion}</div>`:''}
+          ${r.cargo?`<div style="font-size:11px;"><span style="color:var(--mist);font-weight:600;">Cargo:</span> ${r.cargo}</div>`:''}
+          ${r.hora?`<div style="font-size:11px;"><span style="color:var(--mist);font-weight:600;">Hora:</span> ${r.hora}</div>`:''}
+          ${r.telefono?`<div style="font-size:11px;"><span style="color:var(--mist);font-weight:600;">Tel:</span> <a href="tel:${r.telefono}" style="color:var(--sapp);text-decoration:none;font-weight:700;">${r.telefono}</a></div>`:''}
+          ${r.email?`<div style="font-size:11px;"><span style="color:var(--mist);font-weight:600;">Email:</span> <a href="mailto:${r.email}" style="color:var(--sapp);text-decoration:none;font-weight:700;">${r.email}</a></div>`:''}
+          ${r.cotizacion?`<div style="font-size:11px;"><span style="color:var(--mist);font-weight:600;">Cotización:</span> <span class="tag t-si">${r.cotizacion}</span></div>`:''}
+        </div>
+        ${r.notas?`<div style="font-size:11.5px;line-height:1.5;background:var(--paper);border-radius:6px;padding:8px 10px;border:1px solid var(--smoke);">${r.notas}</div>`:''}
+        <div style="margin-top:8px;text-align:right;">
           <button onclick="eliminarReu(${r.id})" style="font-size:9.5px;font-weight:600;color:var(--ruby);background:none;border:1px solid var(--ruby-lt);border-radius:5px;padding:3px 9px;cursor:pointer;">Eliminar</button>
         </div>
       </div>

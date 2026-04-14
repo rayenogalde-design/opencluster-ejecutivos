@@ -2053,30 +2053,7 @@ async function generarPDF(){
   // Forzar ocultar elementos de editor con inline style
   ficha.querySelectorAll('.f-footer-preview,.page-break-marker,.page-break-spacer,.block-x,.f-edit-hint').forEach(el=>{el.dataset._oldDisplay=el.style.display;el.style.display='none';});
 
-  // Auto-calcular spacer para anclar exec card al fondo de la última página
-  const spacer=document.getElementById('execSpacer');
-  if(spacer){
-    spacer.style.flex='none';
-    spacer.style.height='0';
-    void ficha.offsetHeight;
-    const fichaRect=ficha.getBoundingClientRect();
-    const pxPerMm=fichaRect.width/216;
-    const pageContentH=225*pxPerMm;
-    const execCard=ficha.querySelector('.exec-card');
-    const execH=execCard?execCard.getBoundingClientRect().height+8:55;
-    const totalH=ficha.offsetHeight;
-    // Contenido en la última página (sin spacer)
-    const contentHastaExec=totalH-execH;
-    const lastPageStart=Math.floor(contentHastaExec/pageContentH)*pageContentH;
-    const contentLastPage=contentHastaExec-lastPageStart;
-    // Espacio restante en la última página después del contenido
-    const available=pageContentH-contentLastPage-execH;
-    if(available>5){
-      const sliderVal=document.getElementById('spacerSlider');
-      const manualExtra=sliderVal?parseInt(sliderVal.value)||0:0;
-      spacer.style.height=(available+manualExtra)+'px';
-    }
-  }
+  // Exec card eliminado — footer en todas las páginas
 
   const titulo=getTitle()||'Ficha_Tecnica';
   const nombreArchivo=titulo.replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ ]/g,'').replace(/\s+/g,'_');
@@ -2089,7 +2066,7 @@ async function generarPDF(){
     image:{type:'jpeg',quality:0.92},
     html2canvas:{scale:2,useCORS:true,allowTaint:true,logging:false,backgroundColor:'#ffffff'},
     jsPDF:{unit:'mm',format:'letter',orientation:'portrait'},
-    pagebreak:{mode:['css','legacy'],avoid:'.exec-card'}
+    pagebreak:{mode:['css','legacy']}
   };
 
   try{
@@ -2106,8 +2083,8 @@ async function generarPDF(){
           pdf.setFillColor(Math.round(6-6*ratio),Math.round(179-153*ratio),Math.round(253-157*ratio));
           pdf.rect(x,pageH-1.2,0.4,1.2,'F');
         }
-        // Footer en páginas intermedias (no en la última)
-        if(i<totalPages){
+        // Footer en TODAS las páginas
+        if(true){
           const fo=FOOTER_OPTS;
           const bgC=hexToRGB(fo.bg);
           const txC=hexToRGB(fo.txt);

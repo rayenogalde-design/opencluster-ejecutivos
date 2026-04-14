@@ -804,6 +804,14 @@ const EXEC_DB_EARLY={
 };
 window._allProducts=[];
 async function _loadProducts(){
+  var API='https://script.google.com/macros/s/AKfycbweKJvtlS74V_-lmNFlFzSu0_EslEeEFAKE0dwnSmin1Futeb5H_7tNcJf6mzSyEdz_/exec';
+  try{
+    // Intentar via proxy Apps Script (funciona desde GitHub Pages)
+    var r=await fetch(API+'?accion=productos_shopify',{mode:'cors'});
+    var d=await r.json();
+    if(d.products&&d.products.length){window._allProducts=d.products;return;}
+  }catch(e){console.warn('Proxy falló, intentando directo:',e);}
+  // Fallback: directo a Shopify (funciona desde localhost/file)
   try{
     var pg=1;
     while(true){

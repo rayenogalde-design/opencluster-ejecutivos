@@ -761,6 +761,10 @@ body{font-family:'Open Sans',sans-serif;background:var(--bg);color:var(--text);m
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
           GUARDAR COMO PDF
         </button>
+        <button class="btn-pdf" id="btnPublicar" onclick="publicarFicha()" style="background:linear-gradient(135deg,#2A7A5A,#1e6347);margin-top:6px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+          PUBLICAR FICHA
+        </button>
         <button class="btn-clear" onclick="clearEditor()">Limpiar y volver a buscar</button>
       </div>
       </div>
@@ -2006,6 +2010,40 @@ function updateSpacer(val){
   document.getElementById('val-spacer').textContent=val+'px';
   const spacer=document.getElementById('execSpacer');
   if(spacer){spacer.style.height=val+'px';spacer.style.flex='none';}
+}
+
+/* ========== PUBLICAR FICHA (a biblioteca) ========== */
+async function publicarFicha(){
+  const btn=document.getElementById('btnPublicar');
+  const titulo=getTitle();
+  if(!titulo){alert('Primero selecciona un producto para crear la ficha.');return;}
+  if(!confirm('¿Publicar esta ficha en la Biblioteca?\n\nTodos los ejecutivos podrán verla y descargarla como PDF.\n\nProducto: '+titulo)){return;}
+  btn.textContent='Publicando...';btn.disabled=true;
+  try{
+    // Recopilar datos de la ficha
+    const fichaEl=document.getElementById('ficha');
+    const datos={
+      titulo:titulo,
+      html:fichaEl?fichaEl.innerHTML:'',
+      producto:window._selectedProduct||{},
+      secciones:getSectionOrder(),
+      timestamp:Date.now()
+    };
+    const API='https://script.google.com/macros/s/AKfycbzeXaOTFFdJXKd94kenszKjxLCRaFVgpWUVPQMCPk9atPtSEBuaLdXlg0sisguFp90I/exec';
+    const exec=window._EXEC||{nombre:'Desconocido'};
+    const r=await fetch(API+'?accion=publicar_ficha&producto='+encodeURIComponent(titulo)+'&categoria='+encodeURIComponent((window._selectedProduct||{}).product_type||'')+'&ejecutivo='+encodeURIComponent(exec.nombre)+'&datos='+encodeURIComponent(JSON.stringify(datos)),{mode:'cors'});
+    const res=await r.json();
+    if(res.ok){
+      alert('Ficha publicada exitosamente.\n\nID: '+res.id+'\n\nTodos los ejecutivos pueden verla en la Biblioteca de Fichas Técnicas.');
+    }else{
+      alert('Error al publicar: '+(res.error||'desconocido'));
+    }
+  }catch(e){
+    console.error('Error publicando:',e);
+    alert('Error de conexión al publicar. Intenta de nuevo.');
+  }
+  btn.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg> PUBLICAR FICHA';
+  btn.disabled=false;
 }
 
 /* ========== GUARDAR PDF ========== */

@@ -1918,21 +1918,28 @@ function renderPageBreaks(){
       const elTop=(rect.top-fichaTop);
       const spaceLeft=pageLimit-elTop;
       // Si es un .f-card y el hermano anterior es un .f-section-header,
-      // insertar el spacer ANTES del header para que no se separen
+      // solo mover el header junto si queda muy poco espacio (<60px) para contenido después del header
       let insertBefore=el;
       if(el.classList.contains('f-card')&&el.previousElementSibling&&el.previousElementSibling.classList.contains('f-section-header')){
-        insertBefore=el.previousElementSibling;
-        const hdrRect=insertBefore.getBoundingClientRect();
-        const hdrTop=(hdrRect.top-fichaTop);
-        const gapH=Math.max(0,pageLimit-hdrTop);
-        const spacer=document.createElement('div');
-        spacer.className='page-break-spacer';
-        spacer.style.cssText=`height:${gapH+footerH+15}px;position:relative;margin:0 -8mm;clear:both;`;
-        spacer.innerHTML=buildSpacerHTML(gapH,footerH,fo,fs,pageNum);
-        insertBefore.parentNode.insertBefore(spacer,insertBefore);
-        pageLimit=hdrTop+gapH+footerH+15+pageContentH;
-        pageNum++;
-      } else if(elTop>=pageLimit-30){
+        const hdrRect=el.previousElementSibling.getBoundingClientRect();
+        const hdrBottom=(hdrRect.bottom-fichaTop);
+        const spaceAfterHdr=pageLimit-hdrBottom;
+        // Si hay menos de 60px para contenido después del header, mover ambos
+        if(spaceAfterHdr<60){
+          insertBefore=el.previousElementSibling;
+          const hdrTop=(hdrRect.top-fichaTop);
+          const gapH=Math.max(0,pageLimit-hdrTop);
+          const spacer=document.createElement('div');
+          spacer.className='page-break-spacer';
+          spacer.style.cssText=`height:${gapH+footerH+15}px;position:relative;margin:0 -8mm;clear:both;`;
+          spacer.innerHTML=buildSpacerHTML(gapH,footerH,fo,fs,pageNum);
+          insertBefore.parentNode.insertBefore(spacer,insertBefore);
+          pageLimit=hdrTop+gapH+footerH+15+pageContentH;
+          pageNum++;
+          continue;
+        }
+      }
+      if(elTop>=pageLimit-30){
         const spacer=document.createElement('div');
         spacer.className='page-break-spacer';
         const gapBefore=Math.max(0,pageLimit-elTop);

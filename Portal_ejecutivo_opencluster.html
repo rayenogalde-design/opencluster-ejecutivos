@@ -2728,6 +2728,7 @@ function renderContactos(){
   }
   lista.innerHTML=[...CONTACTOS].reverse().map((c,i)=>{
     const idx=CONTACTOS.length-1-i;
+    const eid='pce-'+idx;
     const resColor=c.resultado==='Aceptó reunión'?'var(--jade)':c.resultado==='No respondió'||c.resultado==='Rechazó'?'var(--ruby)':'var(--orange)';
     return`<div style="background:#fff;border-radius:10px;border:1px solid var(--smoke);padding:14px 16px;margin-bottom:10px;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
@@ -2735,7 +2736,10 @@ function renderContactos(){
           <div style="font-size:14px;font-weight:700;color:var(--ink);">${esc(c.nombre)}</div>
           <div style="font-size:12px;color:var(--mist);">${esc(c.institucion)}${c.cargo?' · '+esc(c.cargo):''}</div>
         </div>
-        <span style="font-size:10px;font-weight:700;color:${resColor};background:${resColor}15;padding:3px 10px;border-radius:6px;">${esc(c.resultado)}</span>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <span style="font-size:10px;font-weight:700;color:${resColor};background:${resColor}15;padding:3px 10px;border-radius:6px;">${esc(c.resultado)}</span>
+          <button onclick="toggleEditContacto(${idx},'${eid}')" style="font-size:9px;font-weight:700;color:var(--sapp);background:var(--sapp-lt);border:1px solid rgba(26,95,168,.2);border-radius:5px;padding:3px 9px;cursor:pointer;font-family:inherit;">Editar</button>
+        </div>
       </div>
       <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mist);margin-bottom:4px;">
         <span>${esc(c.fecha||'')}</span>
@@ -2744,6 +2748,37 @@ function renderContactos(){
         ${c.email?`<a href="mailto:${esc(c.email)}" style="color:var(--sapp);text-decoration:none;font-weight:600;">${esc(c.email)}</a>`:''}
       </div>
       ${c.notas?`<div style="font-size:12px;color:#555;margin-top:4px;line-height:1.4;">${esc(c.notas)}</div>`:''}
+      <div id="${eid}" style="display:none;margin-top:10px;padding:12px;background:var(--paper);border-radius:8px;border:1px solid var(--smoke);">
+        <div class="f2" style="margin-bottom:6px;">
+          <div class="fld" style="margin-bottom:0;"><label>Nombre</label><input type="text" id="${eid}-nom" value="${esc(c.nombre)}" style="font-size:13px;padding:8px 10px;"></div>
+          <div class="fld" style="margin-bottom:0;"><label>Institución</label><input type="text" id="${eid}-inst" value="${esc(c.institucion)}" style="font-size:13px;padding:8px 10px;"></div>
+        </div>
+        <div class="f2" style="margin-bottom:6px;">
+          <div class="fld" style="margin-bottom:0;"><label>Cargo</label><input type="text" id="${eid}-cargo" value="${esc(c.cargo||'')}" style="font-size:13px;padding:8px 10px;"></div>
+          <div class="fld" style="margin-bottom:0;"><label>Ciudad</label><input type="text" id="${eid}-ciudad" value="${esc(c.ciudad||'')}" style="font-size:13px;padding:8px 10px;"></div>
+        </div>
+        <div class="f2" style="margin-bottom:6px;">
+          <div class="fld" style="margin-bottom:0;"><label>Teléfono</label><input type="tel" id="${eid}-tel" value="${esc(c.tel||'')}" style="font-size:13px;padding:8px 10px;"></div>
+          <div class="fld" style="margin-bottom:0;"><label>Email</label><input type="email" id="${eid}-email" value="${esc(c.email||'')}" style="font-size:13px;padding:8px 10px;"></div>
+        </div>
+        <div class="f2" style="margin-bottom:6px;">
+          <div class="fld" style="margin-bottom:0;"><label>Medio</label>
+            <select id="${eid}-medio" style="font-size:13px;padding:8px 10px;">
+              <option${c.medio==='Llamada'?' selected':''}>Llamada</option><option${c.medio==='Email'?' selected':''}>Email</option><option${c.medio==='WhatsApp'?' selected':''}>WhatsApp</option><option${c.medio==='Presencial'?' selected':''}>Presencial</option><option${c.medio==='Red social'?' selected':''}>Red social</option>
+            </select>
+          </div>
+          <div class="fld" style="margin-bottom:0;"><label>Resultado</label>
+            <select id="${eid}-res" style="font-size:13px;padding:8px 10px;">
+              <option${c.resultado==='Aceptó reunión'?' selected':''}>Aceptó reunión</option><option${c.resultado==='Interesado, pendiente'?' selected':''}>Interesado, pendiente</option><option${c.resultado==='No respondió'?' selected':''}>No respondió</option><option${c.resultado==='Rechazó'?' selected':''}>Rechazó</option><option${c.resultado==='Derivó a otra persona'?' selected':''}>Derivó a otra persona</option>
+            </select>
+          </div>
+        </div>
+        <div class="fld" style="margin-bottom:8px;"><label>Notas</label><textarea id="${eid}-notas" rows="2" style="font-size:13px;padding:8px 10px;">${esc(c.notas||'')}</textarea></div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn-primary" style="flex:1;padding:8px;font-size:12px;" onclick="guardarEditContacto(${idx},'${eid}')">Guardar cambios</button>
+          <button class="btn-sec" style="padding:8px;font-size:12px;" onclick="document.getElementById('${eid}').style.display='none'">Cancelar</button>
+        </div>
+      </div>
     </div>`;
   }).join('');
 }
@@ -2785,6 +2820,27 @@ async function guardarPrimerContacto(){
   _medioContacto='';
   btn.disabled=false;btn.textContent='Registrar Contacto';
   toast('Contacto registrado','jade');
+  renderContactos();
+}
+
+function toggleEditContacto(idx,eid){
+  const el=document.getElementById(eid);
+  if(el)el.style.display=el.style.display==='none'?'block':'none';
+}
+
+function guardarEditContacto(idx,eid){
+  if(!CONTACTOS[idx])return;
+  CONTACTOS[idx].nombre=document.getElementById(eid+'-nom')?.value.trim()||CONTACTOS[idx].nombre;
+  CONTACTOS[idx].institucion=document.getElementById(eid+'-inst')?.value.trim()||CONTACTOS[idx].institucion;
+  CONTACTOS[idx].cargo=document.getElementById(eid+'-cargo')?.value.trim()||'';
+  CONTACTOS[idx].ciudad=document.getElementById(eid+'-ciudad')?.value.trim()||'';
+  CONTACTOS[idx].tel=document.getElementById(eid+'-tel')?.value.trim()||'';
+  CONTACTOS[idx].email=document.getElementById(eid+'-email')?.value.trim()||'';
+  CONTACTOS[idx].medio=document.getElementById(eid+'-medio')?.value||CONTACTOS[idx].medio;
+  CONTACTOS[idx].resultado=document.getElementById(eid+'-res')?.value||CONTACTOS[idx].resultado;
+  CONTACTOS[idx].notas=document.getElementById(eid+'-notas')?.value.trim()||'';
+  localStorage.setItem('oc_contactos_'+window.location.hostname,JSON.stringify(CONTACTOS));
+  toast('Contacto actualizado','jade');
   renderContactos();
 }
 

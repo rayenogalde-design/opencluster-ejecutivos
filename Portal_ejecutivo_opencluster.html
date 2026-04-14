@@ -401,9 +401,10 @@ select.login-inp{appearance:none;cursor:pointer;}
 
   <div class="tabs">
     <div class="tab on" data-tab="resumen" onclick="goTab('resumen',this)">Resumen</div>
-    <div class="tab" data-tab="cotizaciones" onclick="goTab('cotizaciones',this)">Cotizaciones</div>
+    <div class="tab" data-tab="contactos" onclick="goTab('contactos',this)" style="font-weight:700;">Primer Contacto</div>
     <div class="tab" data-tab="reuniones" onclick="goTab('reuniones',this)" style="font-weight:700;">Reuniones <span class="tab-badge" id="tab-badge-reu" style="display:none">0</span></div>
-    <div class="tab" data-tab="seguimientos" onclick="goTab('seguimientos',this)">Seg. Pendientes <span class="tab-badge" id="tab-badge-seg" style="display:none">0</span></div>
+    <div class="tab" data-tab="seguimientos" onclick="goTab('seguimientos',this)">Seguimientos <span class="tab-badge" id="tab-badge-seg" style="display:none">0</span></div>
+    <div class="tab" data-tab="cotizaciones" onclick="goTab('cotizaciones',this)">Cotizaciones</div>
     <div class="tab" data-tab="faq" onclick="goTab('faq',this)">Preguntas Frecuentes</div>
     <div class="tab" data-tab="productos" onclick="goTab('productos',this)" style="display:none;">Productos</div>
     <div class="tab" data-tab="metricas" onclick="goTab('metricas',this)" style="display:none;">Métricas Anuales</div>
@@ -467,6 +468,58 @@ select.login-inp{appearance:none;cursor:pointer;}
           </div>
         </div><!-- /res-main -->
       </div><!-- /res-layout -->
+    </div>
+
+    <!-- PRIMER CONTACTO -->
+    <div class="sec" id="s-contactos">
+      <div class="sec-hd"><h2>Primer Contacto</h2><p>Registra tus contactos iniciales antes de agendar reuniones</p></div>
+      <div class="hairline"></div>
+      <div class="g2">
+        <div>
+          <div class="form-wrap">
+            <div class="form-title">Nuevo Contacto</div>
+            <div class="fld"><label>Nombre del contacto *</label><input type="text" id="pc-nombre" placeholder="Nombre de la persona" style="font-size:14px;padding:10px 12px;"></div>
+            <div class="fld"><label>Institución *</label><input type="text" id="pc-inst" placeholder="Municipalidad, hospital, escuela..." style="font-size:14px;padding:10px 12px;"></div>
+            <div class="f2">
+              <div class="fld"><label>Cargo</label><input type="text" id="pc-cargo" placeholder="Director, encargado..." style="font-size:13px;padding:9px 12px;"></div>
+              <div class="fld"><label>Ciudad</label><input type="text" id="pc-ciudad" placeholder="Ciudad" style="font-size:13px;padding:9px 12px;"></div>
+            </div>
+            <div class="f2">
+              <div class="fld"><label>Teléfono</label><input type="tel" id="pc-tel" placeholder="+56 9..." style="font-size:13px;padding:9px 12px;"></div>
+              <div class="fld"><label>Email</label><input type="email" id="pc-email" placeholder="correo@..." style="font-size:13px;padding:9px 12px;"></div>
+            </div>
+            <div class="fld">
+              <label>Medio de contacto *</label>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <span class="exec-chip" onclick="selMedioContacto('Llamada',this)" data-medio="Llamada" style="padding:8px 16px;font-size:13px;">Llamada</span>
+                <span class="exec-chip" onclick="selMedioContacto('Email',this)" data-medio="Email" style="padding:8px 16px;font-size:13px;">Email</span>
+                <span class="exec-chip" onclick="selMedioContacto('WhatsApp',this)" data-medio="WhatsApp" style="padding:8px 16px;font-size:13px;">WhatsApp</span>
+                <span class="exec-chip" onclick="selMedioContacto('Presencial',this)" data-medio="Presencial" style="padding:8px 16px;font-size:13px;">Presencial</span>
+                <span class="exec-chip" onclick="selMedioContacto('Red social',this)" data-medio="Red social" style="padding:8px 16px;font-size:13px;">Red social</span>
+              </div>
+            </div>
+            <div class="fld">
+              <label>Resultado del contacto *</label>
+              <select id="pc-resultado" style="font-size:14px;padding:10px 12px;">
+                <option value="">— Seleccionar —</option>
+                <option value="Aceptó reunión">Aceptó reunión</option>
+                <option value="Interesado, pendiente">Interesado, pendiente</option>
+                <option value="No respondió">No respondió</option>
+                <option value="Rechazó">Rechazó</option>
+                <option value="Derivó a otra persona">Derivó a otra persona</option>
+              </select>
+            </div>
+            <div class="fld"><label>Notas</label><textarea id="pc-notas" rows="2" placeholder="Detalles del contacto..." style="font-size:13px;padding:9px 12px;"></textarea></div>
+            <button class="btn-primary" id="btn-pc" onclick="guardarPrimerContacto()" style="margin-top:10px;font-size:14px;padding:12px;">Registrar Contacto</button>
+          </div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div style="font-size:14px;font-weight:700;color:var(--ink);">Mis contactos (<span id="pc-count">0</span>)</div>
+          </div>
+          <div id="pc-lista"></div>
+        </div>
+      </div>
     </div>
 
     <!-- COTIZACIONES -->
@@ -821,14 +874,30 @@ function parseMes(f){
   return p[1]||'';
 }
 
+function fmtDate(str){
+  if(!str)return '';
+  const s=String(str).trim();
+  // ISO: 2026-04-13T04:00:00.000Z → 13/04/2026
+  if(s.includes('T')){const d=new Date(s);if(!isNaN(d))return d.toLocaleDateString('es-CL');}
+  // yyyy-mm-dd → dd/mm/yyyy
+  const m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m)return m[3]+'/'+m[2]+'/'+m[1];
+  return s;
+}
 function parseDate(str){
   if(!str)return null;
+  const s=String(str).trim();
+  // ISO
+  if(s.includes('T')){const d=new Date(s);if(!isNaN(d))return d;}
   // dd/mm/yyyy
-  const m1=String(str).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  const m1=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if(m1)return new Date(+m1[3],+m1[2]-1,+m1[1]);
   // yyyy-mm-dd
-  const m2=String(str).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const m2=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if(m2)return new Date(+m2[1],+m2[2]-1,+m2[3]);
+  // dd-mm-yyyy
+  const m3=s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if(m3)return new Date(+m3[3],+m3[2]-1,+m3[1]);
   return null;
 }
 
@@ -1012,6 +1081,7 @@ function goTab(id,el){
 
 function renderTab(id){
   if(id==='resumen')renderResumen();
+  else if(id==='contactos')renderContactos();
   else if(id==='cotizaciones')renderCotizaciones();
   else if(id==='reuniones')renderReuniones();
   else if(id==='seguimientos')renderSeguimientos();
@@ -2391,7 +2461,7 @@ function buildAccCot(c,soloVista,prefix){
     <div class="acc-hd" onclick="togAcc('${id}')">
       <span class="acc-num">${c.num}</span>
       <span class="acc-name">${c.inst||c.cliente||'—'}</span>
-      <span style="font-size:10px;color:var(--mist);flex-shrink:0;white-space:nowrap;">${c.fecha}</span>
+      <span style="font-size:10px;color:var(--mist);flex-shrink:0;white-space:nowrap;">${fmtDate(c.fecha)}</span>
       <span class="acc-money">${fmtM(c.neto)}</span>
       ${tagE(c.estado)}${alertaLabel}${execLabel}
       <span class="acc-chev" id="chev-${id}">▾</span>
@@ -2407,7 +2477,7 @@ function buildAccCot(c,soloVista,prefix){
         <div class="acc-cell"><div class="acc-clbl">Neto</div><div class="acc-cval" style="font-weight:700;">${fmt(c.neto)}</div></div>
         <div class="acc-cell"><div class="acc-clbl">Total c/IVA</div><div class="acc-cval">${fmt(c.total)}</div></div>
         <div class="acc-cell"><div class="acc-clbl">FNDR</div><div class="acc-cval">${c.fndr==='Sí'?'<span class="tag t-si">Sí</span>':'No'}</div></div>
-        ${soloVista?`<div class="acc-cell"><div class="acc-clbl">Ejecutivo</div><div class="acc-cval">${c.exec||'—'}</div></div>`:`<div class="acc-cell"><div class="acc-clbl">Última gestión</div><div class="acc-cval">${c.gestion||'<span style="color:var(--ruby)">Sin gestión</span>'}</div></div>`}
+        ${soloVista?`<div class="acc-cell"><div class="acc-clbl">Ejecutivo</div><div class="acc-cval">${c.exec||'—'}</div></div>`:`<div class="acc-cell"><div class="acc-clbl">Última gestión</div><div class="acc-cval">${c.gestion?fmtDate(c.gestion):'<span style="color:var(--ruby)">Sin gestión</span>'}</div></div>`}
         <div class="acc-cell"><div class="acc-clbl">Estado</div><div class="acc-cval">${tagE(c.estado)}</div></div>
       </div>
       <div class="acc-prods"><div class="acc-plbl">Productos (${c.prods.length})</div>${c.prods.join(' · ')}</div>
@@ -2485,7 +2555,7 @@ function buildSegHist(c){
   }
   const numCot=c.num;
   const todos=segs.map((s,idx)=>({
-    fecha:s['Fecha Seguimiento']||s['Fecha']||'',
+    fecha:fmtDate(s['Fecha Seguimiento']||s['Fecha']||''),
     estado:s['Estado']||'En gestión',
     comentario:s['Comentario']||'',
     tipo:s['Tipo Contacto']||'',
@@ -2632,6 +2702,90 @@ async function guardarSeg(numCot,accId,instLabel,fechaCot){
     }else{toast('⚠ '+res.error,'warn');}
   }catch(ex){toast('Error: '+ex.message,'warn');}
   if(btn){btn.disabled=false;btn.textContent='Guardar seguimiento →';}
+}
+
+// ════════════════════════════════════════════
+// ════════════════════════════════════════════
+// PRIMER CONTACTO
+// ════════════════════════════════════════════
+let CONTACTOS=JSON.parse(localStorage.getItem('oc_contactos_'+window.location.hostname)||'[]');
+let _medioContacto='';
+
+function selMedioContacto(medio,btn){
+  document.querySelectorAll('#s-contactos .exec-chip').forEach(c=>c.classList.remove('sel'));
+  btn.classList.add('sel');
+  _medioContacto=medio;
+}
+
+function renderContactos(){
+  const lista=document.getElementById('pc-lista');
+  const count=document.getElementById('pc-count');
+  if(!lista)return;
+  count.textContent=CONTACTOS.length;
+  if(!CONTACTOS.length){
+    lista.innerHTML='<div style="text-align:center;padding:30px;color:var(--mist);font-size:13px;background:#fff;border-radius:10px;border:1px solid var(--smoke);">Sin contactos registrados. Registra tu primer contacto para empezar el seguimiento.</div>';
+    return;
+  }
+  lista.innerHTML=[...CONTACTOS].reverse().map((c,i)=>{
+    const idx=CONTACTOS.length-1-i;
+    const resColor=c.resultado==='Aceptó reunión'?'var(--jade)':c.resultado==='No respondió'||c.resultado==='Rechazó'?'var(--ruby)':'var(--orange)';
+    return`<div style="background:#fff;border-radius:10px;border:1px solid var(--smoke);padding:14px 16px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--ink);">${esc(c.nombre)}</div>
+          <div style="font-size:12px;color:var(--mist);">${esc(c.institucion)}${c.cargo?' · '+esc(c.cargo):''}</div>
+        </div>
+        <span style="font-size:10px;font-weight:700;color:${resColor};background:${resColor}15;padding:3px 10px;border-radius:6px;">${esc(c.resultado)}</span>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mist);margin-bottom:4px;">
+        <span>${esc(c.fecha||'')}</span>
+        <span style="font-weight:600;color:var(--sapp);">${esc(c.medio||'')}</span>
+        ${c.tel?`<a href="tel:${esc(c.tel)}" style="color:var(--sapp);text-decoration:none;font-weight:600;">${esc(c.tel)}</a>`:''}
+        ${c.email?`<a href="mailto:${esc(c.email)}" style="color:var(--sapp);text-decoration:none;font-weight:600;">${esc(c.email)}</a>`:''}
+      </div>
+      ${c.notas?`<div style="font-size:12px;color:#555;margin-top:4px;line-height:1.4;">${esc(c.notas)}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+async function guardarPrimerContacto(){
+  const nombre=document.getElementById('pc-nombre').value.trim();
+  const inst=document.getElementById('pc-inst').value.trim();
+  const resultado=document.getElementById('pc-resultado').value;
+  if(!nombre){toast('Ingresa el nombre del contacto','warn');return;}
+  if(!inst){toast('Ingresa la institución','warn');return;}
+  if(!_medioContacto){toast('Selecciona el medio de contacto','warn');return;}
+  if(!resultado){toast('Selecciona el resultado del contacto','warn');return;}
+  const contacto={
+    nombre,
+    institucion:inst,
+    cargo:document.getElementById('pc-cargo').value.trim(),
+    ciudad:document.getElementById('pc-ciudad').value.trim(),
+    tel:document.getElementById('pc-tel').value.trim(),
+    email:document.getElementById('pc-email').value.trim(),
+    medio:_medioContacto,
+    resultado,
+    notas:document.getElementById('pc-notas').value.trim(),
+    fecha:new Date().toLocaleDateString('es-CL'),
+    ejecutivo:USUARIO
+  };
+  const btn=document.getElementById('btn-pc');
+  btn.disabled=true;btn.textContent='Guardando...';
+  try{
+    await apiPost({accion:'registrar_contacto',...contacto});
+  }catch(e){console.warn('Error guardando contacto:',e);}
+  CONTACTOS.push(contacto);
+  localStorage.setItem('oc_contactos_'+window.location.hostname,JSON.stringify(CONTACTOS));
+  // Limpiar form
+  ['pc-nombre','pc-inst','pc-cargo','pc-ciudad','pc-tel','pc-email','pc-notas'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+  document.getElementById('pc-resultado').value='';
+  document.querySelectorAll('#s-contactos .exec-chip').forEach(c=>c.classList.remove('sel'));
+  _medioContacto='';
+  btn.disabled=false;btn.textContent='Registrar Contacto';
+  toast('Contacto registrado','jade');
+  renderContactos();
 }
 
 // ════════════════════════════════════════════

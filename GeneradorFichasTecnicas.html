@@ -1,0 +1,2170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>OpenCluster Tech — Fichas Tecnicas</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Open+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --navy:#001a60;--navy2:#002a90;--sky:#06b3fd;--orange:#ff7e00;
+  --ltblue:#d6eeff;--pale:#eaf6ff;--bg:#F4F6FB;
+  --text:#1a2535;--muted:#64748b;--border:#d0d8e8;--gold:#C9A96E;
+}
+body{font-family:'Open Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* ========= LOGIN OVERLAY ========= */
+.login-overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:linear-gradient(170deg,#0A0F1E 0%,var(--navy) 35%,var(--navy2) 60%,var(--sky) 100%);}
+.login-overlay.hidden{display:none;}
+.login-box{background:#fff;border-radius:16px;padding:40px 36px;width:360px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+.login-logo{height:36px;margin-bottom:20px;}
+.login-title{font-family:'Montserrat',sans-serif;font-size:18px;font-weight:700;color:var(--navy);margin-bottom:6px;}
+.login-sub{font-size:12px;color:var(--muted);margin-bottom:24px;}
+.login-select{width:100%;padding:12px 14px;border:2px solid var(--border);border-radius:10px;font-family:'Open Sans',sans-serif;font-size:14px;color:var(--text);outline:none;appearance:auto;cursor:pointer;margin-bottom:18px;}
+.login-select:focus{border-color:var(--sky);}
+.login-btn{width:100%;padding:12px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;font-family:'Montserrat',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:.2s;}
+.login-btn:hover{background:linear-gradient(135deg,var(--navy2),var(--sky));}
+
+/* ========= WORKSPACE HEADER ========= */
+.ws-hero{background:linear-gradient(170deg,#0A0F1E 0%,var(--navy) 35%,var(--navy2) 60%,var(--sky) 100%);padding:0;position:relative;overflow:hidden;}
+.ws-hero::before{content:'';position:absolute;bottom:0;left:0;right:0;height:1.5px;background:linear-gradient(90deg,transparent 5%,var(--gold) 30%,rgba(232,213,168,.6) 50%,var(--gold) 70%,transparent 95%);opacity:.4;}
+.ws-hero-top{display:flex;align-items:center;justify-content:space-between;padding:14px 28px 12px;}
+.ws-brand{font-family:'Montserrat',sans-serif;font-size:15px;font-weight:700;color:rgba(255,255,255,.85);letter-spacing:1px;}
+.ws-brand span{color:var(--sky);}
+.ws-hdr-right{display:flex;align-items:center;gap:14px;}
+.ws-user{font-size:11px;color:rgba(255,255,255,.55);font-weight:600;}
+.ws-logout{font-size:10px;color:rgba(255,255,255,.3);background:none;border:1px solid rgba(255,255,255,.12);border-radius:6px;padding:4px 12px;cursor:pointer;font-family:'Open Sans',sans-serif;transition:.15s;}
+.ws-logout:hover{color:#fff;border-color:rgba(255,255,255,.3);}
+
+/* ========= SEARCH MODE ========= */
+.search-mode{max-width:700px;margin:0 auto;padding:30px 20px 40px;}
+.search-mode.hidden{display:none;}
+.search-title{font-family:'Montserrat',sans-serif;font-size:22px;font-weight:800;color:var(--navy);text-align:center;margin-bottom:4px;}
+.search-sub{font-size:12px;color:var(--muted);text-align:center;margin-bottom:22px;}
+.search-wrap{position:relative;margin-bottom:4px;}
+.search-input{width:100%;padding:16px 20px 16px 50px;border:none;border-radius:14px;font-family:'Open Sans',sans-serif;font-size:15px;color:var(--text);outline:none;background:#fff;box-shadow:0 8px 32px rgba(0,26,96,.12);}
+.search-input:focus{box-shadow:0 8px 32px rgba(6,179,253,.18);}
+.search-icon{position:absolute;left:17px;top:50%;transform:translateY(-50%);color:var(--sky);}
+.search-results{background:#fff;border-radius:12px;max-height:400px;overflow-y:auto;display:none;box-shadow:0 12px 40px rgba(0,26,96,.12);}
+.search-results.show{display:block;}
+.sr-item{display:flex;align-items:center;gap:14px;padding:12px 16px;cursor:pointer;transition:background .12s;border-bottom:1px solid var(--pale);}
+.sr-item:last-child{border-bottom:none;}
+.sr-item:hover{background:var(--pale);}
+.sr-item img{width:52px;height:52px;object-fit:contain;border-radius:6px;border:1px solid var(--border);background:#fff;flex-shrink:0;}
+.sr-name{font-family:'Montserrat',sans-serif;font-size:13px;font-weight:700;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sr-tags{font-size:10px;color:var(--muted);margin-top:2px;}
+.search-loading{text-align:center;padding:20px;color:var(--muted);font-size:13px;}
+
+/* ========= EDITOR LAYOUT ========= */
+.editor-layout{display:none;height:calc(100vh - 52px);overflow:hidden;}
+.editor-layout.show{display:flex;flex-direction:row;}
+
+/* ========= SIDEBAR ========= */
+.sidebar{width:420px;min-width:420px;max-width:420px;flex-shrink:0;background:#fff;border-right:1px solid var(--border);overflow-y:auto;overflow-x:hidden;height:calc(100vh - 52px);padding:0 0 24px;}
+.sb-section{padding:14px 20px;border-bottom:1px solid #eef1f6;}
+.sb-section:last-child{border-bottom:none;}
+.sb-section.collapsed .sb-content{display:none;}
+.sb-section.collapsed .sb-title{margin-bottom:0;}
+.sb-title{font-family:'Montserrat',sans-serif;font-size:12px;font-weight:700;color:var(--navy);margin-bottom:12px;display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;}
+.sb-title svg{flex-shrink:0;}
+.sb-title:hover{color:var(--sky);}
+.sb-chevron{margin-left:auto;color:var(--muted);transition:transform .2s;font-size:10px;}
+.sb-section.collapsed .sb-chevron{transform:rotate(-90deg);}
+
+/* Template cards — 25 grid */
+.tpl-grid-25{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-height:320px;overflow-y:auto;padding-right:4px;}
+.tpl-grid-25::-webkit-scrollbar{width:4px;}
+.tpl-grid-25::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.tpl-card{border:2px solid var(--border);border-radius:8px;padding:6px;cursor:pointer;text-align:center;transition:.15s;background:#fff;}
+.tpl-card:hover{border-color:var(--sky);background:var(--pale);}
+.tpl-card.active{border-color:var(--sky);background:var(--pale);box-shadow:0 0 0 2px rgba(6,179,253,.2);}
+.tpl-num{font-family:'Montserrat',sans-serif;font-size:9px;font-weight:800;color:var(--sky);margin-bottom:2px;}
+.tpl-preview{height:28px;border-radius:3px;margin-bottom:3px;overflow:hidden;display:flex;flex-direction:column;}
+.tpl-card-label{font-family:'Montserrat',sans-serif;font-size:8px;font-weight:700;color:var(--navy);}
+.tpl-grid-25{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-height:300px;overflow-y:auto;padding-right:4px;}
+.tpl-card-25{border:2px solid var(--border);border-radius:8px;padding:6px;cursor:pointer;text-align:center;transition:.15s;background:#fff;}
+.tpl-card-25:hover{border-color:var(--sky);background:var(--pale);}
+.tpl-card-25.active{border-color:var(--sky);background:var(--pale);box-shadow:0 0 0 2px rgba(6,179,253,.2);}
+.tpl-card-25 .tpl-num{font-family:'Montserrat',sans-serif;font-size:9px;font-weight:800;color:var(--sky);margin-bottom:2px;}
+.tpl-card-25 .tpl-preview{height:28px;border-radius:3px;margin-bottom:3px;display:flex;overflow:hidden;}
+.tpl-card-25 .tpl-preview-hdr{height:8px;border-radius:2px 2px 0 0;}
+.tpl-card-25 .tpl-card-label{font-family:'Montserrat',sans-serif;font-size:8px;font-weight:700;color:var(--navy);}
+
+/* Image thumbnails */
+.img-grid{display:flex;flex-wrap:wrap;gap:10px;}
+.img-thumb{position:relative;width:80px;height:80px;border:2px solid var(--border);border-radius:8px;overflow:hidden;cursor:pointer;transition:.15s;}
+.img-thumb:hover{border-color:var(--sky);}
+.img-thumb.selected{border-color:var(--sky);box-shadow:0 0 0 2px rgba(6,179,253,.25);}
+.img-thumb img{width:100%;height:100%;object-fit:contain;background:#fff;}
+.img-thumb .img-badge{position:absolute;top:3px;left:3px;background:var(--sky);color:#fff;font-size:8px;font-weight:700;padding:1px 5px;border-radius:4px;font-family:'Montserrat',sans-serif;display:none;}
+.img-thumb.selected .img-badge{display:block;}
+.img-thumb .img-check{position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:4px;border:2px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center;transition:.1s;}
+.img-thumb.selected .img-check{background:var(--sky);border-color:var(--sky);}
+
+/* Toggle switches */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f2f5;}
+.toggle-row:last-child{border-bottom:none;}
+.sec-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f0f2f5;transition:background .15s;}
+.sec-row:last-child{border-bottom:none;}
+.sec-arrows{display:flex;flex-direction:column;gap:1px;}
+.sec-arrow{background:none;border:1px solid var(--border);border-radius:4px;width:20px;height:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);transition:.15s;padding:0;}
+.sec-arrow:hover{border-color:var(--sky);color:var(--navy);background:var(--pale);}
+.toggle-label{font-size:13px;font-weight:600;color:var(--text);flex:1;}
+.toggle-switch{position:relative;width:46px;height:26px;cursor:pointer;}
+.toggle-switch input{opacity:0;width:0;height:0;position:absolute;}
+.toggle-track{position:absolute;inset:0;background:#cfd5de;border-radius:13px;transition:.2s;}
+.toggle-switch input:checked+.toggle-track{background:var(--sky);}
+.toggle-track::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.15);}
+.toggle-switch input:checked+.toggle-track::after{transform:translateX(20px);}
+
+/* Size buttons */
+/* Block X buttons */
+.block-x{position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:rgba(192,57,43,.8);color:#fff;border:none;cursor:pointer;font-size:11px;line-height:1;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;z-index:5;}
+.f-card:hover .block-x,.f-section-header:hover .block-x{opacity:1;}
+.f-card{position:relative;}
+.f-section-header{position:relative;}
+
+/* Editable areas */
+.f-editable{outline:none;cursor:text;border-radius:3px;transition:box-shadow .15s,background .15s;}
+.f-editable:hover{box-shadow:inset 0 0 0 1.5px rgba(6,179,253,.25);}
+.f-editable:focus{box-shadow:inset 0 0 0 2px rgba(6,179,253,.5);background:rgba(6,179,253,.03);}
+.f-edit-hint{position:absolute;top:2px;left:2px;font-family:'Montserrat',sans-serif;font-size:7px;font-weight:600;color:var(--sky);background:rgba(255,255,255,.9);padding:1px 5px;border-radius:3px;opacity:0;transition:opacity .15s;pointer-events:none;z-index:4;}
+.f-card:hover .f-edit-hint{opacity:1;}
+.f-editable:focus~.f-edit-hint,.f-card:has(.f-editable:focus) .f-edit-hint{opacity:0;}
+.f-editable-title{outline:none;cursor:text;border-radius:3px;transition:box-shadow .15s;}
+.f-editable-title:hover{box-shadow:inset 0 0 0 1.5px rgba(6,179,253,.25);}
+.f-editable-title:focus{box-shadow:inset 0 0 0 2px rgba(6,179,253,.5);background:rgba(6,179,253,.05);}
+
+/* Color picker */
+.color-grid{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;}
+.color-dot{width:26px;height:26px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:.15s;}
+.color-dot:hover{transform:scale(1.15);}
+.color-dot.active{border-color:var(--navy);box-shadow:0 0 0 2px rgba(0,26,96,.2);}
+.color-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.color-row-label{font-size:10px;font-weight:600;color:var(--text);min-width:80px;font-family:'Montserrat',sans-serif;}
+
+.body-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}
+.body-opt{cursor:pointer;border:2px solid var(--border);border-radius:8px;padding:6px;text-align:center;transition:.2s;background:#fff;}
+.body-opt:hover{border-color:var(--sky);}
+.body-opt.active{border-color:var(--sky);background:var(--pale);}
+.body-opt svg{width:100%;height:auto;margin-bottom:3px;}
+.body-opt span{font-family:'Montserrat',sans-serif;font-size:8px;font-weight:600;color:var(--muted);}
+
+.logo-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:4px;}
+.logo-opt{cursor:pointer;border:2px solid var(--border);border-radius:8px;padding:6px;text-align:center;transition:.2s;background:#fff;overflow:hidden;}
+.logo-opt:hover{border-color:var(--sky);}
+.logo-opt.active{border-color:var(--sky);background:var(--pale);}
+.logo-opt img{width:100%;height:36px;object-fit:contain;margin-bottom:3px;}
+.logo-opt span{font-family:'Montserrat',sans-serif;font-size:8px;font-weight:600;color:var(--muted);}
+
+.hdr-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}
+.hdr-card{cursor:pointer;border:2px solid var(--border);border-radius:8px;padding:6px;text-align:center;transition:.2s;background:#fff;}
+.hdr-card:hover{border-color:var(--sky);}
+.hdr-card.active{border-color:var(--sky);background:var(--pale);}
+.hdr-card svg{width:100%;height:auto;margin-bottom:4px;}
+.hdr-card span{font-family:'Montserrat',sans-serif;font-size:9px;font-weight:700;color:var(--navy);}
+
+.size-control{margin-bottom:14px;}
+.size-control-label{font-family:'Montserrat',sans-serif;font-size:10px;font-weight:600;color:var(--navy);margin-bottom:5px;}
+.align-group{display:flex;gap:4px;margin-top:4px;}
+.align-btn{width:30px;height:24px;border:1.5px solid var(--border);border-radius:5px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:.15s;padding:0;}
+.align-btn:hover{border-color:var(--sky);color:var(--navy);}
+.align-btn.active{border-color:var(--sky);background:var(--pale);color:var(--navy);}
+.size-control-row{display:flex;align-items:center;gap:8px;}
+.size-slider{flex:1;accent-color:var(--sky);cursor:pointer;height:6px;}
+.size-val{min-width:40px;text-align:right;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;color:var(--sky);flex-shrink:0;}
+.size-reset{width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:600;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;transition:.15s;margin-top:4px;}
+.size-reset:hover{border-color:var(--sky);color:var(--navy);}
+
+/* Action buttons */
+.sb-actions{display:flex;flex-direction:column;gap:10px;}
+.btn-pdf{padding:14px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;font-family:'Montserrat',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:.2s;}
+.btn-pdf:hover{background:linear-gradient(135deg,var(--navy2),var(--sky));}
+.btn-clear{padding:12px;border:2px solid var(--border);border-radius:10px;background:#fff;color:var(--muted);font-family:'Montserrat',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:.15s;}
+.btn-clear:hover{border-color:var(--sky);color:var(--navy);}
+
+/* ========= PREVIEW AREA ========= */
+.preview-area{flex:1;overflow:auto;height:calc(100vh - 52px);padding:28px;background:var(--bg);position:relative;}
+/* Image zone grid */
+.img-zone{border:1.5px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center;font-family:'Montserrat',sans-serif;font-size:7px;font-weight:700;color:var(--muted);cursor:pointer;transition:.15s;user-select:none;}
+.img-zone:hover{border-color:var(--sky);background:var(--pale);}
+.img-zone.active{border-color:var(--sky);background:rgba(6,179,253,.15);color:var(--navy);}
+
+/* View controls */
+.view-controls{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:8px;justify-content:center;padding:8px 0 12px;background:var(--bg);}
+.view-btn{height:28px;border:1.5px solid var(--border);border-radius:6px;background:#fff;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;color:var(--navy);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;padding:0 10px;gap:4px;}
+.view-btn:hover{border-color:var(--sky);background:var(--pale);}
+.view-btn.active{border-color:var(--sky);background:var(--pale);color:var(--sky);}
+.zoom-btn{width:28px;height:28px;border:1.5px solid var(--border);border-radius:6px;background:#fff;font-family:'Montserrat',sans-serif;font-size:14px;font-weight:700;color:var(--navy);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;}
+.zoom-btn:hover{border-color:var(--sky);background:var(--pale);}
+.zoom-val{font-family:'Montserrat',sans-serif;font-size:11px;font-weight:700;color:var(--muted);min-width:40px;text-align:center;}
+/* Page preview grid */
+.pages-grid{display:flex;flex-wrap:wrap;gap:16px;justify-content:center;align-items:flex-start;}
+.page-frame{background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.1);border:1px solid #ddd;overflow:hidden;position:relative;}
+.page-frame .page-num{position:absolute;bottom:4px;right:8px;font-family:'Montserrat',sans-serif;font-size:8px;color:#bbb;}
+
+/* ========= FICHA PDF ========= */
+.ficha{width:216mm;min-height:279mm;background:#fff;box-shadow:0 4px 24px rgba(0,0,0,.08);display:flex;flex-direction:column;font-family:'Open Sans',sans-serif;}
+.f-topline{height:5px;background:linear-gradient(90deg,var(--sky),var(--navy));flex-shrink:0;margin-bottom:4mm;}
+.f-inner{padding:8mm 8mm 2mm;box-sizing:border-box;flex:1;display:flex;flex-direction:column;}
+.f-titlebar{background:var(--ltblue);border-top:4px solid var(--sky);padding:12px 24px;text-align:center;}
+.f-titlebar h2{font-family:'Montserrat',sans-serif;font-size:14pt;font-weight:700;color:var(--navy);margin:0;}
+.f-meta{background:#f0f4ff;padding:8px 24px;display:flex;align-items:center;justify-content:space-between;font-size:9pt;color:var(--muted);}
+.f-meta-sku{font-weight:600;color:var(--navy);}
+.f-meta-cats{font-size:8pt;color:var(--muted);}
+.f-body{padding:18px 24px;}
+
+/* Image layouts */
+.f-images{margin-bottom:16px;display:flex;justify-content:center;gap:16px;flex-wrap:wrap;}
+.f-images img{border:1px solid var(--border);border-radius:6px;object-fit:contain;background:#fff;}
+.f-img-sm{max-height:140px;}
+.f-img-md{max-height:200px;}
+.f-img-lg{max-height:280px;}
+
+/* Info grid */
+.f-info-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;margin-bottom:16px;border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.f-info-cell{padding:8px 12px;border-bottom:1px solid #e8ecf2;border-right:1px solid #e8ecf2;}
+.f-info-cell:nth-child(3n){border-right:none;}
+.f-info-label{font-size:7pt;font-weight:700;color:var(--sky);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;}
+.f-info-value{font-size:9pt;font-weight:600;color:var(--navy);}
+
+/* Section cards */
+.f-section-header{background:var(--navy);color:#fff;font-family:'Montserrat',sans-serif;font-size:10pt;font-weight:700;padding:7px 14px;border-radius:5px 5px 0 0;margin-top:14px;}
+.f-card{border:1px solid var(--border);border-top:none;border-radius:0 0 5px 5px;padding:14px;margin-bottom:4px;font-size:9pt;line-height:1.6;color:var(--text);}
+.f-card-sky{border-top:3px solid var(--sky);border-radius:5px;padding:14px;margin-bottom:14px;}
+.f-card-sky .f-card-sky-title{font-family:'Montserrat',sans-serif;font-size:10pt;font-weight:700;color:var(--navy);margin-bottom:8px;}
+
+/* Two-col layout */
+.f-two-cols{display:flex;gap:16px;margin-bottom:4px;}
+.f-two-cols>div{flex:1;}
+
+/* Specs table */
+.f-specs-table{width:100%;border-collapse:collapse;font-size:9pt;margin-bottom:4px;}
+.f-specs-table thead th{background:var(--navy);color:#fff;font-family:'Montserrat',sans-serif;font-size:8pt;font-weight:700;padding:7px 10px;text-align:left;}
+.f-specs-table tbody tr:nth-child(odd){background:var(--ltblue);}
+.f-specs-table tbody tr:nth-child(even){background:#fff;}
+.f-specs-table td{padding:6px 10px;color:var(--text);border-bottom:1px solid #e8ecf2;}
+
+/* Visual template */
+.f-visual-specs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;}
+.f-visual-spec-item{background:var(--pale);border-radius:5px;padding:8px 10px;}
+.f-visual-spec-label{font-size:7pt;font-weight:700;color:var(--sky);text-transform:uppercase;}
+.f-visual-spec-value{font-size:9pt;font-weight:600;color:var(--navy);}
+
+/* UL/OL in cards */
+.f-card ul,.f-card ol{padding-left:18px;margin:4px 0;}
+.f-card li{margin-bottom:3px;}
+
+/* Footer exec-card */
+.f-footer{padding:6px 24px 0;margin-top:auto;}
+.exec-card{display:flex;align-items:center;justify-content:space-between;gap:10px;background:linear-gradient(135deg,#001a60,#002a90);border-radius:7px;padding:6px 12px;margin:0;}
+.f-bottomline{margin-top:0!important;}
+.exec-avatar{width:30px;height:30px;border-radius:50%;background:#06b3fd;display:flex;align-items:center;justify-content:center;font-family:'Open Sans',sans-serif;font-size:10px;font-weight:800;color:white;flex-shrink:0;}
+.exec-info{flex:1;}
+.exec-name{font-size:8pt;font-weight:700;color:white;line-height:1.2;}
+.exec-role{font-size:6.5pt;color:#06b3fd;line-height:1.2;}
+.exec-dept{font-size:6pt;color:rgba(255,255,255,.45);line-height:1.2;}
+.exec-contacts{display:flex;flex-direction:column;gap:2px;align-items:flex-end;}
+.exec-contact{font-size:6.8pt;color:rgba(255,255,255,.85);display:flex;align-items:center;gap:3px;}
+.f-bottomline{height:5px;background:linear-gradient(90deg,var(--navy),var(--sky));flex-shrink:0;}
+
+/* Marcadores de salto de página como hojas separadas */
+.page-break-marker{position:absolute;left:-20px;right:-20px;height:40px;background:var(--bg);pointer-events:none;z-index:5;display:flex;align-items:center;justify-content:center;box-shadow:0 -8px 12px rgba(0,0,0,.08) inset,0 8px 12px rgba(0,0,0,.08) inset;}
+.page-break-marker::before{content:attr(data-label);background:#ff7e00;color:#fff;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;padding:4px 14px;border-radius:12px;white-space:nowrap;box-shadow:0 2px 8px rgba(255,126,0,.3);}
+.page-break-marker::after{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(180deg,rgba(0,0,0,.15),transparent);}
+.ficha{position:relative;}
+
+/* Modo PDF: oculta elementos del editor */
+.ficha.pdf-mode .page-break-marker,
+.ficha.pdf-mode .page-break-spacer,
+.ficha.pdf-mode .f-footer-preview,
+.ficha.pdf-mode .block-x,
+.ficha.pdf-mode .f-edit-hint{display:none!important;}
+
+/* ========= PRINT ========= */
+/* Print: table structure for repeating footer */
+.print-footer{display:none;}
+.print-wrap{display:contents;}
+@media print{
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+  body{background:#fff!important;margin:0!important;padding:0!important;}
+  .login-overlay,.ws-hero,.search-mode,.sidebar,.block-x,.f-edit-hint,.view-controls{display:none!important;}
+  .ficha{transform:none!important;}
+  .f-editable,.f-editable-title{box-shadow:none!important;}
+  .editor-layout{display:block!important;height:auto!important;overflow:visible!important;}
+  .preview-area{padding:0!important;display:block!important;overflow:visible!important;height:auto!important;max-height:none!important;}
+  .ficha{box-shadow:none!important;width:100%!important;margin:0!important;min-height:0!important;height:auto!important;overflow:visible!important;}
+  .f-topline{margin-bottom:2mm!important;}
+  .f-inner{padding:5mm 8mm 2mm!important;min-height:0!important;height:auto!important;overflow:visible!important;display:block!important;}
+  .f-body{overflow:visible!important;display:block!important;}
+  .f-section-header{page-break-inside:avoid!important;page-break-after:avoid!important;}
+  .f-card{page-break-inside:auto!important;}
+  .exec-card{page-break-inside:avoid!important;}
+  .f-bottomline{display:none!important;}
+  .f-footer-preview{display:none!important;}
+  .page-break-marker{display:none!important;}
+  .f-images{page-break-inside:avoid!important;}
+  /* Table trick: thead/tfoot repeat on every page */
+  .print-wrap{display:table!important;width:100%!important;}
+  .print-wrap-body{display:table-row-group!important;}
+  .print-footer{display:table-footer-group!important;}
+  .print-footer-inner{padding:0 5mm;}
+  .print-footer-text{text-align:center;padding:2px 0 1px;font-family:'Open Sans',sans-serif;font-size:6.5pt;color:#8a96aa;}
+  .print-footer-line{height:4px;background:linear-gradient(90deg,#06b3fd,#001a60);margin-top:2px;}
+  @page{size:letter;margin:4mm 5mm 2mm;}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <img src="logos/Recurso 4construyendo 1.png" alt="OpenCluster Tech" class="login-logo">
+    <div class="login-title">Fichas Tecnicas</div>
+    <div class="login-sub">Selecciona tu usuario para continuar</div>
+    <select class="login-select" id="loginSelect">
+      <option value="">-- Seleccionar --</option>
+      <option value="Rayen Ogalde">Rayen Ogalde</option>
+      <option value="German Alvarado">German Alvarado</option>
+      <option value="William Marin">William Marin</option>
+      <option value="Roberto Caceres">Roberto Caceres</option>
+      <option value="Ximena Romero">Ximena Romero</option>
+      <option value="Maximiliano Astudillo">Maximiliano Astudillo</option>
+    </select>
+    <button class="login-btn" id="loginBtn" onclick="doLogin(document.getElementById('loginSelect').value)">Ingresar</button>
+  </div>
+</div>
+
+<!-- ===== WORKSPACE HEADER ===== -->
+<div class="ws-hero">
+  <div class="ws-hero-top">
+    <div class="ws-brand">Open<span>Cluster</span> Tech</div>
+    <div class="ws-hdr-right">
+      <span class="ws-user" id="wsUser"></span>
+      <button class="ws-logout" id="wsLogout">Cambiar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SEARCH MODE ===== -->
+<div class="search-mode" id="searchMode">
+  <div class="search-title">Generador de Fichas Tecnicas</div>
+  <div class="search-sub">Busca un producto para comenzar</div>
+  <div class="search-wrap">
+    <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" class="search-input" id="searchInput" placeholder="Buscar producto..." autocomplete="off">
+  </div>
+  <div class="search-results" id="searchResults"></div>
+</div>
+
+<!-- ===== EDITOR LAYOUT ===== -->
+<div class="editor-layout" id="editorLayout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar" id="sidebar">
+
+    <!-- Sections FIRST -->
+    <div class="sb-section">
+      <div class="sb-title" onclick="toggleSec(this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--navy)" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        Secciones de la Ficha
+        <span class="sb-chevron">&#9660;</span>
+      </div>
+      <div class="sb-content">
+      <div style="font-size:9px;color:var(--muted);margin-bottom:8px;">Elige que informacion incluir y en que orden</div>
+      <div id="sectionList">
+        <div class="sec-row" data-sec="desc">
+          <div class="sec-arrows">
+            <button class="sec-arrow" onclick="moveSection('desc',-1)" title="Subir"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 15l-6-6-6 6"/></svg></button>
+            <button class="sec-arrow" onclick="moveSection('desc',1)" title="Bajar"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+          </div>
+          <span class="toggle-label">Descripcion</span>
+          <label class="toggle-switch"><input type="checkbox" checked data-section="desc" onchange="renderFicha()"><span class="toggle-track"></span></label>
+        </div>
+        <div class="sec-row" data-sec="chars">
+          <div class="sec-arrows">
+            <button class="sec-arrow" onclick="moveSection('chars',-1)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 15l-6-6-6 6"/></svg></button>
+            <button class="sec-arrow" onclick="moveSection('chars',1)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+          </div>
+          <span class="toggle-label">Caracteristicas</span>
+          <label class="toggle-switch"><input type="checkbox" checked data-section="chars" onchange="renderFicha()"><span class="toggle-track"></span></label>
+        </div>
+        <div class="sec-row" data-sec="specs">
+          <div class="sec-arrows">
+            <button class="sec-arrow" onclick="moveSection('specs',-1)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 15l-6-6-6 6"/></svg></button>
+            <button class="sec-arrow" onclick="moveSection('specs',1)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+          </div>
+          <span class="toggle-label">Especificaciones Tecnicas</span>
+          <label class="toggle-switch"><input type="checkbox" checked data-section="specs" onchange="renderFicha()"><span class="toggle-track"></span></label>
+        </div>
+        <div class="sec-row" data-sec="infogrid">
+          <div class="sec-arrows">
+            <button class="sec-arrow" onclick="moveSection('infogrid',-1)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 15l-6-6-6 6"/></svg></button>
+            <button class="sec-arrow" onclick="moveSection('infogrid',1)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+          </div>
+          <span class="toggle-label">Info Grid / SKU</span>
+          <label class="toggle-switch"><input type="checkbox" data-section="infogrid" onchange="renderFicha()"><span class="toggle-track"></span></label>
+        </div>
+        <div class="sec-row" data-sec="tags">
+          <div class="sec-arrows">
+            <button class="sec-arrow" onclick="moveSection('tags',-1)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 15l-6-6-6 6"/></svg></button>
+            <button class="sec-arrow" onclick="moveSection('tags',1)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+          </div>
+          <span class="toggle-label">Categorias / Tags</span>
+          <label class="toggle-switch"><input type="checkbox" checked data-section="tags" onchange="renderFicha()"><span class="toggle-track"></span></label>
+        </div>
+      </div>
+      </div>
+    </div>
+
+    <!-- Template -->
+    <div class="sb-section">
+      <div class="sb-title" onclick="toggleSec(this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--navy)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="9" x2="9" y2="21"/></svg>
+        Plantilla
+        <span class="sb-chevron">&#9660;</span>
+      </div>
+      <div class="sb-content">
+        <div class="tpl-grid-25" id="tplGrid25"></div>
+      </div>
+    </div>
+
+    <!-- Header layout -->
+    <div class="sb-section">
+      <div class="sb-title" onclick="toggleSec(this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--navy)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg>
+        Diseno del Header
+        <span class="sb-chevron">&#9660;</span>
+      </div>
+      <div class="sb-content">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:10px;">Elige como se ve el header de la ficha</div>
+      <div class="hdr-grid">
+        <div class="hdr-card active" data-hdr="clasico" onclick="setHeaderStyle('clasico')">
+          <svg viewBox="0 0 80 30"><rect x="2" y="4" width="20" height="14" rx="2" fill="#d6eeff" stroke="#06b3fd" stroke-width=".8"/><rect x="30" y="6" width="36" height="3" rx="1" fill="#001a60"/><rect x="30" y="12" width="24" height="2" rx=".5" fill="#06b3fd"/><rect x="2" y="24" width="76" height="2" fill="#06b3fd"/></svg>
+          <span>Clasico</span>
+        </div>
+        <div class="hdr-card" data-hdr="centrado" onclick="setHeaderStyle('centrado')">
+          <svg viewBox="0 0 80 30"><rect x="28" y="2" width="24" height="10" rx="2" fill="#d6eeff" stroke="#06b3fd" stroke-width=".8"/><rect x="14" y="16" width="52" height="3" rx="1" fill="#001a60"/><rect x="24" y="22" width="32" height="2" rx=".5" fill="#06b3fd"/><rect x="2" y="28" width="76" height="2" fill="#06b3fd"/></svg>
+          <span>Centrado</span>
+        </div>
+        <div class="hdr-card" data-hdr="banner" onclick="setHeaderStyle('banner')">
+          <svg viewBox="0 0 80 30"><rect x="0" y="0" width="80" height="22" rx="0" fill="#001a60"/><rect x="4" y="4" width="14" height="14" rx="2" fill="#06b3fd" opacity=".4"/><rect x="24" y="6" width="36" height="3" rx="1" fill="#fff"/><rect x="24" y="12" width="20" height="2" rx=".5" fill="#06b3fd"/><rect x="2" y="24" width="76" height="2" fill="#06b3fd"/></svg>
+          <span>Banner</span>
+        </div>
+        <div class="hdr-card" data-hdr="lateral" onclick="setHeaderStyle('lateral')">
+          <svg viewBox="0 0 80 30"><rect x="0" y="0" width="22" height="30" rx="0" fill="#001a60"/><rect x="4" y="3" width="14" height="14" rx="2" fill="#06b3fd" opacity=".4"/><rect x="4" y="20" width="14" height="3" rx="1" fill="#06b3fd" opacity=".3"/><rect x="28" y="4" width="40" height="4" rx="1" fill="#001a60"/><rect x="28" y="12" width="30" height="2" rx=".5" fill="#06b3fd"/><rect x="28" y="18" width="46" height="3" rx="1" fill="#e8ecf2"/></svg>
+          <span>Lateral</span>
+        </div>
+        <div class="hdr-card" data-hdr="degradado" onclick="setHeaderStyle('degradado')">
+          <svg viewBox="0 0 80 30"><defs><linearGradient id="gd1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#06b3fd"/><stop offset="100%" stop-color="#001a60"/></linearGradient></defs><rect x="0" y="0" width="80" height="24" fill="url(#gd1)"/><rect x="4" y="4" width="20" height="3" rx="1" fill="#fff" opacity=".6"/><rect x="4" y="10" width="40" height="3" rx="1" fill="#fff" opacity=".8"/><rect x="4" y="16" width="55" height="4" rx="1" fill="#fff"/></svg>
+          <span>Degradado</span>
+        </div>
+        <div class="hdr-card" data-hdr="minimalista" onclick="setHeaderStyle('minimalista')">
+          <svg viewBox="0 0 80 30"><rect x="0" y="0" width="80" height="3" fill="#06b3fd"/><rect x="2" y="6" width="16" height="6" rx="1" fill="#d6eeff" stroke="#06b3fd" stroke-width=".5"/><rect x="16" y="14" width="48" height="3" rx="1" fill="#001a60"/><rect x="30" y="20" width="20" height="1.5" rx=".5" fill="#06b3fd"/><rect x="10" y="25" width="60" height="3" rx="1" fill="#001a60"/></svg>
+          <span>Minimalista</span>
+        </div>
+        <div class="hdr-card" data-hdr="doblelinea" onclick="setHeaderStyle('doblelinea')">
+          <svg viewBox="0 0 80 30"><rect x="0" y="0" width="80" height="12" fill="#06b3fd"/><rect x="4" y="3" width="18" height="6" rx="1" fill="#fff" opacity=".5"/><rect x="0" y="12" width="80" height="16" fill="#001a60"/><rect x="14" y="15" width="52" height="3" rx="1" fill="#fff"/><rect x="20" y="21" width="40" height="3" rx="1" fill="#06b3fd"/></svg>
+          <span>Doble Linea</span>
+        </div>
+      </div>
+      </div>
+    </div>
+
+    <!-- Logo selector -->
+    <div class="sb-section collapsed">
+      <div class="sb-title" onclick="toggleSec(this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--navy)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12l2 2 4-4"/></svg>
+        Logo
+        <span class="sb-chevron">&#9660;</span>
+      </div>
+      <div class="sb-content">
+        <div class="logo-grid" id="logoGrid"></div>
+        <button class="btn-add-logo" id="btnMasLogos" onclick="toggleMasLogos()" style="width:100%;padding:6px;border:1.5px dashed var(--sky);border-radius:8px;background:var(--pale);color:var(--sky);font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;cursor:pointer;margin-top:6px;">Mas logos</button>
+      </div>
+    </div>
+
+    <!-- Images -->
+    <div class="sb-section">
+      <div class="sb-title" onclick="toggleSec(this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--navy)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+        Imagenes
+        <span class="sb-chevron">&#9660;</span>
+      </div>
+      <div class="sb-content">
+        <div class="img-grid" id="imgGrid"></div>
+        <div style="font-size:10px;color:var(--muted);margin-top:8px;">Selecciona hasta 5 imagenes.</div>
+        <div style="font-size:9px;font-weight:700;color:var(--navy);margin-top:10px;font-family:'Montserrat',sans-serif;">Posicion individual de cada imagen</div>
+        <div id="imgPosIndividual" style="margin-top:6px;"></div>
+        <div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap;">
+          <button class="align-btn" onclick="setAllImgPos('arriba')" style="padding:3px 6px;font-size:8px;width:auto;">Todas arriba</button>
+          <button class="align-btn" onclick="setAllImgPos('abajo')" style="padding:3px 6px;font-size:8px;width:auto;">Todas abajo</button>
+          <button class="align-btn" onclick="setAllImgPos('izquierda')" style="padding:3px 6px;font-size:8px;width:auto;">Todas izq</button>
+          <button class="align-btn" onclick="setAllImgPos('derecha')" style="padding:3px 6px;font-size:8px;width:auto;">Todas der</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Body layout -->
+    <div class="sb-section">
+      <div class="sb-title" onclick="toggleSec(this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--navy)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 9v12"/></svg>
+        Diseno del Cuerpo
+        <span class="sb-chevron">&#9660;</span>
+      </div>
+      <div class="sb-content">
+      <div class="body-grid">
+        <div class="body-opt active" data-body="apilado" onclick="setBodyLayout('apilado')">
+          <svg viewBox="0 0 60 40"><rect x="4" y="2" width="52" height="8" rx="1" fill="#e8ecf2"/><rect x="4" y="13" width="52" height="8" rx="1" fill="#e8ecf2"/><rect x="4" y="24" width="52" height="8" rx="1" fill="#e8ecf2"/><rect x="4" y="35" width="52" height="3" rx="1" fill="#001a60"/></svg>
+          <span>Apilado</span>
+        </div>
+        <div class="body-opt" data-body="doscol" onclick="setBodyLayout('doscol')">
+          <svg viewBox="0 0 60 40"><rect x="2" y="2" width="26" height="30" rx="1" fill="#e8ecf2"/><rect x="32" y="2" width="26" height="30" rx="1" fill="#e8ecf2"/><rect x="2" y="35" width="56" height="3" rx="1" fill="#001a60"/></svg>
+          <span>Dos Columnas</span>
+        </div>
+        <div class="body-opt" data-body="panelder" onclick="setBodyLayout('panelder')">
+          <svg viewBox="0 0 60 40"><rect x="2" y="2" width="34" height="30" rx="1" fill="#e8ecf2"/><rect x="38" y="2" width="20" height="30" rx="1" fill="#d6eeff" stroke="#06b3fd" stroke-width=".5"/><rect x="2" y="35" width="56" height="3" rx="1" fill="#001a60"/></svg>
+          <span>Panel Derecho</span>
+        </div>
+        <div class="body-opt" data-body="panelizq" onclick="setBodyLayout('panelizq')">
+          <svg viewBox="0 0 60 40"><rect x="2" y="2" width="20" height="30" rx="1" fill="#d6eeff" stroke="#06b3fd" stroke-width=".5"/><rect x="24" y="2" width="34" height="30" rx="1" fill="#e8ecf2"/><rect x="2" y="35" width="56" height="3" rx="1" fill="#001a60"/></svg>
+          <span>Panel Izquierdo</span>
+        </div>
+        <div class="body-opt" data-body="tarjetas" onclick="setBodyLayout('tarjetas')">
+          <svg viewBox="0 0 60 40"><rect x="2" y="2" width="26" height="14" rx="2" fill="#fff" stroke="#06b3fd" stroke-width="1"/><rect x="32" y="2" width="26" height="14" rx="2" fill="#fff" stroke="#06b3fd" stroke-width="1"/><rect x="2" y="20" width="56" height="12" rx="2" fill="#fff" stroke="#001a60" stroke-width="1"/><rect x="2" y="35" width="56" height="3" rx="1" fill="#001a60"/></svg>
+          <span>Tarjetas</span>
+        </div>
+        <div class="body-opt" data-body="trescol" onclick="setBodyLayout('trescol')">
+          <svg viewBox="0 0 60 40"><rect x="2" y="2" width="16" height="30" rx="1" fill="#e8ecf2"/><rect x="22" y="2" width="16" height="30" rx="1" fill="#e8ecf2"/><rect x="42" y="2" width="16" height="30" rx="1" fill="#e8ecf2"/><rect x="2" y="35" width="56" height="3" rx="1" fill="#001a60"/></svg>
+          <span>3 Columnas</span>
+        </div>
+        <div class="body-opt" data-body="cuadricula" onclick="setBodyLayout('cuadricula')">
+          <svg viewBox="0 0 60 40"><rect x="2" y="2" width="26" height="14" rx="1" fill="#e8ecf2"/><rect x="32" y="2" width="26" height="14" rx="1" fill="#e8ecf2"/><rect x="2" y="19" width="26" height="14" rx="1" fill="#e8ecf2"/><rect x="32" y="19" width="26" height="14" rx="1" fill="#e8ecf2"/><rect x="2" y="35" width="56" height="3" rx="1" fill="#001a60"/></svg>
+          <span>Cuadricula</span>
+        </div>
+        <div class="body-opt" data-body="imgcol" onclick="setBodyLayout('imgcol')">
+          <svg viewBox="0 0 60 40"><rect x="2" y="2" width="56" height="10" rx="1" fill="#d6eeff" stroke="#06b3fd" stroke-width=".5"/><rect x="2" y="15" width="26" height="17" rx="1" fill="#e8ecf2"/><rect x="32" y="15" width="26" height="17" rx="1" fill="#e8ecf2"/><rect x="2" y="35" width="56" height="3" rx="1" fill="#001a60"/></svg>
+          <span>Img + 2 Col</span>
+        </div>
+        <div class="body-opt" data-body="compacto" onclick="setBodyLayout('compacto')">
+          <svg viewBox="0 0 60 40"><rect x="2" y="2" width="56" height="6" rx="1" fill="#e8ecf2"/><rect x="2" y="10" width="56" height="6" rx="1" fill="#e8ecf2"/><rect x="2" y="18" width="56" height="6" rx="1" fill="#e8ecf2"/><rect x="2" y="26" width="56" height="6" rx="1" fill="#e8ecf2"/><rect x="2" y="35" width="56" height="3" rx="1" fill="#001a60"/></svg>
+          <span>Compacto</span>
+        </div>
+      </div>
+      </div>
+    </div>
+
+
+    <!-- Granular size controls -->
+    <div class="sb-section collapsed">
+      <div class="sb-title" onclick="toggleSec(this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--navy)" stroke-width="2"><path d="M4 7V4h16v3"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="8" y1="20" x2="16" y2="20"/></svg>
+        Tamanos
+        <span class="sb-chevron">&#9660;</span>
+      </div>
+      <div class="sb-content">
+
+      <div class="size-control">
+        <div class="size-control-label">Logo</div>
+        <div class="size-control-row"><input type="range" min="28" max="72" value="48" class="size-slider" data-target="logoSize" oninput="updateSize('logoSize',this.value)"><span class="size-val" id="val-logoSize">48px</span></div>
+        <div class="align-group">
+          <button class="align-btn active" data-align="logoAlign" data-val="left" onclick="setAlign('logoAlign','left',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 10H3M21 6H3M21 14H3M17 18H3"/></svg></button>
+          <button class="align-btn" data-align="logoAlign" data-val="center" onclick="setAlign('logoAlign','center',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10H6M21 6H3M21 14H3M18 18H6"/></svg></button>
+          <button class="align-btn" data-align="logoAlign" data-val="right" onclick="setAlign('logoAlign','right',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10H7M21 6H3M21 14H3M21 18H7"/></svg></button>
+        </div>
+      </div>
+
+      <div class="size-control">
+        <div class="size-control-label">"FICHA TECNICA"</div>
+        <div class="size-control-row"><input type="range" min="10" max="28" value="18" class="size-slider" data-target="fichaTitle" oninput="updateSize('fichaTitle',this.value)"><span class="size-val" id="val-fichaTitle">18pt</span></div>
+        <div class="align-group">
+          <button class="align-btn" data-align="titleAlign" data-val="left" onclick="setAlign('titleAlign','left',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 10H3M21 6H3M21 14H3M17 18H3"/></svg></button>
+          <button class="align-btn" data-align="titleAlign" data-val="center" onclick="setAlign('titleAlign','center',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10H6M21 6H3M21 14H3M18 18H6"/></svg></button>
+          <button class="align-btn active" data-align="titleAlign" data-val="right" onclick="setAlign('titleAlign','right',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10H7M21 6H3M21 14H3M21 18H7"/></svg></button>
+        </div>
+      </div>
+
+      <div class="size-control">
+        <div class="size-control-label">Nombre del Producto</div>
+        <div class="size-control-row"><input type="range" min="9" max="22" value="14" class="size-slider" data-target="prodName" oninput="updateSize('prodName',this.value)"><span class="size-val" id="val-prodName">14pt</span></div>
+        <div class="align-group">
+          <button class="align-btn" data-align="nameAlign" data-val="left" onclick="setAlign('nameAlign','left',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 10H3M21 6H3M21 14H3M17 18H3"/></svg></button>
+          <button class="align-btn active" data-align="nameAlign" data-val="center" onclick="setAlign('nameAlign','center',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10H6M21 6H3M21 14H3M18 18H6"/></svg></button>
+          <button class="align-btn" data-align="nameAlign" data-val="right" onclick="setAlign('nameAlign','right',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10H7M21 6H3M21 14H3M21 18H7"/></svg></button>
+        </div>
+      </div>
+
+      <div class="size-control">
+        <div class="size-control-label">Texto General</div>
+        <div class="size-control-row"><input type="range" min="7" max="13" value="9" class="size-slider" data-target="bodyText" oninput="updateSize('bodyText',this.value)"><span class="size-val" id="val-bodyText">9pt</span></div>
+      </div>
+
+      <div class="size-control">
+        <div class="size-control-label">Imagenes</div>
+        <div class="size-control-row"><input type="range" min="25" max="90" value="55" class="size-slider" data-target="imgSize" oninput="updateSize('imgSize',this.value)"><span class="size-val" id="val-imgSize">55mm</span></div>
+      </div>
+
+      <div class="size-control">
+        <div class="size-control-label">Titulos de Seccion</div>
+        <div class="size-control-row"><input type="range" min="7" max="14" value="8" class="size-slider" data-target="secTitle" oninput="updateSize('secTitle',this.value)"><span class="size-val" id="val-secTitle">8pt</span></div>
+      </div>
+
+      <div class="size-control">
+        <div class="size-control-label">Tabla de Specs</div>
+        <div class="size-control-row"><input type="range" min="6" max="11" value="8" class="size-slider" data-target="tableText" oninput="updateSize('tableText',this.value)"><span class="size-val" id="val-tableText">8pt</span></div>
+      </div>
+
+      <div class="size-control">
+        <div class="size-control-label">Espacio antes del footer</div>
+        <div class="size-control-row"><input type="range" min="0" max="500" value="0" class="size-slider" id="spacerSlider" oninput="updateSpacer(this.value)"><span class="size-val" id="val-spacer">0px</span></div>
+      </div>
+
+      <button class="size-reset" onclick="resetSizes()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 105.64-11.36L1 10"/></svg>
+        Restaurar valores por defecto
+      </button>
+      </div>
+    </div>
+
+    <!-- Footer intermedio PDF -->
+    <div class="sb-section collapsed">
+      <div class="sb-title" onclick="toggleSec(this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--navy)" stroke-width="2"><rect x="2" y="17" width="20" height="4" rx="1"/><path d="M4 13h16M8 9h8"/></svg>
+        Footer Intermedio PDF
+        <span class="sb-chevron">&#9660;</span>
+      </div>
+      <div class="sb-content">
+      <div class="fld" style="margin-bottom:6px;">
+        <label style="font-size:9px;font-weight:700;color:var(--muted);">Color de fondo</label>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">
+          <div class="color-dot active" style="background:#06b3fd;" onclick="setFooterOpt('bg','#06b3fd',this)"></div>
+          <div class="color-dot" style="background:#001a60;" onclick="setFooterOpt('bg','#001a60',this)"></div>
+          <div class="color-dot" style="background:#002a90;" onclick="setFooterOpt('bg','#002a90',this)"></div>
+          <div class="color-dot" style="background:#C9A96E;" onclick="setFooterOpt('bg','#C9A96E',this)"></div>
+          <div class="color-dot" style="background:#d6eeff;" onclick="setFooterOpt('bg','#d6eeff',this)"></div>
+          <div class="color-dot" style="background:#0a1a3a;" onclick="setFooterOpt('bg','#0a1a3a',this)"></div>
+          <div class="color-dot" style="background:#2A7A5A;" onclick="setFooterOpt('bg','#2A7A5A',this)"></div>
+          <div class="color-dot" style="background:#ffffff;border-color:#ddd;" onclick="setFooterOpt('bg','#ffffff',this)"></div>
+        </div>
+      </div>
+      <div class="fld" style="margin-bottom:6px;">
+        <label style="font-size:9px;font-weight:700;color:var(--muted);">Color de texto</label>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">
+          <div class="color-dot active" style="background:#ffffff;border-color:#ddd;" onclick="setFooterOpt('txt','#ffffff',this)"></div>
+          <div class="color-dot" style="background:#001a60;" onclick="setFooterOpt('txt','#001a60',this)"></div>
+          <div class="color-dot" style="background:#06b3fd;" onclick="setFooterOpt('txt','#06b3fd',this)"></div>
+          <div class="color-dot" style="background:#C9A96E;" onclick="setFooterOpt('txt','#C9A96E',this)"></div>
+          <div class="color-dot" style="background:#000000;" onclick="setFooterOpt('txt','#000000',this)"></div>
+        </div>
+      </div>
+      <div class="fld" style="margin-bottom:6px;">
+        <label style="font-size:9px;font-weight:700;color:var(--muted);">Color de la web</label>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">
+          <div class="color-dot active" style="background:#C9A96E;" onclick="setFooterOpt('web','#C9A96E',this)"></div>
+          <div class="color-dot" style="background:#ffffff;border-color:#ddd;" onclick="setFooterOpt('web','#ffffff',this)"></div>
+          <div class="color-dot" style="background:#06b3fd;" onclick="setFooterOpt('web','#06b3fd',this)"></div>
+          <div class="color-dot" style="background:#001a60;" onclick="setFooterOpt('web','#001a60',this)"></div>
+          <div class="color-dot" style="background:#ff7e00;" onclick="setFooterOpt('web','#ff7e00',this)"></div>
+        </div>
+      </div>
+      <div class="size-control">
+        <div class="size-control-label">Tamano texto footer</div>
+        <div class="size-control-row"><input type="range" min="5" max="14" value="8" class="size-slider" id="footerFontSize" oninput="setFooterOpt('fontSize',this.value)"><span class="size-val" id="val-footerSize">8pt</span></div>
+      </div>
+      <div class="fld">
+        <label style="font-size:9px;font-weight:700;color:var(--muted);">Linea 1 (eslogan)</label>
+        <input type="text" id="footerLine1" value="OpenCluster Tech — Construyendo Inclusion, porque nos importa." oninput="updateFooterLines()" style="font-size:11px;">
+      </div>
+      <div class="fld">
+        <label style="font-size:9px;font-weight:700;color:var(--muted);">Linea 2</label>
+        <input type="text" id="footerLine2" value="Ponemos a su disposicion el catalogo mas amplio de ayudas tecnicas y tecnologia asistiva de todo Chile." oninput="updateFooterLines()" style="font-size:11px;">
+      </div>
+      <div class="fld">
+        <label style="font-size:9px;font-weight:700;color:var(--muted);">Linea 3</label>
+        <input type="text" id="footerLine3" value="Partners exclusivos de Qinera — Juntos, estamos implementando salas multisensoriales a lo largo de todo el pais." oninput="updateFooterLines()" style="font-size:11px;">
+      </div>
+      <div class="fld">
+        <label style="font-size:9px;font-weight:700;color:var(--muted);">Linea 4 (web)</label>
+        <input type="text" id="footerLine4" value="www.opencluster-tech.cl" oninput="updateFooterLines()" style="font-size:11px;">
+      </div>
+      <div style="font-size:9px;font-weight:700;color:var(--navy);margin:10px 0 6px;font-family:'Montserrat',sans-serif;">Preview del footer</div>
+      <div id="footerPreview" style="border-radius:6px;overflow:hidden;border:1px solid var(--border);"></div>
+      </div>
+    </div>
+
+    <!-- Colors -->
+    <div class="sb-section collapsed">
+      <div class="sb-title" onclick="toggleSec(this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--navy)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 0 20"/></svg>
+        Colores
+        <span class="sb-chevron">&#9660;</span>
+      </div>
+      <div class="sb-content">
+      <div style="font-size:9px;color:var(--muted);margin-bottom:10px;">Cambia los colores de cada parte de la ficha</div>
+      <div class="color-row">
+        <span class="color-row-label">Lineas Sup/Inf</span>
+        <div class="color-grid" id="cg-topline">
+          <div class="color-dot active" style="background:linear-gradient(90deg,#06b3fd,#001a60);" onclick="setColor('topline','sky-navy',this)"></div>
+          <div class="color-dot" style="background:linear-gradient(90deg,#001a60,#06b3fd);" onclick="setColor('topline','navy-sky',this)"></div>
+          <div class="color-dot" style="background:linear-gradient(90deg,#C9A96E,#001a60);" onclick="setColor('topline','gold-navy',this)"></div>
+          <div class="color-dot" style="background:#001a60;" onclick="setColor('topline','navy',this)"></div>
+          <div class="color-dot" style="background:#06b3fd;" onclick="setColor('topline','sky',this)"></div>
+          <div class="color-dot" style="background:#C9A96E;" onclick="setColor('topline','gold',this)"></div>
+        </div>
+      </div>
+      <div class="color-row">
+        <span class="color-row-label">Secciones</span>
+        <div class="color-grid" id="cg-sections">
+          <div class="color-dot active" style="background:#001a60;" onclick="setColor('sections','#001a60',this)"></div>
+          <div class="color-dot" style="background:#06b3fd;" onclick="setColor('sections','#06b3fd',this)"></div>
+          <div class="color-dot" style="background:#002a90;" onclick="setColor('sections','#002a90',this)"></div>
+          <div class="color-dot" style="background:#C9A96E;" onclick="setColor('sections','#C9A96E',this)"></div>
+          <div class="color-dot" style="background:#ff7e00;" onclick="setColor('sections','#ff7e00',this)"></div>
+          <div class="color-dot" style="background:#2A7A5A;" onclick="setColor('sections','#2A7A5A',this)"></div>
+          <div class="color-dot" style="background:#0a1a3a;" onclick="setColor('sections','#0a1a3a',this)"></div>
+          <div class="color-dot" style="background:#ffffff;border-color:#ddd;" onclick="setColor('sections','#ffffff',this)"></div>
+        </div>
+      </div>
+      <div class="color-row">
+        <span class="color-row-label">Titulo Prod.</span>
+        <div class="color-grid" id="cg-titlebar">
+          <div class="color-dot active" style="background:#d6eeff;" onclick="setColor('titlebar','#d6eeff',this)"></div>
+          <div class="color-dot" style="background:#eaf6ff;" onclick="setColor('titlebar','#eaf6ff',this)"></div>
+          <div class="color-dot" style="background:#001a60;" onclick="setColor('titlebar','#001a60',this)"></div>
+          <div class="color-dot" style="background:#06b3fd;" onclick="setColor('titlebar','#06b3fd',this)"></div>
+          <div class="color-dot" style="background:#fff8ec;" onclick="setColor('titlebar','#fff8ec',this)"></div>
+          <div class="color-dot" style="background:#e8f5ee;" onclick="setColor('titlebar','#e8f5ee',this)"></div>
+          <div class="color-dot" style="background:#ffffff;border-color:#ddd;" onclick="setColor('titlebar','#ffffff',this)"></div>
+        </div>
+      </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="sb-section">
+      <div class="sb-title" onclick="toggleSec(this)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--navy)" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        Acciones
+        <span class="sb-chevron">&#9660;</span>
+      </div>
+      <div class="sb-content">
+      <div class="sb-actions">
+        <button class="btn-pdf" id="btnPdf" onclick="guardarPDF()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          GUARDAR COMO PDF
+        </button>
+        <button class="btn-clear" onclick="clearEditor()">Limpiar y volver a buscar</button>
+      </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- PREVIEW -->
+  <div class="preview-area" id="previewArea">
+    <div class="view-controls" id="viewControls">
+      <button class="view-btn active" id="viewNormal" onclick="setView('normal')">Normal</button>
+      <button class="view-btn" id="viewPages" onclick="setView('pages')">Vista Paginas</button>
+      <span style="width:1px;height:20px;background:var(--border);"></span>
+      <button class="zoom-btn" onclick="setZoom(-10)">-</button>
+      <span class="zoom-val" id="zoomVal">100%</span>
+      <button class="zoom-btn" onclick="setZoom(10)">+</button>
+      <button class="zoom-btn" onclick="setZoom(0)" style="font-size:10px;width:auto;padding:0 8px;">Reset</button>
+    </div>
+    <div class="print-wrap">
+      <div class="print-wrap-body">
+        <div class="ficha" id="ficha"></div>
+      </div>
+      <div class="print-footer">
+        <div class="print-footer-inner">
+          <div class="print-footer-text">www.opencluster-tech.cl — OpenCluster Tech SpA — Construyendo Inclusion — Tecnologia para la autonomia y la participacion</div>
+          <div class="print-footer-line"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ========== EARLY LOGIN (before anything that might break) ========== */
+const EXEC_DB_EARLY={
+  'Rayen Ogalde':{nombre:'Rayen Ogalde Vega',cargo:'Encargada de Difusion y Vinculos Institucionales',depto:'Departamento Comercial · OpenCluster Tech',tel:'+56 9 5629 4723',email:'rayen.ogalde@opencluster-tech.cl'},
+  'German Alvarado':{nombre:'German Alvarado Araya',cargo:'Ejecutivo Comercial',depto:'Departamento Comercial · OpenCluster Tech',tel:'+56 9 8772 6906',email:'german.alvarado@opencluster-tech.cl'},
+  'William Marin':{nombre:'William Marin',cargo:'Ejecutivo Comercial',depto:'Departamento Comercial · OpenCluster Tech',tel:'+56 9 4242 7631',email:'william.marin@opencluster-tech.cl'},
+  'Roberto Caceres':{nombre:'Roberto Caceres',cargo:'Ejecutivo Comercial',depto:'Departamento Comercial · OpenCluster Tech',tel:'+56 9 7558 6018',email:'roberto.caceres@opencluster-tech.cl'},
+  'Ximena Romero':{nombre:'Ximena Romero',cargo:'Ejecutiva de Ventas y Comunicaciones',depto:'Departamento Comercial · OpenCluster Tech',tel:'+56 9 3149 5928',email:'ximena.romero@opencluster-tech.cl'},
+  'Maximiliano Astudillo':{nombre:'Maximiliano Astudillo',cargo:'Terapeuta Ocupacional',depto:'Departamento Comercial · OpenCluster Tech',tel:'+56 9 9037 7357',email:'maximiliano.astudillo@opencluster-tech.cl'}
+};
+window._allProducts=[];
+async function _loadProducts(){
+  try{
+    var pg=1;
+    while(true){
+      var r=await fetch('https://opencluster-tech.cl/products.json?limit=250&page='+pg);
+      var d=await r.json();
+      if(!d.products||!d.products.length)break;
+      window._allProducts=window._allProducts.concat(d.products);
+      if(d.products.length<250)break;
+      pg++;
+    }
+  }catch(e){console.error(e);}
+}
+function doLogin(name){
+  if(!name||!EXEC_DB_EARLY[name]){alert('Selecciona un ejecutivo');return;}
+  window._EXEC=EXEC_DB_EARLY[name];
+  localStorage.setItem('oc_ft_exec',name);
+  document.getElementById('loginOverlay').style.display='none';
+  var u=document.getElementById('wsUser');if(u)u.textContent=window._EXEC.nombre;
+  _loadProducts();
+}
+// Auto-login check
+(function(){var s=localStorage.getItem('oc_ft_exec');if(s&&EXEC_DB_EARLY[s])doLogin(s);})();
+</script>
+<script>
+/* ========== EXEC DB ========== */
+const EXEC_DB={
+  'Rayen Ogalde':{nombre:'Rayen Ogalde Vega',cargo:'Encargada de Difusion y Vinculos Institucionales',depto:'Departamento Comercial \u00b7 OpenCluster Tech',tel:'+56 9 5629 4723',email:'rayen.ogalde@opencluster-tech.cl'},
+  'German Alvarado':{nombre:'German Alvarado Araya',cargo:'Ejecutivo Comercial',depto:'Departamento Comercial \u00b7 OpenCluster Tech',tel:'+56 9 8772 6906',email:'german.alvarado@opencluster-tech.cl'},
+  'William Marin':{nombre:'William Marin',cargo:'Ejecutivo Comercial',depto:'Departamento Comercial \u00b7 OpenCluster Tech',tel:'+56 9 4242 7631',email:'william.marin@opencluster-tech.cl'},
+  'Roberto Caceres':{nombre:'Roberto Caceres',cargo:'Ejecutivo Comercial',depto:'Departamento Comercial \u00b7 OpenCluster Tech',tel:'+56 9 7558 6018',email:'roberto.caceres@opencluster-tech.cl'},
+  'Ximena Romero':{nombre:'Ximena Romero',cargo:'Ejecutiva de Ventas y Comunicaciones',depto:'Departamento Comercial \u00b7 OpenCluster Tech',tel:'+56 9 3149 5928',email:'ximena.romero@opencluster-tech.cl'},
+  'Maximiliano Astudillo':{nombre:'Maximiliano Astudillo',cargo:'Terapeuta Ocupacional',depto:'Departamento Comercial \u00b7 OpenCluster Tech',tel:'+56 9 9037 7357',email:'maximiliano.astudillo@opencluster-tech.cl'}
+};
+
+/* ========== STATE ========== */
+let currentExec=window._EXEC||null;
+let allProducts=[];
+let selectedProduct=null;
+let selectedImages=[];
+let uniqueImages=[];
+let currentTemplate=1;
+let currentTextSize='normal';
+let currentImgSize='normal';
+let parsedContent={desc:'',lists:'',tables:''};
+let editedContent={desc:null,lists:null,tables:null,title:null};
+
+/* ========== LOGIN ========== */
+const loginOverlay=document.getElementById('loginOverlay');
+const loginSelect=document.getElementById('loginSelect');
+const loginBtn=document.getElementById('loginBtn');
+const wsUser=document.getElementById('wsUser');
+
+// Options already in HTML — no duplicates needed
+
+function doLogin(name){
+  if(!name||!EXEC_DB[name]){alert('Selecciona un ejecutivo');return;}
+  currentExec=EXEC_DB[name];
+  localStorage.setItem('oc_ft_exec',name);
+  document.getElementById('loginOverlay').style.display='none';
+  document.getElementById('wsUser').textContent=currentExec.nombre;
+  loadProducts();
+}
+
+const saved=localStorage.getItem('oc_ft_exec');
+if(saved&&EXEC_DB[saved]){loginSelect.value=saved;doLogin(saved);}
+
+loginBtn.addEventListener('click',()=>doLogin(loginSelect.value));
+document.getElementById('wsLogout').addEventListener('click',()=>{
+  localStorage.removeItem('oc_ft_exec');
+  document.getElementById('loginOverlay').style.display='';
+  currentExec=null;
+});
+
+/* ========== PRODUCTS ========== */
+async function loadProducts(){
+  // Sync from early loader if available
+  if(window._allProducts&&window._allProducts.length){allProducts=window._allProducts;return;}
+  allProducts=[];
+  let page=1;
+  try{
+    while(true){
+      const r=await fetch('https://opencluster-tech.cl/products.json?limit=250&page='+page);
+      const d=await r.json();
+      if(!d.products||d.products.length===0)break;
+      allProducts=allProducts.concat(d.products);
+      if(d.products.length<250)break;
+      page++;
+    }
+  }catch(e){console.error('Error loading products:',e);}
+}
+
+// Auto-load products if already logged in
+if(currentExec) loadProducts();
+
+/* ========== SEARCH ========== */
+const searchInput=document.getElementById('searchInput');
+const searchResults=document.getElementById('searchResults');
+let searchTimeout=null;
+
+searchInput.addEventListener('input',()=>{
+  clearTimeout(searchTimeout);
+  searchTimeout=setTimeout(doSearch,200);
+});
+
+function doSearch(){
+  const q=searchInput.value.trim().toLowerCase();
+  if(q.length<2){searchResults.classList.remove('show');searchResults.innerHTML='';return;}
+  const ap=window._allProducts||allProducts||[];
+  const matches=ap.filter(p=>p.title.toLowerCase().includes(q)||(p.tags&&(Array.isArray(p.tags)?p.tags.join(' '):String(p.tags)).toLowerCase().includes(q))).slice(0,30);
+  if(!matches.length){searchResults.innerHTML='<div class="search-loading">Sin resultados</div>';searchResults.classList.add('show');return;}
+  searchResults.innerHTML=matches.map((p,i)=>{
+    const img=p.images&&p.images[0]?p.images[0].src:'';
+    const tags=Array.isArray(p.tags)?p.tags.join(', '):String(p.tags||'');
+    return `<div class="sr-item" onclick="selectProduct(${i},'${q}')"><img src="${img}" alt="" onerror="this.style.display='none'"><div><div class="sr-name">${esc(p.title)}</div><div class="sr-tags">${esc(tags.substring(0,80))}</div></div></div>`;
+  }).join('');
+  searchResults.classList.add('show');
+  // store filtered for indexing
+  searchResults._matches=matches;
+}
+
+function esc(s){if(!s)return '';var x=s.replace(/&/g,'&amp;');x=x.replace(/\x3c/g,'\x26lt;');x=x.replace(/>/g,'\x26gt;');x=x.replace(/"/g,'\x26quot;');return x;}
+
+/* ========== SELECT PRODUCT ========== */
+function selectProduct(idx,q){
+  const matches=searchResults._matches;
+  if(!matches||!matches[idx])return;
+  selectedProduct=matches[idx];
+  editedContent={desc:null,lists:null,tables:null,title:null};
+  parseBodyHtml(selectedProduct.body_html||'');
+  extractImages(selectedProduct);
+  buildImageGrid();
+  // default select first 1-2 images
+  selectedImages=uniqueImages.slice(0,Math.min(5,uniqueImages.length));
+  updateImageSelection();
+  // switch to editor
+  document.getElementById('searchMode').classList.add('hidden');
+  document.getElementById('editorLayout').classList.add('show');
+  renderFicha();
+}
+
+function extractImages(prod){
+  const seen=new Set();
+  uniqueImages=[];
+  // 1. Product images from API
+  if(prod.images){
+    prod.images.forEach(img=>{
+      const base=img.src.split('?')[0];
+      if(!seen.has(base)){seen.add(base);uniqueImages.push(img.src);}
+    });
+  }
+  // 2. Images embedded in body_html
+  if(prod.body_html){
+    const div=document.createElement('div');
+    div.innerHTML=prod.body_html;
+    div.querySelectorAll('img').forEach(img=>{
+      const src=img.getAttribute('src')||'';
+      if(!src)return;
+      const base=src.split('?')[0];
+      if(!seen.has(base)){seen.add(base);uniqueImages.push(src);}
+    });
+  }
+}
+
+/* ========== PARSE BODY HTML ========== */
+function parseBodyHtml(html){
+  const div=document.createElement('div');
+  div.innerHTML=html;
+  // remove img tags
+  div.querySelectorAll('img').forEach(i=>i.remove());
+
+  let desc='',lists='',tables='';
+
+  // tables
+  div.querySelectorAll('table').forEach(t=>{tables+=t.outerHTML;t.remove();});
+  // lists
+  div.querySelectorAll('ul,ol').forEach(l=>{lists+=l.outerHTML;l.remove();});
+  // remaining is description
+  desc=div.innerHTML.trim();
+  // clean up empty tags
+  desc=desc.replace(/<(p|div|span)[^>]*>\s*<\/(p|div|span)>/gi,'').trim();
+
+  parsedContent={desc,lists,tables};
+}
+
+/* ========== IMAGE GRID ========== */
+function buildImageGrid(){
+  const grid=document.getElementById('imgGrid');
+  grid.innerHTML=uniqueImages.map((src,i)=>`
+    <div class="img-thumb" data-idx="${i}" onclick="toggleImage(${i})">
+      <img src="${src}" alt="">
+      <span class="img-badge"></span>
+      <span class="img-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+    </div>
+  `).join('');
+  updateImageSelection();
+}
+
+function toggleImage(idx){
+  const src=uniqueImages[idx];
+  const pos=selectedImages.indexOf(src);
+  if(pos>=0){
+    selectedImages.splice(pos,1);
+  }else{
+    if(selectedImages.length>=5)selectedImages.shift();
+    selectedImages.push(src);
+  }
+  updateImageSelection();
+  renderFicha();
+}
+
+function updateImageSelection(){
+  document.querySelectorAll('.img-thumb').forEach(el=>{
+    const idx=parseInt(el.dataset.idx);
+    const src=uniqueImages[idx];
+    const pos=selectedImages.indexOf(src);
+    el.classList.toggle('selected',pos>=0);
+    const badge=el.querySelector('.img-badge');
+    if(pos>=0){badge.textContent='Imagen '+(pos+1);badge.style.display='block';}
+    else{badge.style.display='none';}
+  });
+  buildImgPosControls();
+}
+
+/* ========== VIEW & ZOOM ========== */
+let zoomLevel=100;
+let currentView='normal';
+let pagesContainer=null;
+
+function setZoom(delta){
+  if(delta===0)zoomLevel=100;
+  else zoomLevel=Math.max(20,Math.min(150,zoomLevel+delta));
+  document.getElementById('zoomVal').textContent=zoomLevel+'%';
+  if(currentView==='normal'){
+    const ficha=document.getElementById('ficha');
+    ficha.style.transform='scale('+(zoomLevel/100)+')';
+    ficha.style.transformOrigin='top center';
+    ficha.style.marginBottom=zoomLevel<100?'-'+(100-zoomLevel)*3+'mm':'0';
+  } else {
+    updatePagesView();
+  }
+}
+
+function setView(mode){
+  currentView=mode;
+  document.getElementById('viewNormal').classList.toggle('active',mode==='normal');
+  document.getElementById('viewPages').classList.toggle('active',mode==='pages');
+  const ficha=document.getElementById('ficha');
+  if(mode==='normal'){
+    ficha.style.display='';
+    ficha.style.transform='scale('+(zoomLevel/100)+')';
+    if(pagesContainer){pagesContainer.remove();pagesContainer=null;}
+  } else {
+    generatePagesView();
+  }
+}
+
+async function generatePagesView(){
+  const ficha=document.getElementById('ficha');
+  // Asegurar que la ficha esté en tamaño real para captura
+  ficha.style.transform='none';
+  ficha.style.marginBottom='0';
+
+  // Crear contenedor de páginas si no existe
+  if(!pagesContainer){
+    pagesContainer=document.createElement('div');
+    pagesContainer.className='pages-grid';
+    ficha.parentElement.appendChild(pagesContainer);
+  }
+  pagesContainer.innerHTML='<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;">Generando vista de paginas...</div>';
+  ficha.style.display='none';
+
+  try{
+    // Capturar ficha usando html2pdf para generar canvas
+    ficha.style.display='flex';
+    ficha.querySelectorAll('.block-x,.f-edit-hint,.f-footer-preview').forEach(e=>e.style.display='none');
+    const worker=html2pdf().set({html2canvas:{scale:1,useCORS:true,allowTaint:true,logging:false,backgroundColor:'#fff'},jsPDF:{unit:'mm',format:'letter'}}).from(ficha);
+    const canvas=await worker.toCanvas();
+    ficha.querySelectorAll('.block-x').forEach(e=>e.style.display='');
+    ficha.querySelectorAll('.f-edit-hint').forEach(e=>e.style.display='');
+    ficha.querySelectorAll('.f-footer-preview').forEach(e=>e.style.display='');
+
+    // Dimensiones de una página carta en pixels (a 1.5x scale)
+    const pageW=216*1.5*3.78; // mm to px at 96dpi * scale
+    const pageH=279*1.5*3.78;
+    const totalH=canvas.height;
+    const numPages=Math.max(1,Math.ceil(totalH/pageH));
+    const scale=zoomLevel/100;
+    const displayW=Math.round(pageW*scale*0.45);
+    const displayH=Math.round(pageH*scale*0.45);
+
+    pagesContainer.innerHTML='';
+    for(let i=0;i<numPages;i++){
+      const pageCanvas=document.createElement('canvas');
+      pageCanvas.width=pageW;
+      pageCanvas.height=pageH;
+      const ctx=pageCanvas.getContext('2d');
+      ctx.fillStyle='#fff';
+      ctx.fillRect(0,0,pageW,pageH);
+      ctx.drawImage(canvas,0,i*pageH,pageW,pageH,0,0,pageW,pageH);
+      const frame=document.createElement('div');
+      frame.className='page-frame';
+      frame.style.width=displayW+'px';
+      frame.style.height=displayH+'px';
+      pageCanvas.style.width='100%';
+      pageCanvas.style.height='100%';
+      frame.appendChild(pageCanvas);
+      const num=document.createElement('div');
+      num.className='page-num';
+      num.textContent='Pagina '+(i+1)+' de '+numPages;
+      frame.appendChild(num);
+      pagesContainer.appendChild(frame);
+    }
+  }catch(ex){
+    pagesContainer.innerHTML='<div style="text-align:center;padding:20px;color:var(--ruby);font-size:12px;">Error generando vista. Usa vista Normal.</div>';
+    console.error(ex);
+  }
+}
+
+function updatePagesView(){
+  if(currentView==='pages'&&pagesContainer){
+    const frames=pagesContainer.querySelectorAll('.page-frame');
+    const pageW=216*1.5*3.78;
+    const pageH=279*1.5*3.78;
+    const scale=zoomLevel/100;
+    frames.forEach(f=>{
+      f.style.width=Math.round(pageW*scale*0.45)+'px';
+      f.style.height=Math.round(pageH*scale*0.45)+'px';
+    });
+  }
+}
+
+/* ========== COLLAPSIBLE SECTIONS ========== */
+function toggleSec(titleEl){
+  const sec=titleEl.closest('.sb-section');
+  if(sec)sec.classList.toggle('collapsed');
+}
+
+/* ========== 25 TEMPLATE PRESETS ========== */
+// sectionStyle: standard, minimal, accent-left, rounded, flat, underline
+const TEMPLATES=[
+  {id:1, name:'Clasica',header:'clasico',body:'apilado',secStyle:'standard',colors:{header:'#001a60',sections:'#001a60',titlebar:'#d6eeff'}},
+  {id:2, name:'Dos Columnas',header:'clasico',body:'doscol',secStyle:'standard',colors:{header:'#001a60',sections:'#001a60',titlebar:'#d6eeff'}},
+  {id:3, name:'Visual Cards',header:'clasico',body:'tarjetas',secStyle:'rounded',colors:{header:'#001a60',sections:'#001a60',titlebar:'#d6eeff'}},
+  {id:4, name:'Corporativa',header:'banner',body:'apilado',secStyle:'standard',colors:{header:'#001a60',sections:'#001a60',titlebar:'#001a60'}},
+  {id:5, name:'Gold Premium',header:'banner',body:'apilado',secStyle:'accent-left',colors:{header:'#001a60',sections:'#C9A96E',titlebar:'#fff8ec'}},
+  {id:6, name:'Minimalista',header:'minimalista',body:'apilado',secStyle:'minimal',colors:{header:'#001a60',sections:'#06b3fd',titlebar:'#ffffff'}},
+  {id:7, name:'Sky Limpia',header:'minimalista',body:'doscol',secStyle:'underline',colors:{header:'#06b3fd',sections:'#06b3fd',titlebar:'#eaf6ff'}},
+  {id:8, name:'Lateral Elegante',header:'lateral',body:'panelder',secStyle:'standard',colors:{header:'#001a60',sections:'#001a60',titlebar:'#d6eeff'}},
+  {id:9, name:'Ejecutiva',header:'doblelinea',body:'doscol',secStyle:'accent-left',colors:{header:'#001a60',sections:'#002a90',titlebar:'#06b3fd'}},
+  {id:10,name:'Moderna',header:'degradado',body:'tarjetas',secStyle:'rounded',colors:{header:'#06b3fd',sections:'#001a60',titlebar:'#d6eeff'}},
+  {id:11,name:'Profesional',header:'centrado',body:'apilado',secStyle:'standard',colors:{header:'#001a60',sections:'#001a60',titlebar:'#d6eeff'}},
+  {id:12,name:'Catalogo',header:'banner',body:'tarjetas',secStyle:'flat',colors:{header:'#001a60',sections:'#06b3fd',titlebar:'#eaf6ff'}},
+  {id:13,name:'Tecnica Pura',header:'clasico',body:'doscol',secStyle:'standard',colors:{header:'#001a60',sections:'#0a1a3a',titlebar:'#d6eeff'}},
+  {id:14,name:'Institucional',header:'lateral',body:'apilado',secStyle:'accent-left',colors:{header:'#001a60',sections:'#C9A96E',titlebar:'#fff8ec'}},
+  {id:15,name:'Presentacion',header:'degradado',body:'panelder',secStyle:'minimal',colors:{header:'#06b3fd',sections:'#001a60',titlebar:'#d6eeff'}},
+  {id:16,name:'Informe',header:'doblelinea',body:'apilado',secStyle:'underline',colors:{header:'#001a60',sections:'#001a60',titlebar:'#d6eeff'}},
+  {id:17,name:'Ficha Rapida',header:'minimalista',body:'apilado',secStyle:'flat',colors:{header:'#06b3fd',sections:'#06b3fd',titlebar:'#ffffff'}},
+  {id:18,name:'Panel Gold',header:'banner',body:'panelizq',secStyle:'rounded',colors:{header:'#001a60',sections:'#C9A96E',titlebar:'#fff8ec'}},
+  {id:19,name:'Sky Fresh',header:'centrado',body:'tarjetas',secStyle:'minimal',colors:{header:'#06b3fd',sections:'#06b3fd',titlebar:'#eaf6ff'}},
+  {id:20,name:'Panel Info',header:'lateral',body:'panelizq',secStyle:'accent-left',colors:{header:'#001a60',sections:'#001a60',titlebar:'#d6eeff'}},
+  {id:21,name:'Doble Vista',header:'centrado',body:'doscol',secStyle:'flat',colors:{header:'#001a60',sections:'#002a90',titlebar:'#d6eeff'}},
+  {id:22,name:'Tarjetas Pro',header:'doblelinea',body:'tarjetas',secStyle:'rounded',colors:{header:'#001a60',sections:'#001a60',titlebar:'#06b3fd'}},
+  {id:23,name:'Columna Navy',header:'lateral',body:'panelder',secStyle:'underline',colors:{header:'#001a60',sections:'#002a90',titlebar:'#d6eeff'}},
+  {id:24,name:'Degradado Plus',header:'degradado',body:'doscol',secStyle:'accent-left',colors:{header:'#06b3fd',sections:'#001a60',titlebar:'#d6eeff'}},
+  {id:25,name:'Formal',header:'clasico',body:'panelizq',secStyle:'standard',colors:{header:'#001a60',sections:'#0a1a3a',titlebar:'#eaf6ff'}},
+];
+let currentSecStyle='standard';
+
+function buildTemplateGrid(){
+  const grid=document.getElementById('tplGrid25');
+  if(!grid)return;
+  grid.innerHTML=TEMPLATES.map(t=>{
+    const hc=t.colors.header,sc=t.colors.sections,tc=t.colors.titlebar;
+    return`<div class="tpl-card${currentTemplate==t.id?' active':''}" data-tpl="${t.id}" onclick="setTemplate(${t.id})">
+      <div class="tpl-num">#${t.id}</div>
+      <div class="tpl-preview">
+        <div style="height:8px;background:${hc};border-radius:2px 2px 0 0;"></div>
+        <div style="height:4px;background:${tc};"></div>
+        <div style="flex:1;background:#f5f5f5;display:flex;gap:1px;padding:1px;">
+          <div style="flex:1;background:${sc};opacity:.15;border-radius:1px;"></div>
+          <div style="flex:1;background:${sc};opacity:.1;border-radius:1px;"></div>
+        </div>
+      </div>
+      <div class="tpl-card-label">${t.name}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ========== CONTROLS ========== */
+function setTemplate(tplId){
+  const tpl=TEMPLATES.find(t=>t.id===tplId);
+  if(!tpl)return;
+  currentTemplate=tplId;
+  currentHeaderStyle=tpl.header;
+  currentBodyLayout=tpl.body;
+  currentSecStyle=tpl.secStyle||'standard';
+  COLORS.header=tpl.colors.header;
+  COLORS.sections=tpl.colors.sections;
+  COLORS.titlebar=tpl.colors.titlebar;
+  document.querySelectorAll('.tpl-card').forEach(c=>c.classList.toggle('active',String(c.dataset.tpl)===String(tplId)));
+  document.querySelectorAll('.hdr-card').forEach(c=>c.classList.toggle('active',c.dataset.hdr===tpl.header));
+  document.querySelectorAll('.body-opt').forEach(c=>c.classList.toggle('active',c.dataset.body===tpl.body));
+  syncColorDots();
+  renderFicha();
+}
+
+function syncColorDots(){
+  ['header','sections','titlebar'].forEach(key=>{
+    const grid=document.getElementById('cg-'+key);
+    if(!grid)return;
+    grid.querySelectorAll('.color-dot').forEach(d=>{
+      const bg=d.style.backgroundColor||d.style.background||'';
+      const hex=rgbToHex(bg)||bg;
+      d.classList.toggle('active',hex.toLowerCase()===COLORS[key].toLowerCase());
+    });
+  });
+}
+
+function rgbToHex(rgb){
+  if(!rgb||rgb.charAt(0)==='#')return rgb;
+  const m=rgb.match(/(\d+)/g);
+  if(!m||m.length<3)return rgb;
+  return '#'+((1<<24)+(parseInt(m[0])<<16)+(parseInt(m[1])<<8)+parseInt(m[2])).toString(16).slice(1);
+}
+
+function setTextSize(s){
+  currentTextSize=s;
+  document.querySelectorAll('[data-tsize]').forEach(b=>b.classList.toggle('active',b.dataset.tsize===s));
+  renderFicha();
+}
+
+function setImgSize(s){
+  currentImgSize=s;
+  document.querySelectorAll('[data-isize]').forEach(b=>b.classList.toggle('active',b.dataset.isize===s));
+  renderFicha();
+}
+
+// Granular size controls
+const SIZES={logoSize:48,fichaTitle:18,prodName:14,bodyText:9,imgSize:55,secTitle:8,tableText:8};
+const SIZE_DEFAULTS={...SIZES};
+const SIZE_UNITS={logoSize:'px',fichaTitle:'pt',prodName:'pt',bodyText:'pt',imgSize:'mm',secTitle:'pt',tableText:'pt'};
+
+function updateSize(key,val){
+  SIZES[key]=parseInt(val);
+  document.getElementById('val-'+key).textContent=val+SIZE_UNITS[key];
+  renderFicha();
+}
+
+let currentHeaderStyle='clasico';
+let currentLogo='logos/Recurso 4construyendo 1.png';
+let imgPositions={}; // {src: 'arriba'|'izquierda'|'derecha'|'abajo'}
+let imgSizes={}; // {src: tamaño en mm}
+const ALIGNS={logoAlign:'left',titleAlign:'right',nameAlign:'center'};
+let currentBodyLayout='apilado';
+
+function setImgPosIndiv(src,pos){
+  imgPositions[src]=pos;
+  buildImgPosControls();
+  renderFicha();
+}
+
+function setAllImgPos(pos){
+  selectedImages.forEach(s=>{imgPositions[s]=pos;});
+  buildImgPosControls();
+  renderFicha();
+}
+
+function buildImgPosControls(){
+  const el=document.getElementById('imgPosIndividual');
+  if(!el)return;
+  if(!selectedImages.length){el.innerHTML='';return;}
+  const opts=[
+    {id:'arr-izq',label:'Arr-Izq'},{id:'arriba',label:'Arriba'},{id:'arr-der',label:'Arr-Der'},
+    {id:'izquierda',label:'Izq'},{id:'centro',label:'Centro'},{id:'derecha',label:'Der'},
+    {id:'abj-izq',label:'Abj-Izq'},{id:'abajo',label:'Abajo'},{id:'abj-der',label:'Abj-Der'}
+  ];
+  el.innerHTML=selectedImages.map((src,i)=>{
+    const pos=imgPositions[src]||'arriba';
+    const sz=imgSizes[src]||SIZES.imgSize||55;
+    const safeSrc=src.replace(/'/g,"\\'");
+    return`<div style="margin-bottom:8px;padding:6px 0;border-bottom:1px solid #eef1f6;">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+        <img src="${src}" style="width:32px;height:32px;object-fit:contain;border:1px solid var(--border);border-radius:4px;background:#fff;flex-shrink:0;">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;flex:1;">${opts.map(o=>`<button class="align-btn${pos===o.id?' active':''}" onclick="setImgPosIndiv('${safeSrc}','${o.id}')" style="padding:2px 4px;font-size:7px;width:auto;">${o.label}</button>`).join('')}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;margin-left:38px;">
+        <span style="font-size:8px;font-weight:700;color:var(--muted);min-width:30px;">Tamaño</span>
+        <input type="range" min="20" max="120" value="${sz}" oninput="setImgSizeIndiv('${safeSrc}',this.value);this.nextElementSibling.textContent=this.value+'mm';" style="flex:1;accent-color:var(--sky);">
+        <span style="font-size:9px;font-weight:700;color:var(--sky);min-width:32px;">${sz}mm</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setImgSizeIndiv(src,val){
+  imgSizes[src]=parseInt(val);
+  renderFicha();
+}
+
+function setBodyLayout(layout){
+  currentBodyLayout=layout;
+  document.querySelectorAll('.body-opt').forEach(c=>c.classList.toggle('active',c.dataset.body===layout));
+  renderFicha();
+}
+
+function setAlign(key,val,btn){
+  ALIGNS[key]=val;
+  document.querySelectorAll(`.align-btn[data-align="${key}"]`).forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderFicha();
+}
+
+/* ========== 27 LOGOS ========== */
+const ALL_LOGOS=[
+  {src:'logos/Recurso 4construyendo 1.png',label:'Horizontal'},
+  {src:'logos/Logo 2.jpeg',label:'Cuadrado'},
+  {src:'logos/Logo 3 - Alargado.PNG',label:'Alargado'},
+  {src:'logos/construyendo inclusion logo transparente Mesa de trabajo 5.png',label:'Transparente'},
+  {src:'logos/Logo 1.jpeg',label:'Fondo Negro'},
+  {src:'logos/construyendo inclusion logo transparente Mesa de trabajo 1.png',label:'Trans. 1'},
+  {src:'logos/construyendo inclusion logo transparente Mesa de trabajo 1_1.png',label:'Trans. 1b'},
+  {src:'logos/construyendo inclusion logo transparente Mesa de trabajo 2.png',label:'Trans. 2'},
+  {src:'logos/construyendo inclusion logo transparente Mesa de trabajo 3.png',label:'Trans. 3'},
+  {src:'logos/construyendo inclusion logo transparente Mesa de trabajo 4.png',label:'Trans. 4'},
+  {src:'logos/construyendo inclusion logo transparente Mesa de trabajo 6.png',label:'Trans. 6'},
+  {src:'logos/construyendo inclusion logo transparente Mesa de trabajo 10.png',label:'Trans. 10'},
+  {src:'logos/construyendo inclusion logo transparente Mesa de trabajo 11.png',label:'Trans. 11'},
+  {src:'logos/construyendo inclusion logo transparente Mesa de trabajo 12.png',label:'Trans. 12'},
+  {src:'logos/construyendo inclusion logo transparente Mesa de trabajo 13.png',label:'Trans. 13'},
+  {src:'logos/construyendo inclusion logo transparente Mesa de trabajo 14.png',label:'Trans. 14'},
+  {src:'logos/construyendo inclusion logo blanco Mesa de trabajo 1.png',label:'Blanco 1'},
+  {src:'logos/construyendo inclusion logo blanco Mesa de trabajo 1_1.png',label:'Blanco 1b'},
+  {src:'logos/construyendo inclusion logo blanco Mesa de trabajo 2.png',label:'Blanco 2'},
+  {src:'logos/construyendo inclusion logo blanco Mesa de trabajo 3.png',label:'Blanco 3'},
+  {src:'logos/construyendo inclusion logo blanco Mesa de trabajo 4.png',label:'Blanco 4'},
+  {src:'logos/construyendo inclusion logo blanco Mesa de trabajo 5.png',label:'Blanco 5'},
+  {src:'logos/construyendo inclusion logo blanco Mesa de trabajo 6.png',label:'Blanco 6'},
+  {src:'logos/construyendo inclusion logo blanco Mesa de trabajo 10.png',label:'Blanco 10'},
+  {src:'logos/construyendo inclusion logo blanco Mesa de trabajo 11.png',label:'Blanco 11'},
+  {src:'logos/construyendo inclusion logo blanco Mesa de trabajo 12.png',label:'Blanco 12'},
+  {src:'logos/construyendo inclusion logo blanco Mesa de trabajo 13.png',label:'Blanco 13'},
+];
+let logoUsage=JSON.parse(localStorage.getItem('oc_logo_usage')||'{}');
+let showAllLogos=false;
+
+function getLogosSorted(){return[...ALL_LOGOS].sort((a,b)=>(logoUsage[b.src]||0)-(logoUsage[a.src]||0));}
+
+function buildLogoGrid(){
+  const sorted=getLogosSorted();
+  const visible=showAllLogos?sorted:sorted.slice(0,6);
+  const grid=document.getElementById('logoGrid');
+  grid.innerHTML=visible.map(l=>
+    `<div class="logo-opt${currentLogo===l.src?' active':''}" data-logo="${l.src}" onclick="setLogo(this)">
+      <img src="${l.src}" alt="${l.label}" onerror="this.parentElement.style.display='none'">
+      <span>${l.label}</span>
+    </div>`
+  ).join('');
+  const btn=document.getElementById('btnMasLogos');
+  if(btn)btn.textContent=showAllLogos?'Menos logos':'Mas logos';
+}
+
+function toggleMasLogos(){showAllLogos=!showAllLogos;buildLogoGrid();}
+
+function trackLogoUsage(src){logoUsage[src]=(logoUsage[src]||0)+1;localStorage.setItem('oc_logo_usage',JSON.stringify(logoUsage));}
+
+function setLogo(el){
+  currentLogo=el.dataset.logo;
+  trackLogoUsage(currentLogo);
+  document.querySelectorAll('.logo-opt').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  renderFicha();
+}
+
+function setHeaderStyle(style){
+  currentHeaderStyle=style;
+  document.querySelectorAll('.hdr-card').forEach(c=>c.classList.toggle('active',c.dataset.hdr===style));
+  renderFicha();
+}
+
+function buildHeader(title){
+  const logo=currentLogo;
+  const ls=SIZES.logoSize;
+  const ft=SIZES.fichaTitle;
+  const pn=SIZES.prodName;
+  const editableTitle=`<span class="f-editable-title" contenteditable="true" data-edit="title">${esc(title)}</span>`;
+
+  if(currentHeaderStyle==='centrado'){
+    const la=ALIGNS.logoAlign;const ta=ALIGNS.titleAlign;const na=ALIGNS.nameAlign;
+    return `<div style="text-align:${la};padding:4mm 0 2mm;">
+      <img src="${logo}" style="height:${ls}px;margin-bottom:3mm;" onerror="this.style.display='none'">
+    </div>
+    <div style="text-align:${ta};margin-bottom:2mm;">
+      <div style="font-family:'Montserrat',sans-serif;font-size:${ft}pt;font-weight:800;color:var(--navy);letter-spacing:1px;">FICHA TECNICA</div>
+    </div>
+    <div style="background:${COLORS.titlebar};text-align:${na};padding:6px 12px;font-family:'Montserrat',sans-serif;font-size:${pn}pt;font-weight:800;color:${isLightColor(COLORS.titlebar)?'var(--navy)':'#fff'};border-top:4px solid var(--sky);">${editableTitle}</div>`;
+  }
+  if(currentHeaderStyle==='banner'){
+    return `<div style="background:linear-gradient(135deg,var(--navy),var(--navy2));padding:5mm 6mm;display:flex;align-items:center;justify-content:space-between;margin:-8mm -8mm 3mm -8mm;">
+      <img src="${logo}" style="height:${ls}px;" onerror="this.style.display='none'">
+      <div style="text-align:right;">
+        <div style="font-family:'Montserrat',sans-serif;font-size:${ft}pt;font-weight:800;color:#fff;letter-spacing:1px;">FICHA TECNICA</div>
+      </div>
+    </div>
+    <div style="background:linear-gradient(90deg,var(--sky),var(--navy));padding:6px 12px;font-family:'Montserrat',sans-serif;font-size:${pn}pt;font-weight:800;color:#fff;text-align:center;">${editableTitle}</div>`;
+  }
+  if(currentHeaderStyle==='lateral'){
+    return `<div style="display:flex;margin:-8mm -8mm 3mm -8mm;min-height:35mm;">
+      <div style="background:linear-gradient(180deg,var(--navy),var(--navy2));width:30mm;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4mm;">
+        <img src="${logo}" style="max-width:22mm;max-height:${ls}px;" onerror="this.style.display='none'">
+        <div style="font-family:'Montserrat',sans-serif;font-size:6pt;color:var(--sky);margin-top:2mm;text-align:center;letter-spacing:1px;line-height:1.4;">FICHA<br>TECNICA</div>
+      </div>
+      <div style="flex:1;padding:5mm 5mm 3mm;display:flex;flex-direction:column;justify-content:center;">
+        <div style="font-family:'Montserrat',sans-serif;font-size:${ft}pt;font-weight:800;color:var(--navy);letter-spacing:.5px;">FICHA TECNICA</div>
+        <div style="height:3px;width:40mm;background:linear-gradient(90deg,var(--sky),transparent);margin:2mm 0;"></div>
+        <div style="font-family:'Montserrat',sans-serif;font-size:${pn}pt;font-weight:800;color:var(--navy);">${editableTitle}</div>
+      </div>
+    </div>`;
+  }
+  if(currentHeaderStyle==='degradado'){
+    return `<div style="background:linear-gradient(135deg,var(--sky) 0%,var(--navy) 100%);padding:6mm;margin:-8mm -8mm 3mm -8mm;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:3mm;right:4mm;opacity:.1;"><img src="${logo}" style="height:${ls*1.5}px;" onerror="this.style.display='none'"></div>
+      <img src="${logo}" style="height:${Math.round(ls*0.7)}px;margin-bottom:3mm;" onerror="this.style.display='none'">
+      <div style="font-family:'Montserrat',sans-serif;font-size:${ft}pt;font-weight:800;color:#fff;letter-spacing:1.5px;margin-bottom:2mm;">FICHA TECNICA</div>
+      <div style="font-family:'Montserrat',sans-serif;font-size:${pn}pt;font-weight:700;color:#fff;line-height:1.2;">${editableTitle}</div>
+    </div>`;
+  }
+  if(currentHeaderStyle==='minimalista'){
+    const la=ALIGNS.logoAlign;const ta=ALIGNS.titleAlign;const na=ALIGNS.nameAlign;
+    return `<div style="border-top:6px solid var(--sky);padding-top:4mm;margin-bottom:2mm;">
+      <div style="text-align:${la};margin-bottom:4mm;">
+        <img src="${logo}" style="height:${Math.round(ls*0.6)}px;" onerror="this.style.display='none'">
+      </div>
+      <div style="font-family:'Montserrat',sans-serif;font-size:${ft}pt;font-weight:800;color:var(--navy);text-align:${ta};letter-spacing:2px;margin-bottom:3mm;">FICHA TECNICA</div>
+      <div style="height:1px;background:var(--border);margin-bottom:3mm;"></div>
+      <div style="font-family:'Montserrat',sans-serif;font-size:${pn}pt;font-weight:800;color:var(--navy);text-align:${na};">${editableTitle}</div>
+      <div style="height:3px;width:30mm;background:var(--sky);margin:2mm ${na==='center'?'auto':na==='right'?'0 0 auto':'auto 0'} 0;border-radius:2px;"></div>
+    </div>`;
+  }
+  if(currentHeaderStyle==='doblelinea'){
+    return `<div style="margin:-8mm -8mm 3mm -8mm;">
+      <div style="background:var(--sky);padding:3mm 6mm;display:flex;align-items:center;justify-content:space-between;">
+        <img src="${logo}" style="height:${Math.round(ls*0.65)}px;" onerror="this.style.display='none'">
+        <div style="font-family:'Montserrat',sans-serif;font-size:8pt;color:var(--navy);font-weight:700;letter-spacing:1px;">www.opencluster-tech.cl</div>
+      </div>
+      <div style="background:var(--navy);padding:4mm 6mm;text-align:center;">
+        <div style="font-family:'Montserrat',sans-serif;font-size:${ft}pt;font-weight:800;color:#fff;letter-spacing:1.5px;margin-bottom:1mm;">FICHA TECNICA</div>
+        <div style="font-family:'Montserrat',sans-serif;font-size:${pn}pt;font-weight:700;color:var(--sky);">${editableTitle}</div>
+      </div>
+    </div>`;
+  }
+  // clasico (default) — uses alignment controls
+  const la=ALIGNS.logoAlign;
+  const ta=ALIGNS.titleAlign;
+  const na=ALIGNS.nameAlign;
+  return `<div style="text-align:${la};margin-bottom:2mm;">
+    <img src="${logo}" style="height:${ls}px;" onerror="this.style.display='none'">
+  </div>
+  <div style="text-align:${ta};margin-bottom:2mm;">
+    <div style="font-family:'Montserrat',sans-serif;font-size:${ft}pt;font-weight:800;color:var(--navy);letter-spacing:.5px;">FICHA TECNICA</div>
+  </div>
+  <div style="background:${COLORS.titlebar};text-align:${na};padding:6px 12px;font-family:'Montserrat',sans-serif;font-size:${pn}pt;font-weight:800;color:${isLightColor(COLORS.titlebar)?'var(--navy)':'#fff'};border-top:4px solid var(--sky);">${editableTitle}</div>`;
+}
+
+function moveSection(secId, dir){
+  const list=document.getElementById('sectionList');
+  const rows=[...list.children];
+  const idx=rows.findIndex(r=>r.dataset.sec===secId);
+  if(idx<0)return;
+  const newIdx=idx+dir;
+  if(newIdx<0||newIdx>=rows.length)return;
+  const el=rows[idx];
+  if(dir<0) list.insertBefore(el,rows[newIdx]);
+  else list.insertBefore(rows[newIdx],el);
+  renderFicha();
+}
+
+function getSectionOrder(){
+  const list=document.getElementById('sectionList');
+  if(!list)return ['desc','chars','specs','infogrid','tags'];
+  return [...list.children].map(r=>r.dataset.sec);
+}
+
+// Color controls
+const COLORS={header:'#001a60',sections:'#001a60',titlebar:'#d6eeff',topline:'sky-navy'};
+function setColor(key,val,btn){
+  COLORS[key]=val;
+  btn.closest('.color-grid').querySelectorAll('.color-dot').forEach(d=>d.classList.remove('active'));
+  btn.classList.add('active');
+  renderFicha();
+}
+function isLightColor(hex){
+  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  return (r*299+g*587+b*114)/1000>150;
+}
+
+// Block removal
+function removeBlock(btn){
+  const block=btn.closest('.f-card')||btn.closest('.f-section-header');
+  if(block){
+    const next=block.nextElementSibling;
+    block.remove();
+    if(next&&next.classList.contains('f-card'))next.remove();
+  }
+}
+
+function resetSizes(){
+  Object.keys(SIZE_DEFAULTS).forEach(k=>{
+    SIZES[k]=SIZE_DEFAULTS[k];
+    const slider=document.querySelector(`[data-target="${k}"]`);
+    if(slider)slider.value=SIZE_DEFAULTS[k];
+    document.getElementById('val-'+k).textContent=SIZE_DEFAULTS[k]+SIZE_UNITS[k];
+  });
+  renderFicha();
+}
+
+function getSectionEnabled(key){
+  const cb=document.querySelector(`[data-section="${key}"]`);
+  return cb?cb.checked:true;
+}
+
+function clearEditor(){
+  selectedProduct=null;selectedImages=[];uniqueImages=[];
+  editedContent={desc:null,lists:null,tables:null,title:null};
+  document.getElementById('editorLayout').classList.remove('show');
+  document.getElementById('searchMode').classList.remove('hidden');
+  searchInput.value='';searchResults.innerHTML='';searchResults.classList.remove('show');
+}
+
+/* ========== SAVE EDITS BEFORE RE-RENDER ========== */
+function saveEditsFromDOM(){
+  const ficha=document.getElementById('ficha');
+  if(!ficha)return;
+  const descEl=ficha.querySelector('[data-edit="desc"]');
+  if(descEl)editedContent.desc=descEl.innerHTML;
+  const charsEl=ficha.querySelector('[data-edit="chars"]');
+  if(charsEl)editedContent.lists=charsEl.innerHTML;
+  const specsEl=ficha.querySelector('[data-edit="specs"]');
+  if(specsEl)editedContent.tables=specsEl.innerHTML;
+  const titleEl=ficha.querySelector('[data-edit="title"]');
+  if(titleEl)editedContent.title=titleEl.textContent;
+}
+
+function getContent(key){
+  if(key==='desc')return editedContent.desc!==null?editedContent.desc:parsedContent.desc;
+  if(key==='lists')return editedContent.lists!==null?editedContent.lists:parsedContent.lists;
+  if(key==='tables')return editedContent.tables!==null?editedContent.tables:parsedContent.tables;
+  return '';
+}
+
+function getTitle(){
+  if(editedContent.title!==null)return editedContent.title;
+  return selectedProduct?selectedProduct.title:'';
+}
+
+/* ========== TEXT SIZE MAP ========== */
+const TEXT_SIZES={small:'8pt',normal:'9pt',large:'10.5pt'};
+const IMG_CLASSES={small:'f-img-sm',normal:'f-img-md',large:'f-img-lg'};
+
+/* ========== RENDER FICHA ========== */
+function renderFicha(){
+  if(!currentExec&&window._EXEC)currentExec=window._EXEC;
+  if(!selectedProduct||!currentExec)return;
+  saveEditsFromDOM();
+  const p=selectedProduct;
+  const baseFontSize=TEXT_SIZES[currentTextSize];
+  const imgClass=IMG_CLASSES[currentImgSize];
+  const showDesc=getSectionEnabled('desc');
+  const showChars=getSectionEnabled('chars');
+  const showSpecs=getSectionEnabled('specs');
+  const showInfoGrid=getSectionEnabled('infogrid');
+  const showTags=getSectionEnabled('tags');
+
+  const variants=p.variants||[];
+  const sku=variants.length?variants[0].sku||'':'';
+  const tags=Array.isArray(p.tags)?p.tags:String(p.tags||'').split(',');
+  const cats=tags.map(t=>t.trim()).filter(Boolean);
+  const productType=p.product_type||'';
+
+  // Info grid data — NO precio, NO fabricante
+  const infoItems=[];
+  if(sku)infoItems.push({label:'SKU',value:sku});
+  if(productType)infoItems.push({label:'Tipo',value:productType});
+  if(variants.length&&variants[0].weight&&variants[0].weight>0)infoItems.push({label:'Peso',value:variants[0].weight+' '+(variants[0].weight_unit||'kg')});
+  if(variants.length&&variants[0].barcode)infoItems.push({label:'Codigo',value:variants[0].barcode});
+
+  // Exec card
+  const initials=currentExec.nombre.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+  const execHtml=`
+    <div class="exec-card">
+      <div class="exec-avatar">${initials}</div>
+      <div class="exec-info">
+        <div class="exec-name">${esc(currentExec.nombre)}</div>
+        <div class="exec-role">${esc(currentExec.cargo)}</div>
+        <div class="exec-dept">${esc(currentExec.depto)}</div>
+      </div>
+      <div class="exec-contacts">
+        <div class="exec-contact"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.362 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>${esc(currentExec.tel)}</div>
+        <div class="exec-contact"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>${esc(currentExec.email)}</div>
+      </div>
+    </div>`;
+
+  // Images — posiciones y tamaños individuales por imagen
+  const imgS=SIZES.imgSize;
+  const getImgSz=s=>imgSizes[s]||imgS;
+  const imgStyleFor=s=>`max-height:${getImgSz(s)}mm;object-fit:contain;border:none;border-radius:6px;background:transparent;`;
+  const imgStyle=`max-height:${imgS}mm;object-fit:contain;border:none;border-radius:6px;background:transparent;`;
+  const mkImg=(s,w)=>`<img src="${s}" style="width:${w||'100%'};max-height:${getImgSz(s)}mm;object-fit:contain;border:none;border-radius:6px;background:transparent;margin-bottom:6px;display:block;page-break-inside:avoid;break-inside:avoid;">`;
+
+  function wrapWithSideImg(contentHtml){
+    if(!selectedImages.length)return contentHtml;
+    const groups={};
+    selectedImages.forEach(s=>{const p=imgPositions[s]||'arriba';if(!groups[p])groups[p]=[];groups[p].push(s);});
+    const fImg=(s)=>mkImg(s);
+    const rowImgs=(imgs)=>`<div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;align-items:flex-start;page-break-inside:avoid;break-inside:avoid;">${imgs.map(s=>`<img src="${s}" style="${imgStyleFor(s)};page-break-inside:avoid;break-inside:avoid;">`).join('')}</div>`;
+    const floatDiv=(imgs,side)=>`<div style="float:${side};width:28%;${side==='left'?'margin:2mm 4mm 4mm 2mm;':'margin:2mm 2mm 4mm 4mm;'}">${imgs.map(s=>fImg(s)).join('')}</div>`;
+
+    // Dividir contenido en mitades para inyectar "centro"
+    const halfIdx=Math.ceil(secBlocks.length/2);
+    const contentFirstHalf=secBlocks.slice(0,halfIdx).map(s=>s.html).join('');
+    const contentSecondHalf=secBlocks.slice(halfIdx).map(s=>s.html).join('');
+    const hasFloat=(groups['arr-izq']||groups['arr-der']||groups['izquierda']||groups['derecha']||groups['abj-izq']||groups['abj-der']);
+
+    let html='';
+    // ARRIBA centradas
+    if(groups['arriba']) html+=rowImgs(groups['arriba']);
+    // ARRIBA flotantes (después de las centradas, flotan al lado del contenido)
+    if(groups['arr-izq']) html+=floatDiv(groups['arr-izq'],'left');
+    if(groups['arr-der']) html+=floatDiv(groups['arr-der'],'right');
+    // FLOTANTES del cuerpo
+    if(groups['izquierda']) html+=floatDiv(groups['izquierda'],'left');
+    if(groups['derecha']) html+=floatDiv(groups['derecha'],'right');
+    // Si hay imágenes "centro", partir el contenido en dos mitades
+    if(groups['centro']){
+      html+=contentFirstHalf;
+      if(hasFloat) html+='<div style="clear:both;"></div>';
+      html+=rowImgs(groups['centro']);
+      // Floats abajo
+      if(groups['abj-izq']) html+=floatDiv(groups['abj-izq'],'left');
+      if(groups['abj-der']) html+=floatDiv(groups['abj-der'],'right');
+      html+=contentSecondHalf;
+    } else if((groups['abj-izq']||groups['abj-der'])&&secBlocks.length>1){
+      // Inyectar floats abajo antes de la última sección
+      const allButLast=secBlocks.slice(0,-1).map(s=>s.html).join('');
+      const lastSec=secBlocks[secBlocks.length-1].html;
+      html+=allButLast;
+      html+='<div style="clear:both;"></div>';
+      if(groups['abj-izq']) html+=floatDiv(groups['abj-izq'],'left');
+      if(groups['abj-der']) html+=floatDiv(groups['abj-der'],'right');
+      html+=lastSec;
+      html+='<div style="clear:both;"></div>';
+    } else if((groups['abj-izq']||groups['abj-der'])&&secBlocks.length===1){
+      if(groups['abj-izq']) html+=floatDiv(groups['abj-izq'],'left');
+      if(groups['abj-der']) html+=floatDiv(groups['abj-der'],'right');
+      html+=contentHtml;
+      html+='<div style="clear:both;"></div>';
+    } else {
+      html+=contentHtml;
+      if(hasFloat) html+='<div style="clear:both;"></div>';
+    }
+    // ABAJO centradas
+    if(groups['abajo']) html+=rowImgs(groups['abajo']);
+    return html;
+  }
+
+  // Meta bar
+  let metaHtml='';
+  if(showTags){
+    metaHtml=`<div class="f-meta"><span class="f-meta-sku">${sku?'SKU: '+esc(sku):''}</span><span class="f-meta-cats">${cats.map(c=>esc(c)).join(' / ')}</span></div>`;
+  }
+
+  // Info grid
+  let infoGridHtml='';
+  if(showInfoGrid&&infoItems.length){
+    infoGridHtml=`<div class="f-info-grid">${infoItems.map(it=>`<div class="f-info-cell"><div class="f-info-label">${esc(it.label)}</div><div class="f-info-value">${esc(it.value)}</div></div>`).join('')}</div>`;
+  }
+
+  // Section style builder
+  function secHtml(title,content,editKey){
+    const sc=COLORS.sections;
+    const stc=isLightColor(sc)?'#001a60':'#fff';
+    const ss=currentSecStyle;
+    const editAttr=editKey?` contenteditable="true" data-edit="${editKey}"`:' ';
+    const editClass=editKey?' f-editable':'';
+    const hint=editKey?'<span class="f-edit-hint">Editar</span>':'';
+    const xBtn='<button class="block-x" onclick="removeBlock(this)">x</button>';
+    if(ss==='minimal') return`<div style="border-top:3px solid ${sc};padding:10px 0 4px;margin-top:12px;"><div style="font-family:'Montserrat',sans-serif;font-size:${SIZES.secTitle}pt;font-weight:700;color:${sc};margin-bottom:6px;">${title}${xBtn}</div><div class="f-card" style="border:none;padding:8px 0;"><div class="${editClass}"${editAttr}>${content}</div>${hint}${xBtn}</div></div>`;
+    if(ss==='accent-left') return`<div style="border-left:4px solid ${sc};padding:8px 14px;margin-top:12px;background:var(--pale);border-radius:0 5px 5px 0;"><div style="font-family:'Montserrat',sans-serif;font-size:${SIZES.secTitle}pt;font-weight:700;color:${sc};margin-bottom:6px;">${title}${xBtn}</div><div class="f-card" style="border:none;padding:0;"><div class="${editClass}"${editAttr}>${content}</div>${hint}${xBtn}</div></div>`;
+    if(ss==='rounded') return`<div style="margin-top:12px;background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,26,96,.06);border:1px solid #e8ecf2;overflow:hidden;"><div style="background:${sc};color:${stc};font-family:'Montserrat',sans-serif;font-size:${SIZES.secTitle}pt;font-weight:700;padding:7px 14px;border-radius:10px 10px 0 0;">${title}${xBtn}</div><div class="f-card" style="border:none;padding:14px;border-radius:0 0 10px 10px;"><div class="${editClass}"${editAttr}>${content}</div>${hint}${xBtn}</div></div>`;
+    if(ss==='flat') return`<div style="margin-top:12px;background:#f0f4f8;border-radius:5px;padding:12px 14px;"><div style="font-family:'Montserrat',sans-serif;font-size:${SIZES.secTitle}pt;font-weight:700;color:${sc};margin-bottom:6px;">${title}${xBtn}</div><div class="f-card" style="border:none;padding:0;background:transparent;"><div class="${editClass}"${editAttr}>${content}</div>${hint}${xBtn}</div></div>`;
+    if(ss==='underline') return`<div style="margin-top:14px;"><div style="font-family:'Montserrat',sans-serif;font-size:${SIZES.secTitle}pt;font-weight:700;color:var(--navy);padding-bottom:4px;border-bottom:2px solid ${sc};margin-bottom:8px;">${title}${xBtn}</div><div class="f-card" style="border:none;padding:4px 0;"><div class="${editClass}"${editAttr}>${content}</div>${hint}${xBtn}</div></div>`;
+    // standard (default)
+    return`<div class="f-section-header" style="background:${sc};color:${stc};">${title}${xBtn}</div><div class="f-card"><div class="${editClass}"${editAttr}>${content}</div>${hint}${xBtn}</div>`;
+  }
+
+  // Build individual section blocks in sidebar order
+  const order=getSectionOrder();
+  const secBlocks=[];
+  order.forEach(sec=>{
+    if(sec==='infogrid'&&showInfoGrid&&infoGridHtml) secBlocks.push({id:'infogrid',html:infoGridHtml});
+    if(sec==='tags'&&showTags&&metaHtml) secBlocks.push({id:'tags',html:metaHtml});
+    const descContent=getContent('desc');
+    const listsContent=getContent('lists');
+    const tablesContent=getContent('tables');
+    if(sec==='desc'&&showDesc&&descContent) secBlocks.push({id:'desc',html:secHtml('Descripcion',descContent,'desc')});
+    if(sec==='chars'&&showChars&&listsContent) secBlocks.push({id:'chars',html:secHtml('Caracteristicas',listsContent,'chars')});
+    if(sec==='specs'&&showSpecs&&tablesContent) secBlocks.push({id:'specs',html:secHtml('Especificaciones Tecnicas',typeof renderSpecsTable==='function'?renderSpecsTable(tablesContent):tablesContent,'specs')});
+  });
+  const allSecs=secBlocks.map(s=>s.html).join('');
+  const half=Math.ceil(secBlocks.length/2);
+  const col1=secBlocks.slice(0,half).map(s=>s.html).join('');
+  const col2=secBlocks.slice(half).map(s=>s.html).join('');
+
+  // Apply body layout
+  let bodyHtml='';
+  if(currentBodyLayout==='doscol'){
+    const content=`<div style="display:flex;gap:3mm;"><div style="flex:1;min-width:0;">${col1}</div><div style="flex:1;min-width:0;">${col2}</div></div>`;
+    bodyHtml=wrapWithSideImg(content);
+  } else if(currentBodyLayout==='panelder'){
+    const panelHalf=Math.ceil(secBlocks.length/2);
+    const mainSecs=secBlocks.slice(0,panelHalf).map(s=>s.html).join('');
+    const panelSecs=secBlocks.slice(panelHalf).map(s=>s.html).join('');
+    const sc=COLORS.sections;
+    const panelBg=isLightColor(sc)?sc+'15':'var(--pale)';
+    const content=`<div style="display:flex;gap:3mm;"><div style="flex:1;min-width:0;">${mainSecs}</div><div style="width:38%;flex-shrink:0;background:${panelBg};border-radius:4px;padding:3mm;border-left:3px solid ${sc};">${panelSecs}</div></div>`;
+    bodyHtml=wrapWithSideImg(content);
+  } else if(currentBodyLayout==='panelizq'){
+    const panelHalf=Math.ceil(secBlocks.length/2);
+    const panelSecs=secBlocks.slice(0,panelHalf).map(s=>s.html).join('');
+    const mainSecs=secBlocks.slice(panelHalf).map(s=>s.html).join('');
+    const sc=COLORS.sections;
+    const panelBg=isLightColor(sc)?sc+'15':'var(--pale)';
+    const content=`<div style="display:flex;gap:3mm;"><div style="width:38%;flex-shrink:0;background:${panelBg};border-radius:4px;padding:3mm;border-right:3px solid ${sc};">${panelSecs}</div><div style="flex:1;min-width:0;">${mainSecs}</div></div>`;
+    bodyHtml=wrapWithSideImg(content);
+  } else if(currentBodyLayout==='tarjetas'){
+    let cards='<div style="display:flex;flex-wrap:wrap;gap:2mm;">';
+    secBlocks.forEach(s=>{
+      const isWide=s.id==='specs'||s.id==='desc';
+      cards+=`<div style="${isWide?'width:100%;':'flex:1;min-width:45%;'}background:#fff;border:1.5px solid var(--ltblue);border-radius:5px;padding:2mm;overflow:hidden;">${s.html}</div>`;
+    });
+    cards+='</div>';
+    bodyHtml=wrapWithSideImg(cards);
+  } else if(currentBodyLayout==='trescol'){
+    const t=Math.ceil(secBlocks.length/3);
+    const c1t=secBlocks.slice(0,t).map(s=>s.html).join('');
+    const c2t=secBlocks.slice(t,t*2).map(s=>s.html).join('');
+    const c3t=secBlocks.slice(t*2).map(s=>s.html).join('');
+    const content=`<div style="display:flex;gap:2mm;"><div style="flex:1;min-width:0;">${c1t}</div><div style="flex:1;min-width:0;">${c2t}</div><div style="flex:1;min-width:0;">${c3t}</div></div>`;
+    bodyHtml=wrapWithSideImg(content);
+  } else if(currentBodyLayout==='cuadricula'){
+    let grid='<div style="display:grid;grid-template-columns:1fr 1fr;gap:2mm;">';
+    secBlocks.forEach(s=>{
+      grid+=`<div style="background:#fff;border:1px solid var(--border);border-radius:4px;padding:2mm;overflow:hidden;">${s.html}</div>`;
+    });
+    grid+='</div>';
+    bodyHtml=wrapWithSideImg(grid);
+  } else if(currentBodyLayout==='imgcol'){
+    const content=`<div style="display:flex;gap:3mm;"><div style="flex:1;min-width:0;">${col1}</div><div style="flex:1;min-width:0;">${col2}</div></div>`;
+    bodyHtml=wrapWithSideImg(content);
+  } else if(currentBodyLayout==='compacto'){
+    const content=`<div style="display:flex;flex-direction:column;gap:1mm;">`+secBlocks.map(s=>`<div style="padding:1mm 0;">${s.html}</div>`).join('')+`</div>`;
+    bodyHtml=wrapWithSideImg(content);
+  } else {
+    // apilado (default)
+    bodyHtml=wrapWithSideImg(allSecs);
+  }
+  metaHtml='';
+
+  const fichaEl=document.getElementById('ficha');
+  fichaEl.style.fontSize=baseFontSize;
+  const tlMap={'sky-navy':'linear-gradient(90deg,var(--sky),var(--navy))','navy-sky':'linear-gradient(90deg,var(--navy),var(--sky))','gold-navy':'linear-gradient(90deg,var(--gold),var(--navy))','navy':'var(--navy)','sky':'var(--sky)','gold':'var(--gold)'};
+  const tlBg=tlMap[COLORS.topline]||tlMap['sky-navy'];
+  fichaEl.innerHTML=`
+    <div class="f-topline" style="background:${tlBg}"></div>
+    <div class="f-inner" style="font-size:${SIZES.bodyText}pt;">
+      ${buildHeader(getTitle())}
+      <div class="f-body">${bodyHtml}</div>
+      <div id="execSpacer" style="flex:1;"></div>
+      <div style="padding:0 0 2px;">${execHtml}</div>
+    </div>
+    <div class="f-bottomline" style="background:${tlBg}"></div>
+  `;
+  // Apply granular sizes to ALL matching elements
+  fichaEl.querySelectorAll('.f-section-header,.f-card-sky-title').forEach(el=>{el.style.fontSize=SIZES.secTitle+'pt';});
+  fichaEl.querySelectorAll('table').forEach(el=>{el.style.fontSize=SIZES.tableText+'pt';});
+  fichaEl.querySelectorAll('table td, table th').forEach(el=>{el.style.fontSize=SIZES.tableText+'pt';});
+  fichaEl.querySelectorAll('.f-body').forEach(el=>{el.style.fontSize=SIZES.bodyText+'pt';});
+  fichaEl.querySelectorAll('.f-card').forEach(el=>{el.style.fontSize=SIZES.bodyText+'pt';});
+  fichaEl.querySelectorAll('img').forEach(el=>{
+    if(el.closest('.exec-card')||el.closest('.f-header')||el.closest('[style*="background"]'))return;
+    if(!el.src.includes('logos/')) el.style.maxHeight=SIZES.imgSize+'mm';
+  });
+  // Marcadores de page break
+  setTimeout(renderPageBreaks,100);
+  // Si estamos en vista de páginas, regenerar después de un delay
+  if(currentView==='pages'){clearTimeout(window._pagesTimer);window._pagesTimer=setTimeout(generatePagesView,500);}
+}
+
+/* ========== SPECS HELPERS ========== */
+function renderSpecsTable(tableHtml){
+  // Parse existing table and re-style
+  const div=document.createElement('div');
+  div.innerHTML=tableHtml;
+  const tables=div.querySelectorAll('table');
+  if(!tables.length)return tableHtml;
+  let out='';
+  tables.forEach(t=>{
+    const rows=t.querySelectorAll('tr');
+    if(!rows.length)return;
+    let thead='',tbody='';
+    rows.forEach((r,ri)=>{
+      const cells=r.querySelectorAll('td,th');
+      if(ri===0&&(r.querySelector('th')||cells.length>=2)){
+        // check if header row
+        const isHeader=!!r.querySelector('th');
+        if(isHeader){
+          thead=`<thead><tr>${Array.from(cells).map(c=>`<th>${c.innerHTML}</th>`).join('')}</tr></thead>`;
+          return;
+        }
+      }
+      tbody+=`<tr>${Array.from(cells).map(c=>`<td>${c.innerHTML}</td>`).join('')}</tr>`;
+    });
+    if(!thead&&tbody){
+      // first row as header
+      const firstRow=rows[0].querySelectorAll('td,th');
+      thead=`<thead><tr>${Array.from(firstRow).map(c=>`<th>${c.innerHTML}</th>`).join('')}</tr></thead>`;
+      // rebuild tbody without first row
+      tbody='';
+      for(let i=1;i<rows.length;i++){
+        const cells=rows[i].querySelectorAll('td,th');
+        tbody+=`<tr>${Array.from(cells).map(c=>`<td>${c.innerHTML}</td>`).join('')}</tr>`;
+      }
+    }
+    out+=`<table class="f-specs-table">${thead}<tbody>${tbody}</tbody></table>`;
+  });
+  return out||tableHtml;
+}
+
+function renderVisualSpecs(tableHtml){
+  const div=document.createElement('div');
+  div.innerHTML=tableHtml;
+  const rows=div.querySelectorAll('tr');
+  let items=[];
+  rows.forEach(r=>{
+    const cells=r.querySelectorAll('td,th');
+    if(cells.length>=2){
+      items.push({label:cells[0].textContent.trim(),value:cells[1].textContent.trim()});
+    }
+  });
+  if(!items.length)return tableHtml;
+  // skip header-like first row
+  if(items.length>1&&items[0].label.toLowerCase().includes('especif'))items.shift();
+  return `<div class="f-visual-specs">${items.map(it=>`<div class="f-visual-spec-item"><div class="f-visual-spec-label">${esc(it.label)}</div><div class="f-visual-spec-value">${esc(it.value)}</div></div>`).join('')}</div>`;
+}
+
+/* ========== FOOTER INTERMEDIO OPCIONES ========== */
+const FOOTER_OPTS={bg:'#06b3fd',txt:'#ffffff',web:'#C9A96E',fontSize:8,
+  line1:'OpenCluster Tech \u2014 Construyendo Inclusion, porque nos importa.',
+  line2:'Ponemos a su disposicion el catalogo mas amplio de ayudas tecnicas y tecnologia asistiva de todo Chile.',
+  line3:'Partners exclusivos de Qinera \u2014 Juntos, estamos implementando salas multisensoriales a lo largo de todo el pais.',
+  line4:'www.opencluster-tech.cl'};
+
+function setFooterOpt(key,val,btn){
+  FOOTER_OPTS[key]=val;
+  if(key==='fontSize')document.getElementById('val-footerSize').textContent=val+'pt';
+  if(btn&&btn.classList){
+    btn.closest('.fld,.size-control')?.querySelectorAll('.color-dot').forEach(d=>d.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  renderFooterPreview();
+}
+
+function updateFooterLines(){
+  FOOTER_OPTS.line1=document.getElementById('footerLine1').value;
+  FOOTER_OPTS.line2=document.getElementById('footerLine2').value;
+  FOOTER_OPTS.line3=document.getElementById('footerLine3').value;
+  FOOTER_OPTS.line4=document.getElementById('footerLine4').value;
+  renderFooterPreview();
+}
+
+function renderPageBreaks(){
+  const fichaEl=document.getElementById('ficha');
+  if(!fichaEl)return;
+  // Quitar spacers previos
+  fichaEl.querySelectorAll('.page-break-spacer').forEach(el=>el.remove());
+  const fichaRect=fichaEl.getBoundingClientRect();
+  if(fichaRect.width<=0)return;
+  const pxPerMm=fichaRect.width/216;
+  const pageContentH=225*pxPerMm; // contenido útil por página
+  const fo=FOOTER_OPTS;
+  const fs=parseInt(fo.fontSize)||8;
+  const footerH=Math.round(28*pxPerMm); // ~28mm de footer + separador
+  // Recolectar todos los elementos "rompibles" — secciones, headers, cards
+  // Buscar secciones y bloques que sean candidatos a empujar a otra página
+  const candidates=[...fichaEl.querySelectorAll('.f-card, .f-section-header, .f-info-grid, .f-meta')];
+  if(!candidates.length)return;
+  const fichaTop=fichaEl.getBoundingClientRect().top;
+  let pageNum=1;
+  let pageLimit=pageContentH;
+  for(let i=0;i<candidates.length;i++){
+    const el=candidates[i];
+    const rect=el.getBoundingClientRect();
+    const elBottom=(rect.bottom-fichaTop);
+    if(elBottom>pageLimit){
+      // Este elemento se sale de la página — insertar spacer ANTES de él
+      const elTop=(rect.top-fichaTop);
+      const spaceLeft=pageLimit-elTop;
+      // Si el elemento empieza después del límite, insertar spacer al inicio del elemento
+      // Si el elemento empieza dentro de la página, dejarlo y romper en el siguiente
+      if(elTop>=pageLimit-30){
+        // Caso A: el elemento ya está totalmente fuera, insertar spacer aquí
+        const spacer=document.createElement('div');
+        spacer.className='page-break-spacer';
+        const gapBefore=Math.max(0,pageLimit-elTop);
+        spacer.style.cssText=`height:${gapBefore+footerH+15}px;position:relative;margin:0 -8mm;clear:both;`;
+        spacer.innerHTML=buildSpacerHTML(gapBefore,footerH,fo,fs,pageNum);
+        el.parentNode.insertBefore(spacer,el);
+        pageLimit=elBottom-rect.height+pageContentH; // nueva página empieza aquí
+        pageNum++;
+      } else {
+        // Caso B: el elemento cabe parcialmente — empujarlo a la siguiente página
+        const spacer=document.createElement('div');
+        spacer.className='page-break-spacer';
+        spacer.style.cssText=`height:${spaceLeft+footerH+15}px;position:relative;margin:0 -8mm;clear:both;`;
+        spacer.innerHTML=buildSpacerHTML(spaceLeft,footerH,fo,fs,pageNum);
+        el.parentNode.insertBefore(spacer,el);
+        pageLimit=elTop+spaceLeft+footerH+15+pageContentH;
+        pageNum++;
+      }
+    }
+  }
+}
+
+function buildSpacerHTML(spacerH,footerH,fo,fs,pageNum){
+  return`
+    <div style="position:absolute;left:0;right:0;top:${spacerH}px;background:${fo.bg};padding:8px 16px;text-align:center;">
+      <div style="font-family:'Montserrat',sans-serif;font-size:${fs+1}px;font-weight:700;color:${fo.txt};margin-bottom:3px;">${fo.line1}</div>
+      <div style="font-family:'Open Sans',sans-serif;font-size:${fs-1}px;color:${fo.txt};opacity:.9;margin-bottom:2px;">${fo.line2}</div>
+      <div style="font-family:'Open Sans',sans-serif;font-size:${fs-1}px;color:${fo.txt};opacity:.9;margin-bottom:3px;">${fo.line3}</div>
+      <div style="font-family:'Montserrat',sans-serif;font-size:${fs}px;font-weight:700;color:${fo.web};">${fo.line4}</div>
+    </div>
+    <div style="position:absolute;left:0;right:0;top:${spacerH+footerH-12}px;height:18px;background:var(--bg);display:flex;align-items:center;justify-content:center;">
+      <span style="background:#ff7e00;color:#fff;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;padding:3px 12px;border-radius:10px;box-shadow:0 2px 6px rgba(255,126,0,.3);">Fin pagina ${pageNum} / Inicio pagina ${pageNum+1}</span>
+    </div>`;
+}
+
+function renderFooterPreview(){
+  const el=document.getElementById('footerPreview');
+  if(!el)return;
+  const fo=FOOTER_OPTS;
+  const fs=parseInt(fo.fontSize)||8;
+  el.innerHTML=`
+    <div style="height:3px;background:linear-gradient(90deg,var(--sky),var(--navy));"></div>
+    <div style="height:2px;"></div>
+    <div style="background:${fo.bg};padding:8px 12px;text-align:center;">
+      <div style="font-family:'Montserrat',sans-serif;font-size:${fs+1}px;font-weight:700;color:${fo.txt};margin-bottom:4px;">${fo.line1}</div>
+      <div style="font-family:'Open Sans',sans-serif;font-size:${fs-1}px;color:${fo.txt};opacity:.85;margin-bottom:3px;">${fo.line2}</div>
+      <div style="font-family:'Open Sans',sans-serif;font-size:${fs-1}px;color:${fo.txt};opacity:.85;margin-bottom:4px;">${fo.line3}</div>
+      <div style="font-family:'Montserrat',sans-serif;font-size:${fs}px;font-weight:700;color:${fo.web};">${fo.line4}</div>
+    </div>
+    <div style="height:3px;background:linear-gradient(90deg,var(--navy),var(--sky));"></div>
+  `;
+}
+
+function hexToRGB(hex){
+  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  return{r,g,b};
+}
+
+function updateSpacer(val){
+  document.getElementById('val-spacer').textContent=val+'px';
+  const spacer=document.getElementById('execSpacer');
+  if(spacer){spacer.style.height=val+'px';spacer.style.flex='none';}
+}
+
+/* ========== GUARDAR PDF ========== */
+async function guardarPDF(){
+  const btn=document.getElementById('btnPdf');
+  btn.textContent='Generando PDF...';btn.disabled=true;
+  const isLocal=location.protocol==='http:'||location.protocol==='https:';
+  if(isLocal&&typeof html2pdf!=='undefined'){
+    try{
+      await generarPDF();
+      btn.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> GUARDAR COMO PDF';
+      btn.disabled=false;
+      return;
+    }catch(ex){console.error('html2pdf error:',ex);}
+  }
+  // Fallback: window.print
+  const ficha=document.getElementById('ficha');
+  const prev=ficha.style.transform;
+  ficha.style.transform='none';
+  ficha.style.marginBottom='0';
+  ficha.classList.add('pdf-mode');
+  const titulo=getTitle()||'Ficha_Tecnica';
+  const nombreLimpio=titulo.replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ ]/g,'').replace(/\s+/g,'');
+  const prevTitle=document.title;
+  document.title=nombreLimpio+'_OpenCluster-Tech';
+  window.scrollTo(0,0);
+  setTimeout(()=>{
+    window.print();
+    document.title=prevTitle;
+    ficha.style.transform=prev;
+    ficha.classList.remove('pdf-mode');
+    btn.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> GUARDAR COMO PDF';
+    btn.disabled=false;
+  },150);
+}
+
+/* ========== GENERAR PDF (html2pdf) ========== */
+async function generarPDF(){
+  const btn=document.getElementById('btnPdf');
+  btn.textContent='Preparando...';btn.disabled=true;
+
+  const ficha=document.getElementById('ficha');
+  const prevTransform=ficha.style.transform;
+  const prevMargin=ficha.style.marginBottom;
+  const prevDisplay=ficha.style.display;
+  ficha.style.transform='none';
+  ficha.style.marginBottom='0';
+  ficha.style.display='flex';
+  ficha.classList.add('pdf-mode');
+  // Forzar ocultar elementos de editor con inline style
+  ficha.querySelectorAll('.f-footer-preview,.page-break-marker,.page-break-spacer,.block-x,.f-edit-hint').forEach(el=>{el.dataset._oldDisplay=el.style.display;el.style.display='none';});
+
+  // Auto-calcular spacer para anclar exec card al fondo de la última página
+  const spacer=document.getElementById('execSpacer');
+  if(spacer){
+    spacer.style.flex='none';
+    spacer.style.height='0';
+    void ficha.offsetHeight;
+    const fichaRect=ficha.getBoundingClientRect();
+    const pxPerMm=fichaRect.width/216;
+    const pageContentH=225*pxPerMm;
+    const execCard=ficha.querySelector('.exec-card');
+    const execH=execCard?execCard.getBoundingClientRect().height+8:55;
+    const totalH=ficha.offsetHeight;
+    // Contenido en la última página (sin spacer)
+    const contentHastaExec=totalH-execH;
+    const lastPageStart=Math.floor(contentHastaExec/pageContentH)*pageContentH;
+    const contentLastPage=contentHastaExec-lastPageStart;
+    // Espacio restante en la última página después del contenido
+    const available=pageContentH-contentLastPage-execH;
+    if(available>5){
+      const sliderVal=document.getElementById('spacerSlider');
+      const manualExtra=sliderVal?parseInt(sliderVal.value)||0:0;
+      spacer.style.height=(available+manualExtra)+'px';
+    }
+  }
+
+  const titulo=getTitle()||'Ficha_Tecnica';
+  const nombreArchivo=titulo.replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ ]/g,'').replace(/\s+/g,'_');
+
+  btn.textContent='Generando PDF...';
+
+  const opt={
+    margin:[18,5,36,5],
+    filename:nombreArchivo+'_OpenCluster-Tech.pdf',
+    image:{type:'jpeg',quality:0.92},
+    html2canvas:{scale:2,useCORS:true,allowTaint:true,logging:false,backgroundColor:'#ffffff'},
+    jsPDF:{unit:'mm',format:'letter',orientation:'portrait'},
+    pagebreak:{mode:['css','legacy'],avoid:'.exec-card'}
+  };
+
+  try{
+    const worker=html2pdf().set(opt).from(ficha).toPdf();
+    await worker.get('pdf').then(function(pdf){
+      const totalPages=pdf.internal.getNumberOfPages();
+      const pageW=pdf.internal.pageSize.getWidth();
+      const pageH=pdf.internal.pageSize.getHeight();
+      for(let i=1;i<=totalPages;i++){
+        pdf.setPage(i);
+        // Línea degradada inferior — borde de la página, fina
+        for(let x=0;x<pageW;x+=0.3){
+          const ratio=x/pageW;
+          pdf.setFillColor(Math.round(6-6*ratio),Math.round(179-153*ratio),Math.round(253-157*ratio));
+          pdf.rect(x,pageH-1.2,0.4,1.2,'F');
+        }
+        // Footer en páginas intermedias (no en la última)
+        if(i<totalPages){
+          const fo=FOOTER_OPTS;
+          const bgC=hexToRGB(fo.bg);
+          const txC=hexToRGB(fo.txt);
+          const wbC=hexToRGB(fo.web);
+          const fs=parseInt(fo.fontSize)||8;
+          // Línea degradada fina separadora
+          for(let x=0;x<pageW;x+=0.3){
+            const ratio=x/pageW;
+            pdf.setFillColor(Math.round(6-6*ratio),Math.round(179-153*ratio),Math.round(253-157*ratio));
+            pdf.rect(x,pageH-28,0.4,0.8,'F');
+          }
+          // Fondo
+          pdf.setFillColor(bgC.r,bgC.g,bgC.b);
+          pdf.rect(0,pageH-26.5,pageW,25.3,'F');
+          // Linea 1
+          pdf.setFontSize(fs+2);
+          pdf.setTextColor(txC.r,txC.g,txC.b);
+          pdf.text(fo.line1,pageW/2,pageH-20,{align:'center'});
+          // Linea 2
+          pdf.setFontSize(fs-0.5);
+          pdf.setTextColor(txC.r,txC.g,txC.b);
+          pdf.text(fo.line2,pageW/2,pageH-15,{align:'center'});
+          // Linea 3
+          pdf.setFontSize(fs-0.5);
+          pdf.setTextColor(txC.r,txC.g,txC.b);
+          pdf.text(fo.line3,pageW/2,pageH-10.5,{align:'center'});
+          // Linea 4 (web)
+          pdf.setFontSize(fs+1);
+          pdf.setTextColor(wbC.r,wbC.g,wbC.b);
+          pdf.text(fo.line4,pageW/2,pageH-5.5,{align:'center'});
+        }
+        // Número de página — TODAS las páginas
+        pdf.setFontSize(6);
+        pdf.setTextColor(180,180,180);
+        pdf.text('Pagina '+i+' de '+totalPages,pageW-7,pageH-6,{align:'right'});
+        // Línea degradada superior — borde de la página, fina
+        if(i>1){
+          for(let x=0;x<pageW;x+=0.3){
+            const ratio=x/pageW;
+            pdf.setFillColor(Math.round(0+6*ratio),Math.round(26+153*ratio),Math.round(96+157*ratio));
+            pdf.rect(x,0,0.4,1.2,'F');
+          }
+          // Mini header en páginas 2+
+          pdf.setFontSize(7);
+          pdf.setTextColor(0,26,96);
+          pdf.text('FICHA TECNICA \u2014 '+titulo.substring(0,60),pageW/2,8,{align:'center'});
+        }
+      }
+    });
+    await worker.save();
+  }catch(ex){
+    console.error('Error PDF:',ex);
+    // Fallback: intentar sin footer overlay
+    try{
+      btn.textContent='Reintentando...';
+      await html2pdf().set({margin:[5,5,5,5],filename:nombreArchivo+'.pdf',image:{type:'jpeg',quality:0.85},html2canvas:{scale:1.5,useCORS:true,allowTaint:true,logging:false},jsPDF:{unit:'mm',format:'letter',orientation:'portrait'}}).from(ficha).save();
+    }catch(ex2){
+      console.error('Fallback fallo:',ex2);
+      // Último recurso: print
+      alert('No se pudo generar el PDF automaticamente. Se abrira la ventana de impresion.\nEn Destino selecciona "Guardar como PDF".');
+      window.print();
+    }
+  }
+
+  ficha.style.transform=prevTransform;
+  ficha.style.marginBottom=prevMargin;
+  ficha.style.display=prevDisplay;
+  ficha.classList.remove('pdf-mode');
+  ficha.querySelectorAll('.f-footer-preview,.page-break-marker,.page-break-spacer,.block-x,.f-edit-hint').forEach(el=>{el.style.display=el.dataset._oldDisplay||'';delete el.dataset._oldDisplay;});
+  const spacerR=document.getElementById('execSpacer');
+  const sliderR=document.getElementById('spacerSlider');
+  if(spacerR&&sliderR){spacerR.style.height=sliderR.value+'px';spacerR.style.flex='none';}
+
+  btn.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> GUARDAR COMO PDF';
+  btn.disabled=false;
+}
+
+/* ========== INIT GRIDS ========== */
+buildTemplateGrid();
+buildLogoGrid();
+renderFooterPreview();
+</script>
+
+</body>
+</html>

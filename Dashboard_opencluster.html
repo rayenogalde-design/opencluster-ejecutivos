@@ -1356,8 +1356,9 @@ function rowToReu(r, i) {
     fecha:       gf('Fecha','fecha','Date'),
     hora:        gf('Hora','hora','Hour','Time'),
     tipo:        gf('Tipo','tipo','Type','Tipo de Reunión','Tipo Reunion'),
-    ejecutivos:  gf('Ejecutivos','ejecutivos','Ejecutivo','ejecutivo','Exec'),
-    nombre:      gf('Prospecto','prospecto','Nombre','nombre','Nombre Cliente','Cliente','contact'),
+    creador:     gf('Creador','creador'),
+    ejecutivos:  gf('Ejecutivos','ejecutivos'),
+    nombre:      gf('Prospecto','prospecto'),
     institucion: gf('Institución','Institucion','institucion','Empresa','empresa','Organización'),
     cargo:       gf('Cargo','cargo','Rol'),
     telefono:    gf('Teléfono','Telefono','telefono','Fono','fono','Phone','Tel'),
@@ -2875,8 +2876,9 @@ function renderReunionLista(){
   function sepExecs(execStr,creador){
     const all=(execStr||'').split(',').map(s=>s.trim()).filter(Boolean);
     const cr=creador||(all.length?all[0]:'');
-    const acomp=all.filter(e=>e!==cr);
-    return {creador:cr,acompanantes:acomp};
+    const crShort=cr.split(' ')[0];
+    const acomp=all.filter(e=>e!==cr&&e.split(' ')[0]!==crShort).map(e=>e.split(' ')[0]);
+    return {creador:crShort,acompanantes:acomp};
   }
 
   const resCls={Exitosa:'t-gan',Reagendar:'t-si',Pendiente:'t-env','Sin interés':'t-per','Posible cliente':'t-si'};
@@ -2893,7 +2895,7 @@ function renderReunionLista(){
     </tr></thead>
     <tbody>${reuniones.map((r,i)=>{
       const {creador,acompanantes}=sepExecs(r.ejecutivos,r.creador);
-      const fechaBonita=fmtFechaCL(r.fecha);
+      const fechaBonita=fmtFechaGlobal(r.fecha);
       return`<tr style="border-bottom:1px solid var(--smoke);${i%2===0?'':'background:var(--paper);'}">
         <td style="padding:9px 10px;font-weight:600;color:var(--ink);white-space:nowrap;">${fechaBonita}</td>
         <td style="padding:9px 10px;"><span class="tag t-env" style="font-size:9px;">${r.tipo||'—'}</span></td>
@@ -3305,6 +3307,18 @@ function procesarContactos(rows){
   }).filter(r=>r['Nombre']||r['Ejecutivo']);
 }
 
+function fmtFechaGlobal(f){
+  if(!f)return '';
+  const s=String(f).trim();
+  const meses=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  let d=null;
+  if(s.includes('T'))d=new Date(s);
+  else{const m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);if(m)d=new Date(+m[1],+m[2]-1,+m[3]);}
+  if(!d){const m2=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);if(m2)d=new Date(+m2[3],+m2[2]-1,+m2[1]);}
+  if(d&&!isNaN(d))return d.getDate()+' de '+meses[d.getMonth()]+' '+d.getFullYear();
+  return s;
+}
+
 function renderContactosDash(){
   const PASTEL=['#F4A7BB','#C3B1E1','#A8D8C8','#A7C7E7','#FCCEB5','#F7E1A0','#E8A0BF','#B5CDA3'];
   let data=[...contactosDash];
@@ -3363,7 +3377,7 @@ function renderContactosDash(){
     if(!data.length){lista.innerHTML='<div style="text-align:center;padding:24px;color:var(--subtle);font-size:12px;">Sin contactos registrados.</div>';return;}
     lista.innerHTML=[...data].reverse().map(c=>{
       const resColor=(c['Resultado']||'').includes('cept')?'var(--jade)':(c['Resultado']||'').includes('No resp')||(c['Resultado']||'').includes('echaz')?'var(--ruby)':'var(--amber)';
-      const fecha=c['Fecha']||'';
+      const fecha=fmtFechaGlobal(c['Fecha']||'');
       return`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--smoke);">
         <div style="flex:1;min-width:0;">
           <div style="font-size:12px;font-weight:700;color:var(--ink);">${c['Nombre']||'—'} <span style="font-size:10px;color:var(--subtle);font-weight:500;">· ${c['Institucion']||''}</span></div>

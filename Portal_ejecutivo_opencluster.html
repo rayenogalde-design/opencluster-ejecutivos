@@ -808,8 +808,9 @@ const TEAM = [
   {full:'Germán Alvarado', short:'Germán'},
   {full:'William',         short:'William'},
   {full:'Mario',           short:'Mario'},
-  {full:'Hernán',          short:'Hernán'},
+  {full:'Hernán',          short:'Hernán',soloAcompanante:true},
 ];
+const TEAM_GRAFICOS=TEAM.filter(t=>!t.soloAcompanante);
 
 // ════════════════════════════════════════════
 // ESTADO GLOBAL
@@ -1153,6 +1154,7 @@ async function iniciarApp(modoDemo=false){
   if(esMario()){
     document.querySelector('[data-tab=reuniones]').style.display='none';
     document.querySelector('[data-tab=seguimientos]').style.display='none';
+    document.querySelector('[data-tab=contactos]').style.display='none';
     document.querySelector('[data-tab=metricas]').style.display='';
     document.querySelector('[data-tab=productos]').style.display='';
     document.getElementById('alert-banner').style.display='none';
@@ -1472,12 +1474,14 @@ const META_EQUIPO_MONTO = 40000000;
 
 function renderMetaBanner(){
   const banner=document.getElementById('meta-banner');
-  if(!banner||esMario())return;
-  const pct=META_PCTS[USUARIO]||0;
+  if(!banner)return;
+  const esM=esMario();
+  const pct=esM?100:(META_PCTS[USUARIO]||0);
   if(!pct||!META_EQUIPO_MONTO){banner.style.display='none';return;}
-  const metaInd=Math.round(META_EQUIPO_MONTO*pct/100);
+  const metaInd=esM?META_EQUIPO_MONTO:Math.round(META_EQUIPO_MONTO*pct/100);
   const mesHoy=getMesActual();
-  const ventasMes=COTS.filter(c=>c.mes===mesHoy&&c.estado==='Ganada').reduce((s,c)=>s+c.neto,0);
+  const cotsVenta=esM?(COTS_EQUIPO||COTS):COTS;
+  const ventasMes=cotsVenta.filter(c=>c.mes===mesHoy&&c.estado==='Ganada').reduce((s,c)=>s+c.neto,0);
   const progreso=metaInd>0?Math.min(100,Math.round(ventasMes/metaInd*100)):0;
   const barCol=progreso>=100?'linear-gradient(90deg,#2A7A5A,#34D399)':progreso>=50?'linear-gradient(90deg,#C9A96E,#E8D5A8)':'linear-gradient(90deg,#C0392B,#E74C3C)';
   const mesNombres={Ene:'Enero',Feb:'Febrero',Mar:'Marzo',Abr:'Abril',May:'Mayo',Jun:'Junio',Jul:'Julio',Ago:'Agosto',Sep:'Septiembre',Oct:'Octubre',Nov:'Noviembre',Dic:'Diciembre'};
@@ -1521,7 +1525,7 @@ function renderMetaBanner(){
       </div>
       <div style="flex:1;min-width:0;">
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;flex-wrap:wrap;gap:4px;">
-          <div style="font-family:'Montserrat',sans-serif;font-size:12px;font-weight:800;color:#C9A96E;text-transform:uppercase;letter-spacing:1.2px;">Meta Mensual de Ventas para ${(TEAM.find(t=>t.full===USUARIO)||{}).short||USUARIO.split(' ')[0]} · ${mesNombres[mesHoy]||mesHoy} 2026</div>
+          <div style="font-family:'Montserrat',sans-serif;font-size:12px;font-weight:800;color:#C9A96E;text-transform:uppercase;letter-spacing:1.2px;">${esM?'Meta Mensual Equipo Difusión':'Meta Mensual de Ventas para '+(TEAM.find(t=>t.full===USUARIO)||{}).short||USUARIO.split(' ')[0]} · ${mesNombres[mesHoy]||mesHoy} 2026</div>
           <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#E8D5A8;text-shadow:0 1px 8px rgba(201,169,110,.3);">${fmt(metaInd)}</div>
         </div>
         <div style="height:10px;background:rgba(255,255,255,.1);border-radius:100px;overflow:hidden;margin-bottom:6px;border:1px solid rgba(201,169,110,.2);">
@@ -1546,7 +1550,7 @@ function renderMuroHonor(){
   }
   const mesHoy=filtroResumenMesP||getMesActual();
   const cotsMes=COTS_EQUIPO.filter(c=>c.mes===mesHoy);
-  const execsSinMario=TEAM.filter(t=>t.short!=='Mario');
+  const execsSinMario=TEAM_GRAFICOS.filter(t=>t.short!=='Mario');
 
   // Calcular ganadores
   const porCots=execsSinMario.map(e=>({name:e.short,val:cotsMes.filter(c=>c.exec===e.full).length})).sort((a,b)=>b.val-a.val);
@@ -2169,7 +2173,7 @@ function renderFndrChart(allCots, highlightExec){
   const el=document.getElementById('fndr-chart-body');
   if(!el)return;
   // Execs visibles en el gráfico: excluir solo a Mario
-  const execsVisiblesFndr=TEAM.filter(t=>t.short!=='Mario');
+  const execsVisiblesFndr=TEAM_GRAFICOS.filter(t=>t.short!=='Mario');
   // Build per-exec fund breakdown from all team cotizaciones
   const byExec={};
   execsVisiblesFndr.forEach(t=>{ byExec[t.short]={}; });

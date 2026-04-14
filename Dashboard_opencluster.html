@@ -395,6 +395,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);d
     <div class="nav-item" id="nav-ejecutivos" onclick="goSec('ejecutivos',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>Ejecutivos
     </div>
+    <div class="nav-item" id="nav-funnel" onclick="goSec('funnel',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>Embudo de Ventas
+    </div>
     <div class="nav-item" id="nav-estadisticas" onclick="goSec('estadisticas',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Estadísticas
     </div>
@@ -553,6 +556,37 @@ body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);d
       <div class="card">
         <div class="card-hd"><h3>Progreso hacia Meta Mensual</h3><span class="badge b-gold">ventas ganadas</span></div>
         <div class="card-body" id="exec-metas"></div>
+      </div>
+    </section>
+
+    <!-- EMBUDO DE VENTAS -->
+    <section class="sec" id="s-funnel">
+      <div class="sec-hd"><h2>Embudo de Ventas</h2><p>Vida de una oportunidad — desde el primer contacto hasta el cierre</p></div>
+      <div class="hairline"></div>
+      <style>
+        .funnel-wrap{max-width:600px;margin:0 auto 24px;}
+        .funnel-step{display:flex;align-items:center;margin-bottom:4px;}
+        .funnel-bar{height:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Montserrat',sans-serif;font-weight:700;font-size:13px;transition:width .8s ease;min-width:60px;text-shadow:0 1px 2px rgba(0,0,0,.15);}
+        .funnel-label{font-size:11px;color:#64748b;font-weight:600;min-width:100px;text-align:right;padding-right:14px;}
+        .funnel-pct{font-size:11px;color:#94a3b8;font-weight:600;padding-left:10px;min-width:50px;}
+        .tasa-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:20px;}
+        .tasa-card{background:#fff;border-radius:12px;padding:18px;border:1px solid #e8eef4;text-align:center;}
+        .tasa-card .tasa-val{font-family:'Montserrat',sans-serif;font-size:28px;font-weight:800;color:var(--navy);}
+        .tasa-card .tasa-lbl{font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-top:4px;}
+        .tasa-exec-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:18px;}
+        .tasa-exec{background:#fafbfd;border-radius:10px;padding:12px;border:1px solid #e8eef4;text-align:center;}
+        .tasa-exec .te-name{font-size:11px;font-weight:700;color:var(--navy);margin-bottom:4px;}
+        .tasa-exec .te-val{font-family:'Montserrat',sans-serif;font-size:20px;font-weight:800;}
+        .tasa-exec .te-sub{font-size:9px;color:#94a3b8;}
+      </style>
+      <div class="funnel-wrap" id="funnel-chart"></div>
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-hd"><h3>Tasa de Cierre</h3><span class="badge b-gold">acumulado 2026</span></div>
+        <div class="card-body">
+          <div class="tasa-grid" id="tasa-general"></div>
+          <div style="margin-top:18px;font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.5px;">Por Ejecutivo</div>
+          <div class="tasa-exec-grid" id="tasa-por-exec"></div>
+        </div>
       </div>
     </section>
 
@@ -996,7 +1030,7 @@ function renderSec(id) {
     resumen:renderResumen, novedades:renderNovedades, ejecutivos:renderEjecutivos,
     estadisticas:renderEstadisticas, seguimientos:renderSeguimientos,
     anuales:renderAnuales, grandes:renderGrandes, regiones:renderRegiones,
-    productos:renderProductos, reuniones:renderReuniones,
+    productos:renderProductos, funnel:renderFunnel, reuniones:renderReuniones,
     fndr:renderFndr, perdidas:renderPerdidas, pagos:renderPagos, faqs:renderFaqs,
   };
   if (fn[id]) fn[id]();
@@ -3236,6 +3270,74 @@ function categoriaDeTipo(tipo){
   return null;
 }
 
+function renderFunnel(){
+  const totalReuniones=reuniones.length;
+  const totalCots=COTS.length;
+  const enGestion=COTS.filter(c=>c.estado==='En gestión').length;
+  const ganadas=COTS.filter(c=>c.estado==='Ganada').length;
+  // Contactos desde localStorage (aún no vienen del API)
+  const contactos=JSON.parse(localStorage.getItem('oc_contactos_'+window.location.hostname)||'[]');
+  const totalContactos=contactos.length||Math.round(totalReuniones*1.5)||0; // estimado si no hay datos
+
+  const steps=[
+    {label:'Contactos',val:totalContactos||totalReuniones,color:'#F4A7BB'},
+    {label:'Reuniones',val:totalReuniones,color:'#C3B1E1'},
+    {label:'Cotizaciones',val:totalCots,color:'#A7C7E7'},
+    {label:'En gestión',val:enGestion,color:'#A8D8C8'},
+    {label:'Ganadas',val:ganadas,color:'#F7E1A0'},
+  ];
+  const maxVal=Math.max(...steps.map(s=>s.val),1);
+
+  // Dibujar funnel
+  const wrap=document.getElementById('funnel-chart');
+  if(!wrap)return;
+  wrap.innerHTML=steps.map((s,i)=>{
+    const pct=Math.max(Math.round((s.val/maxVal)*100),12);
+    const convPct=i>0&&steps[i-1].val>0?Math.round((s.val/steps[i-1].val)*100):null;
+    return`<div class="funnel-step">
+      <div class="funnel-label">${s.label}</div>
+      <div class="funnel-bar" style="width:${pct}%;background:${s.color};">${s.val}</div>
+      ${convPct!==null?`<div class="funnel-pct">${convPct}%</div>`:'<div class="funnel-pct"></div>'}
+    </div>`;
+  }).join('');
+
+  // Tasas de cierre generales
+  const tasaGen=document.getElementById('tasa-general');
+  if(tasaGen){
+    const tasaCotReu=totalReuniones?Math.round((totalCots/totalReuniones)*100):0;
+    const tasaCierre=totalCots?Math.round((ganadas/totalCots)*100):0;
+    const tasaGestion=totalCots?Math.round((enGestion/totalCots)*100):0;
+    tasaGen.innerHTML=`
+      <div class="tasa-card"><div class="tasa-val" style="color:#C3B1E1;">${tasaCotReu}%</div><div class="tasa-lbl">Reunión → Cotización</div></div>
+      <div class="tasa-card"><div class="tasa-val" style="color:#A8D8C8;">${tasaGestion}%</div><div class="tasa-lbl">En gestión activa</div></div>
+      <div class="tasa-card"><div class="tasa-val" style="color:#F7E1A0;">${tasaCierre}%</div><div class="tasa-lbl">Tasa de cierre</div></div>
+    `;
+  }
+
+  // Tasa por ejecutivo
+  const tasaExec=document.getElementById('tasa-por-exec');
+  if(tasaExec){
+    const PASTEL_E=['#F4A7BB','#C3B1E1','#A8D8C8','#A7C7E7','#FCCEB5','#F7E1A0'];
+    const execs={};
+    COTS.forEach(c=>{
+      const e=c.exec||'Sin asignar';
+      if(!execs[e])execs[e]={cots:0,ganadas:0};
+      execs[e].cots++;
+      if(c.estado==='Ganada')execs[e].ganadas++;
+    });
+    const sorted=Object.entries(execs).sort((a,b)=>b[1].cots-a[1].cots);
+    tasaExec.innerHTML=sorted.map(([name,d],i)=>{
+      const tasa=d.cots?Math.round((d.ganadas/d.cots)*100):0;
+      const color=PASTEL_E[i%PASTEL_E.length];
+      return`<div class="tasa-exec">
+        <div class="te-name">${name.split(' ')[0]}</div>
+        <div class="te-val" style="color:${color};">${tasa}%</div>
+        <div class="te-sub">${d.ganadas} de ${d.cots} cotizaciones</div>
+      </div>`;
+    }).join('');
+  }
+}
+
 function renderGraficosReuniones(){
   if(!reuniones||!reuniones.length){
     ['ch-reu-categoria','ch-reu-preventa','ch-reu-venta','ch-reu-postventa','ch-reu-exec','ch-reu-acompanantes'].forEach(id=>{
@@ -3271,15 +3373,19 @@ function renderGraficosReuniones(){
     }
   });
 
-  // 1. Gráfico por categoría (ordenado mayor a menor)
+  // Paleta pastel
+  const PASTEL=['#F4A7BB','#C3B1E1','#A8D8C8','#A7C7E7','#FCCEB5','#F7E1A0','#E8A0BF','#B5CDA3','#D4B5E5','#F9C4D2'];
+  const donutOpts=(pos)=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:pos||'right',labels:{font:{size:10,weight:'500',family:'DM Sans'},padding:10,boxWidth:12,usePointStyle:true,pointStyle:'circle'}},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.parsed} reuniones`}}},cutout:'55%'});
+
+  // 1. Categorías — doughnut
   const catEntries=Object.entries(porCat).sort((a,b)=>b[1]-a[1]);
   mkChart('ch-reu-categoria',{
-    type:'bar',
-    data:{labels:catEntries.map(e=>e[0]),datasets:[{data:catEntries.map(e=>e[1]),backgroundColor:['#C9A96E','#1A5FA8','#2A7A5A'],borderWidth:0,borderRadius:5}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1,font:{size:9}}}}}
+    type:'doughnut',
+    data:{labels:catEntries.map(e=>e[0]),datasets:[{data:catEntries.map(e=>e[1]),backgroundColor:['#F4A7BB','#C3B1E1','#A8D8C8'],borderWidth:2,borderColor:'#fff',hoverOffset:6}]},
+    options:donutOpts('bottom')
   });
 
-  // 2-4. Gráficos por tipo dentro de cada categoría (mayor a menor)
+  // 2-4. Tipos por categoría — doughnut
   ['Pre-venta','Venta','Post-venta'].forEach((cat,i)=>{
     const id=i===0?'ch-reu-preventa':i===1?'ch-reu-venta':'ch-reu-postventa';
     const tipos=porTipo[cat]||{};
@@ -3287,34 +3393,33 @@ function renderGraficosReuniones(){
     if(!entries.length){
       if(charts[id]){try{charts[id].destroy();}catch(e){}delete charts[id];}
       const el=document.getElementById(id);
-      if(el){const ctx=el.getContext('2d');ctx.clearRect(0,0,el.width,el.height);ctx.font='12px DM Sans';ctx.fillStyle='#999';ctx.textAlign='center';ctx.fillText('Sin datos',el.width/2,el.height/2);}
+      if(el){const ctx=el.getContext('2d');ctx.clearRect(0,0,el.width,el.height);ctx.font='12px DM Sans';ctx.fillStyle='#bbb';ctx.textAlign='center';ctx.fillText('Sin datos',el.width/2,el.height/2);}
       return;
     }
-    const colors=['#C9A96E','#1A5FA8','#2A7A5A','#8A5A2A','#7A3A8A','#C0392B','#E67E22'];
     mkChart(id,{
-      type:'bar',
-      data:{labels:entries.map(e=>e[0]),datasets:[{data:entries.map(e=>e[1]),backgroundColor:entries.map((_,idx)=>colors[idx%colors.length]),borderWidth:0,borderRadius:4}]},
-      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1,font:{size:8}}},y:{ticks:{font:{size:9}}}}}
+      type:'doughnut',
+      data:{labels:entries.map(e=>e[0]),datasets:[{data:entries.map(e=>e[1]),backgroundColor:entries.map((_,idx)=>PASTEL[idx%PASTEL.length]),borderWidth:2,borderColor:'#fff',hoverOffset:6}]},
+      options:donutOpts('right')
     });
   });
 
-  // 5. Reuniones por ejecutivo (mayor a menor, dorado al top)
+  // 5. Por ejecutivo — doughnut
   const execEntries=Object.entries(porExec).sort((a,b)=>b[1]-a[1]);
   if(execEntries.length){
     mkChart('ch-reu-exec',{
-      type:'bar',
-      data:{labels:execEntries.map(e=>e[0]),datasets:[{data:execEntries.map(e=>e[1]),backgroundColor:execEntries.map((_,i)=>i===0?'#C9A96E':'#1A5FA8'),borderWidth:0,borderRadius:4}]},
-      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1,font:{size:9}}},y:{ticks:{font:{size:9}}}}}
+      type:'doughnut',
+      data:{labels:execEntries.map(e=>e[0]),datasets:[{data:execEntries.map(e=>e[1]),backgroundColor:execEntries.map((_,i)=>PASTEL[i%PASTEL.length]),borderWidth:2,borderColor:'#fff',hoverOffset:6}]},
+      options:donutOpts('right')
     });
   }
 
-  // 6. Acompañantes (pares, mayor a menor)
-  const acompEntries=Object.entries(acompPairs).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  // 6. Acompañantes — doughnut
+  const acompEntries=Object.entries(acompPairs).sort((a,b)=>b[1]-a[1]).slice(0,8);
   if(acompEntries.length){
     mkChart('ch-reu-acompanantes',{
-      type:'bar',
-      data:{labels:acompEntries.map(e=>e[0]),datasets:[{data:acompEntries.map(e=>e[1]),backgroundColor:acompEntries.map((_,i)=>i===0?'#C9A96E':'#2A7A5A'),borderWidth:0,borderRadius:4}]},
-      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1,font:{size:9}}},y:{ticks:{font:{size:8}}}}}
+      type:'doughnut',
+      data:{labels:acompEntries.map(e=>e[0]),datasets:[{data:acompEntries.map(e=>e[1]),backgroundColor:acompEntries.map((_,i)=>PASTEL[i%PASTEL.length]),borderWidth:2,borderColor:'#fff',hoverOffset:6}]},
+      options:donutOpts('right')
     });
   }
 }

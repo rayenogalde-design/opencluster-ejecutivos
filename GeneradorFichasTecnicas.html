@@ -2050,10 +2050,24 @@ async function generarPDF(){
   ficha.style.marginBottom='0';
   ficha.style.display='flex';
   ficha.classList.add('pdf-mode');
-  // Forzar ocultar elementos de editor con inline style
-  ficha.querySelectorAll('.f-footer-preview,.page-break-marker,.page-break-spacer,.block-x,.f-edit-hint').forEach(el=>{el.dataset._oldDisplay=el.style.display;el.style.display='none';});
+  // Ocultar elementos de editor
+  ficha.querySelectorAll('.f-footer-preview,.page-break-marker,.block-x,.f-edit-hint').forEach(el=>{el.dataset._oldDisplay=el.style.display;el.style.display='none';});
 
-  // Exec card eliminado — footer en todas las páginas
+  // Recalcular page breaks antes de generar PDF
+  renderPageBreaks();
+  // Ahora convertir spacers en page-break marks
+  ficha.querySelectorAll('.page-break-spacer').forEach(el=>{
+    el.dataset._oldDisplay=el.style.display;
+    el.dataset._oldHeight=el.style.height;
+    el.dataset._oldHtml=el.innerHTML;
+    el.innerHTML='';
+    el.style.height='0';
+    el.style.padding='0';
+    el.style.margin='0';
+    el.style.overflow='hidden';
+    el.style.pageBreakBefore='always';
+    el.style.breakBefore='page';
+  });
 
   const titulo=getTitle()||'Ficha_Tecnica';
   const nombreArchivo=titulo.replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ ]/g,'').replace(/\s+/g,'_');
@@ -2153,7 +2167,17 @@ async function generarPDF(){
   ficha.style.marginBottom=prevMargin;
   ficha.style.display=prevDisplay;
   ficha.classList.remove('pdf-mode');
-  ficha.querySelectorAll('.f-footer-preview,.page-break-marker,.page-break-spacer,.block-x,.f-edit-hint').forEach(el=>{el.style.display=el.dataset._oldDisplay||'';delete el.dataset._oldDisplay;});
+  ficha.querySelectorAll('.f-footer-preview,.page-break-marker,.block-x,.f-edit-hint').forEach(el=>{el.style.display=el.dataset._oldDisplay||'';delete el.dataset._oldDisplay;});
+  // Restaurar spacers de Vista Páginas
+  ficha.querySelectorAll('.page-break-spacer').forEach(el=>{
+    el.style.display=el.dataset._oldDisplay||'';
+    el.style.height=el.dataset._oldHeight||'';
+    el.innerHTML=el.dataset._oldHtml||'';
+    el.style.pageBreakBefore='';
+    el.style.breakBefore='';
+    el.style.padding='';el.style.margin='';el.style.overflow='';
+    delete el.dataset._oldDisplay;delete el.dataset._oldHeight;delete el.dataset._oldHtml;
+  });
   const spacerR=document.getElementById('execSpacer');
   const sliderR=document.getElementById('spacerSlider');
   if(spacerR&&sliderR){spacerR.style.height=sliderR.value+'px';spacerR.style.flex='none';}

@@ -1394,13 +1394,15 @@ function checkAlertas(){
   // Regla: alerta aparece cada 3 días sin gestión HASTA que tengan 3 seguimientos
   // Después de 3 seguimientos, no más alertas
   // A los 40 días de la cotización, preguntar si se da por perdida
+  // FNDR posterga 3 meses (90 días) antes de reaparecer
   const sinGestion=COTS.filter(c=>{
     if(c.estado==='Ganada'||c.estado==='Perdida'||c.estado==='Cancelada')return false;
     const numSegs=c.segs?c.segs.length:0;
     if(numSegs>=3)return false; // Ya tiene 3+ seguimientos, no más alertas
     const dias=diasSinGestion(c);
     if(dias===null)return !c.gestion; // nunca gestionada
-    return dias>=3;
+    const umbral=c.estado==='FNDR'?90:3;
+    return dias>=umbral;
   });
   // 1b. Cotizaciones con 40+ días para preguntar estado
   const viejas=COTS.filter(c=>{
@@ -1627,7 +1629,8 @@ function renderResumen(){
     if(c.estado==='Ganada'||c.estado==='Perdida'||c.estado==='Cancelada')return false;
     if(c.segs&&c.segs.length>=3)return false;
     const dias=diasSinGestion(c);
-    return dias===null?!c.gestion:dias>=3;
+    const umbral=c.estado==='FNDR'?90:3;
+    return dias===null?!c.gestion:dias>=umbral;
   }).length;
   const ctSMmes=cotsHoy.filter(esSM).length;
   const ctATmes=cotsHoy.filter(esAT).length;
@@ -2452,6 +2455,7 @@ function buildAccCot(c,soloVista,prefix){
             <option>Ganada</option>
             <option>Perdida</option>
             <option>Cancelada</option>
+            <option>FNDR</option>
           </select>
         </div>
         <div class="fld" style="margin-bottom:0;">
@@ -2670,8 +2674,10 @@ function renderSeguimientos(){
     if(c.estado==='Ganada'||c.estado==='Perdida'||c.estado==='Cancelada')return false;
     if(c.segs&&c.segs.length>=3)return false; // 3+ seguimientos = no más alertas
     const dias=diasSinGestion(c);
-    // Si fue gestionada hace menos de 3 días, no mostrar
-    if(dias!==null&&dias<3)return false;
+    // Si estado es FNDR, postergar 3 meses (~90 días) antes de reaparecer.
+    // Si no, umbral normal de 3 días desde última gestión.
+    const umbral=c.estado==='FNDR'?90:3;
+    if(dias!==null&&dias<umbral)return false;
     return true;
   });
   const lista=document.getElementById('seg-list');

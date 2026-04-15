@@ -481,7 +481,7 @@ select.login-inp{appearance:none;cursor:pointer;}
           <div class="form-wrap">
             <div class="form-title">Nuevo Contacto</div>
             <div class="fld"><label>Nombre del contacto *</label><input type="text" id="pc-nombre" placeholder="Nombre de la persona" style="font-size:14px;padding:10px 12px;"></div>
-            <div class="fld"><label>Institución *</label><input type="text" id="pc-inst" placeholder="Municipalidad, hospital, escuela..." style="font-size:14px;padding:10px 12px;"></div>
+            <div class="fld"><label>Institución</label><input type="text" id="pc-inst" placeholder="Municipalidad, hospital, escuela... (opcional)" style="font-size:14px;padding:10px 12px;"></div>
             <div class="f2">
               <div class="fld"><label>Cargo</label><input type="text" id="pc-cargo" placeholder="Director, encargado..." style="font-size:13px;padding:9px 12px;"></div>
               <div class="fld"><label>Ciudad</label><input type="text" id="pc-ciudad" placeholder="Ciudad" style="font-size:13px;padding:9px 12px;"></div>
@@ -505,6 +505,7 @@ select.login-inp{appearance:none;cursor:pointer;}
               <select id="pc-resultado" style="font-size:14px;padding:10px 12px;">
                 <option value="">— Seleccionar —</option>
                 <option value="Aceptó reunión">Aceptó reunión</option>
+                <option value="Esperando respuesta">Esperando respuesta</option>
                 <option value="Interesado, pendiente">Interesado, pendiente</option>
                 <option value="No respondió">No respondió</option>
                 <option value="Rechazó">Rechazó</option>
@@ -2758,6 +2759,7 @@ function renderContactos(){
         </div>
         <div style="display:flex;gap:6px;align-items:center;">
           <span style="font-size:10px;font-weight:700;color:${resColor};background:${resColor}15;padding:3px 10px;border-radius:6px;">${esc(c.resultado)}</span>
+          <button onclick="toggleVerContacto('${eid}-ver')" style="display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;color:var(--sapp);background:var(--sapp-lt);border:1px solid rgba(26,95,168,.2);border-radius:5px;padding:3px 8px;cursor:pointer;font-family:inherit;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Ver</button>
           <button onclick="toggleEditContacto(${idx},'${eid}')" style="font-size:9px;font-weight:700;color:var(--sapp);background:var(--sapp-lt);border:1px solid rgba(26,95,168,.2);border-radius:5px;padding:3px 9px;cursor:pointer;font-family:inherit;">Editar</button>
         </div>
       </div>
@@ -2768,6 +2770,22 @@ function renderContactos(){
         ${c.email?`<a href="mailto:${esc(c.email)}" style="color:var(--sapp);text-decoration:none;font-weight:600;">${esc(c.email)}</a>`:''}
       </div>
       ${c.notas?`<div style="font-size:12px;color:#555;margin-top:4px;line-height:1.4;">${esc(c.notas)}</div>`:''}
+      <div id="${eid}-ver" style="display:none;margin-top:10px;padding:12px 14px;background:linear-gradient(135deg,rgba(26,95,168,.05),rgba(6,179,253,.03));border-radius:8px;border:1px solid rgba(26,95,168,.15);">
+        <div style="font-size:10px;font-weight:700;color:var(--sapp);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Detalles del contacto</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;font-size:12px;">
+          <div><strong style="color:var(--mist);font-weight:600;">Nombre:</strong> ${esc(c.nombre||'—')}</div>
+          <div><strong style="color:var(--mist);font-weight:600;">Institución:</strong> ${esc(c.institucion||'—')}</div>
+          <div><strong style="color:var(--mist);font-weight:600;">Cargo:</strong> ${esc(c.cargo||'—')}</div>
+          <div><strong style="color:var(--mist);font-weight:600;">Ciudad:</strong> ${esc(c.ciudad||'—')}</div>
+          <div><strong style="color:var(--mist);font-weight:600;">Teléfono:</strong> ${c.tel?`<a href="tel:${esc(c.tel)}" style="color:var(--sapp);text-decoration:none;">${esc(c.tel)}</a>`:'—'}</div>
+          <div><strong style="color:var(--mist);font-weight:600;">Email:</strong> ${c.email?`<a href="mailto:${esc(c.email)}" style="color:var(--sapp);text-decoration:none;">${esc(c.email)}</a>`:'—'}</div>
+          <div><strong style="color:var(--mist);font-weight:600;">Medio:</strong> ${esc(c.medio||'—')}</div>
+          <div><strong style="color:var(--mist);font-weight:600;">Fecha:</strong> ${esc(c.fecha||'—')}</div>
+          <div><strong style="color:var(--mist);font-weight:600;">Resultado:</strong> ${esc(c.resultado||'—')}</div>
+          <div><strong style="color:var(--mist);font-weight:600;">Ejecutivo:</strong> ${esc(c.ejecutivo||'—')}</div>
+        </div>
+        ${c.notas?`<div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(26,95,168,.12);"><strong style="color:var(--mist);font-weight:600;font-size:12px;">Notas:</strong><div style="font-size:12px;color:#333;margin-top:4px;line-height:1.4;">${esc(c.notas)}</div></div>`:''}
+      </div>
       <div id="${eid}" style="display:none;margin-top:10px;padding:12px;background:var(--paper);border-radius:8px;border:1px solid var(--smoke);">
         <div class="f2" style="margin-bottom:6px;">
           <div class="fld" style="margin-bottom:0;"><label>Nombre</label><input type="text" id="${eid}-nom" value="${esc(c.nombre)}" style="font-size:13px;padding:8px 10px;"></div>
@@ -2789,7 +2807,7 @@ function renderContactos(){
           </div>
           <div class="fld" style="margin-bottom:0;"><label>Resultado</label>
             <select id="${eid}-res" style="font-size:13px;padding:8px 10px;">
-              <option${c.resultado==='Aceptó reunión'?' selected':''}>Aceptó reunión</option><option${c.resultado==='Interesado, pendiente'?' selected':''}>Interesado, pendiente</option><option${c.resultado==='No respondió'?' selected':''}>No respondió</option><option${c.resultado==='Rechazó'?' selected':''}>Rechazó</option><option${c.resultado==='Derivó a otra persona'?' selected':''}>Derivó a otra persona</option>
+              <option${c.resultado==='Aceptó reunión'?' selected':''}>Aceptó reunión</option><option${c.resultado==='Esperando respuesta'?' selected':''}>Esperando respuesta</option><option${c.resultado==='Interesado, pendiente'?' selected':''}>Interesado, pendiente</option><option${c.resultado==='No respondió'?' selected':''}>No respondió</option><option${c.resultado==='Rechazó'?' selected':''}>Rechazó</option><option${c.resultado==='Derivó a otra persona'?' selected':''}>Derivó a otra persona</option>
             </select>
           </div>
         </div>
@@ -2809,7 +2827,6 @@ async function guardarPrimerContacto(){
   const inst=document.getElementById('pc-inst').value.trim();
   const resultado=document.getElementById('pc-resultado').value;
   if(!nombre){toast('Ingresa el nombre del contacto','warn');return;}
-  if(!inst){toast('Ingresa la institución','warn');return;}
   if(!_medioContacto){toast('Selecciona el medio de contacto','warn');return;}
   if(!resultado){toast('Selecciona el resultado del contacto','warn');return;}
   const contacto={
@@ -2849,6 +2866,11 @@ async function guardarPrimerContacto(){
 
 function toggleEditContacto(idx,eid){
   const el=document.getElementById(eid);
+  if(el)el.style.display=el.style.display==='none'?'block':'none';
+}
+
+function toggleVerContacto(verId){
+  const el=document.getElementById(verId);
   if(el)el.style.display=el.style.display==='none'?'block':'none';
 }
 

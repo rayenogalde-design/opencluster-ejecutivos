@@ -775,6 +775,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);d
       <div class="card" style="margin-bottom:16px;">
         <div class="card-hd"><h3>Reuniones Registradas</h3><span class="badge b-ink" id="reu-count-badge">0</span></div>
         <div id="reu-kpis-row" style="padding:10px 15px;border-bottom:1px solid var(--smoke);"></div>
+        <div id="reu-filtros-row" style="padding:9px 14px;border-bottom:1px solid var(--smoke);display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:var(--paper);">
+          <span style="font-size:10px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;">Filtrar:</span>
+          <select id="reu-filtro-tipo" onchange="renderReunionLista()" style="font-size:11.5px;padding:5px 10px;border:1px solid var(--smoke);border-radius:6px;font-family:'DM Sans',sans-serif;color:var(--ink);outline:none;background:#fff;">
+            <option value="">Todos los tipos</option>
+          </select>
+          <select id="reu-filtro-exec" onchange="renderReunionLista()" style="font-size:11.5px;padding:5px 10px;border:1px solid var(--smoke);border-radius:6px;font-family:'DM Sans',sans-serif;color:var(--ink);outline:none;background:#fff;">
+            <option value="">Todos los ejecutivos</option>
+          </select>
+          <button onclick="document.getElementById('reu-filtro-tipo').value='';document.getElementById('reu-filtro-exec').value='';renderReunionLista();" style="font-size:10.5px;font-weight:600;color:var(--mist);background:none;border:1px solid var(--smoke);border-radius:6px;padding:4px 10px;cursor:pointer;">✕ Limpiar</button>
+        </div>
         <div id="reu-lista" style="padding:9px 14px;max-height:560px;overflow-y:auto;"></div>
       </div>
 
@@ -2096,21 +2106,72 @@ function renderNovedades(){
 // ════════════════════════════════════════════
 // EJECUTIVOS
 // ════════════════════════════════════════════
+// Helper: parsear una fecha (cualquier formato común) → mes abreviado "Ene","Feb"...
+function parseMesReuCard(f){
+  if(!f)return'';
+  const s=String(f).trim();
+  const MESES_ABR=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  let d=null;
+  if(s.includes('T'))d=new Date(s);
+  if(!d||isNaN(d)){const m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);if(m)d=new Date(+m[1],+m[2]-1,+m[3]);}
+  if(!d||isNaN(d)){const m2=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);if(m2)d=new Date(+m2[3],+m2[2]-1,+m2[1]);}
+  if(d&&!isNaN(d))return MESES_ABR[d.getMonth()];
+  // Formato español "11 de abril 2026" o "11 Abr 2026"
+  const parts=s.split(/\s+/);
+  if(parts.length>=3&&parts[1]==='de'){
+    const MMAP={enero:'Ene',febrero:'Feb',marzo:'Mar',abril:'Abr',mayo:'May',junio:'Jun',julio:'Jul',agosto:'Ago',septiembre:'Sep',octubre:'Oct',noviembre:'Nov',diciembre:'Dic'};
+    return MMAP[parts[2].toLowerCase()]||'';
+  }
+  if(parts.length>=2&&parts[1].length===3) return parts[1].charAt(0).toUpperCase()+parts[1].slice(1).toLowerCase();
+  return '';
+}
+
+// Toggle del panel desplegable en card de ejecutivo
+function toggleExecDetail(id){
+  const el=document.getElementById(id);
+  if(el)el.style.display=el.style.display==='none'?'block':'none';
+}
+
 function renderEjecutivos(){
   const data=getD();
   const grid=document.getElementById('exec-grid');grid.innerHTML='';
+  const mesActual=getMes();
   EXECS.forEach(e=>{
     const cots=data.filter(c=>c.exec===e.name);
     const gan=cots.filter(c=>c.estado==='Ganada').reduce((s,c)=>s+c.neto,0);
-    const d=document.createElement('div');d.className='ecard';d.onclick=()=>abrirPanel(e.name);
-    d.innerHTML=`<span class="ecard-arr">›</span>
+    // Reuniones del mes gestionadas por este ejecutivo (como creador)
+    const miShort=(e.short||e.name.split(' ')[0]);
+    const reunionesMes=reuniones.filter(r=>{
+      const creador=(r.creador||'').trim();
+      const esEste=creador===e.name||creador===miShort||creador.split(' ')[0]===miShort;
+      if(!esEste)return false;
+      return parseMesReuCard(r.fecha)===mesActual;
+    });
+    // Primeros contactos del mes de este ejecutivo
+    const contactosMes=contactosDash.filter(c=>{
+      const ej=(c['Ejecutivo']||'').trim();
+      if(ej!==e.name&&ej!==miShort)return false;
+      return parseMesReuCard(c['Fecha'])===mesActual;
+    });
+    const detailId='edet-'+e.name.replace(/\s+/g,'_');
+    const d=document.createElement('div');d.className='ecard';
+    d.innerHTML=`<span class="ecard-arr" onclick="event.stopPropagation();abrirPanel('${e.name.replace(/'/g,"\\'")}');">›</span>
       <div class="ecard-av" style="background:${e.color}">${e.init}</div>
       <div class="ecard-name">${e.name}</div><div class="ecard-role">Ejecutivo Comercial</div>
       <div class="ecard-row">
         <div class="ecard-stat"><div class="ecard-sl">Cotiz.</div><div class="ecard-sv">${cots.length}</div></div>
         <div class="ecard-stat"><div class="ecard-sl">Ganadas</div><div class="ecard-sv" style="color:var(--jade)">${cots.filter(c=>c.estado==='Ganada').length}</div></div>
       </div>
-      <div class="ecard-money">${cots.length?fmt(gan)+' vendido':'Sin actividad'}</div>`;
+      <div class="ecard-money">${cots.length?fmt(gan)+' vendido':'Sin actividad'}</div>
+      <button onclick="event.stopPropagation();toggleExecDetail('${detailId}');" style="margin-top:10px;width:100%;padding:7px 10px;background:var(--paper);color:var(--sapp);border:1px solid var(--smoke);border-radius:6px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:5px;">
+        📋 Reuniones (${reunionesMes.length}) y Contactos (${contactosMes.length}) del mes
+      </button>
+      <div id="${detailId}" style="display:none;margin-top:10px;padding:10px 12px;background:var(--paper);border-radius:7px;border:1px solid var(--smoke);text-align:left;">
+        <div style="font-size:9.5px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">Reuniones de ${mesActual}</div>
+        ${reunionesMes.length?reunionesMes.map(r=>`<div style="font-size:10.5px;padding:5px 8px;background:#fff;border-left:2px solid ${e.color};border-radius:4px;margin-bottom:4px;"><div style="font-weight:700;color:var(--ink);">${r.institucion||r.nombre||'—'}</div><div style="color:var(--mist);font-size:9.5px;margin-top:1px;">${fmtFechaGlobal(r.fecha)||'—'} · ${r.tipo||'—'}${r.resultado?' · '+r.resultado:''}</div></div>`).join(''):'<div style="font-size:10.5px;color:var(--mist);padding:5px 0;font-style:italic;">Sin reuniones este mes.</div>'}
+        <div style="font-size:9.5px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 5px;">Primeros Contactos de ${mesActual}</div>
+        ${contactosMes.length?contactosMes.map(c=>`<div style="font-size:10.5px;padding:5px 8px;background:#fff;border-left:2px solid var(--gold);border-radius:4px;margin-bottom:4px;"><div style="font-weight:700;color:var(--ink);">${c['Nombre']||'—'}${c['Institucion']?' · '+c['Institucion']:''}</div><div style="color:var(--mist);font-size:9.5px;margin-top:1px;">${fmtFechaGlobal(c['Fecha'])||'—'} · ${c['Medio']||'—'}${c['Resultado']?' · '+c['Resultado']:''}</div></div>`).join(''):'<div style="font-size:10.5px;color:var(--mist);padding:5px 0;font-style:italic;">Sin primeros contactos este mes.</div>'}
+      </div>`;
     grid.appendChild(d);
   });
   const met=document.getElementById('exec-metas');let h='';
@@ -2935,9 +2996,44 @@ function renderReunionLista(){
 
   const resCls={Exitosa:'t-gan',Reagendar:'t-si',Pendiente:'t-env','Sin interés':'t-per','Posible cliente':'t-si'};
 
+  // ── FILTROS ──
+  // Poblar dinámicamente los selects si aún no tienen opciones
+  const filtroTipoSel=document.getElementById('reu-filtro-tipo');
+  const filtroExecSel=document.getElementById('reu-filtro-exec');
+  const tipoActual=filtroTipoSel?filtroTipoSel.value:'';
+  const execActual=filtroExecSel?filtroExecSel.value:'';
+  if(filtroTipoSel&&filtroTipoSel.options.length<=1){
+    const tiposUnicos=[...new Set(reuniones.map(r=>(r.tipo||'').trim()).filter(Boolean))].sort();
+    tiposUnicos.forEach(t=>{
+      const opt=document.createElement('option');opt.value=t;opt.textContent=t;
+      filtroTipoSel.appendChild(opt);
+    });
+    if(tipoActual) filtroTipoSel.value=tipoActual;
+  }
+  if(filtroExecSel&&filtroExecSel.options.length<=1){
+    const execsUnicos=[...new Set(reuniones.map(r=>(r.creador||'').trim()).filter(Boolean))].sort();
+    execsUnicos.forEach(e=>{
+      const opt=document.createElement('option');opt.value=e;opt.textContent=e;
+      filtroExecSel.appendChild(opt);
+    });
+    if(execActual) filtroExecSel.value=execActual;
+  }
+
+  // Aplicar filtros
+  let reusFiltradas=reuniones;
+  if(tipoActual) reusFiltradas=reusFiltradas.filter(r=>(r.tipo||'').trim()===tipoActual);
+  if(execActual){
+    // Filtrar por ejecutivo: matchea si es creador O si aparece en acompañantes
+    reusFiltradas=reusFiltradas.filter(r=>{
+      const creador=(r.creador||'').trim();
+      const acomp=(r.acompanantes||'').split(/[,;|]/).map(s=>s.trim()).filter(Boolean);
+      return creador===execActual || acomp.includes(execActual);
+    });
+  }
+
   lista.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:11px;">
     <thead><tr style="background:var(--paper);border-bottom:2px solid var(--smoke);">
-      <th style="padding:9px 10px;text-align:left;font-size:9px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;width:90px;">Fecha</th>
+      <th style="padding:9px 10px;text-align:left;font-size:9px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;width:110px;">Fecha</th>
       <th style="padding:9px 10px;text-align:left;font-size:9px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;">Tipo</th>
       <th style="padding:9px 10px;text-align:left;font-size:9px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;">Prospecto / Institución</th>
       <th style="padding:9px 10px;text-align:left;font-size:9px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;">Gestionó</th>
@@ -2945,7 +3041,7 @@ function renderReunionLista(){
       <th style="padding:9px 10px;text-align:left;font-size:9px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;">Email / Tel</th>
       <th style="padding:9px 10px;text-align:left;font-size:9px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;">Resultado</th>
     </tr></thead>
-    <tbody>${reuniones.map((r,i)=>{
+    <tbody>${!reusFiltradas.length?`<tr><td colspan="7" style="padding:22px;text-align:center;color:var(--mist);font-size:11.5px;">Sin reuniones para este filtro.</td></tr>`:reusFiltradas.map((r,i)=>{
       const {creador,acompanantes}=sepExecs(r.ejecutivos,r.creador,r.acompanantes);
       const fechaBonita=fmtFechaGlobal(r.fecha);
       return`<tr style="border-bottom:1px solid var(--smoke);${i%2===0?'':'background:var(--paper);'}">
@@ -3522,8 +3618,8 @@ function renderGraficosReuniones(){
   // Contar por categoría
   const porCat={'Pre-venta':0,'Venta':0,'Post-venta':0};
   const porTipo={};
-  const porExec={};
-  const acompPairs={};
+  const porExec={};      // Reuniones GESTIONADAS por cada ejecutivo (como creador)
+  const porAcomp={};     // Reuniones en que cada ejecutivo fue ACOMPAÑANTE
   reuniones.forEach(r=>{
     const tipo=r.tipo||r['Tipo']||'';
     const cat=categoriaDeTipo(tipo);
@@ -3532,18 +3628,14 @@ function renderGraficosReuniones(){
       if(!porTipo[cat])porTipo[cat]={};
       porTipo[cat][tipo]=(porTipo[cat][tipo]||0)+1;
     }
-    const execsStr=r.ejecutivos||r['Ejecutivos']||'';
-    const execs=execsStr.split(',').map(s=>s.trim()).filter(Boolean);
-    execs.forEach(e=>{porExec[e]=(porExec[e]||0)+1;});
-    // Acompañantes: pares de ejecutivos en la misma reunión
-    if(execs.length>=2){
-      for(let i=0;i<execs.length;i++){
-        for(let j=i+1;j<execs.length;j++){
-          const pair=[execs[i],execs[j]].sort().join(' + ');
-          acompPairs[pair]=(acompPairs[pair]||0)+1;
-        }
-      }
-    }
+    // Creador = gestor (quien creó la reunión)
+    const creador=(r.creador||r['Creador']||'').trim();
+    if(creador) porExec[creador]=(porExec[creador]||0)+1;
+    // Acompañantes: cuántas veces cada ejecutivo fue acompañante (no gestor)
+    const acompStr=r.acompanantes||r['Acompañantes']||r['Acompanantes']||'';
+    acompStr.split(/[,;|]/).map(s=>s.trim()).filter(Boolean).forEach(a=>{
+      porAcomp[a]=(porAcomp[a]||0)+1;
+    });
   });
 
   // Paleta pastel
@@ -3586,15 +3678,15 @@ function renderGraficosReuniones(){
     });
   }
 
-  // 6. Acompañantes — doughnut
-  const acompEntries=Object.entries(acompPairs).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  // 6. Acompañantes por nombre — doughnut (cuántas veces cada ejecutivo fue acompañante)
+  const acompEntries=Object.entries(porAcomp).sort((a,b)=>b[1]-a[1]);
   if(acompEntries.length){
     mkChart('ch-reu-acompanantes',{
       type:'doughnut',
       data:{labels:acompEntries.map(e=>e[0]),datasets:[{data:acompEntries.map(e=>e[1]),backgroundColor:acompEntries.map((_,i)=>PASTEL[i%PASTEL.length]),borderWidth:2,borderColor:'#fff',hoverOffset:6}]},
       options:donutOpts('right')
     });
-  }
+  } else if(charts['ch-reu-acompanantes']){try{charts['ch-reu-acompanantes'].destroy();}catch(e){}delete charts['ch-reu-acompanantes'];}
 }
 
 // ════════════════════════════════════════════

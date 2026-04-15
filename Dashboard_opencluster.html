@@ -363,11 +363,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);d
 .toast.on{opacity:1;}
 
 ::-webkit-scrollbar{width:4px;} ::-webkit-scrollbar-thumb{background:var(--smoke);border-radius:2px;}
+@media print{.volver-central{display:none!important;}}
 </style>
 </head>
 <body>
 
 <!-- SIDEBAR -->
+<a href="index.html" style="position:fixed;top:10px;left:12px;z-index:99999;font-size:12px;font-weight:700;color:#fff;text-decoration:none;font-family:'DM Sans',sans-serif;background:linear-gradient(135deg,#ff7e00,#ff9a56);padding:7px 14px;border-radius:20px;box-shadow:0 3px 10px rgba(255,126,0,.35);transition:all .2s;display:inline-flex;align-items:center;gap:5px;" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 5px 14px rgba(255,126,0,.5)'" onmouseout="this.style.transform='';this.style.boxShadow='0 3px 10px rgba(255,126,0,.35)'" class="volver-central">&larr; Volver a la Central</a>
+
 <aside class="sb">
   <div class="sb-head">
     <div class="sb-logo">Open<em>Cluster</em> Tech</div>
@@ -1151,7 +1154,7 @@ const RAZONES = [
 ];
 
 // ═══ Apps Script — fuente principal (siempre datos en vivo) ═══
-const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbzNGrOr-gWj_rcUKnt3hYVt4FRQhsnUbvXNVMppgGCiUBqhq1Cl-pbAlZ1jZf7dYGrS/exec";
+const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbzvqg3Hy7XmLWiW2KYAJimcntv_Z3aPT1mw62jOa9vYDNTA36Q5K3lCOHWn52g8EL_P/exec";
 
 // ═══ Google Sheet — fallback vía gviz si Apps Script falla ═══
 const SHEET_ID = "1sIZcID1Ei5kdGjLBSiJoDioGPlblvAzvDPIT6q2OBt8";
@@ -1351,15 +1354,26 @@ function rowToReu(r, i) {
     }
     return '';
   };
+  var _creador = gf('Creador','creador','Gestiono','Gestionó','Gestor');
+  var _acomp   = gf('Acompañantes','Acompanantes','acompañantes','acompanantes','Acompañante','Acompanante');
+  var _ejecs   = gf('Ejecutivos','ejecutivos','Ejecutivo','Participantes','Equipo');
+  // Si no existe columna "Ejecutivos" (fue eliminada por redundante), componer desde creador + acompañantes
+  if (!_ejecs) {
+    var _parts = [];
+    if (_creador) _parts.push(_creador);
+    if (_acomp) _acomp.split(/[,;|]/).map(function(s){return s.trim();}).filter(Boolean).forEach(function(a){_parts.push(a);});
+    _ejecs = _parts.join(', ');
+  }
   return {
     id: Date.now()+i,
     fecha:       gf('Fecha','fecha','Date'),
     hora:        gf('Hora','hora','Hour','Time'),
     tipo:        gf('Tipo','tipo','Type','Tipo de Reunión','Tipo Reunion'),
-    creador:     gf('Creador','creador'),
-    ejecutivos:  gf('Ejecutivos','ejecutivos'),
-    nombre:      gf('Prospecto','prospecto'),
-    institucion: gf('Institución','Institucion','institucion','Empresa','empresa','Organización'),
+    creador:     _creador,
+    ejecutivos:  _ejecs,
+    acompanantes:_acomp,
+    nombre:      gf('Prospecto','prospecto','Nombre Prospecto','Nombre prospecto','Contacto','Nombre Contacto','Cliente','Nombre Cliente'),
+    institucion: gf('Institución','Institucion','institucion','Empresa','empresa','Organización','Organizacion'),
     cargo:       gf('Cargo','cargo','Rol'),
     telefono:    gf('Teléfono','Telefono','telefono','Fono','fono','Phone','Tel'),
     email:       gf('Email','email','Correo','correo','Mail'),
@@ -1906,8 +1920,38 @@ function renderResumen(){
       x:{grid:{display:false},ticks:{font:{size:10.5},color:'#1C2333'},border:{display:false}}}},plugins:[dlPlug()]});
 
   // ── Gráfico: Seguimientos pendientes por ejecutivo ──
+  // ⚠ Alineado con lógica del Portal Ejecutivo (renderSeguimientos):
+  //   - Excluye estados finales: Ganada / Perdida / Cancelada
+  //   - Excluye cotizaciones con 3+ seguimientos registrados
+  //   - Excluye cotizaciones gestionadas hace menos de 3 días
+  const _parseFechaDash=(f)=>{
+    if(!f)return null;
+    const s=String(f).trim();
+    // "15 de Abril, 2026" o "15 de abril 2026"
+    const MMAP={enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,julio:6,agosto:7,septiembre:8,octubre:9,noviembre:10,diciembre:11,ene:0,feb:1,mar:2,abr:3,may:4,jun:5,jul:6,ago:7,sep:8,oct:9,nov:10,dic:11};
+    const m1=s.match(/^(\d{1,2})\s+(?:de\s+)?([A-Za-zÁÉÍÓÚáéíóú]+)[,\s]+(\d{4})/);
+    if(m1){const mo=MMAP[m1[2].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')];if(mo!==undefined)return new Date(+m1[3],mo,+m1[1]);}
+    // "15/04/2026" o "15-04-2026"
+    const m2=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+    if(m2)return new Date(+m2[3],+m2[2]-1,+m2[1]);
+    const d=new Date(s);
+    return isNaN(d)?null:d;
+  };
+  const _diasSinGestionDash=(c)=>{
+    if(!c.gestion)return null;
+    const d=_parseFechaDash(c.gestion);
+    if(!d)return null;
+    return Math.floor((Date.now()-d.getTime())/86400000);
+  };
+  const _esPendiente=(c)=>{
+    if(c.estado==='Ganada'||c.estado==='Perdida'||c.estado==='Cancelada')return false;
+    if(c.segs&&c.segs.length>=3)return false;
+    const dias=_diasSinGestionDash(c);
+    if(dias!==null&&dias<3)return false;
+    return true;
+  };
   const segExecData=execsActivos.map(e=>{
-    const sinG=all.filter(c=>c.exec===e.name&&c.estado!=='Ganada'&&c.estado!=='Perdida'&&!c.gestion).length;
+    const sinG=all.filter(c=>c.exec===e.name&&_esPendiente(c)).length;
     return{e,sinG};
   }).sort((a,b)=>b.sinG-a.sinG);
   const totalSinG=segExecData.reduce((s,d)=>s+d.sinG,0);
@@ -2873,8 +2917,15 @@ function renderReunionLista(){
     return s;
   }
   // Separar creador y acompañantes
-  function sepExecs(execStr,creador){
-    const all=(execStr||'').split(',').map(s=>s.trim()).filter(Boolean);
+  function sepExecs(execStr,creador,acompanantesDirect){
+    // Si el Sheet tiene una columna "Acompañantes" separada, usarla directa
+    if(acompanantesDirect && String(acompanantesDirect).trim()){
+      const acompFromSheet=String(acompanantesDirect).split(/[,|;]/).map(s=>s.trim()).filter(Boolean).map(e=>e.split(' ')[0]);
+      const cr=(creador||'').split(' ')[0];
+      return {creador:cr,acompanantes:acompFromSheet};
+    }
+    // Si no, derivar de "Ejecutivos" quitando al creador
+    const all=(execStr||'').split(/[,|;]/).map(s=>s.trim()).filter(Boolean);
     const cr=creador||(all.length?all[0]:'');
     const crShort=cr.split(' ')[0];
     const acomp=all.filter(e=>e!==cr&&e.split(' ')[0]!==crShort).map(e=>e.split(' ')[0]);
@@ -2894,14 +2945,14 @@ function renderReunionLista(){
       <th style="padding:9px 10px;text-align:left;font-size:9px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;">Resultado</th>
     </tr></thead>
     <tbody>${reuniones.map((r,i)=>{
-      const {creador,acompanantes}=sepExecs(r.ejecutivos,r.creador);
+      const {creador,acompanantes}=sepExecs(r.ejecutivos,r.creador,r.acompanantes);
       const fechaBonita=fmtFechaGlobal(r.fecha);
       return`<tr style="border-bottom:1px solid var(--smoke);${i%2===0?'':'background:var(--paper);'}">
         <td style="padding:9px 10px;font-weight:600;color:var(--ink);white-space:nowrap;">${fechaBonita}</td>
         <td style="padding:9px 10px;"><span class="tag t-env" style="font-size:9px;">${r.tipo||'—'}</span></td>
         <td style="padding:9px 10px;">
-          <div style="font-weight:700;color:var(--ink);font-size:12px;">${r.nombre||'—'}</div>
-          ${r.institucion?`<div style="font-size:10px;color:var(--mist);margin-top:1px;">${r.institucion}</div>`:''}
+          <div style="font-weight:700;color:var(--ink);font-size:12px;">${r.institucion||'—'}</div>
+          ${r.nombre?`<div style="font-size:10px;color:var(--mist);margin-top:1px;">${r.nombre}</div>`:''}
         </td>
         <td style="padding:9px 10px;font-weight:700;color:var(--sapp);font-size:12px;">${creador||'—'}</td>
         <td style="padding:9px 10px;color:var(--subtle);font-size:10px;">${acompanantes.length?acompanantes.join(', '):'—'}</td>

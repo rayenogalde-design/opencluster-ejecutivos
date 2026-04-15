@@ -2827,9 +2827,12 @@ async function guardarPrimerContacto(){
   };
   const btn=document.getElementById('btn-pc');
   btn.disabled=true;btn.textContent='Guardando...';
-  try{
-    await apiPost({accion:'registrar_contacto',...contacto});
-  }catch(e){console.warn('Error guardando contacto:',e);}
+  // ⚡ Fire-and-forget: Apps Script tarda ~15 seg en responder, bloqueaba la UI.
+  // Ahora guardamos local inmediato y sincronizamos con backend en paralelo.
+  apiPost({accion:'registrar_contacto',...contacto}).catch(e=>{
+    console.warn('Error guardando contacto en backend:',e);
+    toast('⚠ Guardado local OK, pero hubo problema al sincronizar con el servidor','warn');
+  });
   CONTACTOS.push(contacto);
   localStorage.setItem('oc_contactos_'+window.location.hostname,JSON.stringify(CONTACTOS));
   // Limpiar form
@@ -2965,7 +2968,10 @@ function renderReuniones(){
           <div style="font-size:10.5px;color:var(--mist);">${r['Fecha']||''} ${r['Tipo']?'· '+r['Tipo']:''} ${proxVencida?'· <span style="color:var(--orange);font-weight:700;">Acción pendiente</span>':''}</div>
         </div>
         <div style="flex-shrink:0;margin-left:8px;">${r['Resultado']?tagR(r['Resultado']):''}</div>
-        <span style="color:var(--silver);font-size:11px;margin-left:6px;">▾</span>
+        <span style="display:inline-flex;align-items:center;gap:3px;margin-left:8px;padding:4px 9px;background:var(--sapp-lt,#eaf3fd);color:var(--sapp,#1a5fa8);border-radius:6px;font-size:10px;font-weight:700;white-space:nowrap;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          Ver
+        </span>
       </div>
       <div class="reu-body" id="${id}">
         ${r['Institución']?`<div style="font-size:12px;margin-bottom:4px;"><strong>Institución:</strong> ${r['Institución']}</div>`:''}

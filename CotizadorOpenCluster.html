@@ -408,6 +408,7 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
 }
 /* En impresión: link clickeable, URL oculta */
 @media print {
+  .volver-central{display:none!important;}
   .prod-cell-url { display:none !important; }
   .prod-link-txt { color:#555 !important; }
   .prod-cell-link a { color:#0055aa !important; text-decoration:underline !important; font-weight:600 !important; }
@@ -838,6 +839,7 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
 </style>
 </head>
 <body>
+<a href="index.html" style="position:fixed;top:10px;left:12px;z-index:999;font-size:12px;font-weight:600;color:#ff9a56;text-decoration:none;font-family:'DM Sans',sans-serif;transition:opacity .2s;" onmouseover="this.style.opacity='.7'" onmouseout="this.style.opacity='1'" class="volver-central">&larr; Volver a la Central</a>
 
 <!-- ════ EDITOR ════ -->
 <div class="editor">
@@ -3179,9 +3181,9 @@ function onOfertaEspecial() {
 
 function fechaHoy() {
   const d = new Date();
-  const meses = ["enero","febrero","marzo","abril","mayo","junio",
-                  "julio","agosto","septiembre","octubre","noviembre","diciembre"];
-  return d.getDate()+" de "+meses[d.getMonth()]+" "+d.getFullYear();
+  const meses = ["Enero","Febrero","Marzo","Abril","Mayo","Junio",
+                  "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  return String(d.getDate()).padStart(2,'0')+" de "+meses[d.getMonth()]+", "+d.getFullYear();
 }
 
 function printDoc() {
@@ -3383,14 +3385,51 @@ async function registrarCotizacion() {
   const btn = document.getElementById("btnRegistrar");
   if(!btn) return;
 
-  // Recopilar datos
-  // Asignar número definitivo al registrar
-  const numAsignado = await fetchYAsignarNumero();
-  if(!numAsignado) {
-    alert("❌ No se pudo obtener el número de cotización. Revisa tu conexión.");
-    btn.disabled = false;
-    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg> <span>Registrar cotización</span>`;
+  // ── ANTI DOBLE-CLIC (bloqueo inmediato) ───────────────────────────────
+  // 1) Flag global: si ya está registrando, salir inmediatamente
+  if(window._registrandoCotizacion) return;
+  // 2) Debounce entre registros completos (evita click maratón)
+  const ultimoRegistro = parseInt(localStorage.getItem("oc_ultimo_registro_ms") || "0", 10);
+  const ahora = Date.now();
+  const segundosDesdeUltimo = Math.floor((ahora - ultimoRegistro) / 1000);
+  if(ultimoRegistro && segundosDesdeUltimo < 15) {
+    alert("⏱️ Espera " + (15 - segundosDesdeUltimo) + " segundos antes de registrar otra cotización.\n\nEsto previene duplicados accidentales.");
     return;
+  }
+  // 3) Marcar flag + deshabilitar botón ANTES de cualquier await
+  window._registrandoCotizacion = true;
+  btn.disabled = true;
+  const _htmlOriginalBtn = btn.innerHTML;
+  btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10" stroke-opacity=".25"/><path d="M22 12a10 10 0 0 1-10 10" class="spin"/></svg> <span>Procesando...</span>';
+
+  // Helper para liberar el bloqueo en caso de error/salida temprana
+  const liberar = () => {
+    window._registrandoCotizacion = false;
+    btn.disabled = false;
+    btn.innerHTML = _htmlOriginalBtn;
+  };
+
+  // Recopilar datos
+  // ⚡ BUG FIX: En modo reemplazo, usar el número ORIGINAL de la cotización cargada.
+  // Antes pedía un número nuevo con fetchYAsignarNumero() incluso al reemplazar,
+  // lo que provocaba que el Apps Script no encontrara el número original y fallaba
+  // silenciosamente. El resultado era que quedaba la original sin modificar + a veces
+  // se creaba una nueva cotización duplicada.
+  let numAsignado;
+  if (_modoReemplazo) {
+    numAsignado = window._cotCargadaNum || document.getElementById("eNum")?.value.trim() || "";
+    if (!numAsignado) {
+      alert("❌ No se encontró el número de la cotización original a reemplazar.\n\nCarga nuevamente la cotización e inténtalo de nuevo.");
+      liberar();
+      return;
+    }
+  } else {
+    numAsignado = await fetchYAsignarNumero();
+    if(!numAsignado) {
+      alert("❌ No se pudo obtener el número de cotización. Revisa tu conexión.");
+      liberar();
+      return;
+    }
   }
 
   const num       = numAsignado;
@@ -3433,11 +3472,13 @@ async function registrarCotizacion() {
     alert("⚠️ Falta tu nombre en la sección 'Mi Perfil de Ejecutivo' (más abajo en el editor). Llénalo una sola vez y quedará guardado para siempre.");
     document.getElementById("eExecNombre")?.scrollIntoView({behavior:"smooth", block:"center"});
     document.getElementById("eExecNombre")?.focus();
+    liberar();
     return;
   }
   if(!email || !email.includes("@")) {
     alert("⚠️ El email del cliente es obligatorio para registrar la cotización.");
     document.getElementById("eCEmail")?.focus();
+    liberar();
     return;
   }
 
@@ -3445,11 +3486,9 @@ async function registrarCotizacion() {
   const yaRegistrado = localStorage.getItem("oc_reg_" + num);
   if(yaRegistrado) {
     const ok = confirm("⚠️ " + num + " ya fue registrada en este dispositivo (" + new Date(yaRegistrado).toLocaleDateString('es-CL') + ").\n\nSi necesitas registrarla de nuevo o el número es correcto, haz clic en Aceptar.");
-    if(!ok) return;
+    if(!ok) { liberar(); return; }
   }
 
-  // Cambiar estado del botón ANTES de enviar para evitar doble clic
-  btn.disabled = true;
   btn.textContent = "Enviando...";
 
   try {
@@ -3480,6 +3519,8 @@ async function registrarCotizacion() {
     });
     // Guardar número en localStorage para bloquear futuros duplicados
     localStorage.setItem("oc_reg_" + num, new Date().toISOString());
+    // Marcar timestamp para el debounce global anti-duplicado
+    localStorage.setItem("oc_ultimo_registro_ms", String(Date.now()));
     _modoReemplazo=false;
     btn.style.background="";
     btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> <span>${esReemplazo?'Cotización reemplazada!':'Cotización registrada!'}</span>`;
@@ -3490,11 +3531,13 @@ async function registrarCotizacion() {
       btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg> <span>Registrar cotización</span>`;
       btn.classList.remove("enviado");
       btn.disabled = false;
+      window._registrandoCotizacion = false;
     }, 3000);
   } catch(err) {
     alert("❌ Error al registrar. Revisa tu conexión a internet.");
     btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg> <span>Registrar cotización</span>`;
     btn.disabled = false;
+    window._registrandoCotizacion = false;
   }
 }
 

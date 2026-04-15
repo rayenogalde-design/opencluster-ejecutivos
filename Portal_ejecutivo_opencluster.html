@@ -315,9 +315,11 @@ select.login-inp{appearance:none;cursor:pointer;}
   .tabs{padding:0 8px;}
   .tab{padding:12px 10px;font-size:11.5px;}
 }
+@media print{.volver-central{display:none!important;}}
 </style>
 </head>
 <body>
+<a href="index.html" style="position:fixed;top:10px;left:12px;z-index:99999;font-size:12px;font-weight:700;color:#fff;text-decoration:none;font-family:'DM Sans',sans-serif;background:linear-gradient(135deg,#ff7e00,#ff9a56);padding:7px 14px;border-radius:20px;box-shadow:0 3px 10px rgba(255,126,0,.35);transition:all .2s;display:inline-flex;align-items:center;gap:5px;" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 5px 14px rgba(255,126,0,.5)'" onmouseout="this.style.transform='';this.style.boxShadow='0 3px 10px rgba(255,126,0,.35)'" class="volver-central">&larr; Volver a la Central</a>
 
 <!-- ══════════════ LOGIN ══════════════ -->
 <div class="login-wrap" id="login-screen">
@@ -605,7 +607,15 @@ select.login-inp{appearance:none;cursor:pointer;}
             </div>
 
             <div class="fld">
-              <label>Ejecutivos participantes</label>
+              <label>Gestor de Reunión</label>
+              <div id="r-gestor" style="background:linear-gradient(135deg,rgba(26,95,168,.08),rgba(6,179,253,.06));border:1.5px solid rgba(26,95,168,.2);border-radius:8px;padding:11px 14px;display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;color:var(--sapp);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg>
+                <span id="r-gestor-name">—</span>
+                <span style="margin-left:auto;font-size:10px;font-weight:600;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;">Tú</span>
+              </div>
+            </div>
+            <div class="fld">
+              <label>Acompañantes <span style="color:var(--mist);font-weight:400;">(opcional — selecciona si alguien del equipo te acompañó)</span></label>
               <div class="exec-grid" id="r-execs"></div>
             </div>
 
@@ -802,7 +812,6 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbzNGrOr-gWj_rcUKnt3hYVt
 
 const TEAM = [
   {full:'Rayen Ogalde',    short:'Rayen'},
-  {full:'Ximena Romero',   short:'Ximena'},
   {full:'Maximiliano Astudillo', short:'Maximiliano'},
   {full:'Roberto Cáceres', short:'Roberto'},
   {full:'Germán Alvarado', short:'Germán'},
@@ -2788,6 +2797,7 @@ function renderContactos(){
         <div style="display:flex;gap:6px;">
           <button class="btn-primary" style="flex:1;padding:8px;font-size:12px;" onclick="guardarEditContacto(${idx},'${eid}')">Guardar cambios</button>
           <button class="btn-sec" style="padding:8px;font-size:12px;" onclick="document.getElementById('${eid}').style.display='none'">Cancelar</button>
+          <button style="padding:8px 12px;font-size:12px;font-weight:700;color:#fff;background:var(--ruby,#C0392B);border:none;border-radius:6px;cursor:pointer;font-family:inherit;" onclick="eliminarContacto(${idx})">🗑 Eliminar</button>
         </div>
       </div>
     </div>`;
@@ -2855,6 +2865,29 @@ function guardarEditContacto(idx,eid){
   renderContactos();
 }
 
+async function eliminarContacto(idx){
+  if(!CONTACTOS[idx])return;
+  const c=CONTACTOS[idx];
+  const ok=confirm('¿Eliminar este contacto?\n\n'+c.nombre+(c.institucion?' ('+c.institucion+')':'')+'\n\nEsta acción no se puede deshacer.');
+  if(!ok)return;
+  // Intentar eliminar en el backend (Apps Script) — si la acción no existe, se ignora
+  try{
+    await apiPost({
+      accion:'eliminar_contacto',
+      nombre:c.nombre||'',
+      institucion:c.institucion||'',
+      ejecutivo:c.ejecutivo||USUARIO,
+      fecha:c.fecha||'',
+      email:c.email||''
+    });
+  }catch(e){console.warn('Error eliminando en backend:',e);}
+  // Eliminar localmente
+  CONTACTOS.splice(idx,1);
+  localStorage.setItem('oc_contactos_'+window.location.hostname,JSON.stringify(CONTACTOS));
+  toast('Contacto eliminado','jade');
+  renderContactos();
+}
+
 // ════════════════════════════════════════════
 // REUNIONES — Chips de ejecutivos
 // ════════════════════════════════════════════
@@ -2862,9 +2895,12 @@ function buildExecChips(){
   const grid=document.getElementById('r-execs');
   if(!grid)return;
   const miShort=(TEAM.find(t=>t.full===USUARIO)||{}).short||USUARIO.split(' ')[0];
-  grid.innerHTML=TEAM.map(t=>{
-    const isMe=t.full===USUARIO||t.short===miShort;
-    return`<span class="exec-chip${isMe?' me sel':''}" data-name="${t.short}" onclick="toggleExecChip(this)">${t.short}</span>`;
+  // Mostrar el nombre del gestor (USUARIO actual)
+  const nameEl=document.getElementById('r-gestor-name');
+  if(nameEl) nameEl.textContent=USUARIO||miShort;
+  // Chips: SOLO los demás miembros del equipo (excluir al USUARIO logueado)
+  grid.innerHTML=TEAM.filter(t=>t.full!==USUARIO&&t.short!==miShort).map(t=>{
+    return`<span class="exec-chip" data-name="${t.short}" onclick="toggleExecChip(this)">${t.short}</span>`;
   }).join('');
 }
 
@@ -3203,7 +3239,11 @@ async function guardarReunion(){
   const tipo=document.getElementById('r-tipo').value;
   if(!nombre){toast('Ingresa el nombre del prospecto','warn');return;}
   if(!tipo){toast('Selecciona el tipo de reunión','warn');return;}
-  const execs=getExecsSeleccionados();
+  const acompanantes=getExecsSeleccionados(); // SHORT names de acompañantes (no incluye al gestor)
+  // Resolver short del USUARIO (gestor) para construir lista completa de ejecutivos
+  const miShort=(TEAM.find(t=>t.full===USUARIO)||{}).short||USUARIO.split(' ')[0];
+  // Lista completa: gestor primero + acompañantes (separados por coma — formato del Sheet)
+  const ejecutivosFull=[miShort, ...acompanantes].join(', ');
   const proxFecha=document.getElementById('r-prox-fecha').value;
   const subDetalle=document.getElementById('r-subval')?document.getElementById('r-subval').value:'';
   const esEdicion=_editReuIdx>=0;
@@ -3216,8 +3256,9 @@ async function guardarReunion(){
     sub_detalle:  subDetalle,
     ciudad:       document.getElementById('r-ciudad').value,
     region:       document.getElementById('r-region').value,
-    ejecutivos:   execs.join(', '),
-    creador:      USUARIO,
+    ejecutivos:   ejecutivosFull,
+    acompanantes: acompanantes.join(', '),
+    creador:      miShort,
     nombre,
     institucion:  document.getElementById('r-inst').value,
     cargo:        document.getElementById('r-cargo').value,

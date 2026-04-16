@@ -512,7 +512,20 @@ select.login-inp{appearance:none;cursor:pointer;}
                 <option value="Derivó a otra persona">Derivó a otra persona</option>
               </select>
             </div>
-            <div class="fld"><label>Notas</label><textarea id="pc-notas" rows="2" placeholder="Detalles del contacto..." style="font-size:13px;padding:9px 12px;"></textarea></div>
+            <div class="fld">
+              <label>Notas</label>
+              <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px;">
+                <span onclick="agregarNotaRapida('Contacto por FNDR Activo')" style="padding:5px 11px;background:var(--sapp-lt,#eaf3fd);color:var(--sapp,#1a5fa8);border:1px solid rgba(26,95,168,.25);border-radius:14px;font-size:10.5px;font-weight:600;cursor:pointer;user-select:none;" onmouseover="this.style.background='var(--sapp)';this.style.color='#fff'" onmouseout="this.style.background='var(--sapp-lt,#eaf3fd)';this.style.color='var(--sapp,#1a5fa8)'">+ FNDR Activo</span>
+                <span onclick="agregarNotaRapida('Contacto para presentar Productos y empresa')" style="padding:5px 11px;background:var(--sapp-lt,#eaf3fd);color:var(--sapp,#1a5fa8);border:1px solid rgba(26,95,168,.25);border-radius:14px;font-size:10.5px;font-weight:600;cursor:pointer;user-select:none;" onmouseover="this.style.background='var(--sapp)';this.style.color='#fff'" onmouseout="this.style.background='var(--sapp-lt,#eaf3fd)';this.style.color='var(--sapp,#1a5fa8)'">+ Presentar Productos y empresa</span>
+                <span onclick="agregarNotaRapida('Cliente solicitó contacto')" style="padding:5px 11px;background:var(--sapp-lt,#eaf3fd);color:var(--sapp,#1a5fa8);border:1px solid rgba(26,95,168,.25);border-radius:14px;font-size:10.5px;font-weight:600;cursor:pointer;user-select:none;" onmouseover="this.style.background='var(--sapp)';this.style.color='#fff'" onmouseout="this.style.background='var(--sapp-lt,#eaf3fd)';this.style.color='var(--sapp,#1a5fa8)'">+ Cliente solicitó contacto</span>
+                <span onclick="agregarNotaRapida('Nos escribió por página Web')" style="padding:5px 11px;background:var(--sapp-lt,#eaf3fd);color:var(--sapp,#1a5fa8);border:1px solid rgba(26,95,168,.25);border-radius:14px;font-size:10.5px;font-weight:600;cursor:pointer;user-select:none;" onmouseover="this.style.background='var(--sapp)';this.style.color='#fff'" onmouseout="this.style.background='var(--sapp-lt,#eaf3fd)';this.style.color='var(--sapp,#1a5fa8)'">+ Página Web</span>
+                <span onclick="agregarNotaRapida('Contactó a OPC mediante WhatsApp')" style="padding:5px 11px;background:var(--sapp-lt,#eaf3fd);color:var(--sapp,#1a5fa8);border:1px solid rgba(26,95,168,.25);border-radius:14px;font-size:10.5px;font-weight:600;cursor:pointer;user-select:none;" onmouseover="this.style.background='var(--sapp)';this.style.color='#fff'" onmouseout="this.style.background='var(--sapp-lt,#eaf3fd)';this.style.color='var(--sapp,#1a5fa8)'">+ WhatsApp a OPC</span>
+                <span onclick="agregarNotaRapida('Interesado en comprar')" style="padding:5px 11px;background:var(--sapp-lt,#eaf3fd);color:var(--sapp,#1a5fa8);border:1px solid rgba(26,95,168,.25);border-radius:14px;font-size:10.5px;font-weight:600;cursor:pointer;user-select:none;" onmouseover="this.style.background='var(--sapp)';this.style.color='#fff'" onmouseout="this.style.background='var(--sapp-lt,#eaf3fd)';this.style.color='var(--sapp,#1a5fa8)'">+ Interesado en comprar</span>
+                <span onclick="agregarNotaRapida('Referido por otro cliente')" style="padding:5px 11px;background:var(--sapp-lt,#eaf3fd);color:var(--sapp,#1a5fa8);border:1px solid rgba(26,95,168,.25);border-radius:14px;font-size:10.5px;font-weight:600;cursor:pointer;user-select:none;" onmouseover="this.style.background='var(--sapp)';this.style.color='#fff'" onmouseout="this.style.background='var(--sapp-lt,#eaf3fd)';this.style.color='var(--sapp,#1a5fa8)'">+ Referido</span>
+                <span onclick="agregarNotaRapida('Contactado en feria/evento')" style="padding:5px 11px;background:var(--sapp-lt,#eaf3fd);color:var(--sapp,#1a5fa8);border:1px solid rgba(26,95,168,.25);border-radius:14px;font-size:10.5px;font-weight:600;cursor:pointer;user-select:none;" onmouseover="this.style.background='var(--sapp)';this.style.color='#fff'" onmouseout="this.style.background='var(--sapp-lt,#eaf3fd)';this.style.color='var(--sapp,#1a5fa8)'">+ Feria/Evento</span>
+              </div>
+              <textarea id="pc-notas" rows="2" placeholder="Detalles del contacto... (o usa los atajos de arriba)" style="font-size:13px;padding:9px 12px;"></textarea>
+            </div>
             <button class="btn-primary" id="btn-pc" onclick="guardarPrimerContacto()" style="margin-top:10px;font-size:14px;padding:12px;">Registrar Contacto</button>
           </div>
         </div>
@@ -2742,6 +2755,21 @@ function selMedioContacto(medio,btn){
   document.querySelectorAll('#s-contactos .exec-chip').forEach(c=>c.classList.remove('sel'));
   btn.classList.add('sel');
   _medioContacto=medio;
+}
+
+// Agrega texto rápido al campo notas (si ya hay texto, lo concatena con " · ")
+function agregarNotaRapida(texto){
+  const ta=document.getElementById('pc-notas');
+  if(!ta)return;
+  const actual=ta.value.trim();
+  if(actual){
+    // Evitar duplicar si ya existe
+    if(actual.indexOf(texto)>=0){ta.focus();return;}
+    ta.value=actual+' · '+texto;
+  } else {
+    ta.value=texto;
+  }
+  ta.focus();
 }
 
 function renderContactos(){

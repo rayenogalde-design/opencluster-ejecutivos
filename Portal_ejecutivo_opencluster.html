@@ -483,6 +483,27 @@ select.login-inp{appearance:none;cursor:pointer;}
             <div class="fld"><label>Nombre del contacto *</label><input type="text" id="pc-nombre" placeholder="Nombre de la persona" style="font-size:14px;padding:10px 12px;"></div>
             <div class="fld"><label>Institución</label><input type="text" id="pc-inst" placeholder="Municipalidad, hospital, escuela... (opcional)" style="font-size:14px;padding:10px 12px;"></div>
             <div class="f2">
+              <div class="fld"><label>Tipo de organización</label>
+                <select id="pc-tipo-org-cat" onchange="onTipoOrgCategoriaChange()" style="font-size:13px;padding:9px 12px;">
+                  <option value="">— Categoría —</option>
+                  <option value="Sector Público Municipal">🏛️ Sector Público Municipal</option>
+                  <option value="Salud Pública">🏥 Salud Pública</option>
+                  <option value="Educación">🏫 Educación</option>
+                  <option value="Gobierno Central/Regional">🏛️ Gobierno Central/Regional</option>
+                  <option value="Fundaciones y ONGs">❤️ Fundaciones y ONGs</option>
+                  <option value="Organizaciones Comunitarias">👥 Organizaciones Comunitarias</option>
+                  <option value="Profesionales de la Salud">🩺 Profesionales de la Salud</option>
+                  <option value="Privados">🏢 Privados</option>
+                  <option value="Otro">➕ Otro</option>
+                </select>
+              </div>
+              <div class="fld"><label>Tipo específico</label>
+                <select id="pc-tipo-org-sub" disabled style="font-size:13px;padding:9px 12px;">
+                  <option value="">— Selecciona categoría primero —</option>
+                </select>
+              </div>
+            </div>
+            <div class="f2">
               <div class="fld"><label>Cargo</label><input type="text" id="pc-cargo" placeholder="Director, encargado..." style="font-size:13px;padding:9px 12px;"></div>
               <div class="fld"><label>Ciudad</label><input type="text" id="pc-ciudad" placeholder="Ciudad" style="font-size:13px;padding:9px 12px;"></div>
             </div>
@@ -2757,6 +2778,33 @@ function selMedioContacto(medio,btn){
   _medioContacto=medio;
 }
 
+// Dropdown dependiente: categoría → tipo específico de organización
+const TIPOS_ORG = {
+  'Sector Público Municipal': ['DIDECO (Dirección de Desarrollo Comunitario)','Oficina de Discapacidad Municipal','Oficina del Adulto Mayor','DAEM (Educación Municipal)','Departamento de Salud Municipal','Otra oficina municipal'],
+  'Salud Pública': ['CESFAM (Centro de Salud Familiar)','CECOSF / CCR','COSAM (Salud Mental)','Hospital Público','Servicio de Salud Regional','COMPIN','Otro centro de salud pública'],
+  'Educación': ['Escuela Especial','Escuela de Lenguaje','Programa PIE (Integración Escolar)','Colegio regular','Jardín Infantil (JUNJI/Integra)','Universidad / Instituto','Centro de Padres y Apoderados','Otro'],
+  'Gobierno Central/Regional': ['SENADIS','SENAMA (Adulto Mayor)','Gobierno Regional (GORE)','Delegación Presidencial','Ministerio / Seremi','JUNAEB','Otro organismo público'],
+  'Fundaciones y ONGs': ['Fundación de Discapacidad','Teletón / CRIT','Organización de Pacientes','Corporación / ONG','Otra fundación'],
+  'Organizaciones Comunitarias': ['Club de Adulto Mayor','Centro de Madres','Junta de Vecinos','Organización de Discapacidad','Otra agrupación comunitaria'],
+  'Profesionales de la Salud': ['Kinesiólogo/a','Terapeuta Ocupacional','Fonoaudiólogo/a','Psicólogo/a','Psicopedagogo/a','Neurólogo/a / Fisiatra','Otro profesional'],
+  'Privados': ['Centro de Rehabilitación Privado','Clínica / Consulta Privada','Empresa (inclusión laboral)','Distribuidor / Comercio','Otro privado'],
+  'Otro': ['Referido por otro cliente','Otro (especificar en notas)']
+};
+
+function onTipoOrgCategoriaChange(){
+  const cat = document.getElementById('pc-tipo-org-cat')?.value;
+  const sub = document.getElementById('pc-tipo-org-sub');
+  if(!sub) return;
+  if(!cat){
+    sub.innerHTML = '<option value="">— Selecciona categoría primero —</option>';
+    sub.disabled = true;
+    return;
+  }
+  const ops = TIPOS_ORG[cat] || [];
+  sub.innerHTML = '<option value="">— Seleccionar —</option>' + ops.map(o=>`<option value="${o}">${o}</option>`).join('');
+  sub.disabled = false;
+}
+
 // Agrega texto rápido al campo notas (si ya hay texto, lo concatena con " · ")
 function agregarNotaRapida(texto){
   const ta=document.getElementById('pc-notas');
@@ -2863,9 +2911,14 @@ async function guardarPrimerContacto(){
   if(!nombre){toast('Ingresa el nombre del contacto','warn');return;}
   if(!_medioContacto){toast('Selecciona el medio de contacto','warn');return;}
   if(!resultado){toast('Selecciona el resultado del contacto','warn');return;}
+  const tipoOrgCat=document.getElementById('pc-tipo-org-cat')?.value||'';
+  const tipoOrgSub=document.getElementById('pc-tipo-org-sub')?.value||'';
   const contacto={
     nombre,
     institucion:inst,
+    tipo_org_categoria:tipoOrgCat,
+    tipo_org_detalle:tipoOrgSub,
+    tipo_org:tipoOrgCat&&tipoOrgSub?(tipoOrgCat+' > '+tipoOrgSub):(tipoOrgCat||tipoOrgSub||''),
     cargo:document.getElementById('pc-cargo').value.trim(),
     ciudad:document.getElementById('pc-ciudad').value.trim(),
     tel:document.getElementById('pc-tel').value.trim(),
@@ -2891,6 +2944,8 @@ async function guardarPrimerContacto(){
     const el=document.getElementById(id);if(el)el.value='';
   });
   document.getElementById('pc-resultado').value='';
+  document.getElementById('pc-tipo-org-cat').value='';
+  onTipoOrgCategoriaChange();
   document.querySelectorAll('#s-contactos .exec-chip').forEach(c=>c.classList.remove('sel'));
   _medioContacto='';
   btn.disabled=false;btn.textContent='Registrar Contacto';

@@ -188,7 +188,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);d
 .panel-body{flex:1;overflow-y:auto;padding:18px 20px;}
 .panel-section-lbl{font-size:9px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--smoke);display:flex;align-items:center;gap:7px;}
 .panel-section-lbl::before{content:'';width:2px;height:10px;background:var(--gold);border-radius:2px;}
-.exec-kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+.exec-kpi-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:18px;}
+@media (max-width:1100px){.exec-kpi-strip{grid-template-columns:repeat(3,1fr);}}
 .exec-kpi{background:var(--paper);border-radius:10px;padding:16px 18px;}
 .exec-kpi-lbl{font-size:10px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
 .exec-kpi-val{font-family:'Playfair Display',serif;font-size:32px;font-weight:600;color:var(--ink);}
@@ -2137,51 +2138,28 @@ function toggleExecDetail(id){
 function renderEjecutivos(){
   const data=getD();
   const grid=document.getElementById('exec-grid');grid.innerHTML='';
-  const mesActual=getMes();
   EXECS.forEach(e=>{
     const cots=data.filter(c=>c.exec===e.name);
     const gan=cots.filter(c=>c.estado==='Ganada').reduce((s,c)=>s+c.neto,0);
-    // Reuniones del mes gestionadas por este ejecutivo (como creador)
-    const miShort=(e.short||e.name.split(' ')[0]);
-    const reunionesMes=reuniones.filter(r=>{
-      const creador=(r.creador||'').trim();
-      const esEste=creador===e.name||creador===miShort||creador.split(' ')[0]===miShort;
-      if(!esEste)return false;
-      return parseMesReuCard(r.fecha)===mesActual;
-    });
-    // Primeros contactos del mes de este ejecutivo
-    const contactosMes=contactosDash.filter(c=>{
-      const ej=(c['Ejecutivo']||'').trim();
-      if(ej!==e.name&&ej!==miShort)return false;
-      return parseMesReuCard(c['Fecha'])===mesActual;
-    });
-    const detailId='edet-'+e.name.replace(/\s+/g,'_');
-    const d=document.createElement('div');d.className='ecard';
-    d.innerHTML=`<span class="ecard-arr" onclick="event.stopPropagation();abrirPanel('${e.name.replace(/'/g,"\\'")}');">›</span>
+    const d=document.createElement('div');d.className='ecard';d.onclick=()=>abrirPanel(e.name);
+    d.innerHTML=`<span class="ecard-arr">›</span>
       <div class="ecard-av" style="background:${e.color}">${e.init}</div>
       <div class="ecard-name">${e.name}</div><div class="ecard-role">Ejecutivo Comercial</div>
       <div class="ecard-row">
         <div class="ecard-stat"><div class="ecard-sl">Cotiz.</div><div class="ecard-sv">${cots.length}</div></div>
         <div class="ecard-stat"><div class="ecard-sl">Ganadas</div><div class="ecard-sv" style="color:var(--jade)">${cots.filter(c=>c.estado==='Ganada').length}</div></div>
       </div>
-      <div class="ecard-money">${cots.length?fmt(gan)+' vendido':'Sin actividad'}</div>
-      <button onclick="event.stopPropagation();toggleExecDetail('${detailId}');" style="margin-top:10px;width:100%;padding:7px 10px;background:var(--paper);color:var(--sapp);border:1px solid var(--smoke);border-radius:6px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:5px;">
-        📋 Reuniones (${reunionesMes.length}) y Contactos (${contactosMes.length}) del mes
-      </button>
-      <div id="${detailId}" style="display:none;margin-top:10px;padding:10px 12px;background:var(--paper);border-radius:7px;border:1px solid var(--smoke);text-align:left;">
-        <div style="font-size:9.5px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">Reuniones de ${mesActual}</div>
-        ${reunionesMes.length?reunionesMes.map(r=>`<div style="font-size:10.5px;padding:5px 8px;background:#fff;border-left:2px solid ${e.color};border-radius:4px;margin-bottom:4px;"><div style="font-weight:700;color:var(--ink);">${r.institucion||r.nombre||'—'}</div><div style="color:var(--mist);font-size:9.5px;margin-top:1px;">${fmtFechaGlobal(r.fecha)||'—'} · ${r.tipo||'—'}${r.resultado?' · '+r.resultado:''}</div></div>`).join(''):'<div style="font-size:10.5px;color:var(--mist);padding:5px 0;font-style:italic;">Sin reuniones este mes.</div>'}
-        <div style="font-size:9.5px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 5px;">Primeros Contactos de ${mesActual}</div>
-        ${contactosMes.length?contactosMes.map(c=>`<div style="font-size:10.5px;padding:5px 8px;background:#fff;border-left:2px solid var(--gold);border-radius:4px;margin-bottom:4px;"><div style="font-weight:700;color:var(--ink);">${c['Nombre']||'—'}${c['Institucion']?' · '+c['Institucion']:''}</div><div style="color:var(--mist);font-size:9.5px;margin-top:1px;">${fmtFechaGlobal(c['Fecha'])||'—'} · ${c['Medio']||'—'}${c['Resultado']?' · '+c['Resultado']:''}</div></div>`).join(''):'<div style="font-size:10.5px;color:var(--mist);padding:5px 0;font-style:italic;">Sin primeros contactos este mes.</div>'}
-      </div>`;
+      <div class="ecard-money">${cots.length?fmt(gan)+' vendido':'Sin actividad'}</div>`;
     grid.appendChild(d);
   });
   const met=document.getElementById('exec-metas');let h='';
+  const mesActualMeta=getMes();
   EXECS.forEach(e=>{
     const cots=data.filter(c=>c.exec===e.name);
-    const gan=cots.filter(c=>c.estado==='Ganada').reduce((s,c)=>s+c.neto,0);
+    // ⚡ FIX: ganado del MES ACTUAL (no acumulado) vs meta mensual
+    const ganMes=cots.filter(c=>c.estado==='Ganada'&&c.mes===mesActualMeta).reduce((s,c)=>s+c.neto,0);
     const goal=metaMensual?Math.round(metaMensual/6):0;
-    const p=pct(gan,goal);const col=p>=100?'var(--jade)':p>=60?'var(--gold-dk)':'var(--mist)';
+    const p=pct(ganMes,goal);const col=p>=100?'var(--jade)':p>=60?'var(--gold-dk)':'var(--mist)';
     h+=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--smoke);">
       <div style="width:30px;height:30px;border-radius:6px;background:${e.color};display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-weight:700;font-size:10.5px;color:#fff;flex-shrink:0;">${e.init}</div>
       <div style="flex:1;">
@@ -2191,7 +2169,7 @@ function renderEjecutivos(){
         </div>
         <div class="prog-track"><div class="prog-bar" style="width:${p}%;background:${e.color};"></div></div>
         <div style="display:flex;justify-content:space-between;margin-top:2px;">
-          <span style="font-size:9px;color:var(--mist);">Ganado: ${fmt(gan)}</span>
+          <span style="font-size:9px;color:var(--mist);">${mesActualMeta}: ${fmt(ganMes)}</span>
           <span style="font-size:9px;color:var(--mist);">Meta: ${goal?fmt(goal):'Sin meta'}</span>
         </div>
       </div></div>`;
@@ -2214,6 +2192,25 @@ function abrirPanel(nombre,mesFiltroPanel){
   const tasaCierre=allCots.length?Math.round(ganadas.length/allCots.length*100):0;
   const goal=metaMensual?Math.round(metaMensual/EXECS.filter(ex=>allCots.length||ex.name===nombre).length||6):0;
   const mesActual=getMes();
+
+  // ⚡ FIX meta mensual: usar SIEMPRE solo ganadas del mes actual (no acumulado)
+  const mesParaMeta=panelMesFiltro||mesActual;
+  const ganadasMesMeta=allCotsBase.filter(c=>c.mes===mesParaMeta&&c.estado==='Ganada');
+  const montoGanadoMesMeta=ganadasMesMeta.reduce((s,c)=>s+c.neto,0);
+
+  // Reuniones del mes (gestor = este ejecutivo) y Primeros Contactos del mes
+  const miShortPnl=(e.short||nombre.split(' ')[0]);
+  const reunionesMesPnl=reuniones.filter(r=>{
+    const creador=(r.creador||'').trim();
+    const esEste=creador===nombre||creador===miShortPnl||creador.split(' ')[0]===miShortPnl;
+    if(!esEste)return false;
+    return parseMesReuCard(r.fecha)===mesParaMeta;
+  });
+  const contactosMesPnl=contactosDash.filter(c=>{
+    const ej=(c['Ejecutivo']||'').trim();
+    if(ej!==nombre&&ej!==miShortPnl)return false;
+    return parseMesReuCard(c['Fecha'])===mesParaMeta;
+  });
 
   // Stats por mes — always uses allCotsBase (all months, unfiltered)
   const statsMes = MESES.map(mes=>{
@@ -2262,21 +2259,24 @@ function abrirPanel(nombre,mesFiltroPanel){
   </div>
   <!-- KPIs ejecutivo -->
   <div class="exec-kpi-strip">
-    <div class="exec-kpi"><div class="exec-kpi-lbl">Cotizaciones</div><div class="exec-kpi-val">${allCots.length}</div><div class="exec-kpi-sub">Total 2026</div></div>
+    <div class="exec-kpi"><div class="exec-kpi-lbl">Cotizaciones</div><div class="exec-kpi-val">${allCots.length}</div><div class="exec-kpi-sub">${panelMesFiltro||'Total 2026'}</div></div>
     <div class="exec-kpi" onclick="document.getElementById('panel-ganadas-section')?.scrollIntoView({behavior:'smooth',block:'start'})" style="cursor:pointer;transition:.13s;" onmouseover="this.style.outline='2px solid var(--jade)';this.style.outlineOffset='-2px'" onmouseout="this.style.outline='none'"><div class="exec-kpi-lbl">Ganadas</div><div class="exec-kpi-val" style="color:var(--jade)">${ganadas.length}</div><div class="exec-kpi-sub">Tasa: ${tasaCierre}% · ver detalle ↓</div></div>
     <div class="exec-kpi"><div class="exec-kpi-lbl">Monto Vendido</div><div class="exec-kpi-val xs" style="color:var(--jade)">${fmtM(montoGanado)}</div><div class="exec-kpi-sub">neto CLP</div></div>
     <div class="exec-kpi" onclick="document.getElementById('panel-sing-section')?.scrollIntoView({behavior:'smooth',block:'start'})" style="cursor:pointer;transition:.13s;" onmouseover="this.style.outline='2px solid var(--ruby)';this.style.outlineOffset='-2px'" onmouseout="this.style.outline='none'"><div class="exec-kpi-lbl">Sin Gestión</div><div class="exec-kpi-val" style="color:${sinG?'var(--ruby)':'var(--jade)'}">${sinG}</div><div class="exec-kpi-sub">${sinG?'ver detalle ↓':'¡Al día!'}</div></div>
+    <div class="exec-kpi" onclick="document.getElementById('panel-reuniones-mes-section')?.scrollIntoView({behavior:'smooth',block:'start'})" style="cursor:pointer;transition:.13s;" onmouseover="this.style.outline='2px solid var(--sapp)';this.style.outlineOffset='-2px'" onmouseout="this.style.outline='none'"><div class="exec-kpi-lbl">Reuniones del mes</div><div class="exec-kpi-val" style="color:var(--sapp)">${reunionesMesPnl.length}</div><div class="exec-kpi-sub">${mesParaMeta} · ver detalle ↓</div></div>
+    <div class="exec-kpi" onclick="document.getElementById('panel-contactos-mes-section')?.scrollIntoView({behavior:'smooth',block:'start'})" style="cursor:pointer;transition:.13s;" onmouseover="this.style.outline='2px solid var(--gold)';this.style.outlineOffset='-2px'" onmouseout="this.style.outline='none'"><div class="exec-kpi-lbl">Contactos del mes</div><div class="exec-kpi-val" style="color:var(--gold-dk,#B08832)">${contactosMesPnl.length}</div><div class="exec-kpi-sub">${mesParaMeta} · ver detalle ↓</div></div>
   </div>`;
 
   if(goal){
-    const metaPct=Math.min(100,Math.round(montoGanado/goal*100));
+    // ⚡ Meta siempre se calcula con ganadas del MES actual (o mes filtrado), no acumulado
+    const metaPct=Math.min(100,Math.round(montoGanadoMesMeta/goal*100));
     const metaCol=metaPct>=100?'var(--jade)':metaPct>=60?'var(--gold-dk)':'var(--ruby)';
     const metaBarCol=metaPct>=100?'var(--jade)':metaPct>=60?e.color:'var(--ruby)';
     h+=`<div style="margin-bottom:18px;background:linear-gradient(135deg,rgba(255,255,255,.9),var(--paper));border:1px solid var(--smoke);border-radius:12px;padding:18px 22px;">
       <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px;">
         <div>
-          <div style="font-size:10px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px;">Meta Mensual</div>
-          <div style="font-size:22px;font-weight:700;color:var(--ink);line-height:1;">${fmt(montoGanado)}</div>
+          <div style="font-size:10px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px;">Meta Mensual · ${mesParaMeta}</div>
+          <div style="font-size:22px;font-weight:700;color:var(--ink);line-height:1;">${fmt(montoGanadoMesMeta)}</div>
           <div style="font-size:13px;color:var(--mist);margin-top:3px;">de <strong style="color:var(--ink);">${fmt(goal)}</strong> objetivo</div>
         </div>
         <div style="font-family:'Playfair Display',serif;font-size:44px;font-weight:700;color:${metaCol};line-height:1;">${metaPct}%</div>
@@ -2447,7 +2447,57 @@ function abrirPanel(nombre,mesFiltroPanel){
     h+=`<div style="color:var(--mist);font-size:12px;padding:16px;text-align:center;background:var(--paper);border-radius:8px;margin-bottom:10px;">Sin reuniones registradas.</div>`;
   }
 
-  // ══ GANADAS (secci��n clickeable) ══
+  // ══ REUNIONES DEL MES (sección clickeable) ══
+  h+=`<div id="panel-reuniones-mes-section" class="panel-section-lbl" style="scroll-margin-top:16px;">Reuniones del mes · ${mesParaMeta} (${reunionesMesPnl.length})</div>`;
+  if(!reunionesMesPnl.length){
+    h+=`<div style="color:var(--mist);font-size:12px;padding:16px;text-align:center;background:var(--paper);border-radius:8px;margin-bottom:14px;">Sin reuniones gestionadas en ${mesParaMeta}.</div>`;
+  } else {
+    h+=`<div style="margin-bottom:14px;">`;
+    reunionesMesPnl.forEach(r=>{
+      const resultCol=r.resultado==='Exitosa'?'var(--jade)':r.resultado==='Sin interés'?'var(--ruby)':'var(--gold-dk,#B08832)';
+      h+=`<div style="background:#fff;border-left:3px solid ${e.color};border-radius:7px;padding:10px 13px;margin-bottom:6px;border:1px solid var(--smoke);border-left-width:3px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:700;color:var(--ink);">${r.institucion||r.nombre||'—'}</div>
+            ${r.nombre&&r.institucion?`<div style="font-size:10.5px;color:var(--mist);margin-top:1px;">${r.nombre}${r.cargo?' · '+r.cargo:''}</div>`:''}
+            <div style="font-size:10px;color:var(--mist);margin-top:3px;">📅 ${fmtFechaGlobal(r.fecha)||'—'}${r.hora?' · '+r.hora:''} · 🏷 ${r.tipo||'—'}</div>
+            ${r.acompanantes?`<div style="font-size:10px;color:var(--mist);margin-top:2px;">👥 Acompañantes: ${r.acompanantes}</div>`:''}
+            ${r.telefono||r.email?`<div style="font-size:10px;margin-top:3px;">${r.telefono?`📞 <a href="tel:${r.telefono}" style="color:var(--sapp);text-decoration:none;font-weight:600;">${r.telefono}</a>`:''}${r.telefono&&r.email?' · ':''}${r.email?`✉ <a href="mailto:${r.email}" style="color:var(--sapp);text-decoration:none;font-weight:600;">${r.email}</a>`:''}</div>`:''}
+            ${r.notas?`<div style="margin-top:6px;font-size:11px;color:#333;line-height:1.4;background:var(--paper);padding:7px 10px;border-radius:6px;">${r.notas}</div>`:''}
+          </div>
+          ${r.resultado?`<span style="flex-shrink:0;background:${resultCol}15;color:${resultCol};font-size:9.5px;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap;">${r.resultado}</span>`:''}
+        </div>
+      </div>`;
+    });
+    h+=`</div>`;
+  }
+
+  // ══ CONTACTOS DEL MES (sección clickeable) ══
+  h+=`<div id="panel-contactos-mes-section" class="panel-section-lbl" style="scroll-margin-top:16px;">Primeros Contactos del mes · ${mesParaMeta} (${contactosMesPnl.length})</div>`;
+  if(!contactosMesPnl.length){
+    h+=`<div style="color:var(--mist);font-size:12px;padding:16px;text-align:center;background:var(--paper);border-radius:8px;margin-bottom:14px;">Sin primeros contactos registrados en ${mesParaMeta}.</div>`;
+  } else {
+    h+=`<div style="margin-bottom:14px;">`;
+    contactosMesPnl.forEach(c=>{
+      const res=c['Resultado']||'';
+      const resCol=res==='Aceptó reunión'?'var(--jade)':(res==='No respondió'||res==='Rechazó')?'var(--ruby)':'var(--gold-dk,#B08832)';
+      h+=`<div style="background:#fff;border-left:3px solid var(--gold);border-radius:7px;padding:10px 13px;margin-bottom:6px;border:1px solid var(--smoke);border-left-width:3px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:700;color:var(--ink);">${c['Nombre']||'—'}${c['Institucion']?' · '+c['Institucion']:''}</div>
+            ${c['Cargo']?`<div style="font-size:10.5px;color:var(--mist);margin-top:1px;">${c['Cargo']}</div>`:''}
+            <div style="font-size:10px;color:var(--mist);margin-top:3px;">📅 ${fmtFechaGlobal(c['Fecha'])||'—'} · 💬 ${c['Medio']||'—'}${c['Ciudad']?' · 📍 '+c['Ciudad']:''}</div>
+            ${c['Telefono']||c['Email']?`<div style="font-size:10px;margin-top:3px;">${c['Telefono']?`📞 <a href="tel:${c['Telefono']}" style="color:var(--sapp);text-decoration:none;font-weight:600;">${c['Telefono']}</a>`:''}${c['Telefono']&&c['Email']?' · ':''}${c['Email']?`✉ <a href="mailto:${c['Email']}" style="color:var(--sapp);text-decoration:none;font-weight:600;">${c['Email']}</a>`:''}</div>`:''}
+            ${c['Notas']?`<div style="margin-top:6px;font-size:11px;color:#333;line-height:1.4;background:var(--paper);padding:7px 10px;border-radius:6px;">${c['Notas']}</div>`:''}
+          </div>
+          ${res?`<span style="flex-shrink:0;background:${resCol}15;color:${resCol};font-size:9.5px;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap;">${res}</span>`:''}
+        </div>
+      </div>`;
+    });
+    h+=`</div>`;
+  }
+
+  // ══ GANADAS (sección clickeable) ══
   h+=`<div id="panel-ganadas-section" class="panel-section-lbl" style="scroll-margin-top:16px;">Cotizaciones Ganadas (${ganadas.length})</div>`;
   if(!ganadas.length){
     h+=`<div style="color:var(--mist);font-size:12px;padding:16px;text-align:center;background:var(--paper);border-radius:8px;margin-bottom:14px;">Sin cotizaciones ganadas${panelMesFiltro?' en '+panelMesFiltro:''}.</div>`;

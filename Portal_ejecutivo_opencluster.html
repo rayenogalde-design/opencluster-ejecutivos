@@ -2553,7 +2553,15 @@ function buildAccCot(c,soloVista,prefix){
 
 function togSegForm(id){
   const f=document.getElementById('segf-'+id);
-  if(f)f.style.display=f.style.display==='none'?'block':'none';
+  if(f){
+    const show=f.style.display==='none';
+    f.style.display=show?'block':'none';
+    // Al abrir, disparar sub-opciones del estado actual (fix: "En gestión" ya seleccionado no disparaba onchange)
+    if(show){
+      const est=document.getElementById('seg-est-'+id);
+      if(est)onEstadoChange(id,est.value);
+    }
+  }
 }
 
 const SEG_SUBOPCIONES={
@@ -2593,10 +2601,11 @@ function onEstadoChange(id,estado){
   const opts=SEG_SUBOPCIONES[estado];
   if(!opts){sub.style.display='none';sub.innerHTML='';return;}
   sub.style.display='block';
-  sub.innerHTML=`<div style="font-size:9.5px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Motivo / Detalle</div>
+  const labelMap={'En gestión':'¿Qué gestión realizaste? (clic para agregar a notas)','Perdida':'¿Por qué se perdió?','Cancelada':'¿Por qué se cancela?'};
+  sub.innerHTML=`<div style="font-size:10px;font-weight:700;color:var(--sapp);margin-bottom:6px;">${labelMap[estado]||'Selecciona un motivo:'}</div>
     <div style="display:flex;flex-wrap:wrap;gap:5px;">
-      ${opts.map(o=>`<span style="padding:4px 10px;border:1.5px solid var(--smoke);border-radius:20px;font-size:11.5px;font-weight:600;color:var(--mist);cursor:pointer;transition:.13s;font-family:'DM Sans',sans-serif;background:#fff;"
-        onclick="selSubOpc(this,'seg-com-${id}')" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="if(!this.classList.contains('sel-sub'))this.style.borderColor='var(--smoke)'">${o}</span>`).join('')}
+      ${opts.map(o=>`<span style="padding:5px 11px;border:1.5px solid var(--smoke);border-radius:20px;font-size:11px;font-weight:600;color:var(--ink);cursor:pointer;transition:.15s;font-family:'DM Sans',sans-serif;background:#fff;"
+        onclick="selSubOpc(this,'seg-com-${id}')" onmouseover="this.style.borderColor='var(--sapp)';this.style.background='var(--sapp-lt)'" onmouseout="if(!this.classList.contains('sel-sub')){this.style.borderColor='var(--smoke)';this.style.background='#fff'}">${o}</span>`).join('')}
     </div>`;
 }
 
@@ -2608,7 +2617,16 @@ function selSubOpc(btn,comId){
   btn.classList.add('sel-sub');
   btn.style.background='var(--ink)';btn.style.color='#fff';btn.style.borderColor='var(--ink)';
   const com=document.getElementById(comId);
-  if(com&&!com.value)com.value=btn.textContent;
+  if(com){
+    // Si hay texto previo, agregar separado por " · ". Si está vacío, poner directo.
+    const txt=btn.textContent.trim();
+    if(com.value.trim()){
+      if(!com.value.includes(txt)) com.value=com.value.trim()+' · '+txt;
+    } else {
+      com.value=txt;
+    }
+    com.focus();
+  }
 }
 
 function buildSegHist(c){

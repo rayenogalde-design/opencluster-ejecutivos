@@ -3211,8 +3211,18 @@ function printDoc() {
     document.getElementById("eCEmail")?.focus();
     return;
   }
+  // Nombre del PDF: NumCotizacion_Institucion_ResumenProductos
+  const prevTitle = document.title;
+  const numCot = (document.getElementById("eNum")?.value || "Cotizacion").trim();
+  const inst = (document.getElementById("eCInstitucion")?.value || "").trim();
+  const prods = getProds().filter(p=>p.name).map(p=>p.name.substring(0,25)+(p.cant>1?' x'+p.cant:'')).join(', ').substring(0,80);
+  const partes = [numCot, inst, prods].filter(Boolean);
+  document.title = partes.join('_').replace(/[\/\\:*?"<>|]/g,'').replace(/\s+/g,' ');
   window.scrollTo(0, 0);
-  setTimeout(() => window.print(), 120);
+  setTimeout(() => {
+    window.print();
+    document.title = prevTitle;
+  }, 120);
 }
 
 async function fetchNumCotizacion() {

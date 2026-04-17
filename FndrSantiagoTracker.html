@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FNDR Fondo Comunidad Activa 2025 — Santiago RM — OpenCluster Tech</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --navy:#001a60;--sky:#06b3fd;--gold:#C9A96E;--gold-lt:#f0e6d0;
+  --orange:#ff7e00;--ltblue:#d6eeff;--bg:#F0F4FA;
+  --text:#1a2535;--subtle:#64748b;--card:#fff;
+  --radius:14px;--shadow:0 2px 16px rgba(0,26,96,.08);
+  --green:#16a34a;--red:#dc2626;--gray:#94a3b8;--purple:#7c3aed;--darkgray:#4b5563;
+}
+body{font-family:'Open Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+a{color:inherit;text-decoration:none;}
+
+/* ── SCROLL ── */
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:#c1d0e8;border-radius:3px;}
+
+/* ── HEADER ── */
+.header{
+  background:linear-gradient(135deg,var(--navy) 0%,#002080 55%,#001040 100%);
+  color:#fff;padding:0;position:sticky;top:0;z-index:100;
+  box-shadow:0 4px 24px rgba(0,26,96,.35);
+}
+.header-inner{
+  max-width:1200px;margin:0 auto;padding:18px 28px;
+  display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  position:relative;
+}
+.header-inner::after{
+  content:'';position:absolute;top:-80%;right:-5%;width:500px;height:500px;
+  border-radius:50%;background:radial-gradient(circle,rgba(6,179,253,.10) 0%,transparent 70%);
+  pointer-events:none;
+}
+.header-brand{display:flex;align-items:center;gap:14px;}
+.header-brand-texts{}
+.header-eyebrow{font-size:.72rem;font-weight:600;color:var(--sky);letter-spacing:.12em;text-transform:uppercase;margin-bottom:2px;}
+.header h1{font-family:'Montserrat',sans-serif;font-size:1.25rem;font-weight:800;line-height:1.2;letter-spacing:-.2px;}
+.header h1 span{color:var(--sky);}
+.header-sub{font-size:.78rem;color:rgba(255,255,255,.65);margin-top:3px;font-weight:500;}
+.header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.back-btn{
+  background:var(--orange);color:#fff;font-family:'Montserrat',sans-serif;font-size:.78rem;
+  font-weight:700;padding:7px 16px;border-radius:20px;letter-spacing:.03em;
+  transition:filter .2s;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+  text-decoration:none;
+}
+.back-btn:hover{filter:brightness(1.12);}
+.back-btn svg{width:14px;height:14px;}
+.session-pill{
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);
+  padding:6px 14px;border-radius:20px;font-size:.8rem;font-weight:600;
+  display:flex;align-items:center;gap:7px;
+}
+.session-dot{width:8px;height:8px;border-radius:50%;background:var(--sky);}
+.logout-link{font-size:.75rem;color:rgba(255,255,255,.5);cursor:pointer;text-decoration:underline;}
+.logout-link:hover{color:#fff;}
+
+/* ── SCREENS ── */
+.screen{display:none;}
+.screen.active{display:block;}
+
+/* ═══════════════════════════════
+   LOGIN SCREEN
+═══════════════════════════════ */
+.login-screen{
+  min-height:calc(100vh - 80px);display:flex;align-items:center;justify-content:center;
+  padding:40px 20px;
+}
+.login-card{
+  background:var(--card);border-radius:20px;padding:44px 48px;max-width:560px;width:100%;
+  box-shadow:0 8px 48px rgba(0,26,96,.13);text-align:center;
+}
+.login-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--ltblue);color:var(--navy);border-radius:20px;
+  padding:5px 14px;font-size:.74rem;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;margin-bottom:20px;
+}
+.login-badge svg{width:14px;height:14px;color:var(--sky);}
+.login-title{
+  font-family:'Montserrat',sans-serif;font-size:1.6rem;font-weight:800;
+  color:var(--navy);margin-bottom:6px;
+}
+.login-sub{font-size:.9rem;color:var(--subtle);margin-bottom:32px;line-height:1.5;}
+.avatar-grid{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin-bottom:28px;}
+.avatar-btn{
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  cursor:pointer;padding:16px 20px;border-radius:16px;border:2px solid transparent;
+  transition:all .2s;background:var(--bg);min-width:96px;
+}
+.avatar-btn:hover{border-color:var(--sky);background:var(--ltblue);}
+.avatar-btn.selected{border-color:var(--navy);background:var(--ltblue);}
+.avatar-circle{
+  width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-family:'Montserrat',sans-serif;font-size:1.3rem;font-weight:800;color:#fff;
+  box-shadow:0 3px 12px rgba(0,0,0,.18);
+}
+.avatar-name{font-size:.8rem;font-weight:700;color:var(--navy);}
+.avatar-count{font-size:.7rem;color:var(--subtle);font-weight:500;}
+.login-enter-btn{
+  width:100%;padding:14px;border-radius:12px;border:none;cursor:pointer;
+  background:linear-gradient(135deg,var(--navy),#002a8f);color:#fff;
+  font-family:'Montserrat',sans-serif;font-size:1rem;font-weight:700;
+  transition:filter .2s;letter-spacing:.02em;
+}
+.login-enter-btn:hover{filter:brightness(1.1);}
+.login-enter-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+/* ═══════════════════════════════
+   DASHBOARD
+═══════════════════════════════ */
+.dash-container{max-width:1200px;margin:0 auto;padding:28px 20px 60px;}
+
+/* Progress bar */
+.progress-bar-wrap{
+  background:var(--card);border-radius:var(--radius);padding:22px 28px;
+  box-shadow:var(--shadow);margin-bottom:24px;
+  display:flex;align-items:center;gap:24px;flex-wrap:wrap;
+}
+.progress-bar-info{flex:1;min-width:200px;}
+.progress-bar-title{font-family:'Montserrat',sans-serif;font-size:1.05rem;font-weight:800;color:var(--navy);margin-bottom:4px;}
+.progress-bar-sub{font-size:.82rem;color:var(--subtle);}
+.progress-bar-track{height:10px;background:#e2e8f0;border-radius:5px;overflow:hidden;margin-top:10px;}
+.progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--sky),var(--navy));border-radius:5px;transition:width .5s ease;}
+.progress-stats{display:flex;gap:20px;flex-wrap:wrap;}
+.progress-stat{text-align:center;}
+.progress-stat-num{font-family:'Montserrat',sans-serif;font-size:1.4rem;font-weight:800;color:var(--navy);}
+.progress-stat-label{font-size:.7rem;color:var(--subtle);font-weight:600;text-transform:uppercase;letter-spacing:.06em;}
+.view-all-btn{
+  background:var(--ltblue);color:var(--navy);border:none;cursor:pointer;
+  font-family:'Montserrat',sans-serif;font-size:.8rem;font-weight:700;
+  padding:9px 18px;border-radius:20px;transition:background .2s;white-space:nowrap;
+}
+.view-all-btn:hover{background:#b8deff;}
+
+/* Org cards */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:18px;}
+.org-card{
+  background:var(--card);border-radius:var(--radius);padding:22px;
+  box-shadow:var(--shadow);border-top:4px solid var(--ltblue);
+  transition:box-shadow .2s,border-color .2s;
+}
+.org-card:hover{box-shadow:0 4px 24px rgba(0,26,96,.13);}
+.org-card.status-Contactado{border-top-color:var(--sky);}
+.org-card.status-Interesado{border-top-color:var(--gold);}
+.org-card.status-Reunión_agendada{border-top-color:var(--orange);}
+.org-card.status-Cotización_enviada{border-top-color:#7c3aed;}
+.org-card.status-Ganada{border-top-color:#16a34a;}
+.org-card.status-Sin_interés{border-top-color:#dc2626;}
+.org-card.status-No_contactable{border-top-color:#4b5563;}
+.org-card.status-No_admisible{border-top-color:#4a0010;opacity:.82;}
+
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px;}
+.card-code{font-size:.72rem;font-weight:700;color:var(--subtle);letter-spacing:.05em;font-family:'Montserrat',sans-serif;}
+.puntaje-badge{
+  font-family:'Montserrat',sans-serif;font-size:.75rem;font-weight:700;
+  padding:3px 9px;border-radius:8px;white-space:nowrap;
+}
+.puntaje-93{background:#001a60;color:#fff;}
+.puntaje-92{background:#002a8f;color:#fff;}
+.puntaje-90{background:#0044b3;color:#fff;}
+.puntaje-86{background:var(--sky);color:#fff;}
+.puntaje-84{background:#38bdf8;color:#fff;}
+.puntaje-83{background:var(--gold);color:var(--navy);}
+.puntaje-81{background:#f59e0b;color:#fff;}
+.puntaje-80{background:#fb923c;color:#fff;}
+.puntaje-78{background:#f87171;color:#fff;}
+.puntaje-50{background:#94a3b8;color:#fff;}
+.puntaje-inadmisible{background:#4a0010;color:#ffd6df;}
+
+.card-proyecto{font-family:'Montserrat',sans-serif;font-size:.95rem;font-weight:700;color:var(--navy);margin-bottom:5px;line-height:1.35;}
+.card-org{font-size:.82rem;color:var(--subtle);font-weight:500;margin-bottom:14px;line-height:1.4;}
+.card-fields{display:flex;flex-direction:column;gap:8px;}
+.card-field-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.card-input{
+  width:100%;padding:7px 10px;border-radius:8px;border:1.5px solid #e2e8f0;
+  font-family:'Open Sans',sans-serif;font-size:.8rem;color:var(--text);
+  background:#fafbfd;transition:border-color .2s;
+}
+.card-input:focus{outline:none;border-color:var(--sky);background:#fff;}
+.card-input::placeholder{color:#b0bec5;}
+.card-select{
+  width:100%;padding:7px 10px;border-radius:8px;border:1.5px solid #e2e8f0;
+  font-family:'Open Sans',sans-serif;font-size:.8rem;color:var(--text);
+  background:#fafbfd;cursor:pointer;transition:border-color .2s;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2394a3b8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;
+}
+.card-select:focus{outline:none;border-color:var(--sky);}
+.card-textarea{
+  width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid #e2e8f0;
+  font-family:'Open Sans',sans-serif;font-size:.8rem;color:var(--text);
+  background:#fafbfd;resize:vertical;min-height:56px;
+  transition:border-color .2s;
+}
+.card-textarea:focus{outline:none;border-color:var(--sky);}
+.card-label{font-size:.7rem;font-weight:600;color:var(--subtle);letter-spacing:.04em;margin-bottom:2px;}
+
+/* ═══════════════════════════════
+   CONSOLIDATED VIEW
+═══════════════════════════════ */
+.cons-container{max-width:1200px;margin:0 auto;padding:28px 20px 60px;}
+
+/* KPI row */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:28px;}
+.kpi-card{
+  background:var(--card);border-radius:var(--radius);padding:18px 20px;
+  box-shadow:var(--shadow);text-align:center;border-bottom:3px solid var(--ltblue);
+}
+.kpi-card.kpi-sky{border-bottom-color:var(--sky);}
+.kpi-card.kpi-gold{border-bottom-color:var(--gold);}
+.kpi-card.kpi-orange{border-bottom-color:var(--orange);}
+.kpi-card.kpi-purple{border-bottom-color:#7c3aed;}
+.kpi-card.kpi-green{border-bottom-color:#16a34a;}
+.kpi-num{font-family:'Montserrat',sans-serif;font-size:2rem;font-weight:800;color:var(--navy);}
+.kpi-label{font-size:.72rem;font-weight:600;color:var(--subtle);text-transform:uppercase;letter-spacing:.06em;margin-top:2px;}
+
+/* Filters */
+.filter-bar{
+  background:var(--card);border-radius:var(--radius);padding:16px 22px;
+  box-shadow:var(--shadow);margin-bottom:20px;
+  display:flex;gap:12px;flex-wrap:wrap;align-items:center;
+}
+.filter-label{font-size:.78rem;font-weight:700;color:var(--subtle);}
+.filter-select{
+  padding:7px 14px;border-radius:8px;border:1.5px solid #e2e8f0;
+  font-family:'Open Sans',sans-serif;font-size:.82rem;color:var(--text);
+  background:#fafbfd;cursor:pointer;
+}
+.filter-select:focus{outline:none;border-color:var(--sky);}
+.cons-back-btn{
+  margin-left:auto;background:var(--ltblue);color:var(--navy);border:none;
+  cursor:pointer;font-family:'Montserrat',sans-serif;font-size:.78rem;font-weight:700;
+  padding:8px 16px;border-radius:20px;transition:background .2s;
+}
+.cons-back-btn:hover{background:#b8deff;}
+
+/* Table */
+.table-wrap{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+.cons-table{width:100%;border-collapse:collapse;font-size:.82rem;}
+.cons-table thead th{
+  background:var(--navy);color:#fff;padding:12px 14px;text-align:left;
+  font-family:'Montserrat',sans-serif;font-size:.72rem;font-weight:700;
+  letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;
+}
+.cons-table tbody tr{border-bottom:1px solid #f1f5f9;transition:background .15s;}
+.cons-table tbody tr:hover{background:#f8faff;}
+.cons-table tbody tr:last-child{border-bottom:none;}
+.cons-table td{padding:11px 14px;vertical-align:top;}
+.td-ejecutivo{font-weight:700;color:var(--navy);white-space:nowrap;}
+.td-codigo{font-size:.72rem;color:var(--subtle);font-family:'Montserrat',sans-serif;font-weight:600;}
+.td-proyecto{font-weight:600;color:var(--navy);line-height:1.35;max-width:220px;}
+.td-org{color:var(--subtle);line-height:1.35;max-width:180px;}
+.td-notes{color:var(--subtle);font-size:.77rem;max-width:150px;font-style:italic;}
+
+/* Status badges */
+.status-badge{
+  display:inline-block;padding:3px 9px;border-radius:20px;
+  font-size:.7rem;font-weight:700;letter-spacing:.03em;white-space:nowrap;
+}
+.sb-Sin_contactar{background:#f1f5f9;color:#64748b;}
+.sb-Contactado{background:#dbeafe;color:#1d4ed8;}
+.sb-Interesado{background:#fef3c7;color:#92400e;}
+.sb-Reunión_agendada{background:#fff7ed;color:#c2410c;}
+.sb-Cotización_enviada{background:#ede9fe;color:#5b21b6;}
+.sb-Ganada{background:#dcfce7;color:#15803d;}
+.sb-Sin_interés{background:#fee2e2;color:#b91c1c;}
+.sb-No_contactable{background:#f1f5f9;color:#374151;}
+.sb-No_admisible{background:#4a0010;color:#ffd6df;}
+
+/* Ejecutivo color dots */
+.ej-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle;}
+
+/* Empty state */
+.empty-state{text-align:center;padding:60px 20px;color:var(--subtle);}
+.empty-state svg{width:48px;height:48px;margin-bottom:14px;opacity:.35;}
+.empty-state p{font-size:.9rem;}
+
+/* Responsive */
+@media(max-width:640px){
+  .login-card{padding:28px 20px;}
+  .avatar-grid{gap:10px;}
+  .avatar-btn{min-width:80px;padding:12px 14px;}
+  .avatar-circle{width:48px;height:48px;font-size:1.1rem;}
+  .header h1{font-size:1rem;}
+  .cards-grid{grid-template-columns:1fr;}
+  .card-field-row{grid-template-columns:1fr;}
+  .cons-table{font-size:.75rem;}
+  .cons-table thead th{padding:10px 8px;font-size:.67rem;}
+  .cons-table td{padding:9px 8px;}
+  .td-proyecto{max-width:140px;}
+  .td-org{max-width:120px;}
+  .td-notes{display:none;}
+  .progress-bar-wrap{gap:14px;}
+}
+@media(max-width:420px){
+  .header-inner{padding:14px 16px;}
+  .kpi-row{grid-template-columns:repeat(2,1fr);}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════ HEADER ══════════ -->
+<header class="header">
+  <div class="header-inner">
+    <div class="header-brand">
+      <svg class="header-logo-svg" width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="19" cy="19" r="18" fill="rgba(6,179,253,0.15)" stroke="rgba(6,179,253,0.4)" stroke-width="1"/>
+        <circle cx="19" cy="19" r="8" fill="#06b3fd" opacity="0.9"/>
+        <circle cx="19" cy="7" r="3.5" fill="#C9A96E"/>
+        <circle cx="19" cy="31" r="3.5" fill="#06b3fd" opacity="0.5"/>
+        <circle cx="7" cy="19" r="3.5" fill="#06b3fd" opacity="0.6"/>
+        <circle cx="31" cy="19" r="3.5" fill="#06b3fd" opacity="0.6"/>
+      </svg>
+      <div class="header-brand-texts">
+        <div class="header-eyebrow">OpenCluster Tech</div>
+        <h1>FNDR Fondo <span>Comunidad Activa 2025</span></h1>
+        <div class="header-sub">Seleccionado no financiable — Región Metropolitana / Santiago</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="session-pill" id="sessionPill" style="display:none;">
+        <span class="session-dot"></span>
+        <span id="sessionName">—</span>
+        <span class="logout-link" onclick="doLogout()">salir</span>
+      </span>
+      <a href="index.html" class="back-btn">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M10 3L5 8l5 5"/>
+        </svg>
+        Volver a la Central
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════
+     LOGIN SCREEN
+══════════════════════════════════════ -->
+<div id="screenLogin" class="screen active">
+  <div class="login-screen">
+    <div class="login-card">
+      <div class="login-badge">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="7" cy="7" r="6"/>
+          <path d="M7 4v3l2 2"/>
+        </svg>
+        Santiago · 38 organizaciones
+      </div>
+      <div class="login-title">¿Quién eres?</div>
+      <div class="login-sub">Selecciona tu nombre para ver tus organizaciones asignadas y registrar avances.</div>
+
+      <div class="avatar-grid" id="avatarGrid">
+        <!-- generated by JS -->
+      </div>
+
+      <button class="login-enter-btn" id="loginEnterBtn" disabled onclick="doLogin()">Entrar al tracker →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     DASHBOARD SCREEN
+══════════════════════════════════════ -->
+<div id="screenDash" class="screen">
+  <div class="dash-container">
+
+    <!-- Progress bar -->
+    <div class="progress-bar-wrap" id="progressWrap">
+      <div class="progress-bar-info">
+        <div class="progress-bar-title" id="progressTitle">Mis organizaciones</div>
+        <div class="progress-bar-sub" id="progressSub">Cargando...</div>
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
+        </div>
+      </div>
+      <div class="progress-stats" id="progressStats"></div>
+      <button class="view-all-btn" onclick="showConsolidated()">Ver todas las 38 →</button>
+    </div>
+
+    <!-- Cards -->
+    <div class="cards-grid" id="cardsGrid"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     CONSOLIDATED SCREEN
+══════════════════════════════════════ -->
+<div id="screenCons" class="screen">
+  <div class="cons-container">
+
+    <!-- KPI row -->
+    <div class="kpi-row" id="kpiRow"></div>
+
+    <!-- Filter bar -->
+    <div class="filter-bar">
+      <span class="filter-label">Filtrar por:</span>
+      <select class="filter-select" id="filterEj" onchange="renderTable()">
+        <option value="">Todos los ejecutivos</option>
+      </select>
+      <select class="filter-select" id="filterStatus" onchange="renderTable()">
+        <option value="">Todos los estados</option>
+      </select>
+      <button class="cons-back-btn" onclick="showDash()">← Volver a mis orgs</button>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <table class="cons-table">
+        <thead>
+          <tr>
+            <th>Ejecutivo</th>
+            <th>Código</th>
+            <th>Proyecto</th>
+            <th>Organización</th>
+            <th>Pts</th>
+            <th>Estado</th>
+            <th>Notas</th>
+          </tr>
+        </thead>
+        <tbody id="consTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════
+   DATA
+═══════════════════════════════════════ */
+const EJECUTIVOS = [
+  {id:'maxi',  name:'Maximiliano', short:'Maxi',    color:'#001a60'},
+  {id:'german',name:'Germán',      short:'Germán',  color:'#06b3fd'},
+  {id:'william',name:'William',    short:'William', color:'#ff7e00'},
+  {id:'rayen', name:'Rayen',       short:'Rayen',   color:'#C9A96E'},
+  {id:'roberto',name:'Roberto',    short:'Roberto', color:'#7c3aed'},
+  {id:'todos', name:'Ver todos',   short:'Todos',   color:'#4b5563'},
+];
+
+const ORGS = [
+  {row:1, pts:93,   ej:'maxi',   codigo:'IL-00108-25', proyecto:'FibroAcción: Estrategias Interdisciplinarias para el Bienestar', org:'Fundación Fibromialgia en Acción'},
+  {row:2, pts:92,   ej:'german', codigo:'IL-00001-25', proyecto:'Comunidad Diversa RM', org:'Fundación Todo Mejora'},
+  {row:3, pts:92,   ej:'william',codigo:'IL-00035-25', proyecto:'Oficios Tecnológicos para inserción laboral', org:'Fund. Formación para el Trabajo Romanos XII'},
+  {row:4, pts:92,   ej:'rayen',  codigo:'IL-00092-25', proyecto:'Jóvenes líderes para la cohesión e inclusión social en RM', org:'Fundación Observa Ciudadanía'},
+  {row:5, pts:92,   ej:'roberto',codigo:'IL-00099-25', proyecto:'Digitalmente Activos', org:'Fund. Solidaria Trabajo para un Hermano'},
+  {row:6, pts:92,   ej:'roberto',codigo:'IL-00229-25', proyecto:'Mujer agente de cambio', org:'Fund. de Educación y Capacitación Recrea'},
+  {row:7, pts:92,   ej:'rayen',  codigo:'IL-00301-25', proyecto:'Danzas sin Barreras', org:'Fundación Cerro Navia'},
+  {row:8, pts:92,   ej:'william',codigo:'IL-00353-25', proyecto:'Juegos de ingenio para la Integración y el bienestar cognitivo y motor', org:'Fundación Veritas'},
+  {row:9, pts:92,   ej:'german', codigo:'IL-00418-25', proyecto:'Trabajando por el autocuidado y salud mental de las comunidades LGTBQ+', org:'ONG Est. de la Sexualidad'},
+  {row:10,pts:92,   ej:'maxi',   codigo:'IL-00551-25', proyecto:'Hogar Alcanzable: Bienestar para envejecer en el lugar', org:'Fundación Alcanzable'},
+  {row:11,pts:92,   ej:'maxi',   codigo:'IL-00631-25', proyecto:'Nuestras voces a la TV: Taller de producción televisiva para infancias', org:'Fund. Cultural Vecinal Santiago Norte'},
+  {row:12,pts:92,   ej:'german', codigo:'IL-00683-25', proyecto:'Trato Hecho Vecino: inclusión de personas en situación calle en la RM', org:'Fundación Trato Hecho Vecino'},
+  {row:13,pts:90,   ej:'william',codigo:'IL-00236-25', proyecto:'Formación Gestores Interculturales para Convivencia y Paz Comunitaria', org:'ONG de Desarrollo Proyecto Tepuy'},
+  {row:14,pts:86.4, ej:'rayen',  codigo:'IL-00026-25', proyecto:'Equipamiento y Sala Multisensorial', org:'Fundación Tu Mundo es Mi Mundo'},
+  {row:15,pts:86.4, ej:'roberto',codigo:'IL-00043-25', proyecto:'Vernos y Crear Vínculos, Programa para Pacientes de la Salud Mental', org:'Fundación Círculo Polar'},
+  {row:16,pts:86.4, ej:'roberto',codigo:'IL-00062-25', proyecto:'Aliados del cuidado', org:'Fundación Aprender en Movimiento'},
+  {row:17,pts:86.4, ej:'rayen',  codigo:'IL-00123-25', proyecto:'Líderes y agentes de cambio para una nueva longevidad', org:'Pontificia Universidad Católica de Chile'},
+  {row:18,pts:86.4, ej:'william',codigo:'IL-00170-25', proyecto:'Emprendedoras Conectadas Personas Mayores', org:'Fundación para la Inclusión Tecnológica Kodea'},
+  {row:19,pts:86.4, ej:'german', codigo:'IL-00425-25', proyecto:'Infancias que Transforman: Inclusión desde las Escuelas y el Territorio', org:'Fundación Teatro Educativo'},
+  {row:20,pts:86.4, ej:'maxi',   codigo:'IL-00433-25', proyecto:'Iluminando Caminos a través del Deporte para la Inclusión', org:'Fundación Luz'},
+  {row:21,pts:86.4, ej:'maxi',   codigo:'IL-00503-25', proyecto:'Educándonos con Inclusión', org:'Soñando Futuro'},
+  {row:22,pts:86.4, ej:'german', codigo:'IL-00784-25', proyecto:'Educación y Equidad Menstrual Escolar', org:'Fundación Mujer Mundo'},
+  {row:23,pts:86.4, ej:'william',codigo:'IL-00054-25', proyecto:'Yo también comparto con amigos. Espacios sociales para P con DI', org:'Fundación Barlovento para la inclusión de personas con discapacidad intelectual'},
+  {row:24,pts:84.7, ej:'rayen',  codigo:'IL-00175-25', proyecto:'Inclusión social de las diversidades sexuales y de género en la R.M', org:'ONG MOVILH'},
+  {row:25,pts:84.7, ej:'roberto',codigo:'IL-00072-25', proyecto:'Empoderamiento Digital PM', org:'Fundación Conecta Mayor'},
+  {row:26,pts:84.7, ej:'roberto',codigo:'IL-00370-25', proyecto:'Ludoteca itinerante Jugando nos conectamos y formamos Comunidad Activa', org:'Instituto para el Desarrollo Comunitario IDECO'},
+  {row:27,pts:84,   ej:'rayen',  codigo:'IL-00693-25', proyecto:'Acompañamiento integral a cuidadores de NNA con S. de Down', org:'Corporación EduDown'},
+  {row:28,pts:83,   ej:'william',codigo:'IL-00176-25', proyecto:'Formación de liderazgos comunitarios en campamentos', org:'Fundación Un Techo para Chile'},
+  {row:29,pts:83,   ej:'german', codigo:'IL-00233-25', proyecto:'Vida Digna TEAbraza', org:'ONG Vida Digna'},
+  {row:30,pts:83,   ej:'maxi',   codigo:'IL-00468-25', proyecto:'Equipando nuestro nuevo espacio de rehabilitación', org:'Fundación Renacer Juntos'},
+  {row:31,pts:83,   ej:'maxi',   codigo:'IL-00673-25', proyecto:'Operativos en terreno para la regularización migratoria', org:'Instituto Católico Chileno de Migración'},
+  {row:32,pts:83,   ej:'german', codigo:'IL-00740-25', proyecto:'Anacroj: un camino hacia la inclusión', org:'Corporación ANACROJ'},
+  {row:33,pts:81,   ej:'william',codigo:'IL-00629-25', proyecto:'Manos que cuidan', org:'Fundación Fem Kuche Papai'},
+  {row:34,pts:80,   ej:'rayen',  codigo:'IL-00150-25', proyecto:'Fomentando la inclusión de las personas mayores', org:'Fundación Juan Carlos Kantor'},
+  {row:35,pts:80,   ej:'roberto',codigo:'IL-00197-25', proyecto:'Finanzas para la vida', org:'Fundación Gestionar Esperanzas'},
+  {row:36,pts:78,   ej:'roberto',codigo:'IL-00117-25', proyecto:'Conectad@s: Aprendiendo Junt@s a Usar la Tecnología', org:'Fundación Cristo Vive'},
+  {row:37,pts:73,   ej:'rayen',  codigo:'IL-00182-25', proyecto:'Enlace Refugio: Charlas de información y orientación integral', org:'Fund. de Ayuda Social de Fieles de las Iglesias Cristianas'},
+  {row:38,pts:50,   ej:'william',codigo:'IL-00194-25', proyecto:'Convivencia Intercultural Migratoria en la Región Metropolitana', org:'Fundación Redmigrantes'},
+  {row:39,pts:0,    ej:'maxi',   codigo:'IL-00017-25', proyecto:'"Súper Inclusión"', org:'Fund. Educacional y Cultural Acompáñame', inadmisible:true, motivo:'Sin certificado de vigencia del directorio'},
+  {row:40,pts:0,    ej:'maxi',   codigo:'IL-00024-25', proyecto:'"Flow interior"', org:'ONG Neyun, Educación en Armonía', inadmisible:true, motivo:'Representante legal no coincide con certificado de directorio'},
+  {row:41,pts:0,    ej:'maxi',   codigo:'IL-00025-25', proyecto:'"Desde los barrios abriendo la participación y el cuidado de la niñez"', org:'La Otra Educación', inadmisible:true, motivo:'Sin certificados de inhabilidades para trabajo con NNA'},
+  {row:42,pts:0,    ej:'german', codigo:'IL-00027-25', proyecto:'"Encuentros de Saberes y Comunidad"', org:'Asociación Compromiso Migrante', inadmisible:true, motivo:'Sin certificados de inhabilidades para trabajo con NNA'},
+  {row:43,pts:0,    ej:'german', codigo:'IL-00029-25', proyecto:'"Sincronizadores Positivos: Alfabetización Digital Inclusiva"', org:'Fundación Encuentros del Futuro', inadmisible:true, motivo:'Solo 1 lugar declarado, inconsistente con alcance regional'},
+  {row:44,pts:0,    ej:'german', codigo:'IL-00038-25', proyecto:'"TEADMIRO CONTIGO II"', org:'Fundación TEADMIRO', inadmisible:true, motivo:'Sin certificados de inhabilidades para trabajo con NNA'},
+  {row:45,pts:0,    ej:'william',codigo:'IL-00042-25', proyecto:'"+Activos +Conectados"', org:'Universidad San Sebastián', inadmisible:true, motivo:'No subsana observaciones entregadas'},
+  {row:46,pts:0,    ej:'william',codigo:'IL-00050-25', proyecto:'"Vinculación intergeneracional: teatro y educación integral"', org:'Fundación Gerocultura', inadmisible:true, motivo:'No subsana observaciones entregadas'},
+  {row:47,pts:48.9, ej:'rayen',  codigo:'IL-00290-25', proyecto:'"Red de Vida: Voluntarios acompañando a las personas mayores"', org:'Círculo del Personal en Retiro de FAMAE', provincia:'Pedro Aguirre Cerda', inadmisible:true, motivo:'Puntaje < 50 pts'},
+  {row:48,pts:42.9, ej:'rayen',  codigo:'IL-00163-25', proyecto:'"Mejorando nuestra casa: Equipamiento para un envejecimiento activo"', org:'Club Adulto Mayor Gruta de Lourdes Las Fundadoras', provincia:'Melipilla', inadmisible:true, motivo:'Puntaje < 50 pts'},
+  {row:49,pts:42.9, ej:'roberto',codigo:'IL-00754-25', proyecto:'"Avanzando con Alegría"', org:'Club de Crónicos Adulto Mayor', provincia:'María Pinto', inadmisible:true, motivo:'Puntaje < 50 pts'},
+  {row:50,pts:42.9, ej:'roberto',codigo:'IL-00210-25', proyecto:'"Con movimiento nos cuidamos"', org:'Centro de Madres Alquilan', provincia:'Maipú', inadmisible:true, motivo:'Puntaje < 50 pts'},
+];
+
+const STATUSES = [
+  'Sin contactar','Contactado','Interesado','Reunión agendada',
+  'Cotización enviada','Ganada','Sin interés','No contactable','No admisible'
+];
+
+/* ═══════════════════════════════════════
+   STATE
+═══════════════════════════════════════ */
+const LS_KEY = 'fndr_stgo_data';
+let currentUser = null;
+let data = {}; // {codigo: {status, notes, phone, email}}
+
+function loadData(){
+  try{ data = JSON.parse(localStorage.getItem(LS_KEY)||'{}'); }
+  catch(e){ data={}; }
+  // init missing
+  ORGS.forEach(o=>{
+    const defaultStatus = o.inadmisible ? 'No admisible' : 'Sin contactar';
+    if(!data[o.codigo]) data[o.codigo]={status:defaultStatus,notes:o.motivo||'',phone:'',email:''};
+  });
+}
+function saveData(){
+  localStorage.setItem(LS_KEY, JSON.stringify(data));
+}
+
+/* ═══════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════ */
+function getEj(id){ return EJECUTIVOS.find(e=>e.id===id); }
+function ptsClass(pts){
+  if(!pts) return 'puntaje-inadmisible';
+  if(pts>=93) return 'puntaje-93';
+  if(pts>=92) return 'puntaje-92';
+  if(pts>=90) return 'puntaje-90';
+  if(pts>=86) return 'puntaje-86';
+  if(pts>=84) return 'puntaje-84';
+  if(pts>=83) return 'puntaje-83';
+  if(pts>=81) return 'puntaje-81';
+  if(pts>=80) return 'puntaje-80';
+  if(pts>=78) return 'puntaje-78';
+  return 'puntaje-50';
+}
+function statusKey(s){ return s.replace(/\s/g,'_').replace(/[éÉ]/g,'é'); }
+function initials(name){ return name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(); }
+
+/* ═══════════════════════════════════════
+   LOGIN
+═══════════════════════════════════════ */
+function buildLoginScreen(){
+  const grid = document.getElementById('avatarGrid');
+  grid.innerHTML = '';
+  EJECUTIVOS.forEach(ej=>{
+    const myOrgs = ej.id==='todos' ? ORGS : ORGS.filter(o=>o.ej===ej.id);
+    const count = myOrgs.length;
+    const div = document.createElement('div');
+    div.className='avatar-btn';
+    div.dataset.id=ej.id;
+    div.onclick=()=>selectUser(ej.id);
+    div.innerHTML=`
+      <div class="avatar-circle" style="background:${ej.color};">${initials(ej.short)}</div>
+      <div class="avatar-name">${ej.short}</div>
+      <div class="avatar-count">${ej.id==='todos'?ORGS.length+' orgs':count+' asignada'+(count===1?'':'s')}</div>
+    `;
+    grid.appendChild(div);
+  });
+}
+
+let selectedId = null;
+function selectUser(id){
+  selectedId = id;
+  document.querySelectorAll('.avatar-btn').forEach(btn=>{
+    btn.classList.toggle('selected', btn.dataset.id===id);
+  });
+  document.getElementById('loginEnterBtn').disabled=false;
+}
+
+function doLogin(){
+  if(!selectedId) return;
+  currentUser = selectedId;
+  document.getElementById('sessionName').textContent = getEj(selectedId)?.short||selectedId;
+  document.getElementById('sessionPill').style.display='flex';
+  if(selectedId==='todos'){
+    showConsolidated();
+  } else {
+    showDash();
+  }
+}
+
+function doLogout(){
+  currentUser=null; selectedId=null;
+  document.getElementById('sessionPill').style.display='none';
+  showScreen('screenLogin');
+  document.querySelectorAll('.avatar-btn').forEach(b=>b.classList.remove('selected'));
+  document.getElementById('loginEnterBtn').disabled=true;
+}
+
+/* ═══════════════════════════════════════
+   SCREENS
+═══════════════════════════════════════ */
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+function showDash(){
+  if(!currentUser||currentUser==='todos'){showConsolidated();return;}
+  renderDash();
+  showScreen('screenDash');
+}
+function showConsolidated(){
+  renderConsolidated();
+  showScreen('screenCons');
+}
+
+/* ═══════════════════════════════════════
+   DASHBOARD
+═══════════════════════════════════════ */
+function renderDash(){
+  const ej = getEj(currentUser);
+  const myOrgs = ORGS.filter(o=>o.ej===currentUser);
+  const total = myOrgs.length;
+  const contacted = myOrgs.filter(o=>data[o.codigo]?.status!=='Sin contactar').length;
+  const interested = myOrgs.filter(o=>['Interesado','Reunión agendada','Cotización enviada','Ganada'].includes(data[o.codigo]?.status)).length;
+  const meetings = myOrgs.filter(o=>data[o.codigo]?.status==='Reunión agendada').length;
+  const won = myOrgs.filter(o=>data[o.codigo]?.status==='Ganada').length;
+
+  document.getElementById('progressTitle').textContent=`Mis organizaciones — ${ej.short}`;
+  document.getElementById('progressSub').textContent=`${contacted} de ${total} contactadas`;
+  document.getElementById('progressFill').style.width=total?((contacted/total)*100)+'%':'0%';
+
+  const stats = document.getElementById('progressStats');
+  stats.innerHTML=`
+    <div class="progress-stat"><div class="progress-stat-num">${total}</div><div class="progress-stat-label">Asignadas</div></div>
+    <div class="progress-stat"><div class="progress-stat-num" style="color:var(--sky)">${contacted}</div><div class="progress-stat-label">Contactadas</div></div>
+    <div class="progress-stat"><div class="progress-stat-num" style="color:var(--gold)">${interested}</div><div class="progress-stat-label">Interesadas</div></div>
+    <div class="progress-stat"><div class="progress-stat-num" style="color:var(--orange)">${meetings}</div><div class="progress-stat-label">Reuniones</div></div>
+    <div class="progress-stat"><div class="progress-stat-num" style="color:#16a34a">${won}</div><div class="progress-stat-label">Ganadas</div></div>
+  `;
+
+  const grid = document.getElementById('cardsGrid');
+  grid.innerHTML='';
+  myOrgs.forEach(org=>{
+    const d = data[org.codigo];
+    const sk = statusKey(d.status);
+    const card = document.createElement('div');
+    card.className=`org-card status-${sk}`;
+    card.id=`card-${org.codigo}`;
+    card.innerHTML=`
+      <div class="card-top">
+        <div class="card-code">${org.codigo}</div>
+        <span class="puntaje-badge ${ptsClass(org.pts)}">${org.pts?org.pts+' pts':'No admisible'}</span>
+      </div>
+      <div class="card-proyecto">${org.proyecto}</div>
+      <div class="card-org">${org.org}</div>
+      <div class="card-fields">
+        <div>
+          <div class="card-label">Estado</div>
+          <select class="card-select" data-codigo="${org.codigo}" data-field="status" onchange="updateField(this)">
+            ${STATUSES.map(s=>`<option value="${s}"${d.status===s?' selected':''}>${s}</option>`).join('')}
+          </select>
+        </div>
+        <div class="card-field-row">
+          <div>
+            <div class="card-label">Teléfono</div>
+            <input class="card-input" type="tel" placeholder="+56 9 ..." data-codigo="${org.codigo}" data-field="phone" value="${escHtml(d.phone||'')}" onchange="updateField(this)" oninput="updateField(this)">
+          </div>
+          <div>
+            <div class="card-label">Correo</div>
+            <input class="card-input" type="email" placeholder="contacto@org..." data-codigo="${org.codigo}" data-field="email" value="${escHtml(d.email||'')}" onchange="updateField(this)" oninput="updateField(this)">
+          </div>
+        </div>
+        <div>
+          <div class="card-label">Notas</div>
+          <textarea class="card-textarea" placeholder="Observaciones, nombre contacto, próximos pasos..." data-codigo="${org.codigo}" data-field="notes" onchange="updateField(this)" oninput="updateField(this)">${escHtml(d.notes||'')}</textarea>
+        </div>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function updateField(el){
+  const {codigo,field}=el.dataset;
+  if(!data[codigo]) data[codigo]={status:'Sin contactar',notes:'',phone:'',email:''};
+  data[codigo][field]=el.value;
+  saveData();
+  if(field==='status'){
+    const card=document.getElementById(`card-${codigo}`);
+    if(card){
+      // remove old status classes
+      card.className='org-card';
+      card.classList.add(`status-${statusKey(el.value)}`);
+    }
+    updateProgress();
+  }
+}
+
+function updateProgress(){
+  if(!currentUser||currentUser==='todos') return;
+  const myOrgs=ORGS.filter(o=>o.ej===currentUser);
+  const total=myOrgs.length;
+  const contacted=myOrgs.filter(o=>data[o.codigo]?.status!=='Sin contactar').length;
+  document.getElementById('progressSub').textContent=`${contacted} de ${total} contactadas`;
+  document.getElementById('progressFill').style.width=total?((contacted/total)*100)+'%':'0%';
+}
+
+/* ═══════════════════════════════════════
+   CONSOLIDATED
+═══════════════════════════════════════ */
+function renderConsolidated(){
+  // KPIs
+  const total=ORGS.length;
+  const contacted=ORGS.filter(o=>data[o.codigo]?.status!=='Sin contactar').length;
+  const interested=ORGS.filter(o=>['Interesado','Reunión agendada','Cotización enviada','Ganada'].includes(data[o.codigo]?.status)).length;
+  const meetings=ORGS.filter(o=>data[o.codigo]?.status==='Reunión agendada').length;
+  const quotes=ORGS.filter(o=>data[o.codigo]?.status==='Cotización enviada').length;
+  const won=ORGS.filter(o=>data[o.codigo]?.status==='Ganada').length;
+  const pct=Math.round((contacted/total)*100);
+
+  document.getElementById('kpiRow').innerHTML=`
+    <div class="kpi-card"><div class="kpi-num">${total}</div><div class="kpi-label">Total orgs</div></div>
+    <div class="kpi-card kpi-sky"><div class="kpi-num">${contacted}</div><div class="kpi-label">Contactadas (${pct}%)</div></div>
+    <div class="kpi-card kpi-gold"><div class="kpi-num">${interested}</div><div class="kpi-label">Interesadas</div></div>
+    <div class="kpi-card kpi-orange"><div class="kpi-num">${meetings}</div><div class="kpi-label">Reuniones</div></div>
+    <div class="kpi-card kpi-purple"><div class="kpi-num">${quotes}</div><div class="kpi-label">Cotizaciones</div></div>
+    <div class="kpi-card kpi-green"><div class="kpi-num">${won}</div><div class="kpi-label">Ganadas</div></div>
+  `;
+
+  // Populate filters
+  const ejFilter=document.getElementById('filterEj');
+  const curEj=ejFilter.value;
+  ejFilter.innerHTML='<option value="">Todos los ejecutivos</option>';
+  EJECUTIVOS.filter(e=>e.id!=='todos').forEach(e=>{
+    ejFilter.innerHTML+=`<option value="${e.id}"${curEj===e.id?' selected':''}>${e.short}</option>`;
+  });
+
+  const stFilter=document.getElementById('filterStatus');
+  const curSt=stFilter.value;
+  stFilter.innerHTML='<option value="">Todos los estados</option>';
+  STATUSES.forEach(s=>{
+    stFilter.innerHTML+=`<option value="${s}"${curSt===s?' selected':''}>${s}</option>`;
+  });
+
+  renderTable();
+}
+
+function renderTable(){
+  const ejVal=document.getElementById('filterEj').value;
+  const stVal=document.getElementById('filterStatus').value;
+
+  let rows=ORGS;
+  if(ejVal) rows=rows.filter(o=>o.ej===ejVal);
+  if(stVal) rows=rows.filter(o=>data[o.codigo]?.status===stVal);
+
+  const tbody=document.getElementById('consTableBody');
+  if(rows.length===0){
+    tbody.innerHTML=`<tr><td colspan="7"><div class="empty-state">
+      <svg viewBox="0 0 48 48" fill="none" stroke="#94a3b8" stroke-width="2"><circle cx="24" cy="24" r="20"/><path d="M24 16v8M24 32h.01"/></svg>
+      <p>No hay organizaciones con esos filtros.</p>
+    </div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML=rows.map(org=>{
+    const ej=getEj(org.ej);
+    const d=data[org.codigo];
+    const sk=statusKey(d.status);
+    return `<tr>
+      <td class="td-ejecutivo">
+        <span class="ej-dot" style="background:${ej.color}"></span>${ej.short}
+      </td>
+      <td><div class="td-codigo">${org.codigo}</div></td>
+      <td><div class="td-proyecto">${org.proyecto}</div></td>
+      <td><div class="td-org">${org.org}</div></td>
+      <td><span class="puntaje-badge ${ptsClass(org.pts)}">${org.pts||'N/A'}</span></td>
+      <td><span class="status-badge sb-${sk}">${d.status}</span></td>
+      <td class="td-notes">${escHtml(d.notes||'—')}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════
+   UTILS
+═══════════════════════════════════════ */
+function escHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ═══════════════════════════════════════
+   INIT
+═══════════════════════════════════════ */
+loadData();
+buildLoginScreen();
+
+// Populate status filter options on load
+const stFilter=document.getElementById('filterStatus');
+STATUSES.forEach(s=>{
+  stFilter.innerHTML+=`<option value="${s}">${s}</option>`;
+});
+</script>
+</body>
+</html>

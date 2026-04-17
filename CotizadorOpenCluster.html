@@ -412,6 +412,11 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
   .prod-cell-url { display:none !important; }
   .prod-link-txt { color:#555 !important; }
   .prod-cell-link a { color:#0055aa !important; text-decoration:underline !important; font-weight:600 !important; }
+  /* Mejorar rendering de fuentes al imprimir */
+  * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+  body { -webkit-font-smoothing:antialiased !important; }
+  .page { font-family:'Open Sans',sans-serif !important; }
+  .ptbl, .ptbl td, .ptbl th { font-family:'Open Sans',sans-serif !important; }
 }
 .prod-cell-top:last-child { padding-bottom:4px; }
 /* Even rows */
@@ -2779,7 +2784,14 @@ function upd() {
     </div>
     <div class="padj">A continuación, adjuntamos cotización solicitada:</div>` : "";
 
-  const fecha = document.getElementById("eCiudad").value+", "+document.getElementById("eFecha").value;
+  // Formatear fecha: si viene en ISO (2026-04-09), convertir a "09 de Abril, 2026"
+  const _fechaRaw = document.getElementById("eFecha").value||'';
+  const _fechaFmt = (()=>{
+    const m=_fechaRaw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if(m){const ms=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];return String(+m[3]).padStart(2,'0')+' de '+ms[+m[2]-1]+', '+m[1];}
+    return _fechaRaw;
+  })();
+  const fecha = document.getElementById("eCiudad").value+", "+_fechaFmt;
   const titulo = "COTIZACIÓN N° "+document.getElementById("eNum").value;
   const codigos = (()=>{
     const parts=[];
@@ -3832,7 +3844,7 @@ async function crearNuevaDesdeCargada() {
     numEl.value = "OC26-NUEVO-" + Date.now().toString().slice(-4);
   }
   // Limpiar fecha a hoy
-  document.getElementById("eFecha").value = new Date().toISOString().split("T")[0];
+  document.getElementById("eFecha").value = fechaHoy();
   // Mostrar confirmación
   // Cambiar botón de registrar
   const btnReg = document.getElementById("btnRegistrar");
@@ -3851,7 +3863,7 @@ function duplicarParaMismoCliente(){
   if(!confirm('Se creará una nueva cotización manteniendo todos los datos actuales (cliente, productos, condiciones).\n\nEl número se asignará al momento de registrar.\n\n¿Continuar?'))return;
   const numEl=document.getElementById('eNum');
   if(numEl){numEl.value='';numEl.placeholder='Se asignará al registrar...';numEl.style.color='#aaa';}
-  document.getElementById('eFecha').value=new Date().toISOString().split('T')[0];
+  document.getElementById('eFecha').value=fechaHoy();
   const banner=document.getElementById('bannerCotCargada');
   if(banner)banner.remove();
   _modoReemplazo=false;

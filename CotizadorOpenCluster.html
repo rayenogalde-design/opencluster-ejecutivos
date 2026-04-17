@@ -890,6 +890,7 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
       <span class="elabel">Tipo de despacho</span>
       <div class="envio-tipo">
         <label><input type="radio" name="envioTipo" value="noincluido" onchange="switchEnvio('noincluido')" checked> No incluido</label>
+        <label><input type="radio" name="envioTipo" value="retiro" onchange="switchEnvio('retiro')"> Retiro en bodega</label>
         <label><input type="radio" name="envioTipo" value="propio" onchange="switchEnvio('propio')"> Logística propia</label>
         <label><input type="radio" name="envioTipo" value="courrier" onchange="switchEnvio('courrier')"> Courrier externo</label>
       </div>
@@ -2294,10 +2295,25 @@ function calcManualTotal() {
 function switchEnvio(tipo) {
   document.getElementById("panelPropio").classList.toggle("active", tipo==="propio");
   document.getElementById("panelCourrier").classList.toggle("active", tipo==="courrier");
+  // Banner retiro en bodega
+  let bannerRetiro=document.getElementById("bannerRetiroBodega");
+  if(tipo==="retiro"){
+    if(!bannerRetiro){
+      bannerRetiro=document.createElement("div");
+      bannerRetiro.id="bannerRetiroBodega";
+      bannerRetiro.style.cssText="background:linear-gradient(135deg,#001a60,#002a90);color:white;padding:14px 20px;border-radius:10px;margin:12px 0;text-align:center;";
+      bannerRetiro.innerHTML='<div style="font-size:14px;font-weight:800;font-family:Montserrat,sans-serif;margin-bottom:4px;">📦 Productos se retiran en bodega</div><div style="font-size:11px;opacity:.8;">Cliente retira productos directamente desde bodega ubicada en Quilpué, V Región, Chile.</div>';
+      const envioBox=document.querySelector(".envio-box");
+      if(envioBox)envioBox.parentNode.insertBefore(bannerRetiro,envioBox.nextSibling);
+    }
+    bannerRetiro.style.display="block";
+  } else {
+    if(bannerRetiro)bannerRetiro.style.display="none";
+  }
   if(tipo==="propio") {
     document.getElementById("eEnvioValC").value = 0;
-  } else {
-    // Courrier: ocultar resumen logística
+  } else if(tipo!=="retiro") {
+    // Courrier o no incluido: ocultar resumen logística
     const box = document.getElementById("resumenEnvioBox");
     if(box) box.style.display = "none";
   }
@@ -2622,7 +2638,7 @@ function upd() {
           const textOnly = r.desc.replace(urlRx,"").replace(/\s+/g," ").trim();
           const descPart = textOnly ? `<div class="prod-cell-desc">${textOnly}</div>` : "";
           const linkPart = urls.map(u=>`<div class="prod-cell-link">
-            <a href="${u}" target="_blank" style="color:#0066cc;text-decoration:underline;font-size:8pt;font-weight:700;font-style:normal;">Ver ficha del producto AQUÍ</a>
+            <a href="${u}" target="_blank" style="color:#0066cc;text-decoration:underline;font-size:8pt;font-weight:700;font-style:normal;">Ver información del producto en nuestra página web AQUÍ</a>
           </div>`).join("");
           return descPart + linkPart;
         })()}

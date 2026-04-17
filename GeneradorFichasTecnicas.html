@@ -291,38 +291,42 @@ body{font-family:'Open Sans',sans-serif;background:var(--bg);color:var(--text);m
 .print-footer{display:none;}
 .print-wrap{display:contents;}
 @media print{
-  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+  .volver-central{display:none!important;}
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}
   body{background:#fff!important;margin:0!important;padding:0!important;}
-  .login-overlay,.ws-hero,.search-mode,.sidebar,.block-x,.f-edit-hint,.view-controls{display:none!important;}
-  .ficha{transform:none!important;}
-  .f-editable,.f-editable-title{box-shadow:none!important;}
+  /* Ocultar TODO lo que no es la ficha */
+  .login-overlay,.ws-hero,.search-mode,.sidebar,.block-x,.f-edit-hint,.view-controls,.f-footer-preview,.f-bottomline,.page-break-marker{display:none!important;}
+  /* ⚡ Spacers: OCULTAR completamente — no breakBefore, no height:0 residual */
+  .page-break-spacer{display:none!important;}
+  /* Layout limpio */
   .editor-layout{display:block!important;height:auto!important;overflow:visible!important;}
   .preview-area{padding:0!important;display:block!important;overflow:visible!important;height:auto!important;max-height:none!important;}
-  .ficha{box-shadow:none!important;width:100%!important;margin:0!important;min-height:0!important;height:auto!important;overflow:visible!important;}
+  .ficha{box-shadow:none!important;width:100%!important;margin:0!important;min-height:0!important;height:auto!important;overflow:visible!important;transform:none!important;}
+  .f-editable,.f-editable-title{box-shadow:none!important;outline:none!important;border:none!important;}
   .f-topline{margin-bottom:2mm!important;}
   .f-inner{padding:5mm 8mm 2mm!important;min-height:0!important;height:auto!important;overflow:visible!important;display:block!important;}
   .f-body{overflow:visible!important;display:block!important;}
-  .f-section-header{page-break-inside:avoid!important;page-break-after:avoid!important;}
-  .f-card{page-break-inside:auto!important;}
-  .exec-card{page-break-inside:avoid!important;}
-  .f-bottomline{display:none!important;}
-  .f-footer-preview{display:none!important;}
-  .page-break-marker{display:none!important;}
-  .page-break-spacer{display:block!important;height:0!important;padding:0!important;margin:0!important;overflow:hidden!important;}
-  .f-images{page-break-inside:avoid!important;}
-  img{page-break-inside:avoid!important;break-inside:avoid!important;}
-  /* Table trick: thead/tfoot repeat on every page */
+  /* Page breaks: Chrome decide, solo evitamos cortar headers/footer/imágenes */
+  .f-section-header{break-inside:avoid!important;break-after:avoid!important;clear:both!important;}
+  .f-card{break-inside:auto!important;}
+  .exec-card{break-inside:avoid!important;}
+  .f-images{break-inside:avoid!important;}
+  img{break-inside:avoid!important;max-height:250mm!important;}
+  /* Floats: clear antes de cada sección para evitar espacios residuales */
+  .f-section{clear:both!important;}
+  /* Table trick: footer repetido en cada página */
   .print-wrap{display:table!important;width:100%!important;}
   .print-wrap-body{display:table-row-group!important;}
   .print-footer{display:table-footer-group!important;}
   .print-footer-inner{padding:0 5mm;}
-  .print-footer-text{text-align:center;padding:2px 0 1px;font-family:'Open Sans',sans-serif;font-size:6.5pt;color:#8a96aa;}
-  .print-footer-line{height:4px;background:linear-gradient(90deg,#06b3fd,#001a60);margin-top:2px;}
-  @page{size:letter;margin:5mm 5mm 18mm;}
+  .print-footer-text{text-align:center;padding:3px 0 2px;font-family:'Open Sans',sans-serif;font-size:6.5pt;color:#8a96aa;}
+  .print-footer-line{height:4px;background:linear-gradient(90deg,#06b3fd,#001a60);margin-top:3px;}
+  @page{size:letter;margin:8mm 8mm 16mm;}
 }
 </style>
 </head>
 <body>
+<a href="index.html" style="position:fixed;top:10px;left:12px;z-index:999;font-size:12px;font-weight:600;color:#ff9a56;text-decoration:none;font-family:'DM Sans',sans-serif;transition:opacity .2s;" onmouseover="this.style.opacity='.7'" onmouseout="this.style.opacity='1'" class="volver-central">&larr; Volver a la Central</a>
 
 <!-- ===== LOGIN ===== -->
 <div class="login-overlay" id="loginOverlay">
@@ -810,7 +814,7 @@ const EXEC_DB_EARLY={
 };
 window._allProducts=[];
 async function _loadProducts(){
-  var API='https://script.google.com/macros/s/AKfycbzNGrOr-gWj_rcUKnt3hYVt4FRQhsnUbvXNVMppgGCiUBqhq1Cl-pbAlZ1jZf7dYGrS/exec';
+  var API='https://script.google.com/macros/s/AKfycbw4StlTqupX9S0iWe1J-euztEh03qmpn5p-AGnM-ACCB3YJt9-QNLlX3-nDnAuZZXS7/exec';
   try{
     // Intentar via proxy Apps Script (funciona desde GitHub Pages)
     var r=await fetch(API+'?accion=productos_shopify',{mode:'cors'});
@@ -2029,7 +2033,7 @@ async function publicarFicha(){
       secciones:getSectionOrder(),
       timestamp:Date.now()
     };
-    const API='https://script.google.com/macros/s/AKfycbzNGrOr-gWj_rcUKnt3hYVt4FRQhsnUbvXNVMppgGCiUBqhq1Cl-pbAlZ1jZf7dYGrS/exec';
+    const API='https://script.google.com/macros/s/AKfycbw4StlTqupX9S0iWe1J-euztEh03qmpn5p-AGnM-ACCB3YJt9-QNLlX3-nDnAuZZXS7/exec';
     const exec=window._EXEC||{nombre:'Desconocido'};
     const r=await fetch(API+'?accion=publicar_ficha&producto='+encodeURIComponent(titulo)+'&categoria='+encodeURIComponent((window._selectedProduct||{}).product_type||'')+'&ejecutivo='+encodeURIComponent(exec.nombre)+'&datos='+encodeURIComponent(JSON.stringify(datos)),{mode:'cors'});
     const res=await r.json();
@@ -2055,13 +2059,15 @@ async function guardarPDF(){
   ficha.style.transform='none';
   ficha.style.marginBottom='0';
   ficha.classList.add('pdf-mode');
-  // Ocultar spacers visuales, dejar solo page-break CSS
+  // ⚡ FIX: NO forzar breakBefore:page en spacers — eso generaba espacios en blanco.
+  // Solo ocultarlos completamente y dejar que Chrome decida los page breaks naturalmente.
   ficha.querySelectorAll('.page-break-spacer').forEach(el=>{
-    el.dataset._bk=el.innerHTML;el.dataset._h=el.style.height;
-    el.innerHTML='';el.style.height='0';el.style.padding='0';el.style.margin='0';
-    el.style.overflow='hidden';el.style.pageBreakBefore='always';el.style.breakBefore='page';
+    el.dataset._bk=el.innerHTML;el.dataset._h=el.style.height;el.dataset._d2=el.style.display;
+    el.style.display='none';
   });
   ficha.querySelectorAll('.f-footer-preview,.page-break-marker,.block-x,.f-edit-hint').forEach(el=>{el.dataset._d=el.style.display;el.style.display='none';});
+  // Limpiar floats: añadir clear:both antes de cada sección para evitar que imágenes float dejen espacio
+  ficha.querySelectorAll('.f-section-header').forEach(el=>{el.style.clear='both';});
   const titulo=getTitle()||'Ficha_Tecnica';
   const nombreLimpio=titulo.replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ ]/g,'').replace(/\s+/g,'_');
   const prevTitle=document.title;
@@ -2076,11 +2082,11 @@ async function guardarPDF(){
     // Restaurar spacers
     ficha.querySelectorAll('.page-break-spacer').forEach(el=>{
       el.innerHTML=el.dataset._bk||'';el.style.height=el.dataset._h||'';
-      el.style.padding='';el.style.margin='';el.style.overflow='';
-      el.style.pageBreakBefore='';el.style.breakBefore='';
-      delete el.dataset._bk;delete el.dataset._h;
+      el.style.display=el.dataset._d2||'';
+      delete el.dataset._bk;delete el.dataset._h;delete el.dataset._d2;
     });
     ficha.querySelectorAll('.f-footer-preview,.page-break-marker,.block-x,.f-edit-hint').forEach(el=>{el.style.display=el.dataset._d||'';delete el.dataset._d;});
+    ficha.querySelectorAll('.f-section-header').forEach(el=>{el.style.clear='';});
     btn.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> GUARDAR COMO PDF';
     btn.disabled=false;
   },200);

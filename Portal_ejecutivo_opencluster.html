@@ -509,6 +509,9 @@ select.login-inp{appearance:none;cursor:pointer;}
             </div>
             <div class="f2">
               <div class="fld"><label>Teléfono</label><input type="tel" id="pc-tel" placeholder="+56 9..." style="font-size:13px;padding:9px 12px;"></div>
+              <div class="fld"><label>Teléfono 2</label><input type="tel" id="pc-tel2" placeholder="Segundo teléfono (opcional)" style="font-size:13px;padding:9px 12px;"></div>
+            </div>
+            <div class="f2">
               <div class="fld"><label>Email</label><input type="email" id="pc-email" placeholder="correo@..." style="font-size:13px;padding:9px 12px;"></div>
             </div>
             <div class="fld">
@@ -553,6 +556,9 @@ select.login-inp{appearance:none;cursor:pointer;}
         <div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
             <div style="font-size:14px;font-weight:700;color:var(--ink);">Mis contactos (<span id="pc-count">0</span>)</div>
+          </div>
+          <div style="margin-bottom:10px;">
+            <input type="text" id="pc-buscar" oninput="filtrarContactos()" placeholder="Buscar contacto por nombre, institución, ciudad..." style="width:100%;padding:10px 14px 10px 36px;border:1.5px solid var(--smoke);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;background:#fff url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%2394a3b8%22 stroke-width=%222.5%22 stroke-linecap=%22round%22><circle cx=%2211%22 cy=%2211%22 r=%228%22/><path d=%22m21 21-4.35-4.35%22/></svg>') no-repeat 10px center;transition:border-color .2s;" onfocus="this.style.borderColor='var(--sapp)'" onblur="this.style.borderColor='var(--smoke)'">
           </div>
           <div id="pc-lista"></div>
         </div>
@@ -2772,6 +2778,17 @@ async function guardarSeg(numCot,accId,instLabel,fechaCot){
 let CONTACTOS=JSON.parse(localStorage.getItem('oc_contactos_'+window.location.hostname)||'[]');
 let _medioContacto='';
 
+// Filtrar contactos por búsqueda
+function filtrarContactos(){
+  const q=(document.getElementById('pc-buscar')?.value||'').toLowerCase().trim();
+  const items=document.querySelectorAll('#pc-lista > div');
+  items.forEach(el=>{
+    if(!q){el.style.display='';return;}
+    const txt=el.textContent.toLowerCase();
+    el.style.display=txt.includes(q)?'':'none';
+  });
+}
+
 function selMedioContacto(medio,btn){
   document.querySelectorAll('#s-contactos .exec-chip').forEach(c=>c.classList.remove('sel'));
   btn.classList.add('sel');
@@ -2849,6 +2866,7 @@ function renderContactos(){
         <span>${esc(c.fecha||'')}</span>
         <span style="font-weight:600;color:var(--sapp);">${esc(c.medio||'')}</span>
         ${c.tel?`<a href="tel:${esc(c.tel)}" style="color:var(--sapp);text-decoration:none;font-weight:600;">${esc(c.tel)}</a>`:''}
+        ${c.tel2?`<a href="tel:${esc(c.tel2)}" style="color:var(--sapp);text-decoration:none;font-weight:600;">${esc(c.tel2)}</a>`:''}
         ${c.email?`<a href="mailto:${esc(c.email)}" style="color:var(--sapp);text-decoration:none;font-weight:600;">${esc(c.email)}</a>`:''}
       </div>
       ${c.notas?`<div style="font-size:12px;color:#555;margin-top:4px;line-height:1.4;">${esc(c.notas)}</div>`:''}
@@ -2860,6 +2878,7 @@ function renderContactos(){
           <div><strong style="color:var(--mist);font-weight:600;">Cargo:</strong> ${esc(c.cargo||'—')}</div>
           <div><strong style="color:var(--mist);font-weight:600;">Ciudad:</strong> ${esc(c.ciudad||'—')}</div>
           <div><strong style="color:var(--mist);font-weight:600;">Teléfono:</strong> ${c.tel?`<a href="tel:${esc(c.tel)}" style="color:var(--sapp);text-decoration:none;">${esc(c.tel)}</a>`:'—'}</div>
+          <div><strong style="color:var(--mist);font-weight:600;">Teléfono 2:</strong> ${c.tel2?`<a href="tel:${esc(c.tel2)}" style="color:var(--sapp);text-decoration:none;">${esc(c.tel2)}</a>`:'—'}</div>
           <div><strong style="color:var(--mist);font-weight:600;">Email:</strong> ${c.email?`<a href="mailto:${esc(c.email)}" style="color:var(--sapp);text-decoration:none;">${esc(c.email)}</a>`:'—'}</div>
           <div><strong style="color:var(--mist);font-weight:600;">Medio:</strong> ${esc(c.medio||'—')}</div>
           <div><strong style="color:var(--mist);font-weight:600;">Fecha:</strong> ${esc(c.fecha||'—')}</div>
@@ -2879,6 +2898,9 @@ function renderContactos(){
         </div>
         <div class="f2" style="margin-bottom:6px;">
           <div class="fld" style="margin-bottom:0;"><label>Teléfono</label><input type="tel" id="${eid}-tel" value="${esc(c.tel||'')}" style="font-size:13px;padding:8px 10px;"></div>
+          <div class="fld" style="margin-bottom:0;"><label>Teléfono 2</label><input type="tel" id="${eid}-tel2" value="${esc(c.tel2||'')}" style="font-size:13px;padding:8px 10px;"></div>
+        </div>
+        <div class="f2" style="margin-bottom:6px;">
           <div class="fld" style="margin-bottom:0;"><label>Email</label><input type="email" id="${eid}-email" value="${esc(c.email||'')}" style="font-size:13px;padding:8px 10px;"></div>
         </div>
         <div class="f2" style="margin-bottom:6px;">
@@ -2922,6 +2944,7 @@ async function guardarPrimerContacto(){
     cargo:document.getElementById('pc-cargo').value.trim(),
     ciudad:document.getElementById('pc-ciudad').value.trim(),
     tel:document.getElementById('pc-tel').value.trim(),
+    tel2:document.getElementById('pc-tel2')?.value.trim()||'',
     email:document.getElementById('pc-email').value.trim(),
     medio:_medioContacto,
     resultado,
@@ -2940,7 +2963,7 @@ async function guardarPrimerContacto(){
   CONTACTOS.push(contacto);
   localStorage.setItem('oc_contactos_'+window.location.hostname,JSON.stringify(CONTACTOS));
   // Limpiar form
-  ['pc-nombre','pc-inst','pc-cargo','pc-ciudad','pc-tel','pc-email','pc-notas'].forEach(id=>{
+  ['pc-nombre','pc-inst','pc-cargo','pc-ciudad','pc-tel','pc-tel2','pc-email','pc-notas'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.value='';
   });
   document.getElementById('pc-resultado').value='';
@@ -2970,6 +2993,7 @@ function guardarEditContacto(idx,eid){
   CONTACTOS[idx].cargo=document.getElementById(eid+'-cargo')?.value.trim()||'';
   CONTACTOS[idx].ciudad=document.getElementById(eid+'-ciudad')?.value.trim()||'';
   CONTACTOS[idx].tel=document.getElementById(eid+'-tel')?.value.trim()||'';
+  CONTACTOS[idx].tel2=document.getElementById(eid+'-tel2')?.value.trim()||'';
   CONTACTOS[idx].email=document.getElementById(eid+'-email')?.value.trim()||'';
   CONTACTOS[idx].medio=document.getElementById(eid+'-medio')?.value||CONTACTOS[idx].medio;
   CONTACTOS[idx].resultado=document.getElementById(eid+'-res')?.value||CONTACTOS[idx].resultado;

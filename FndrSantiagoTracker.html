@@ -420,8 +420,10 @@ a{color:inherit;text-decoration:none;}
           <tr>
             <th>Ejecutivo</th>
             <th>Código</th>
-            <th>Proyecto</th>
             <th>Organización</th>
+            <th>RUT</th>
+            <th>Fondos GORE</th>
+            <th>Contactar</th>
             <th>Pts</th>
             <th>Estado</th>
             <th>Notas</th>
@@ -662,9 +664,33 @@ function renderDash(){
         </div>
         <div class="card-field-row">
           <div>
+            <div class="card-label">RUT Organización</div>
+            <input class="card-input" type="text" placeholder="Ej: 65.123.456-7" data-codigo="${org.codigo}" data-field="rut" value="${escHtml(d.rut||'')}" onchange="updateField(this)" oninput="updateField(this)">
+          </div>
+          <div>
+            <div class="card-label">¿Fondos GORE/FNDR últimos 2 años?</div>
+            <select class="card-select" data-codigo="${org.codigo}" data-field="fondos_previos" onchange="updateField(this)" style="font-size:.85rem;">
+              <option value=""${!d.fondos_previos?' selected':''}>— Sin verificar —</option>
+              <option value="no"${d.fondos_previos==='no'?' selected':''}>No ha recibido</option>
+              <option value="si"${d.fondos_previos==='si'?' selected':''}>Sí, ha recibido</option>
+            </select>
+          </div>
+        </div>
+        <div class="card-field-row">
+          <div>
+            <div class="card-label">¿Vale la pena contactar?</div>
+            <select class="card-select" data-codigo="${org.codigo}" data-field="vale_contactar" onchange="updateField(this)" style="font-size:.85rem;">
+              <option value=""${!d.vale_contactar?' selected':''}>— Por definir —</option>
+              <option value="si"${d.vale_contactar==='si'?' selected':''}>Sí, contactar</option>
+              <option value="no"${d.vale_contactar==='no'?' selected':''}>No, descartar</option>
+            </select>
+          </div>
+          <div>
             <div class="card-label">Teléfono</div>
             <input class="card-input" type="tel" placeholder="+56 9 ..." data-codigo="${org.codigo}" data-field="phone" value="${escHtml(d.phone||'')}" onchange="updateField(this)" oninput="updateField(this)">
           </div>
+        </div>
+        <div class="card-field-row">
           <div>
             <div class="card-label">Correo</div>
             <input class="card-input" type="email" placeholder="contacto@org..." data-codigo="${org.codigo}" data-field="email" value="${escHtml(d.email||'')}" onchange="updateField(this)" oninput="updateField(this)">
@@ -755,7 +781,7 @@ function renderTable(){
 
   const tbody=document.getElementById('consTableBody');
   if(rows.length===0){
-    tbody.innerHTML=`<tr><td colspan="7"><div class="empty-state">
+    tbody.innerHTML=`<tr><td colspan="9"><div class="empty-state">
       <svg viewBox="0 0 48 48" fill="none" stroke="#94a3b8" stroke-width="2"><circle cx="24" cy="24" r="20"/><path d="M24 16v8M24 32h.01"/></svg>
       <p>No hay organizaciones con esos filtros.</p>
     </div></td></tr>`;
@@ -766,13 +792,17 @@ function renderTable(){
     const ej=getEj(org.ej);
     const d=data[org.codigo];
     const sk=statusKey(d.status);
+    const fondosLabel=d.fondos_previos==='si'?'<span style="color:#c0392b;font-weight:700;">Sí</span>':d.fondos_previos==='no'?'<span style="color:#16a34a;font-weight:700;">No</span>':'<span style="color:#94a3b8;">—</span>';
+    const contactarLabel=d.vale_contactar==='si'?'<span style="color:#16a34a;font-weight:700;">Sí</span>':d.vale_contactar==='no'?'<span style="color:#c0392b;font-weight:700;">No</span>':'<span style="color:#94a3b8;">—</span>';
     return `<tr>
       <td class="td-ejecutivo">
         <span class="ej-dot" style="background:${ej.color}"></span>${ej.short}
       </td>
       <td><div class="td-codigo">${org.codigo}</div></td>
-      <td><div class="td-proyecto">${org.proyecto}</div></td>
       <td><div class="td-org">${org.org}</div></td>
+      <td style="font-size:.8rem;font-weight:600;">${escHtml(d.rut||'—')}</td>
+      <td>${fondosLabel}</td>
+      <td>${contactarLabel}</td>
       <td><span class="puntaje-badge ${ptsClass(org.pts)}">${org.pts||'N/A'}</span></td>
       <td><span class="status-badge sb-${sk}">${d.status}</span></td>
       <td class="td-notes">${escHtml(d.notes||'—')}</td>

@@ -833,8 +833,33 @@ function renderDash(){
           </div>
         </div>
         <div>
+          <div class="card-label">Página web</div>
+          <input class="card-input" type="url" placeholder="https://www.ejemplo.cl" data-codigo="${org.codigo}" data-field="pagina_web" value="${escHtml(d.pagina_web||'')}" onchange="updateField(this)" oninput="updateField(this)">
+        </div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1.5px solid var(--smoke);">
+          <div style="font-size:.78rem;font-weight:700;color:var(--sapp);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Persona de contacto</div>
+          <div>
+            <div class="card-label">Nombre de contacto</div>
+            <input class="card-input" type="text" placeholder="Nombre de la persona contactada" data-codigo="${org.codigo}" data-field="nombre_contacto" value="${escHtml(d.nombre_contacto||'')}" onchange="updateField(this)" oninput="updateField(this)">
+          </div>
+          <div class="card-field-row">
+            <div>
+              <div class="card-label">Teléfono contacto</div>
+              <input class="card-input" type="tel" placeholder="+56 9 ..." data-codigo="${org.codigo}" data-field="tel_contacto" value="${escHtml(d.tel_contacto||'')}" onchange="updateField(this)" oninput="updateField(this)">
+            </div>
+            <div>
+              <div class="card-label">Email contacto</div>
+              <input class="card-input" type="email" placeholder="persona@org..." data-codigo="${org.codigo}" data-field="email_contacto" value="${escHtml(d.email_contacto||'')}" onchange="updateField(this)" oninput="updateField(this)">
+            </div>
+          </div>
+        </div>
+        <div>
           <div class="card-label">Notas</div>
-          <textarea class="card-textarea" placeholder="Observaciones, nombre contacto, próximos pasos..." data-codigo="${org.codigo}" data-field="notes" onchange="updateField(this)" oninput="updateField(this)">${escHtml(d.notes||'')}</textarea>
+          <textarea class="card-textarea" placeholder="Observaciones, próximos pasos..." data-codigo="${org.codigo}" data-field="notes" onchange="updateField(this)" oninput="updateField(this)">${escHtml(d.notes||'')}</textarea>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button onclick="guardarCard('${org.codigo}')" style="flex:1;padding:8px 14px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;border-radius:7px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:opacity .15s;" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">Guardar</button>
+          <button onclick="toggleEditCard('${org.codigo}')" style="padding:8px 14px;background:var(--sapp-lt,#eaf3fd);color:var(--sapp);border:1px solid rgba(26,95,168,.25);border-radius:7px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">Editar</button>
         </div>
       </div>
     `;
@@ -842,9 +867,37 @@ function renderDash(){
   });
 }
 
+function guardarCard(codigo){
+  saveData();
+  // Feedback visual
+  const card=document.getElementById('card-'+codigo);
+  if(card){
+    const btn=card.querySelector('button[onclick*="guardarCard"]');
+    if(btn){
+      const orig=btn.innerHTML;
+      btn.innerHTML='Guardado';btn.style.background='#16a34a';
+      setTimeout(()=>{btn.innerHTML=orig;btn.style.background='';},1500);
+    }
+    // Deshabilitar campos (modo lectura)
+    card.querySelectorAll('input,select,textarea').forEach(el=>el.disabled=true);
+    const editBtn=card.querySelector('button[onclick*="toggleEditCard"]');
+    if(editBtn)editBtn.style.display='inline-block';
+  }
+  // Actualizar progreso
+  renderDash();
+}
+
+function toggleEditCard(codigo){
+  const card=document.getElementById('card-'+codigo);
+  if(!card)return;
+  const inputs=card.querySelectorAll('input,select,textarea');
+  const allDisabled=[...inputs].every(el=>el.disabled);
+  inputs.forEach(el=>el.disabled=!allDisabled);
+}
+
 function updateField(el){
   const {codigo,field}=el.dataset;
-  if(!data[codigo]) data[codigo]={status:'Sin contactar',notes:'',phone:'',email:'',fecha_constitucion:'',representante_legal:'',enfoque_proyecto:'',fecha_contacto:'',medio_contacto:'',resultado_tipo:'',resultado_detalle:''};
+  if(!data[codigo]) data[codigo]={status:'Sin contactar',notes:'',phone:'',email:'',fecha_constitucion:'',representante_legal:'',enfoque_proyecto:'',fecha_contacto:'',medio_contacto:'',resultado_tipo:'',resultado_detalle:'',pagina_web:'',nombre_contacto:'',tel_contacto:'',email_contacto:''};
   data[codigo][field]=el.value;
   saveData();
   if(field==='status'){

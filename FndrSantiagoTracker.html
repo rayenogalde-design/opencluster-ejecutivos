@@ -801,6 +801,16 @@ function renderDash(){
           <div class="card-label">Representante legal</div>
           <input class="card-input" type="text" placeholder="Nombre completo..." data-codigo="${org.codigo}" data-field="representante_legal" value="${escHtml(d.representante_legal||'')}" onchange="updateField(this)" oninput="updateField(this)">
         </div>
+        <div class="card-field-row">
+          <div>
+            <div class="card-label">RUT Rep. Legal</div>
+            <input class="card-input" type="text" placeholder="Ej: 12.345.678-9" data-codigo="${org.codigo}" data-field="rut_rep_legal" value="${escHtml(d.rut_rep_legal||'')}" onchange="updateField(this)" oninput="updateField(this)">
+          </div>
+          <div>
+            <div class="card-label">Personalidad Jurídica N°</div>
+            <input class="card-input" type="text" placeholder="N° de personalidad jurídica" data-codigo="${org.codigo}" data-field="personalidad_juridica" value="${escHtml(d.personalidad_juridica||'')}" onchange="updateField(this)" oninput="updateField(this)">
+          </div>
+        </div>
         <div>
           <div class="card-label">Enfoque de proyecto</div>
           <textarea class="card-textarea" rows="2" placeholder="Descripción breve del enfoque..." data-codigo="${org.codigo}" data-field="enfoque_proyecto" onchange="updateField(this)" oninput="updateField(this)">${escHtml(d.enfoque_proyecto||'')}</textarea>
@@ -869,22 +879,38 @@ function renderDash(){
 
 function guardarCard(codigo){
   saveData();
-  // Feedback visual
   const card=document.getElementById('card-'+codigo);
   if(card){
     const btn=card.querySelector('button[onclick*="guardarCard"]');
     if(btn){
-      const orig=btn.innerHTML;
       btn.innerHTML='Guardado';btn.style.background='#16a34a';
-      setTimeout(()=>{btn.innerHTML=orig;btn.style.background='';},1500);
+      setTimeout(()=>{btn.innerHTML='Guardar';btn.style.background='linear-gradient(135deg,#16a34a,#15803d)';},1500);
     }
     // Deshabilitar campos (modo lectura)
     card.querySelectorAll('input,select,textarea').forEach(el=>el.disabled=true);
-    const editBtn=card.querySelector('button[onclick*="toggleEditCard"]');
-    if(editBtn)editBtn.style.display='inline-block';
   }
-  // Actualizar progreso
-  renderDash();
+  // Actualizar progreso SIN re-renderizar las cards
+  updateProgress();
+}
+
+function updateProgress(){
+  const ej=getEj(currentUser);
+  const myOrgs=ORGS.filter(o=>o.ej===currentUser);
+  const total=myOrgs.length;
+  const contacted=myOrgs.filter(o=>data[o.codigo]?.status!=='Sin contactar'&&data[o.codigo]?.status!=='No admisible').length;
+  const interested=myOrgs.filter(o=>['Interesado','Reunión agendada','Cotización enviada','Ganada'].includes(data[o.codigo]?.status)).length;
+  const meetings=myOrgs.filter(o=>data[o.codigo]?.status==='Reunión agendada').length;
+  const won=myOrgs.filter(o=>data[o.codigo]?.status==='Ganada').length;
+  document.getElementById('progressSub').textContent=`${contacted} de ${total} contactadas`;
+  document.getElementById('progressFill').style.width=total?((contacted/total)*100)+'%':'0%';
+  const stats=document.getElementById('progressStats');
+  if(stats) stats.innerHTML=`
+    <div class="progress-stat"><div class="progress-stat-num">${total}</div><div class="progress-stat-label">Asignadas</div></div>
+    <div class="progress-stat"><div class="progress-stat-num" style="color:var(--sky)">${contacted}</div><div class="progress-stat-label">Contactadas</div></div>
+    <div class="progress-stat"><div class="progress-stat-num" style="color:var(--gold)">${interested}</div><div class="progress-stat-label">Interesadas</div></div>
+    <div class="progress-stat"><div class="progress-stat-num" style="color:var(--orange)">${meetings}</div><div class="progress-stat-label">Reuniones</div></div>
+    <div class="progress-stat"><div class="progress-stat-num" style="color:#16a34a">${won}</div><div class="progress-stat-label">Ganadas</div></div>
+  `;
 }
 
 function toggleEditCard(codigo){

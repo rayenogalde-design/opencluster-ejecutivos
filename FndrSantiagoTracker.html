@@ -142,13 +142,49 @@ a{color:inherit;text-decoration:none;}
 .view-all-btn:hover{background:#b8deff;}
 
 /* Org cards */
-.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:18px;}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;}
 .org-card{
-  background:var(--card);border-radius:var(--radius);padding:22px;
+  background:var(--card);border-radius:var(--radius);padding:0;overflow:hidden;
   box-shadow:var(--shadow);border-top:4px solid var(--ltblue);
   transition:box-shadow .2s,border-color .2s;
 }
 .org-card:hover{box-shadow:0 4px 24px rgba(0,26,96,.13);}
+
+/* Collapsed header */
+.card-collapsed{
+  display:flex;align-items:center;gap:12px;padding:14px 16px;
+  cursor:pointer;user-select:none;transition:background .15s;
+}
+.card-collapsed:hover{background:#fafbfd;}
+.card-num{
+  background:linear-gradient(135deg,var(--navy),#002a8f);color:#fff;
+  border-radius:50%;width:30px;height:30px;display:flex;align-items:center;
+  justify-content:center;font-weight:800;font-family:'Montserrat',sans-serif;
+  font-size:.78rem;flex-shrink:0;box-shadow:0 2px 6px rgba(0,26,96,.25);
+}
+.card-collapsed-main{flex:1;min-width:0;}
+.card-collapsed-title{
+  font-family:'Montserrat',sans-serif;font-size:.88rem;font-weight:700;
+  color:var(--navy);line-height:1.25;margin-bottom:7px;
+  overflow:hidden;text-overflow:ellipsis;display:-webkit-box;
+  -webkit-line-clamp:2;-webkit-box-orient:vertical;
+}
+.card-pills{display:flex;gap:5px;flex-wrap:wrap;}
+.pill{
+  display:inline-flex;align-items:center;gap:3px;padding:3px 8px;
+  border-radius:10px;font-size:.64rem;font-weight:700;
+  font-family:'Montserrat',sans-serif;background:#f1f5f9;color:#94a3b8;
+  border:1px solid transparent;letter-spacing:.01em;white-space:nowrap;
+}
+.pill.on{background:#dcfce7;color:#15803d;border-color:#86efac;}
+.pill.off{background:#fee2e2;color:#b91c1c;border-color:#fca5a5;}
+.pill-icon{font-size:.78rem;line-height:1;}
+.card-chevron{
+  color:var(--subtle);transition:transform .25s;flex-shrink:0;
+}
+.org-card.expanded .card-chevron{transform:rotate(180deg);}
+.card-body{display:none;padding:0 18px 18px;border-top:1.5px solid #eef2f7;}
+.org-card.expanded .card-body{display:block;padding-top:16px;}
 .org-card.status-Contactado{border-top-color:var(--sky);}
 .org-card.status-Interesado{border-top-color:var(--gold);}
 .org-card.status-Reunión_agendada{border-top-color:var(--orange);}
@@ -707,10 +743,26 @@ function loadData(){
         nombre_contacto:'',
         tel_contacto:'',
         email_contacto:'',
-        vale_contactar:''
+        vale_contactar:'',
+        postula_proyecto:''
       };
     }
   });
+  // Merge PRE data into empty fields (para orgs guardadas antes de cargar PRE)
+  ORGS.forEach(o=>{
+    const p=PRE[o.codigo]; if(!p) return;
+    const d=data[o.codigo]; if(!d) return;
+    if(!d.rut && p.rut) d.rut=p.rut;
+    if(!d.phone && p.tel) d.phone=p.tel;
+    if(!d.email && p.email) d.email=p.email;
+    if(!d.rut_rep_legal && p.rut_rep) d.rut_rep_legal=p.rut_rep;
+    if(!d.representante_legal && p.rep) d.representante_legal=p.rep;
+    if(!d.personalidad_juridica && p.pj) d.personalidad_juridica=p.pj;
+    if(!d.pagina_web && p.web) d.pagina_web=p.web;
+    if(!d.fondos_previos && p.fondos) d.fondos_previos=p.fondos;
+    if(d.postula_proyecto===undefined) d.postula_proyecto='';
+  });
+  saveData();
 }
 function saveData(){
   localStorage.setItem(LS_KEY, JSON.stringify(data));
@@ -832,7 +884,7 @@ function renderDash(){
 
   const grid = document.getElementById('cardsGrid');
   grid.innerHTML='';
-  myOrgs.forEach(org=>{
+  myOrgs.forEach((org, idx)=>{
     const d = data[org.codigo];
     const sk = statusKey(d.status);
     const card = document.createElement('div');
@@ -850,6 +902,15 @@ function renderDash(){
       detalleOpts='<option value="">—</option><option value="Sin respuesta"'+(d.resultado_detalle==='Sin respuesta'?' selected':'')+'>Sin respuesta</option><option value="No interesado"'+(d.resultado_detalle==='No interesado'?' selected':'')+'>No interesado</option><option value="Ya está postulando"'+(d.resultado_detalle==='Ya está postulando'?' selected':'')+'>Ya está postulando</option>';
     }
     card.innerHTML=`
+      <div class="card-collapsed" onclick="toggleCard('${org.codigo}')">
+        <div class="card-num">${idx+1}</div>
+        <div class="card-collapsed-main">
+          <div class="card-collapsed-title">${escHtml(org.org)}</div>
+          <div class="card-pills" id="pills-${org.codigo}">${buildPillsHtml(d)}</div>
+        </div>
+        <svg class="card-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="card-body">
       <div class="card-top">
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
           <div class="card-code">${org.codigo}</div>
@@ -858,8 +919,7 @@ function renderDash(){
         </div>
         ${org.pts!=null?`<span class="puntaje-badge ${ptsClass(org.pts)}">${org.pts?org.pts+' pts':'No admisible'}</span>`:''}
       </div>
-      <div class="card-proyecto" style="font-family:'Montserrat',sans-serif;font-size:1rem;font-weight:800;color:var(--navy);margin-bottom:3px;line-height:1.3;">${org.org}</div>
-      <div class="card-org" style="font-size:.8rem;color:var(--subtle);font-weight:500;margin-bottom:12px;line-height:1.4;">Proyecto: ${org.proyecto}</div>
+      <div class="card-org" style="font-size:.8rem;color:var(--subtle);font-weight:500;margin-bottom:12px;line-height:1.4;">Proyecto: ${escHtml(org.proyecto)}</div>
       ${org.motivo?`<div style="font-size:.78rem;color:#c0392b;font-weight:600;margin-bottom:8px;padding:4px 8px;background:rgba(192,57,43,.06);border-radius:4px;">Causal: ${org.motivo}</div>`:''}
       <div style="margin-bottom:10px;">
         <a href="https://registros19862.gob.cl/" target="_blank" style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;background:linear-gradient(135deg,#06b3fd,#001a60);color:#fff;border-radius:6px;font-size:.78rem;font-weight:700;text-decoration:none;transition:opacity .2s;" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
@@ -961,6 +1021,14 @@ function renderDash(){
             </select>
           </div>
         </div>
+        <div>
+          <div class="card-label">¿Postula proyecto?</div>
+          <select class="card-select" data-codigo="${org.codigo}" data-field="postula_proyecto" onchange="updateField(this)">
+            <option value=""${!d.postula_proyecto?' selected':''}>— Por definir —</option>
+            <option value="si"${d.postula_proyecto==='si'?' selected':''}>Sí, postula</option>
+            <option value="no"${d.postula_proyecto==='no'?' selected':''}>No postula</option>
+          </select>
+        </div>
         <div style="margin-top:10px;padding-top:10px;border-top:1.5px solid var(--smoke);">
           <div style="font-size:.78rem;font-weight:700;color:var(--sapp);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Persona de contacto</div>
           <div>
@@ -987,9 +1055,37 @@ function renderDash(){
           <button onclick="toggleEditCard('${org.codigo}')" style="padding:8px 14px;background:var(--sapp-lt,#eaf3fd);color:var(--sapp);border:1px solid rgba(26,95,168,.25);border-radius:7px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">Editar</button>
         </div>
       </div>
+      </div>
     `;
     grid.appendChild(card);
   });
+}
+
+function buildPillsHtml(d){
+  const datosOk = !!(d.rut && d.representante_legal && d.rut_rep_legal && d.personalidad_juridica);
+  const contactada = !!d.fecha_contacto || (d.status && d.status!=='Sin contactar' && d.status!=='No admisible');
+  const postula = d.postula_proyecto||'';
+  const datosCls = datosOk?'on':'';
+  const contactCls = contactada?'on':'';
+  const postulaCls = postula==='si'?'on':(postula==='no'?'off':'');
+  const datosIcon = datosOk?'✓':'○';
+  const contactIcon = contactada?'✓':'○';
+  const postulaIcon = postula==='si'?'✓':(postula==='no'?'✗':'○');
+  return `
+    <span class="pill ${datosCls}"><span class="pill-icon">${datosIcon}</span> Datos</span>
+    <span class="pill ${contactCls}"><span class="pill-icon">${contactIcon}</span> Contactada</span>
+    <span class="pill ${postulaCls}"><span class="pill-icon">${postulaIcon}</span> Postula</span>
+  `;
+}
+
+function refreshPills(codigo){
+  const el=document.getElementById('pills-'+codigo);
+  if(el && data[codigo]) el.innerHTML=buildPillsHtml(data[codigo]);
+}
+
+function toggleCard(codigo){
+  const card=document.getElementById('card-'+codigo);
+  if(card) card.classList.toggle('expanded');
 }
 
 function guardarCard(codigo){
@@ -1038,17 +1134,18 @@ function toggleEditCard(codigo){
 
 function updateField(el){
   const {codigo,field}=el.dataset;
-  if(!data[codigo]) data[codigo]={status:'Sin contactar',notes:'',phone:'',email:'',fecha_constitucion:'',representante_legal:'',enfoque_proyecto:'',fecha_contacto:'',medio_contacto:'',resultado_tipo:'',resultado_detalle:'',pagina_web:'',nombre_contacto:'',tel_contacto:'',email_contacto:''};
+  if(!data[codigo]) data[codigo]={status:'Sin contactar',notes:'',phone:'',email:'',fecha_constitucion:'',representante_legal:'',enfoque_proyecto:'',fecha_contacto:'',medio_contacto:'',resultado_tipo:'',resultado_detalle:'',pagina_web:'',nombre_contacto:'',tel_contacto:'',email_contacto:'',postula_proyecto:''};
   data[codigo][field]=el.value;
   saveData();
   if(field==='status'){
     const card=document.getElementById(`card-${codigo}`);
     if(card){
-      card.className='org-card';
+      [...card.classList].forEach(c=>{ if(c.startsWith('status-')) card.classList.remove(c); });
       card.classList.add(`status-${statusKey(el.value)}`);
     }
     updateProgress();
   }
+  refreshPills(codigo);
 }
 
 function onResultadoTipoChange(codigo){
@@ -1168,6 +1265,7 @@ function renderTable(){
    UTILS
 ═══════════════════════════════════════ */
 function escHtml(s){
+  if(s===null||s===undefined) return '';
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 

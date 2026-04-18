@@ -157,6 +157,8 @@ a{color:inherit;text-decoration:none;}
 .org-card.status-Sin_interés{border-top-color:#dc2626;}
 .org-card.status-No_contactable{border-top-color:#4b5563;}
 .org-card.status-No_admisible{border-top-color:#4a0010;opacity:.82;}
+.org-card.anio-2024{border-left:3px solid #7c3aed;}
+.org-card.adjudicado2024{border-top-color:#16a34a;}
 
 .card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px;}
 .card-code{font-size:.72rem;font-weight:700;color:var(--subtle);letter-spacing:.05em;font-family:'Montserrat',sans-serif;}
@@ -354,7 +356,7 @@ a{color:inherit;text-decoration:none;}
           <circle cx="7" cy="7" r="6"/>
           <path d="M7 4v3l2 2"/>
         </svg>
-        Santiago · 38 organizaciones
+        Santiago · <span id="loginBadgeCount"></span> organizaciones
       </div>
       <div class="login-title">¿Quién eres?</div>
       <div class="login-sub">Selecciona tu nombre para ver tus organizaciones asignadas y registrar avances.</div>
@@ -384,7 +386,7 @@ a{color:inherit;text-decoration:none;}
         </div>
       </div>
       <div class="progress-stats" id="progressStats"></div>
-      <button class="view-all-btn" onclick="showConsolidated()">Ver todas las 38 →</button>
+      <button class="view-all-btn" onclick="showConsolidated()">Ver todas las <span id="totalOrgsBtn"></span> →</button>
     </div>
 
     <!-- Cards -->
@@ -407,6 +409,11 @@ a{color:inherit;text-decoration:none;}
       <select class="filter-select" id="filterEj" onchange="renderTable()">
         <option value="">Todos los ejecutivos</option>
       </select>
+      <select class="filter-select" id="filterAnio" onchange="renderTable()">
+        <option value="">Todos los años</option>
+        <option value="2025">2025</option>
+        <option value="2024">2024</option>
+      </select>
       <select class="filter-select" id="filterStatus" onchange="renderTable()">
         <option value="">Todos los estados</option>
       </select>
@@ -419,6 +426,7 @@ a{color:inherit;text-decoration:none;}
         <thead>
           <tr>
             <th>Ejecutivo</th>
+            <th>Año</th>
             <th>Código</th>
             <th>Organización</th>
             <th>RUT</th>
@@ -426,6 +434,8 @@ a{color:inherit;text-decoration:none;}
             <th>Contactar</th>
             <th>Pts</th>
             <th>Estado</th>
+            <th>Fecha contacto</th>
+            <th>Resultado</th>
             <th>Notas</th>
           </tr>
         </thead>
@@ -449,56 +459,121 @@ const EJECUTIVOS = [
 ];
 
 const ORGS = [
-  {row:1, pts:93,   ej:'maxi',   codigo:'IL-00108-25', proyecto:'FibroAcción: Estrategias Interdisciplinarias para el Bienestar', org:'Fundación Fibromialgia en Acción'},
-  {row:2, pts:92,   ej:'german', codigo:'IL-00001-25', proyecto:'Comunidad Diversa RM', org:'Fundación Todo Mejora'},
-  {row:3, pts:92,   ej:'william',codigo:'IL-00035-25', proyecto:'Oficios Tecnológicos para inserción laboral', org:'Fund. Formación para el Trabajo Romanos XII'},
-  {row:4, pts:92,   ej:'rayen',  codigo:'IL-00092-25', proyecto:'Jóvenes líderes para la cohesión e inclusión social en RM', org:'Fundación Observa Ciudadanía'},
-  {row:5, pts:92,   ej:'roberto',codigo:'IL-00099-25', proyecto:'Digitalmente Activos', org:'Fund. Solidaria Trabajo para un Hermano'},
-  {row:6, pts:92,   ej:'roberto',codigo:'IL-00229-25', proyecto:'Mujer agente de cambio', org:'Fund. de Educación y Capacitación Recrea'},
-  {row:7, pts:92,   ej:'rayen',  codigo:'IL-00301-25', proyecto:'Danzas sin Barreras', org:'Fundación Cerro Navia'},
-  {row:8, pts:92,   ej:'william',codigo:'IL-00353-25', proyecto:'Juegos de ingenio para la Integración y el bienestar cognitivo y motor', org:'Fundación Veritas'},
-  {row:9, pts:92,   ej:'german', codigo:'IL-00418-25', proyecto:'Trabajando por el autocuidado y salud mental de las comunidades LGTBQ+', org:'ONG Est. de la Sexualidad'},
-  {row:10,pts:92,   ej:'maxi',   codigo:'IL-00551-25', proyecto:'Hogar Alcanzable: Bienestar para envejecer en el lugar', org:'Fundación Alcanzable'},
-  {row:11,pts:92,   ej:'maxi',   codigo:'IL-00631-25', proyecto:'Nuestras voces a la TV: Taller de producción televisiva para infancias', org:'Fund. Cultural Vecinal Santiago Norte'},
-  {row:12,pts:92,   ej:'german', codigo:'IL-00683-25', proyecto:'Trato Hecho Vecino: inclusión de personas en situación calle en la RM', org:'Fundación Trato Hecho Vecino'},
-  {row:13,pts:90,   ej:'william',codigo:'IL-00236-25', proyecto:'Formación Gestores Interculturales para Convivencia y Paz Comunitaria', org:'ONG de Desarrollo Proyecto Tepuy'},
-  {row:14,pts:86.4, ej:'rayen',  codigo:'IL-00026-25', proyecto:'Equipamiento y Sala Multisensorial', org:'Fundación Tu Mundo es Mi Mundo'},
-  {row:15,pts:86.4, ej:'roberto',codigo:'IL-00043-25', proyecto:'Vernos y Crear Vínculos, Programa para Pacientes de la Salud Mental', org:'Fundación Círculo Polar'},
-  {row:16,pts:86.4, ej:'roberto',codigo:'IL-00062-25', proyecto:'Aliados del cuidado', org:'Fundación Aprender en Movimiento'},
-  {row:17,pts:86.4, ej:'rayen',  codigo:'IL-00123-25', proyecto:'Líderes y agentes de cambio para una nueva longevidad', org:'Pontificia Universidad Católica de Chile'},
-  {row:18,pts:86.4, ej:'william',codigo:'IL-00170-25', proyecto:'Emprendedoras Conectadas Personas Mayores', org:'Fundación para la Inclusión Tecnológica Kodea'},
-  {row:19,pts:86.4, ej:'german', codigo:'IL-00425-25', proyecto:'Infancias que Transforman: Inclusión desde las Escuelas y el Territorio', org:'Fundación Teatro Educativo'},
-  {row:20,pts:86.4, ej:'maxi',   codigo:'IL-00433-25', proyecto:'Iluminando Caminos a través del Deporte para la Inclusión', org:'Fundación Luz'},
-  {row:21,pts:86.4, ej:'maxi',   codigo:'IL-00503-25', proyecto:'Educándonos con Inclusión', org:'Soñando Futuro'},
-  {row:22,pts:86.4, ej:'german', codigo:'IL-00784-25', proyecto:'Educación y Equidad Menstrual Escolar', org:'Fundación Mujer Mundo'},
-  {row:23,pts:86.4, ej:'william',codigo:'IL-00054-25', proyecto:'Yo también comparto con amigos. Espacios sociales para P con DI', org:'Fundación Barlovento para la inclusión de personas con discapacidad intelectual'},
-  {row:24,pts:84.7, ej:'rayen',  codigo:'IL-00175-25', proyecto:'Inclusión social de las diversidades sexuales y de género en la R.M', org:'ONG MOVILH'},
-  {row:25,pts:84.7, ej:'roberto',codigo:'IL-00072-25', proyecto:'Empoderamiento Digital PM', org:'Fundación Conecta Mayor'},
-  {row:26,pts:84.7, ej:'roberto',codigo:'IL-00370-25', proyecto:'Ludoteca itinerante Jugando nos conectamos y formamos Comunidad Activa', org:'Instituto para el Desarrollo Comunitario IDECO'},
-  {row:27,pts:84,   ej:'rayen',  codigo:'IL-00693-25', proyecto:'Acompañamiento integral a cuidadores de NNA con S. de Down', org:'Corporación EduDown'},
-  {row:28,pts:83,   ej:'william',codigo:'IL-00176-25', proyecto:'Formación de liderazgos comunitarios en campamentos', org:'Fundación Un Techo para Chile'},
-  {row:29,pts:83,   ej:'german', codigo:'IL-00233-25', proyecto:'Vida Digna TEAbraza', org:'ONG Vida Digna'},
-  {row:30,pts:83,   ej:'maxi',   codigo:'IL-00468-25', proyecto:'Equipando nuestro nuevo espacio de rehabilitación', org:'Fundación Renacer Juntos'},
-  {row:31,pts:83,   ej:'maxi',   codigo:'IL-00673-25', proyecto:'Operativos en terreno para la regularización migratoria', org:'Instituto Católico Chileno de Migración'},
-  {row:32,pts:83,   ej:'german', codigo:'IL-00740-25', proyecto:'Anacroj: un camino hacia la inclusión', org:'Corporación ANACROJ'},
-  {row:33,pts:81,   ej:'william',codigo:'IL-00629-25', proyecto:'Manos que cuidan', org:'Fundación Fem Kuche Papai'},
-  {row:34,pts:80,   ej:'rayen',  codigo:'IL-00150-25', proyecto:'Fomentando la inclusión de las personas mayores', org:'Fundación Juan Carlos Kantor'},
-  {row:35,pts:80,   ej:'roberto',codigo:'IL-00197-25', proyecto:'Finanzas para la vida', org:'Fundación Gestionar Esperanzas'},
-  {row:36,pts:78,   ej:'roberto',codigo:'IL-00117-25', proyecto:'Conectad@s: Aprendiendo Junt@s a Usar la Tecnología', org:'Fundación Cristo Vive'},
-  {row:37,pts:73,   ej:'rayen',  codigo:'IL-00182-25', proyecto:'Enlace Refugio: Charlas de información y orientación integral', org:'Fund. de Ayuda Social de Fieles de las Iglesias Cristianas'},
-  {row:38,pts:50,   ej:'william',codigo:'IL-00194-25', proyecto:'Convivencia Intercultural Migratoria en la Región Metropolitana', org:'Fundación Redmigrantes'},
-  {row:39,pts:0,    ej:'maxi',   codigo:'IL-00017-25', proyecto:'"Súper Inclusión"', org:'Fund. Educacional y Cultural Acompáñame', inadmisible:true, motivo:'Sin certificado de vigencia del directorio'},
-  {row:40,pts:0,    ej:'maxi',   codigo:'IL-00024-25', proyecto:'"Flow interior"', org:'ONG Neyun, Educación en Armonía', inadmisible:true, motivo:'Representante legal no coincide con certificado de directorio'},
-  {row:41,pts:0,    ej:'maxi',   codigo:'IL-00025-25', proyecto:'"Desde los barrios abriendo la participación y el cuidado de la niñez"', org:'La Otra Educación', inadmisible:true, motivo:'Sin certificados de inhabilidades para trabajo con NNA'},
-  {row:42,pts:0,    ej:'german', codigo:'IL-00027-25', proyecto:'"Encuentros de Saberes y Comunidad"', org:'Asociación Compromiso Migrante', inadmisible:true, motivo:'Sin certificados de inhabilidades para trabajo con NNA'},
-  {row:43,pts:0,    ej:'german', codigo:'IL-00029-25', proyecto:'"Sincronizadores Positivos: Alfabetización Digital Inclusiva"', org:'Fundación Encuentros del Futuro', inadmisible:true, motivo:'Solo 1 lugar declarado, inconsistente con alcance regional'},
-  {row:44,pts:0,    ej:'german', codigo:'IL-00038-25', proyecto:'"TEADMIRO CONTIGO II"', org:'Fundación TEADMIRO', inadmisible:true, motivo:'Sin certificados de inhabilidades para trabajo con NNA'},
-  {row:45,pts:0,    ej:'william',codigo:'IL-00042-25', proyecto:'"+Activos +Conectados"', org:'Universidad San Sebastián', inadmisible:true, motivo:'No subsana observaciones entregadas'},
-  {row:46,pts:0,    ej:'william',codigo:'IL-00050-25', proyecto:'"Vinculación intergeneracional: teatro y educación integral"', org:'Fundación Gerocultura', inadmisible:true, motivo:'No subsana observaciones entregadas'},
-  {row:47,pts:48.9, ej:'rayen',  codigo:'IL-00290-25', proyecto:'"Red de Vida: Voluntarios acompañando a las personas mayores"', org:'Círculo del Personal en Retiro de FAMAE', provincia:'Pedro Aguirre Cerda', inadmisible:true, motivo:'Puntaje < 50 pts'},
-  {row:48,pts:42.9, ej:'rayen',  codigo:'IL-00163-25', proyecto:'"Mejorando nuestra casa: Equipamiento para un envejecimiento activo"', org:'Club Adulto Mayor Gruta de Lourdes Las Fundadoras', provincia:'Melipilla', inadmisible:true, motivo:'Puntaje < 50 pts'},
-  {row:49,pts:42.9, ej:'roberto',codigo:'IL-00754-25', proyecto:'"Avanzando con Alegría"', org:'Club de Crónicos Adulto Mayor', provincia:'María Pinto', inadmisible:true, motivo:'Puntaje < 50 pts'},
-  {row:50,pts:42.9, ej:'roberto',codigo:'IL-00210-25', proyecto:'"Con movimiento nos cuidamos"', org:'Centro de Madres Alquilan', provincia:'Maipú', inadmisible:true, motivo:'Puntaje < 50 pts'},
+  {row:1, pts:93,   ej:'maxi',   codigo:'IL-00108-25', proyecto:'FibroAcción: Estrategias Interdisciplinarias para el Bienestar', org:'Fundación Fibromialgia en Acción', anio:'2025'},
+  {row:2, pts:92,   ej:'german', codigo:'IL-00001-25', proyecto:'Comunidad Diversa RM', org:'Fundación Todo Mejora', anio:'2025'},
+  {row:3, pts:92,   ej:'william',codigo:'IL-00035-25', proyecto:'Oficios Tecnológicos para inserción laboral', org:'Fund. Formación para el Trabajo Romanos XII', anio:'2025'},
+  {row:4, pts:92,   ej:'rayen',  codigo:'IL-00092-25', proyecto:'Jóvenes líderes para la cohesión e inclusión social en RM', org:'Fundación Observa Ciudadanía', anio:'2025'},
+  {row:5, pts:92,   ej:'roberto',codigo:'IL-00099-25', proyecto:'Digitalmente Activos', org:'Fund. Solidaria Trabajo para un Hermano', anio:'2025'},
+  {row:6, pts:92,   ej:'roberto',codigo:'IL-00229-25', proyecto:'Mujer agente de cambio', org:'Fund. de Educación y Capacitación Recrea', anio:'2025'},
+  {row:7, pts:92,   ej:'rayen',  codigo:'IL-00301-25', proyecto:'Danzas sin Barreras', org:'Fundación Cerro Navia', anio:'2025'},
+  {row:8, pts:92,   ej:'william',codigo:'IL-00353-25', proyecto:'Juegos de ingenio para la Integración y el bienestar cognitivo y motor', org:'Fundación Veritas', anio:'2025'},
+  {row:9, pts:92,   ej:'german', codigo:'IL-00418-25', proyecto:'Trabajando por el autocuidado y salud mental de las comunidades LGTBQ+', org:'ONG Est. de la Sexualidad', anio:'2025'},
+  {row:10,pts:92,   ej:'maxi',   codigo:'IL-00551-25', proyecto:'Hogar Alcanzable: Bienestar para envejecer en el lugar', org:'Fundación Alcanzable', anio:'2025'},
+  {row:11,pts:92,   ej:'maxi',   codigo:'IL-00631-25', proyecto:'Nuestras voces a la TV: Taller de producción televisiva para infancias', org:'Fund. Cultural Vecinal Santiago Norte', anio:'2025'},
+  {row:12,pts:92,   ej:'german', codigo:'IL-00683-25', proyecto:'Trato Hecho Vecino: inclusión de personas en situación calle en la RM', org:'Fundación Trato Hecho Vecino', anio:'2025'},
+  {row:13,pts:90,   ej:'william',codigo:'IL-00236-25', proyecto:'Formación Gestores Interculturales para Convivencia y Paz Comunitaria', org:'ONG de Desarrollo Proyecto Tepuy', anio:'2025'},
+  {row:14,pts:86.4, ej:'rayen',  codigo:'IL-00026-25', proyecto:'Equipamiento y Sala Multisensorial', org:'Fundación Tu Mundo es Mi Mundo', anio:'2025'},
+  {row:15,pts:86.4, ej:'roberto',codigo:'IL-00043-25', proyecto:'Vernos y Crear Vínculos, Programa para Pacientes de la Salud Mental', org:'Fundación Círculo Polar', anio:'2025'},
+  {row:16,pts:86.4, ej:'roberto',codigo:'IL-00062-25', proyecto:'Aliados del cuidado', org:'Fundación Aprender en Movimiento', anio:'2025'},
+  {row:17,pts:86.4, ej:'rayen',  codigo:'IL-00123-25', proyecto:'Líderes y agentes de cambio para una nueva longevidad', org:'Pontificia Universidad Católica de Chile', anio:'2025'},
+  {row:18,pts:86.4, ej:'william',codigo:'IL-00170-25', proyecto:'Emprendedoras Conectadas Personas Mayores', org:'Fundación para la Inclusión Tecnológica Kodea', anio:'2025'},
+  {row:19,pts:86.4, ej:'german', codigo:'IL-00425-25', proyecto:'Infancias que Transforman: Inclusión desde las Escuelas y el Territorio', org:'Fundación Teatro Educativo', anio:'2025'},
+  {row:20,pts:86.4, ej:'maxi',   codigo:'IL-00433-25', proyecto:'Iluminando Caminos a través del Deporte para la Inclusión', org:'Fundación Luz', anio:'2025'},
+  {row:21,pts:86.4, ej:'maxi',   codigo:'IL-00503-25', proyecto:'Educándonos con Inclusión', org:'Soñando Futuro', anio:'2025'},
+  {row:22,pts:86.4, ej:'german', codigo:'IL-00784-25', proyecto:'Educación y Equidad Menstrual Escolar', org:'Fundación Mujer Mundo', anio:'2025'},
+  {row:23,pts:86.4, ej:'william',codigo:'IL-00054-25', proyecto:'Yo también comparto con amigos. Espacios sociales para P con DI', org:'Fundación Barlovento para la inclusión de personas con discapacidad intelectual', anio:'2025'},
+  {row:24,pts:84.7, ej:'rayen',  codigo:'IL-00175-25', proyecto:'Inclusión social de las diversidades sexuales y de género en la R.M', org:'ONG MOVILH', anio:'2025'},
+  {row:25,pts:84.7, ej:'roberto',codigo:'IL-00072-25', proyecto:'Empoderamiento Digital PM', org:'Fundación Conecta Mayor', anio:'2025'},
+  {row:26,pts:84.7, ej:'roberto',codigo:'IL-00370-25', proyecto:'Ludoteca itinerante Jugando nos conectamos y formamos Comunidad Activa', org:'Instituto para el Desarrollo Comunitario IDECO', anio:'2025'},
+  {row:27,pts:84,   ej:'rayen',  codigo:'IL-00693-25', proyecto:'Acompañamiento integral a cuidadores de NNA con S. de Down', org:'Corporación EduDown', anio:'2025'},
+  {row:28,pts:83,   ej:'william',codigo:'IL-00176-25', proyecto:'Formación de liderazgos comunitarios en campamentos', org:'Fundación Un Techo para Chile', anio:'2025'},
+  {row:29,pts:83,   ej:'german', codigo:'IL-00233-25', proyecto:'Vida Digna TEAbraza', org:'ONG Vida Digna', anio:'2025'},
+  {row:30,pts:83,   ej:'maxi',   codigo:'IL-00468-25', proyecto:'Equipando nuestro nuevo espacio de rehabilitación', org:'Fundación Renacer Juntos', anio:'2025'},
+  {row:31,pts:83,   ej:'maxi',   codigo:'IL-00673-25', proyecto:'Operativos en terreno para la regularización migratoria', org:'Instituto Católico Chileno de Migración', anio:'2025'},
+  {row:32,pts:83,   ej:'german', codigo:'IL-00740-25', proyecto:'Anacroj: un camino hacia la inclusión', org:'Corporación ANACROJ', anio:'2025'},
+  {row:33,pts:81,   ej:'william',codigo:'IL-00629-25', proyecto:'Manos que cuidan', org:'Fundación Fem Kuche Papai', anio:'2025'},
+  {row:34,pts:80,   ej:'rayen',  codigo:'IL-00150-25', proyecto:'Fomentando la inclusión de las personas mayores', org:'Fundación Juan Carlos Kantor', anio:'2025'},
+  {row:35,pts:80,   ej:'roberto',codigo:'IL-00197-25', proyecto:'Finanzas para la vida', org:'Fundación Gestionar Esperanzas', anio:'2025'},
+  {row:36,pts:78,   ej:'roberto',codigo:'IL-00117-25', proyecto:'Conectad@s: Aprendiendo Junt@s a Usar la Tecnología', org:'Fundación Cristo Vive', anio:'2025'},
+  {row:37,pts:73,   ej:'rayen',  codigo:'IL-00182-25', proyecto:'Enlace Refugio: Charlas de información y orientación integral', org:'Fund. de Ayuda Social de Fieles de las Iglesias Cristianas', anio:'2025'},
+  {row:38,pts:50,   ej:'william',codigo:'IL-00194-25', proyecto:'Convivencia Intercultural Migratoria en la Región Metropolitana', org:'Fundación Redmigrantes', anio:'2025'},
+  {row:39,pts:0,    ej:'maxi',   codigo:'IL-00017-25', proyecto:'"Súper Inclusión"', org:'Fund. Educacional y Cultural Acompáñame', inadmisible:true, motivo:'Sin certificado de vigencia del directorio', anio:'2025'},
+  {row:40,pts:0,    ej:'maxi',   codigo:'IL-00024-25', proyecto:'"Flow interior"', org:'ONG Neyun, Educación en Armonía', inadmisible:true, motivo:'Representante legal no coincide con certificado de directorio', anio:'2025'},
+  {row:41,pts:0,    ej:'maxi',   codigo:'IL-00025-25', proyecto:'"Desde los barrios abriendo la participación y el cuidado de la niñez"', org:'La Otra Educación', inadmisible:true, motivo:'Sin certificados de inhabilidades para trabajo con NNA', anio:'2025'},
+  {row:42,pts:0,    ej:'german', codigo:'IL-00027-25', proyecto:'"Encuentros de Saberes y Comunidad"', org:'Asociación Compromiso Migrante', inadmisible:true, motivo:'Sin certificados de inhabilidades para trabajo con NNA', anio:'2025'},
+  {row:43,pts:0,    ej:'german', codigo:'IL-00029-25', proyecto:'"Sincronizadores Positivos: Alfabetización Digital Inclusiva"', org:'Fundación Encuentros del Futuro', inadmisible:true, motivo:'Solo 1 lugar declarado, inconsistente con alcance regional', anio:'2025'},
+  {row:44,pts:0,    ej:'german', codigo:'IL-00038-25', proyecto:'"TEADMIRO CONTIGO II"', org:'Fundación TEADMIRO', inadmisible:true, motivo:'Sin certificados de inhabilidades para trabajo con NNA', anio:'2025'},
+  {row:45,pts:0,    ej:'william',codigo:'IL-00042-25', proyecto:'"+Activos +Conectados"', org:'Universidad San Sebastián', inadmisible:true, motivo:'No subsana observaciones entregadas', anio:'2025'},
+  {row:46,pts:0,    ej:'william',codigo:'IL-00050-25', proyecto:'"Vinculación intergeneracional: teatro y educación integral"', org:'Fundación Gerocultura', inadmisible:true, motivo:'No subsana observaciones entregadas', anio:'2025'},
+  {row:47,pts:48.9, ej:'rayen',  codigo:'IL-00290-25', proyecto:'"Red de Vida: Voluntarios acompañando a las personas mayores"', org:'Círculo del Personal en Retiro de FAMAE', provincia:'Pedro Aguirre Cerda', inadmisible:true, motivo:'Puntaje < 50 pts', anio:'2025'},
+  {row:48,pts:42.9, ej:'rayen',  codigo:'IL-00163-25', proyecto:'"Mejorando nuestra casa: Equipamiento para un envejecimiento activo"', org:'Club Adulto Mayor Gruta de Lourdes Las Fundadoras', provincia:'Melipilla', inadmisible:true, motivo:'Puntaje < 50 pts', anio:'2025'},
+  {row:49,pts:42.9, ej:'roberto',codigo:'IL-00754-25', proyecto:'"Avanzando con Alegría"', org:'Club de Crónicos Adulto Mayor', provincia:'María Pinto', inadmisible:true, motivo:'Puntaje < 50 pts', anio:'2025'},
+  {row:50,pts:42.9, ej:'roberto',codigo:'IL-00210-25', proyecto:'"Con movimiento nos cuidamos"', org:'Centro de Madres Alquilan', provincia:'Maipú', inadmisible:true, motivo:'Puntaje < 50 pts', anio:'2025'},
+  // ── 2024 (snake draft: 1→maxi,2→german,3→william,4→rayen,5→roberto,6→roberto,7→rayen,8→william,9→german,10→maxi,repeat) ──
+  {codigo:'IL-00662-24', proyecto:'Anacroj: una casa para la inclusión', org:'Corporación de Ayuda al Niño con Artritis Crónica Juvenil ANACROJ', ej:'maxi',    anio:'2024', estado:'Adjudicado',  adjudicado2024:true},
+  {codigo:'IL-00582-24', proyecto:'TEADMIRO CONTIGO', org:'Fundación Trastorno Espectro Autista TEADMIRO', ej:'german',  anio:'2024', estado:'Adjudicado',  adjudicado2024:true},
+  {codigo:'IL-00041-24', proyecto:'Observatorios Ciudadanos de Personas Mayores Previenen el Maltrato', org:'ONG Centro de Capacitación y Desarrollo CEC', ej:'william', anio:'2024', estado:'Adjudicado',  adjudicado2024:true},
+  {codigo:'IL-00029-24', proyecto:'Infancia y juventud migrante, camino a la regularización', org:'Instituto Católico Chileno de Migración', ej:'rayen',   anio:'2024', estado:'Adjudicado',  adjudicado2024:true},
+  {codigo:'IL-00148-24', proyecto:'Programa de Acción Regional Contra la Discriminación', org:'Fundación Iguales', ej:'roberto',  anio:'2024', estado:'Adjudicado',  adjudicado2024:true},
+  {codigo:'IL-00243-24', proyecto:'Senderismo Sin Límites', org:'Fundación Eres', ej:'roberto',  anio:'2024', estado:'Adjudicado',  adjudicado2024:true},
+  {codigo:'IL-00673-24', proyecto:'Final Nacional de BSR 2024', org:'Federación Deportiva Nacional de Basquetbol Paralímpico de Chile', ej:'rayen',   anio:'2024', estado:'Adjudicado',  adjudicado2024:true},
+  {codigo:'IL-00558-24', proyecto:'Inclusión, de las palabras a la acción', org:'Fundación Apanines', ej:'william', anio:'2024', estado:'Adjudicado',  adjudicado2024:true},
+  {codigo:'IL-00056-24', proyecto:'Rehabilitación y salud mental de personas con discapacidad visual', org:'FUNDALURP', ej:'german',  anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00140-24', proyecto:'Conectando Mayores: habilitación digital de facilitadores y mayores', org:'Fundación Conecta Mayor', ej:'maxi',    anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00187-24', proyecto:'Alfabetización Digital Gamificada', org:'Fundación Alcance', ej:'maxi',    anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00493-24', proyecto:'AFTER para una juventud positiva', org:'Fundación Viña San Bernardo', ej:'german',  anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00213-24', proyecto:'Salud mental y diversidad sexual en el territorio', org:'Corporación Tesi Huneeus', ej:'william', anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00293-24', proyecto:'Línea Libre, Línea de ayuda para Independencia y Cerrillos', org:'Fundación para la Confianza', ej:'rayen',   anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00488-24', proyecto:'Mejorando la calidad de vida en hogar la familia', org:'Fundación Hogar la Familia', ej:'roberto',  anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00062-24', proyecto:'Puentes de inclusión: Construyendo redes de convivencia', org:'Sociedad Protectora de Ciegos Santa Lucía – Fundación Luz', ej:'roberto',  anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00141-24', proyecto:'Mayores Conectados', org:'Fundación para la Inclusión Tecnológica Kodea', ej:'rayen',   anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00430-24', proyecto:'Integrar a adultos mayores con movilidad reducida a la sociedad', org:'Corporación de Ayuda Odontológica para Pacientes con Necesidades Especiales y Discapacidad', ej:'william', anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00569-24', proyecto:'Contigo puede ser Distinto', org:'Fundación Educacional Sur América', ej:'german',  anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00099-24', proyecto:'Abriendo Puertas para la Inclusión en Chacabuco', org:'Fundación Misión Batuco', ej:'maxi',    anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00122-24', proyecto:'Salud Oral para Todos', org:'Fundación Deportistas por un Sueño', ej:'maxi',    anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00275-24', proyecto:'Acompañamiento a niños/as con Sd. de Down en edad escolar', org:'Corporación de Educación y Salud para el Síndrome de Down – EduDown', ej:'german',  anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00429-24', proyecto:'Lúdica Terapéutica En Tu Cesfam y Territorio', org:'Centro Cultural La Ambulancia De La Risa', ej:'william', anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00348-24', proyecto:'REHABINEURO: Rehabilitación Neurológica para todos', org:'Fundación CERAD', ej:'rayen',   anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00417-24', proyecto:'Acompañamiento Escuelas Región Metropolitana 2024', org:'Fundación Todo Mejora', ej:'roberto',  anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00069-24', proyecto:'Casa de Salud Mental Protectora de la Infancia', org:'Sociedad de Asistencia y Capacitación', ej:'roberto',  anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00286-24', proyecto:'Envejecimiento activo', org:'Fundación de Beneficencia Pública Por Más', ej:'rayen',   anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00363-24', proyecto:'Aprendiendo en comunidad sobre el cuidado integral de niños, niñas y adolescentes', org:'Fundación de Educación y Capacitación Recrea', ej:'william', anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00499-24', proyecto:'Promover asociatividad en Uniones Comunales de Juntas de Vecinos', org:'Federación Regional Metropolitana de Uniones Comunales de Juntas de Vecinos FEMUC', ej:'german',  anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00604-24', proyecto:'Atención de salud integral para migrantes en situación de calle', org:'Fundación Salud Calle', ej:'maxi',    anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00640-24', proyecto:'Digitalizando al adulto mayor', org:'Unión Comunal del Adulto Mayor Quinta Normal', ej:'maxi',    anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00023-24', proyecto:'Formación de Líderes/as LGBTIQA+', org:'Fundación Chile Diverso', ej:'german',  anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00236-24', proyecto:'Apoyo y Formación a Personas Cuidadoras (Macul y Peñalolén)', org:'Fundación Chilena para la Discapacidad', ej:'william', anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00120-24', proyecto:'Preparación a la vida independiente para jóvenes de la red Mejor Niñez', org:'Fundación Proyecto B', ej:'rayen',   anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00458-24', proyecto:'Circuito Nacional UNAB Tour Indoor Triathlon', org:'Federación Deportiva Nacional de Triatlón de Chile', ej:'roberto',  anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00296-24', proyecto:'Alivio del dolor en niños y adolescentes por medio del Arteterapia', org:'Fundación Creando Experiencias Positivas para la Infancia', ej:'roberto',  anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00323-24', proyecto:'Cocina Saludable en Vivo para Adultos Mayores', org:'Fundación Crea Energía', ej:'rayen',   anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00214-24', proyecto:'Tejiendo redes', org:'Fundación de Beneficencia Hogar de Cristo', ej:'william', anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00351-24', proyecto:'Fortalecimiento intergeneracional en la diversidad e inclusión', org:'Fundación Kintruy, Cultura, Arte e Inclusión', ej:'german',  anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00528-24', proyecto:'Atención Integral desde el enfoque Naturópata para la Población Vulnerable', org:'Asociación de Apiterapeutas y Naturópatas de Chile', ej:'maxi',    anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00680-24', proyecto:'Nuevas Energías', org:'Fundación Sueños en Movimiento', ej:'maxi',    anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00198-24', proyecto:'Academia Biotecnología Agrícola', org:'ONG Susténtate', ej:'german',  anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00221-24', proyecto:'Mayor cohesión y mejor convivencia en escuelas vulnerables de Santiago', org:'Fundación As You Wish', ej:'william', anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00070-24', proyecto:'Educación vial inmersiva', org:'Educleta', ej:'rayen',   anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00317-24', proyecto:'Fortaleciendo el liderazgo comunitario, Creación de cooperativas', org:'Corporación Chileprimero', ej:'roberto',  anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00282-24', proyecto:'Conectando Mujeres y Fortaleciendo Comunidades', org:'Fundación Por Todas para el Impulso Social', ej:'roberto',  anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00341-24', proyecto:'Vida independiente en comunidad e inclusión en situación de emergencia', org:'Fundación Vida Independiente Chile', ej:'rayen',   anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00442-24', proyecto:'Ricetea es amor y también inclusión', org:'Fundación Ricetea Autismo Buin', ej:'william', anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00270-24', proyecto:'Desarrollo de competencias para el cuidado de personas mayores', org:'Fundación RAKIZUAMNGE', ej:'german',  anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00354-24', proyecto:'Coloquios, Talleres Rehabilitación de Personas Mayores', org:'Fundación AIRE', ej:'maxi',    anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00396-24', proyecto:'CooperActivAs Ciclo de Talleres y Experiencias para la asociatividad', org:'Fundación Solidaria Trabajo para un Hermano', ej:'maxi',    anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00517-24', proyecto:'Promoviendo la Participación Social a través del Deporte', org:'Fundación Proyecto Futuro', ej:'german',  anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00477-24', proyecto:'Espacios seguros de aprendizaje para el bienestar social y emocional', org:'Fundación Padre Semería', ej:'william', anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00457-24', proyecto:'Terapia basada en las artes bajo el Método Lacaracola', org:'Fundación Lacaracola A Ser Feliz', ej:'rayen',   anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00264-24', proyecto:'COOEMPRENDEDORAS: Incubadora de Emprendoras Cooperativas', org:'Fundación Mappocho', ej:'roberto',  anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00565-24', proyecto:'Derechos Humanos para la Inclusión de Grupos Vulnerables', org:'Comisión Chilena de Derechos Humanos', ej:'roberto',  anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00483-24', proyecto:'Herramientas para la defensa de los Derechos Humanos', org:'Universidad Academia de Humanismo Cristiano', ej:'rayen',   anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00151-24', proyecto:'Con un caballo, un cuento y una huerta aprendo', org:'Fundación Granja Educativa Terapéutica Caracol', ej:'william', anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00522-24', proyecto:'Creciendo juntos: un árbol, una niña y un niño', org:'Centro Cultural Cristiano y Juvenil Nehuen', ej:'german',  anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00194-24', proyecto:'Liderazgos juveniles por territorios rurales libres de violencias', org:'Fundación Semilla', ej:'maxi',    anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00659-24', proyecto:'Familias unidas: Niños y niñas felices', org:'Fundación Rodelillo', ej:'maxi',    anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00314-24', proyecto:'Construyendo Futuros: Mujeres, Oficios y Autonomía Económica', org:'Fundación Mujeres Líderes de América Latina (MUJLIDAL)', ej:'german',  anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00366-24', proyecto:'Mejora de Bienestar y Estándares de Intervención para NNA', org:'Aldeas Infantiles SOS Chile', ej:'william', anio:'2024', estado:'No seleccionado'},
+  {codigo:'IL-00527-24', proyecto:'Mentes Saludables Comunidades Fuertes', org:'Fundación Río Montaña Chile', ej:'rayen',   anio:'2024', estado:'No seleccionado'},
 ];
 
 const STATUSES = [
@@ -511,7 +586,7 @@ const STATUSES = [
 ═══════════════════════════════════════ */
 const LS_KEY = 'fndr_stgo_data';
 let currentUser = null;
-let data = {}; // {codigo: {status, notes, phone, email}}
+let data = {}; // {codigo: {status, notes, phone, email, fecha_constitucion, representante_legal, enfoque_proyecto, fecha_contacto, medio_contacto, resultado_tipo, resultado_detalle}}
 
 function loadData(){
   try{ data = JSON.parse(localStorage.getItem(LS_KEY)||'{}'); }
@@ -519,7 +594,7 @@ function loadData(){
   // init missing
   ORGS.forEach(o=>{
     const defaultStatus = 'Sin contactar';
-    if(!data[o.codigo]) data[o.codigo]={status:defaultStatus,notes:o.motivo||'',phone:'',email:''};
+    if(!data[o.codigo]) data[o.codigo]={status:defaultStatus,notes:o.motivo||'',phone:'',email:'',fecha_constitucion:'',representante_legal:'',enfoque_proyecto:'',fecha_contacto:'',medio_contacto:'',resultado_tipo:'',resultado_detalle:''};
   });
 }
 function saveData(){
@@ -646,18 +721,33 @@ function renderDash(){
     const d = data[org.codigo];
     const sk = statusKey(d.status);
     const card = document.createElement('div');
-    card.className=`org-card status-${sk}`;
+    card.className=`org-card status-${sk}${org.anio==='2024'?' anio-2024':''}${org.adjudicado2024?' adjudicado2024':''}`;
     card.id=`card-${org.codigo}`;
+    const anioColor = org.anio==='2024' ? '#7c3aed' : '#001a60';
+    const adjBadge = org.adjudicado2024 ? `<span style="display:inline-block;margin-left:6px;padding:2px 8px;background:#dcfce7;color:#15803d;border-radius:8px;font-size:.68rem;font-weight:700;">Adjudicado 2024</span>` : '';
+    const estadoBadge2024 = org.anio==='2024'&&org.estado==='No seleccionado' ? `<span style="display:inline-block;margin-left:6px;padding:2px 8px;background:#fee2e2;color:#b91c1c;border-radius:8px;font-size:.68rem;font-weight:700;">No seleccionado 2024</span>` : '';
+    // build resultado_detalle options based on saved tipo
+    const tipoSaved = d.resultado_tipo||'';
+    let detalleOpts = '<option value="">—</option>';
+    if(tipoSaved==='Exitoso'){
+      detalleOpts='<option value="">—</option><option value="Aceptó reunión"'+(d.resultado_detalle==='Aceptó reunión'?' selected':'')+'>Aceptó reunión</option><option value="Aceptó participar en Proyecto"'+(d.resultado_detalle==='Aceptó participar en Proyecto'?' selected':'')+'>Aceptó participar en Proyecto</option>';
+    } else if(tipoSaved==='No hubo contacto'){
+      detalleOpts='<option value="">—</option><option value="Sin respuesta"'+(d.resultado_detalle==='Sin respuesta'?' selected':'')+'>Sin respuesta</option><option value="No interesado"'+(d.resultado_detalle==='No interesado'?' selected':'')+'>No interesado</option><option value="Ya está postulando"'+(d.resultado_detalle==='Ya está postulando'?' selected':'')+'>Ya está postulando</option>';
+    }
     card.innerHTML=`
       <div class="card-top">
-        <div class="card-code">${org.codigo}</div>
-        <span class="puntaje-badge ${ptsClass(org.pts)}">${org.pts?org.pts+' pts':'No admisible'}</span>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          <div class="card-code">${org.codigo}</div>
+          <span style="display:inline-block;padding:2px 8px;background:${anioColor};color:#fff;border-radius:8px;font-size:.67rem;font-weight:700;font-family:'Montserrat',sans-serif;">${org.anio||'2025'}</span>
+          ${adjBadge}${estadoBadge2024}
+        </div>
+        ${org.pts!=null?`<span class="puntaje-badge ${ptsClass(org.pts)}">${org.pts?org.pts+' pts':'No admisible'}</span>`:''}
       </div>
-      <div class="card-proyecto">${org.proyecto}</div>
-      <div class="card-org">${org.org}</div>
+      <div class="card-proyecto" style="font-family:'Montserrat',sans-serif;font-size:1rem;font-weight:800;color:var(--navy);margin-bottom:3px;line-height:1.3;">${org.org}</div>
+      <div class="card-org" style="font-size:.8rem;color:var(--subtle);font-weight:500;margin-bottom:12px;line-height:1.4;">Proyecto: ${org.proyecto}</div>
       ${org.motivo?`<div style="font-size:.78rem;color:#c0392b;font-weight:600;margin-bottom:8px;padding:4px 8px;background:rgba(192,57,43,.06);border-radius:4px;">Causal: ${org.motivo}</div>`:''}
       <div style="margin-bottom:10px;">
-        <a href="https://registros19862.gob.cl/" target="_blank" style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;background:linear-gradient(135deg,#06b3fd,#001a60);color:#fff;border-radius:6px;font-size:.78rem;font-weight:700;text-decoration:none;font-family:'DM Sans',sans-serif;transition:opacity .2s;" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+        <a href="https://registros19862.gob.cl/" target="_blank" style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;background:linear-gradient(135deg,#06b3fd,#001a60);color:#fff;border-radius:6px;font-size:.78rem;font-weight:700;text-decoration:none;transition:opacity .2s;" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
           Verificar en Registro Civil (Ley 19.862)
         </a>
@@ -702,6 +792,45 @@ function renderDash(){
             <div class="card-label">Correo</div>
             <input class="card-input" type="email" placeholder="contacto@org..." data-codigo="${org.codigo}" data-field="email" value="${escHtml(d.email||'')}" onchange="updateField(this)" oninput="updateField(this)">
           </div>
+          <div>
+            <div class="card-label">Fecha de constitución</div>
+            <input class="card-input" type="text" placeholder="DD/MM/AAAA" data-codigo="${org.codigo}" data-field="fecha_constitucion" value="${escHtml(d.fecha_constitucion||'')}" onchange="updateField(this)" oninput="updateField(this)">
+          </div>
+        </div>
+        <div>
+          <div class="card-label">Representante legal</div>
+          <input class="card-input" type="text" placeholder="Nombre completo..." data-codigo="${org.codigo}" data-field="representante_legal" value="${escHtml(d.representante_legal||'')}" onchange="updateField(this)" oninput="updateField(this)">
+        </div>
+        <div>
+          <div class="card-label">Enfoque de proyecto</div>
+          <textarea class="card-textarea" rows="2" placeholder="Descripción breve del enfoque..." data-codigo="${org.codigo}" data-field="enfoque_proyecto" onchange="updateField(this)" oninput="updateField(this)">${escHtml(d.enfoque_proyecto||'')}</textarea>
+        </div>
+        <div class="card-field-row">
+          <div>
+            <div class="card-label">Fecha de contacto</div>
+            <input class="card-input" type="date" data-codigo="${org.codigo}" data-field="fecha_contacto" value="${escHtml(d.fecha_contacto||'')}" onchange="updateField(this)">
+          </div>
+          <div>
+            <div class="card-label">Medio de contacto</div>
+            <select class="card-select" data-codigo="${org.codigo}" data-field="medio_contacto" onchange="updateField(this)">
+              <option value=""${!d.medio_contacto?' selected':''}>—</option>
+              <option value="Llamada"${d.medio_contacto==='Llamada'?' selected':''}>Llamada</option>
+              <option value="Email"${d.medio_contacto==='Email'?' selected':''}>Email</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <div class="card-label">Resultado de contacto</div>
+          <div style="display:flex;gap:8px;">
+            <select class="card-select" style="flex:1;" data-codigo="${org.codigo}" data-field="resultado_tipo" onchange="updateField(this);onResultadoTipoChange('${org.codigo}')">
+              <option value=""${!tipoSaved?' selected':''}>—</option>
+              <option value="Exitoso"${tipoSaved==='Exitoso'?' selected':''}>Exitoso</option>
+              <option value="No hubo contacto"${tipoSaved==='No hubo contacto'?' selected':''}>No hubo contacto</option>
+            </select>
+            <select class="card-select" style="flex:1;" id="detalle-${org.codigo}" data-codigo="${org.codigo}" data-field="resultado_detalle" onchange="updateField(this)"${!tipoSaved?' disabled':''}>
+              ${detalleOpts}
+            </select>
+          </div>
         </div>
         <div>
           <div class="card-label">Notas</div>
@@ -715,18 +844,34 @@ function renderDash(){
 
 function updateField(el){
   const {codigo,field}=el.dataset;
-  if(!data[codigo]) data[codigo]={status:'Sin contactar',notes:'',phone:'',email:''};
+  if(!data[codigo]) data[codigo]={status:'Sin contactar',notes:'',phone:'',email:'',fecha_constitucion:'',representante_legal:'',enfoque_proyecto:'',fecha_contacto:'',medio_contacto:'',resultado_tipo:'',resultado_detalle:''};
   data[codigo][field]=el.value;
   saveData();
   if(field==='status'){
     const card=document.getElementById(`card-${codigo}`);
     if(card){
-      // remove old status classes
       card.className='org-card';
       card.classList.add(`status-${statusKey(el.value)}`);
     }
     updateProgress();
   }
+}
+
+function onResultadoTipoChange(codigo){
+  const tipoEl = document.querySelector(`[data-codigo="${codigo}"][data-field="resultado_tipo"]`);
+  const detalleEl = document.getElementById(`detalle-${codigo}`);
+  if(!tipoEl||!detalleEl) return;
+  const tipo = tipoEl.value;
+  detalleEl.disabled = !tipo;
+  if(tipo==='Exitoso'){
+    detalleEl.innerHTML='<option value="">—</option><option value="Aceptó reunión">Aceptó reunión</option><option value="Aceptó participar en Proyecto">Aceptó participar en Proyecto</option>';
+  } else if(tipo==='No hubo contacto'){
+    detalleEl.innerHTML='<option value="">—</option><option value="Sin respuesta">Sin respuesta</option><option value="No interesado">No interesado</option><option value="Ya está postulando">Ya está postulando</option>';
+  } else {
+    detalleEl.innerHTML='<option value="">—</option>';
+  }
+  // also clear saved detalle when tipo changes
+  if(data[codigo]) { data[codigo].resultado_detalle=''; saveData(); }
 }
 
 function updateProgress(){
@@ -780,15 +925,17 @@ function renderConsolidated(){
 
 function renderTable(){
   const ejVal=document.getElementById('filterEj').value;
+  const anioVal=document.getElementById('filterAnio').value;
   const stVal=document.getElementById('filterStatus').value;
 
   let rows=ORGS;
   if(ejVal) rows=rows.filter(o=>o.ej===ejVal);
+  if(anioVal) rows=rows.filter(o=>(o.anio||'2025')===anioVal);
   if(stVal) rows=rows.filter(o=>data[o.codigo]?.status===stVal);
 
   const tbody=document.getElementById('consTableBody');
   if(rows.length===0){
-    tbody.innerHTML=`<tr><td colspan="9"><div class="empty-state">
+    tbody.innerHTML=`<tr><td colspan="12"><div class="empty-state">
       <svg viewBox="0 0 48 48" fill="none" stroke="#94a3b8" stroke-width="2"><circle cx="24" cy="24" r="20"/><path d="M24 16v8M24 32h.01"/></svg>
       <p>No hay organizaciones con esos filtros.</p>
     </div></td></tr>`;
@@ -801,17 +948,23 @@ function renderTable(){
     const sk=statusKey(d.status);
     const fondosLabel=d.fondos_previos==='si'?'<span style="color:#c0392b;font-weight:700;">Sí</span>':d.fondos_previos==='no'?'<span style="color:#16a34a;font-weight:700;">No</span>':'<span style="color:#94a3b8;">—</span>';
     const contactarLabel=d.vale_contactar==='si'?'<span style="color:#16a34a;font-weight:700;">Sí</span>':d.vale_contactar==='no'?'<span style="color:#c0392b;font-weight:700;">No</span>':'<span style="color:#94a3b8;">—</span>';
+    const anioColor=org.anio==='2024'?'#7c3aed':'#001a60';
+    const resultadoTxt=d.resultado_tipo?(d.resultado_detalle?`${d.resultado_tipo}: ${d.resultado_detalle}`:d.resultado_tipo):'—';
+    const fechaContactoFmt=d.fecha_contacto?d.fecha_contacto.split('-').reverse().join('/'):'—';
     return `<tr>
       <td class="td-ejecutivo">
         <span class="ej-dot" style="background:${ej.color}"></span>${ej.short}
       </td>
+      <td><span style="padding:2px 7px;background:${anioColor};color:#fff;border-radius:6px;font-size:.68rem;font-weight:700;font-family:'Montserrat',sans-serif;">${org.anio||'2025'}</span></td>
       <td><div class="td-codigo">${org.codigo}</div></td>
       <td><div class="td-org">${org.org}</div></td>
       <td style="font-size:.8rem;font-weight:600;">${escHtml(d.rut||'—')}</td>
       <td>${fondosLabel}</td>
       <td>${contactarLabel}</td>
-      <td><span class="puntaje-badge ${ptsClass(org.pts)}">${org.pts||'N/A'}</span></td>
+      <td>${org.pts!=null?`<span class="puntaje-badge ${ptsClass(org.pts)}">${org.pts||'N/A'}</span>`:'—'}</td>
       <td><span class="status-badge sb-${sk}">${d.status}</span></td>
+      <td style="font-size:.78rem;white-space:nowrap;">${fechaContactoFmt}</td>
+      <td style="font-size:.77rem;max-width:140px;">${escHtml(resultadoTxt)}</td>
       <td class="td-notes">${escHtml(d.notes||'—')}</td>
     </tr>`;
   }).join('');
@@ -829,6 +982,12 @@ function escHtml(s){
 ═══════════════════════════════════════ */
 loadData();
 buildLoginScreen();
+
+// Set dynamic total counts
+const totalBtn = document.getElementById('totalOrgsBtn');
+if(totalBtn) totalBtn.textContent = ORGS.length;
+const loginBadgeCount = document.getElementById('loginBadgeCount');
+if(loginBadgeCount) loginBadgeCount.textContent = ORGS.length;
 
 // Populate status filter options on load
 const stFilter=document.getElementById('filterStatus');

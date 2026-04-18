@@ -586,15 +586,130 @@ const STATUSES = [
 ═══════════════════════════════════════ */
 const LS_KEY = 'fndr_stgo_data';
 let currentUser = null;
-let data = {}; // {codigo: {status, notes, phone, email, fecha_constitucion, representante_legal, enfoque_proyecto, fecha_contacto, medio_contacto, resultado_tipo, resultado_detalle}}
+let data = {};
+
+// Datos pre-cargados desde registros19862.gob.cl (Registro Central de Colaboradores del Estado)
+const PRE={
+"IL-00108-25":{rut:"65.094.693-6",rep:"CRISTIAN ANIBAL JEREZ COFRE",rut_rep:"20.075.603-7",pj:"233435",dir:"RICARDO MORALES 3003, San Miguel",web:"https://fibromialgiaenaccion.wordpress.com/",fondos:"si"},
+"IL-00001-25":{rut:"65.064.672-K",rep:"PABLO ANDRÉS ASTUDILLO LIZAMA",rut_rep:"13.661.493-2",pj:"3560",dir:"NAPOLEON 3059 603, Las Condes",web:"https://todomejora.org/",tel:"+56 9 6319 9475",email:"contacto@todomejora.org",fondos:"si"},
+"IL-00035-25":{rut:"65.692.700-3",rep:"JORGE FERNANDO CONTRERAS PINTO",rut_rep:"14.018.207-9",pj:"DS N674 MinJus",dir:"VALENTIN LETELLIER 20 404, Santiago",fondos:"si"},
+"IL-00092-25":{rut:"65.184.345-6",rep:"OSCAR PATRICIO GUERRA GONZALEZ",rut_rep:"16.483.599-5",pj:"276646",dir:"BUSTAMANTE 26, Providencia",web:"https://www.observaciudadania.org/",tel:"+56 9 7466 7050",email:"somos@observaciudadania.cl",fondos:"si"},
+"IL-00099-25":{rut:"71.440.800-3",rep:"MAURICIO ROJAS MUJICA",rut_rep:"7.017.781-1",pj:"Dto Arzobispado Stgo N431",dir:"AV EJÉRCITO 390, Santiago",web:"https://www.tph.cl",tel:"(56-2) 26960189",fondos:"si"},
+"IL-00301-25":{rut:"65.174.743-0",rep:"NINIZA KRSTULOVIC MATTE",rut_rep:"9.441.365-6",pj:"283926",dir:"COSTANERA SUR 8710, Cerro Navia",fondos:"no"},
+"IL-00353-25":{rut:"65.174.603-5",rep:"ROMUALDO POBLETE HERNÁNDEZ",rut_rep:"9.909.748-5",pj:"283982",dir:"5 NORTE 764, Independencia",fondos:"no"},
+"IL-00418-25":{rut:"73.362.600-3",rep:"ALVARO GABRIEL NAVARRETE CHIPLE",rut_rep:"14.494.400-3",pj:"RC N7747",dir:"SANTA MÓNICA 2317, Santiago",fondos:"si"},
+"IL-00551-25":{rut:"65.200.331-1",rep:"MARÍA PÍA MORA CAMUS",rut_rep:"15.338.405-3",pj:"315957",dir:"SUECIA 0142, Providencia",fondos:"no"},
+"IL-00631-25":{rut:"65.220.336-1",rep:"SANDRA ZUÑIGA LEYTON",rut_rep:"11.319.155-4",pj:"341861",dir:"CHIPANA 585 B-32, Quilicura",fondos:"si"},
+"IL-00683-25":{rut:"65.116.351-K",rep:"PATRICIO MASSARDO MARCHANT",rut_rep:"13.686.122-0",pj:"218364",dir:"ESPERANZA 1125, Santiago",web:"https://tratohechovecino.cl/web/",email:"contacto@tratohechovecino.cl",fondos:"si"},
+"IL-00236-25":{rut:"65.172.252-7",rep:"MARY ANA DEL CARMEN MONTESINOS RIVERO",rut_rep:"21.382.397-3",pj:"280040",dir:"AV VICUÑA MACKENNA 5957, La Florida",fondos:"si"},
+"IL-00026-25":{rut:"65.156.548-0",rep:"YASNAYA MARINKOVIC ROJAS",rut_rep:"11.317.536-2",pj:"271371",dir:"GRAN VIA 602, Quilicura",fondos:"si"},
+"IL-00043-25":{rut:"65.197.277-9",rep:"FLAVIA ALVAREZ GANEM",rut_rep:"14.640.520-7",pj:"314312",dir:"LA CAPITANIA 80, Las Condes",web:"https://circulopolar.cl/",tel:"+56 971 646 960",email:"contacto@fundacioncirculo.cl",fondos:"no"},
+"IL-00062-25":{rut:"65.177.041-6",rep:"ROSARIO ELISA MARTINEZ SALAZAR",rut_rep:"10.063.507-0",pj:"284854",dir:"FRAY PEDRO DE BARDECI 2898, Macul",web:"https://faem.cl/",tel:"+56 9 4038 0757",email:"comunicaciones@faem.cl",fondos:"si"},
+"IL-00170-25":{rut:"65.102.019-0",rep:"ROBERTO ENRIQUE BARRIGA TAPIA",rut_rep:"10.980.518-1",dir:"EVARISTO LILLO 178 p25, Las Condes",web:"https://www.kodea.org/",fondos:"si"},
+"IL-00425-25":{rut:"65.214.766-6",rep:"DANIELA ANTONIA CASTILLO NAVARRO",rut_rep:"17.675.881-3",pj:"330061",dir:"COMPAÑÍA DE JESUS 1992, Santiago",fondos:"no"},
+"IL-00433-25":{rut:"82.130.300-1",rep:"MARÍA ALICIA ALBORNOZ SAAVEDRA",rut_rep:"15.380.984-4",pj:"14303",dir:"FERNANDO RIOJA 730, La Cisterna",fondos:"si"},
+"IL-00784-25":{rut:"65.146.587-7",rep:"CONSTANZA LIZAMA RODRIGUEZ",rut_rep:"15.643.533-3",pj:"243027",dir:"LAS TRANQUERAS OTE 2525, Vitacura",fondos:"no"},
+"IL-00054-25":{rut:"65.216.269-K",rep:"CRISTINA MERCEDES GIL IBASETA",rut_rep:"8.502.085-4",pj:"333872",dir:"TABANCURA 1515, Vitacura",fondos:"no"},
+"IL-00175-25":{rut:"65.535.000-4",rep:"ROLANDO JIMENEZ PEREZ",rut_rep:"9.035.375-6",pj:"Dto 1858 MinJus",dir:"COQUIMBO 1410, Santiago",web:"https://www.movilh.cl/",fondos:"si"},
+"IL-00072-25":{rut:"53.334.573-5",rep:"FERNANDO MERINO LIND",rut_rep:"18.782.183-5",pj:"313787",dir:"LIBERTADOR B OHIGGINS 340, Santiago",fondos:"si"},
+"IL-00370-25":{rut:"71.877.800-K",rep:"RAFAEL DE PUJADAS LIRA",rut_rep:"15.318.566-2",pj:"Dto 81 MinJus",dir:"JJ VALLEJOS 12653, La Pintana",fondos:"si"},
+"IL-00468-25":{rut:"65.160.577-6",rep:"CLAUDIA CECILIA PEÑA VILLANUEVA",rut_rep:"12.469.191-5",pj:"271097",dir:"LAS HORTENSIAS 981, Cerrillos",fondos:"si"},
+"IL-00673-25":{rut:"82.067.900-8",rep:"LAURO BOCCHI BOCCHI",rut_rep:"25.358.843-8",pj:"Dto Sup N4159 MinJus",dir:"AV GRAL BUSTAMANTE 180, Santiago",fondos:"si"},
+"IL-00150-25":{rut:"65.206.480-9",rep:"MARÍA PATRICIA PUPKIN RATINOFF",rut_rep:"4.600.719-0",pj:"281",dir:"AV LAS CONDES 9792 616, Las Condes",fondos:"si"},
+"IL-00197-25":{rut:"65.206.448-5",rep:"JOSÉ FEDERICO DIEZ COPELLI",rut_rep:"14.755.892-9",pj:"322633",dir:"PRES RIESCO 3845 302, Las Condes",fondos:"no"},
+"IL-00117-25":{rut:"71.735.400-1",rep:"FERNANDO ANDRÉS CONTARDO DÍAZ-MUÑOZ",rut_rep:"7.128.369-0",pj:"Dto 1231 MinJus",dir:"RECOLETA 5441, Huechuraba",web:"https://www.cristovive.cl/",fondos:"si"},
+"IL-00182-25":{rut:"71.785.900-6",rep:"CLAUDIO GONZALEZ URBINA",rut_rep:"3.684.068-4",pj:"Dto 209 MinJus",dir:"MANUEL RODRIGUEZ 33, Santiago",fondos:"si"},
+"IL-00194-25":{rut:"65.196.388-5",rep:"IVÁN RIASCOS CONSUEGRA",rut_rep:"23.825.675-5",pj:"479-2020",dir:"AV GRECIA 4515 43, Ñuñoa",fondos:"si"},
+"IL-00176-25":{rut:"65.533.130-1",dir:"San Joaquín",web:"https://www.techo.org/chile/",fondos:"si"},
+"IL-00233-25":{rut:"65.160.065-0",dir:"La Florida",fondos:"si"},
+"IL-00017-25":{rut:"65.185.952-2",rep:"CRISTIAN MARCELO RODRIGUEZ PONCE",rut_rep:"10.665.877-3",pj:"291440",dir:"RAFAEL CAÑAS 50, Providencia",fondos:"no"},
+"IL-00024-25":{web:"https://www.neyun.org/",email:"contacto@neyun.org"},
+"IL-00025-25":{rut:"65.090.676-4",rep:"EDUARDO MAURICIO LÓPEZ CARVAJAL",rut_rep:"16.403.629-4",pj:"178000",dir:"RAMÓN SUBERCASEAUX 3298, Est Central",fondos:"si"},
+"IL-00029-25":{rut:"65.163.268-4",rep:"MARIA ELENA BOISIER PONS",rut_rep:"7.251.296-0",pj:"273747",dir:"ENCOMENDEROS 260 OF72, Las Condes",fondos:"si"},
+"IL-00038-25":{web:"https://fundacionteadmiro.cl/"},
+"IL-00042-25":{rut:"71.631.900-8",dir:"Concepción",web:"https://www.uss.cl/",fondos:"si"},
+"IL-00050-25":{rut:"65.218.836-2",rep:"CARLOS MANUEL AEDO CASARINO",rut_rep:"10.772.089-8",pj:"339817",dir:"AV POCURO 2120 702, Providencia",fondos:"no"},
+"IL-00693-25":{web:"https://www.artritisjuvenil.cl/",dir:"Los Carolinos 589, El Bosque"},
+"IL-00740-25":{web:"https://www.artritisjuvenil.cl/"},
+"IL-00148-24":{rut:"65.050.286-8",rep:"MARÍA CUMPLIDO BAEZA",rut_rep:"16.608.106-8",pj:"111039",dir:"BUSTAMANTE 250, Providencia",web:"https://www.iguales.cl/",fondos:"si"},
+"IL-00243-24":{rut:"65.090.547-4",rep:"GLENDA VIRGINIA DURAN CARO",rut_rep:"7.028.273-9",pj:"180850",dir:"AV F CASTILLO VELASCO 7440, La Reina",fondos:"si"},
+"IL-00673-24":{rut:"65.116.717-5",rep:"RODRIGO FELIPE TOLEDO AHUMADA",rut_rep:"15.527.297-K",pj:"1306080-0",dir:"RAMON CRUZ 1176, Ñuñoa",fondos:"si"},
+"IL-00558-24":{rut:"65.068.774-4",rep:"BLANCA JEANNETTE ARMIJO TRUJILLO",rut_rep:"13.040.707-2",pj:"16677",dir:"VALDES 880, Melipilla",fondos:"si"},
+"IL-00041-24":{rut:"74.249.000-9",dir:"Providencia",fondos:"si"},
+"IL-00029-24":{rut:"82.067.900-8",rep:"LAURO BOCCHI BOCCHI",rut_rep:"25.358.843-8",dir:"AV GRAL BUSTAMANTE 180, Santiago",fondos:"si"},
+"IL-00493-24":{rut:"65.105.579-2",rep:"ANDREA MYRNA VALLETTE CAMPOS",rut_rep:"10.055.717-7",pj:"198661",dir:"GERMÁN DIAZ VALDEZ 848, San Bernardo",fondos:"si"},
+"IL-00213-24":{rut:"75.349.500-2",rep:"EVELYN EUGENIA WENDEROTH BINIMELIS",rut_rep:"7.042.692-7",pj:"214",dir:"LAGO ROSSELOT 1264, Peñalolén",fondos:"si"},
+"IL-00293-24":{rut:"65.034.418-9",rep:"JOSÉ ANDRÉS MURILLO URRUTIA",rut_rep:"12.852.377-4",pj:"6827",dir:"MIGUEL CLARO 337, Providencia",fondos:"si"},
+"IL-00062-24":{rut:"82.130.300-1",rep:"MARÍA ALICIA ALBORNOZ SAAVEDRA",rut_rep:"15.380.984-4",pj:"14303",dir:"FERNANDO RIOJA 730, La Cisterna",fondos:"si"},
+"IL-00141-24":{rut:"65.102.019-0",rep:"ROBERTO ENRIQUE BARRIGA TAPIA",rut_rep:"10.980.518-1",dir:"EVARISTO LILLO 178 p25, Las Condes",web:"https://www.kodea.org/",fondos:"si"},
+"IL-00099-24":{rut:"65.878.090-5",rep:"NATHALIE LEVY GUARDA",rut_rep:"10.284.886-1",pj:"3126",dir:"UNO SUR 65, Lampa",fondos:"si"},
+"IL-00122-24":{rut:"65.020.274-0",rep:"SANDRA VERONICA CORRALES ROMAN",rut_rep:"14.166.164-7",pj:"Dto 4185 MinJus",dir:"ALEJANDRO VIAL 8706, La Cisterna",fondos:"si"},
+"IL-00429-24":{rut:"65.041.826-3",rep:"RODRIGO ALBERTO ARIAS PEREZ",rut_rep:"13.837.212-K",pj:"2686",dir:"AV CENTRAL 301, La Florida",fondos:"si"},
+"IL-00348-24":{rut:"65.148.418-9",rep:"JUAN PABLO ZUÑIGA NUÑEZ",rut_rep:"16.744.952-2",pj:"246184",dir:"SERRANO 334 508, Melipilla",fondos:"si"},
+"IL-00417-24":{rut:"65.064.672-K",rep:"PABLO ANDRÉS ASTUDILLO LIZAMA",rut_rep:"13.661.493-2",pj:"3560",dir:"NAPOLEON 3059 603, Las Condes",web:"https://todomejora.org/",fondos:"si"},
+"IL-00023-24":{rut:"65.186.286-8",rep:"RODRIGO JOSE CHANDIA SOTO",rut_rep:"10.800.928-4",dir:"PORTUGAL 645, Santiago",fondos:"no"},
+"IL-00236-24":{rut:"65.060.229-3",rep:"MATIAS NICOLAS POBLETE SANDOVAL",rut_rep:"16.647.914-2",pj:"1148",dir:"LEON NEGRO 951, Las Condes",fondos:"si"},
+"IL-00120-24":{rut:"65.045.095-7",rep:"JULIO IGNACIO CIFUENTES SILVA",rut_rep:"18.025.984-8",pj:"3715",dir:"PROVIDENCIA 175, Providencia",fondos:"si"},
+"IL-00458-24":{rut:"65.020.190-6",rep:"FRANCISCO JAVIER PARADA CORDOVA",rut_rep:"13.036.071-8",dir:"RAMON CRUZ 1176 OF408, Providencia",fondos:"si"},
+"IL-00323-24":{rut:"65.102.428-5",rep:"CLAUDIO ANDRES ESPINOZA VASQUEZ",rut_rep:"14.318.961-9",pj:"190261",dir:"DIAGONAL CERVANTES 638 612, Santiago",fondos:"si"},
+"IL-00214-24":{rut:"81.496.800-6",rep:"JUAN CRISTÓBAL ROMERO BUCCICARDI",rut_rep:"9.991.198-0",pj:"13361",dir:"HOGAR DE CRISTO N3812, Est Central",web:"https://www.hogardecristo.cl/",fondos:"si"},
+"IL-00351-24":{rut:"65.169.088-9",rep:"ROSITA AMALIA AYRESS MORENO",rut_rep:"6.494.309-K",pj:"278604",dir:"LIRA 1382, Santiago",fondos:"si"},
+"IL-00680-24":{rut:"65.192.245-3",rep:"GABRIEL CATRILEO URIBE",rut_rep:"17.597.896-8",pj:"305248",dir:"MEZA BELL 2757, Quinta Normal",fondos:"no"},
+"IL-00221-24":{rut:"65.187.885-3",rep:"SANDRA MARIELA LIENDO CHIPOCO",rut_rep:"14.582.838-4",pj:"290451",dir:"DIAGONAL PARAGUAY 360, Santiago",fondos:"si"},
+"IL-00282-24":{rut:"65.201.145-4",rep:"MARIA ISIDORA VICENTE MENDOZA",rut_rep:"10.892.496-9",pj:"317835",dir:"SAN GABRIEL 3504, Las Condes",fondos:"si"},
+"IL-00341-24":{rut:"65.194.552-6",rep:"BORIS EDUARDO ARAOS CANCINO",rut_rep:"10.946.079-6",pj:"308609",dir:"CATEDRAL 1402 713, Santiago",fondos:"si"},
+"IL-00442-24":{rut:"65.176.783-0",rep:"VERONICA ALEJANDRA GUAJARDO SERRANO",rut_rep:"10.045.570-6",pj:"278769",dir:"MANUEL MONTT 497, Buin",fondos:"no"},
+"IL-00270-24":{rut:"65.208.829-5",rep:"FERNANDO VILCHES CESPEDES",rut_rep:"9.308.289-3",pj:"326990",dir:"CMTE WHITESIDE 4903 202, San Miguel",fondos:"si"},
+"IL-00396-24":{rut:"71.440.800-3",rep:"MAURICIO ROJAS MUJICA",rut_rep:"7.017.781-1",dir:"AV EJÉRCITO 390, Santiago",web:"https://www.tph.cl",tel:"(56-2) 26960189",fondos:"si"},
+"IL-00457-24":{rut:"65.113.854-K",rep:"ALEJANDRO FERREIRO YAZIGI",rut_rep:"6.362.223-0",pj:"215674",dir:"ING ALVAREZ ALBORNOZ 6175, Vitacura",fondos:"si"},
+"IL-00264-24":{rut:"65.126.367-0",rep:"FABIAN ESTEBAN SCHIAFFINO ROJAS",rut_rep:"17.671.277-5",pj:"233087",dir:"GRAL BUSTAMANTE 26, Providencia",fondos:"si"},
+"IL-00477-24":{rut:"71.178.900-6",rep:"MARIO MANRIQUEZ SANTA CRUZ",rut_rep:"13.881.946-9",pj:"954/1984 MinJus",dir:"PENCAHUE CENTRAL 080, San Vicente TT",fondos:"si"},
+"IL-00488-24":{rut:"65.194.063-K",dir:"Colina",fondos:"si"},
+"IL-00187-24":{rut:"65.064.497-2",dir:"Santiago",fondos:"no"},
+"IL-00314-24":{rut:"53.333.657-4",dir:"Chiguayante",fondos:"no"},
+"IL-00640-24":{rut:"75.949.920-4",dir:"Quinta Normal"},
+"IL-00527-24":{rut:"65.158.157-5",dir:"San José de Maipo",fondos:"no"},
+"IL-00604-24":{rut:"65.148.038-8",dir:"Estación Central",fondos:"si"},
+"IL-00069-24":{rut:"70.012.450-9",dir:"Puente Alto",fondos:"si"},
+"IL-00366-24":{rut:"73.597.200-6",dir:"Providencia",web:"https://www.aldeasinfantiles.cl/",fondos:"si"},
+"IL-00659-24":{rut:"71.581.400-5",dir:"Santiago",fondos:"si"},
+"IL-00194-24":{rut:"65.387.250-K",dir:"Recoleta",fondos:"si"},
+"IL-00151-24":{rut:"65.685.230-5",dir:"Providencia",fondos:"si"},
+"IL-00483-24":{rut:"71.470.400-1",dir:"Providencia",fondos:"si"},
+"IL-00565-24":{rut:"71.825.600-3",dir:"Arica",fondos:"si"},
+"IL-00522-24":{rut:"65.030.624-4",rep:"MAURICIO RAMIREZ BARRENECHEA",rut_rep:"9.258.512-3",pj:"1301",dir:"AV RECOLETA 3005, Recoleta",fondos:"si"},
+};
 
 function loadData(){
   try{ data = JSON.parse(localStorage.getItem(LS_KEY)||'{}'); }
   catch(e){ data={}; }
-  // init missing
+  // init missing — pre-fill from registry data
   ORGS.forEach(o=>{
-    const defaultStatus = 'Sin contactar';
-    if(!data[o.codigo]) data[o.codigo]={status:defaultStatus,notes:o.motivo||'',phone:'',email:'',fecha_constitucion:'',representante_legal:'',enfoque_proyecto:'',fecha_contacto:'',medio_contacto:'',resultado_tipo:'',resultado_detalle:''};
+    if(!data[o.codigo]){
+      const p=PRE[o.codigo]||{};
+      data[o.codigo]={
+        status:'Sin contactar',
+        notes:o.motivo||'',
+        rut:p.rut||'',
+        phone:p.tel||'',
+        email:p.email||'',
+        rut_rep_legal:p.rut_rep||'',
+        representante_legal:p.rep||'',
+        personalidad_juridica:p.pj||'',
+        pagina_web:p.web||'',
+        fondos_previos:p.fondos||'',
+        fecha_constitucion:'',
+        enfoque_proyecto:'',
+        fecha_contacto:'',
+        medio_contacto:'',
+        resultado_tipo:'',
+        resultado_detalle:'',
+        nombre_contacto:'',
+        tel_contacto:'',
+        email_contacto:'',
+        vale_contactar:''
+      };
+    }
   });
 }
 function saveData(){

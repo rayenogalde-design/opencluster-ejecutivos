@@ -365,6 +365,220 @@ body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);d
 
 ::-webkit-scrollbar{width:4px;} ::-webkit-scrollbar-thumb{background:var(--smoke);border-radius:2px;}
 @media print{.volver-central{display:none!important;}}
+
+/* ════════════════════════════════════════════
+   TO-DO LIST · "MI DÍA"
+   Panel lateral derecho · Solo Dashboard de Rayen
+═══════════════════════════════════════════════ */
+.todo-fab{
+  position:fixed;right:18px;bottom:22px;z-index:9998;
+  width:54px;height:54px;border-radius:50%;border:none;cursor:pointer;
+  background:linear-gradient(135deg,var(--ink),var(--ink2));
+  color:#fff;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 8px 22px rgba(10,15,30,.32),0 0 0 1px rgba(201,169,110,.25) inset;
+  transition:transform .18s,box-shadow .18s;
+}
+.todo-fab:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(10,15,30,.4),0 0 0 1px rgba(201,169,110,.45) inset;}
+.todo-fab svg{width:22px;height:22px;color:var(--gold);}
+.todo-fab-badge{
+  position:absolute;top:-3px;right:-3px;min-width:20px;height:20px;border-radius:10px;
+  background:var(--ruby);color:#fff;font-size:10px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;padding:0 6px;
+  border:2px solid #fff;
+}
+.todo-fab-badge.zero{display:none;}
+
+.todo-panel{
+  position:fixed;top:0;right:0;height:100vh;width:380px;z-index:9999;
+  background:#fff;box-shadow:-12px 0 40px rgba(10,15,30,.18);
+  display:flex;flex-direction:column;
+  transform:translateX(105%);transition:transform .32s cubic-bezier(.16,1,.3,1);
+  font-family:'DM Sans',sans-serif;
+}
+.todo-panel.open{transform:translateX(0);}
+
+.todo-head{
+  padding:18px 20px 14px;background:linear-gradient(135deg,var(--ink) 0%,var(--ink2) 100%);
+  color:#fff;position:relative;
+}
+.todo-head::after{
+  content:'';position:absolute;left:0;right:0;bottom:0;height:1px;
+  background:linear-gradient(90deg,var(--gold),transparent 70%);
+}
+.todo-head-row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.todo-title{
+  font-family:'Playfair Display',serif;font-size:19px;font-weight:600;color:#fff;
+  display:flex;align-items:center;gap:8px;
+}
+.todo-title svg{width:18px;height:18px;color:var(--gold);}
+.todo-close{
+  background:transparent;border:none;color:rgba(255,255,255,.55);cursor:pointer;
+  padding:4px;border-radius:6px;display:flex;align-items:center;justify-content:center;
+  transition:.15s;
+}
+.todo-close:hover{background:rgba(255,255,255,.08);color:#fff;}
+.todo-close svg{width:16px;height:16px;}
+.todo-sub{font-size:11px;color:rgba(255,255,255,.55);margin-top:3px;letter-spacing:.3px;}
+
+.todo-tabs{
+  display:flex;gap:4px;margin-top:14px;background:rgba(255,255,255,.05);
+  padding:3px;border-radius:8px;
+}
+.todo-tab{
+  flex:1;padding:6px 10px;border:none;border-radius:6px;cursor:pointer;
+  background:transparent;color:rgba(255,255,255,.5);font-family:inherit;
+  font-size:11.5px;font-weight:600;transition:.15s;letter-spacing:.2px;
+}
+.todo-tab:hover{color:rgba(255,255,255,.85);}
+.todo-tab.on{background:var(--gold);color:var(--ink);}
+.todo-tab .tab-count{
+  display:inline-block;margin-left:5px;padding:0 5px;border-radius:8px;
+  font-size:9.5px;background:rgba(0,0,0,.18);color:inherit;font-weight:700;
+}
+.todo-tab.on .tab-count{background:rgba(10,15,30,.18);}
+
+.todo-body{flex:1;overflow-y:auto;padding:14px 16px 12px;background:var(--paper);}
+.todo-empty{
+  text-align:center;color:var(--mist);font-size:12px;padding:36px 20px;line-height:1.6;
+}
+.todo-empty svg{width:42px;height:42px;color:var(--silver);margin-bottom:10px;opacity:.7;}
+.todo-empty .todo-empty-t{font-size:13px;color:var(--ink3);font-weight:600;margin-bottom:3px;}
+
+.todo-section-lbl{
+  font-size:9.5px;font-weight:700;color:var(--mist);
+  text-transform:uppercase;letter-spacing:1.2px;margin:6px 4px 8px;
+  display:flex;align-items:center;gap:8px;
+}
+.todo-section-lbl::after{content:'';flex:1;height:1px;background:var(--smoke);}
+
+.todo-item{
+  background:#fff;border:1px solid var(--smoke);border-radius:10px;
+  padding:11px 12px 11px 14px;margin-bottom:8px;
+  display:flex;align-items:flex-start;gap:10px;position:relative;
+  transition:transform .25s,opacity .25s,box-shadow .15s;
+  border-left:3px solid var(--silver);
+}
+.todo-item:hover{box-shadow:0 4px 14px rgba(10,15,30,.07);}
+.todo-item.prio-alta{border-left-color:var(--ruby);}
+.todo-item.prio-media{border-left-color:var(--gold);}
+.todo-item.prio-baja{border-left-color:var(--sapp);}
+.todo-item.doing{background:linear-gradient(180deg,#FFFBF1 0%,#fff 100%);}
+.todo-item.removing{transform:translateX(110%);opacity:0;}
+
+.todo-check{
+  flex-shrink:0;width:20px;height:20px;border-radius:50%;
+  border:1.7px solid var(--silver);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:.15s;background:#fff;margin-top:1px;
+}
+.todo-check:hover{border-color:var(--jade);background:var(--jade-lt);}
+.todo-check svg{width:11px;height:11px;color:#fff;opacity:0;transition:opacity .15s;}
+.todo-check.checked{background:var(--jade);border-color:var(--jade);}
+.todo-check.checked svg{opacity:1;}
+
+.todo-main{flex:1;min-width:0;}
+.todo-text{
+  font-size:12.5px;color:var(--ink);line-height:1.4;font-weight:500;
+  word-wrap:break-word;
+}
+.todo-item.doing .todo-text{font-weight:600;}
+.todo-meta{
+  display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap;
+}
+.todo-tag{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:2px 7px;border-radius:9px;font-size:10px;font-weight:600;
+  background:var(--paper);color:var(--ink3);border:1px solid var(--smoke);
+}
+.todo-tag svg{width:10px;height:10px;}
+.todo-tag.src-reunion{background:var(--sapp-lt);color:var(--sapp);border-color:transparent;}
+.todo-tag.src-cotizacion{background:var(--gold-lt);color:var(--gold-dk);border-color:transparent;}
+.todo-tag.src-fndr{background:#EFE6F8;color:#6B3FA0;border-color:transparent;}
+.todo-tag.src-contacto{background:var(--jade-lt);color:var(--jade);border-color:transparent;}
+.todo-tag.tag-doing{background:var(--gold);color:var(--ink);border-color:transparent;font-weight:700;}
+.todo-tag.tag-due{background:#fff;color:var(--ink3);}
+.todo-tag.tag-due.overdue{background:var(--ruby-lt);color:var(--ruby);border-color:transparent;}
+
+.todo-actions{
+  display:flex;flex-direction:column;gap:2px;margin-left:4px;
+}
+.todo-act{
+  background:transparent;border:none;cursor:pointer;color:var(--mist);
+  width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;
+  transition:.13s;padding:0;
+}
+.todo-act:hover{background:var(--paper);color:var(--ink2);}
+.todo-act.act-doing:hover{color:var(--gold-dk);}
+.todo-act.act-del:hover{color:var(--ruby);background:var(--ruby-lt);}
+.todo-act svg{width:12px;height:12px;}
+
+.todo-foot{
+  background:#fff;border-top:1px solid var(--smoke);padding:12px 16px 14px;
+}
+.todo-add-btn{
+  width:100%;padding:10px;border:1.5px dashed var(--silver);border-radius:9px;
+  background:transparent;color:var(--ink3);cursor:pointer;font-family:inherit;
+  font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;
+  transition:.15s;
+}
+.todo-add-btn:hover{border-color:var(--gold);color:var(--gold-dk);background:rgba(201,169,110,.05);}
+.todo-add-btn svg{width:14px;height:14px;}
+
+.todo-form{display:none;flex-direction:column;gap:8px;}
+.todo-form.on{display:flex;}
+.todo-form-input{
+  width:100%;padding:9px 11px;border:1.5px solid var(--smoke);border-radius:8px;
+  font-family:inherit;font-size:12.5px;color:var(--ink);background:var(--paper);
+  resize:none;transition:.15s;
+}
+.todo-form-input:focus{outline:none;border-color:var(--gold);background:#fff;}
+.todo-form-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.todo-form-select{
+  padding:8px 10px;border:1.5px solid var(--smoke);border-radius:8px;
+  font-family:inherit;font-size:11.5px;color:var(--ink);background:#fff;
+  cursor:pointer;
+}
+.todo-form-buttons{display:flex;gap:6px;}
+.todo-form-save{
+  flex:1;padding:9px;border:none;border-radius:8px;cursor:pointer;
+  background:var(--ink);color:#fff;font-family:inherit;font-size:12px;font-weight:700;
+  transition:.15s;
+}
+.todo-form-save:hover{background:var(--ink2);}
+.todo-form-cancel{
+  padding:9px 14px;border:1px solid var(--smoke);border-radius:8px;cursor:pointer;
+  background:#fff;color:var(--mist);font-family:inherit;font-size:12px;font-weight:600;
+}
+.todo-form-cancel:hover{color:var(--ink2);}
+
+.todo-history-link{
+  margin-top:10px;text-align:center;font-size:10.5px;color:var(--mist);
+  cursor:pointer;text-decoration:underline;text-decoration-color:var(--silver);
+}
+.todo-history-link:hover{color:var(--ink3);text-decoration-color:var(--gold);}
+
+/* Botón "+ ToDo" inline para usar dentro de cards */
+.todo-inline-btn{
+  display:inline-flex;align-items:center;gap:4px;padding:4px 9px;
+  border:1px solid var(--gold);background:transparent;color:var(--gold-dk);
+  border-radius:6px;font-family:'DM Sans',sans-serif;font-size:10.5px;font-weight:700;
+  cursor:pointer;transition:.13s;
+}
+.todo-inline-btn:hover{background:var(--gold);color:#fff;}
+.todo-inline-btn svg{width:11px;height:11px;}
+.todo-inline-btn.added{background:var(--jade);border-color:var(--jade);color:#fff;cursor:default;}
+
+/* Toast confirmación al añadir */
+.todo-toast{
+  position:fixed;top:68px;right:18px;z-index:10000;
+  background:var(--ink);color:#fff;padding:10px 16px;border-radius:9px;
+  font-size:12px;font-weight:600;box-shadow:0 8px 22px rgba(10,15,30,.3);
+  display:flex;align-items:center;gap:8px;
+  transform:translateX(120%);transition:transform .32s cubic-bezier(.16,1,.3,1);
+  border-left:3px solid var(--gold);
+}
+.todo-toast.on{transform:translateX(0);}
+.todo-toast svg{width:14px;height:14px;color:var(--gold);}
 </style>
 </head>
 <body>
@@ -1659,14 +1873,39 @@ function buildAcc(c,prefix){
       </div>
       <div class="acc-prods"><div class="acc-plbl">Productos (${c.prods.length})</div>${c.prods.join(' · ')}</div>
       <div class="acc-seg"><div class="acc-slbl">Historial de Seguimiento</div>${segHist(c)}</div>
-      ${prefix==='res'?`<div style="padding:8px 12px;border-top:1px solid var(--smoke);display:flex;justify-content:flex-end;background:var(--paper);">
-        <button onclick="event.stopPropagation();archivar('${c.num}')" style="font-size:10px;font-weight:700;color:var(--mist);background:none;border:1px solid var(--smoke);border-radius:6px;padding:4px 12px;cursor:pointer;display:flex;align-items:center;gap:5px;">
+      <div style="padding:8px 12px;border-top:1px solid var(--smoke);display:flex;justify-content:flex-end;gap:6px;background:var(--paper);">
+        <button onclick="event.stopPropagation();OCT_addCotToTodo('${c.num}',this)" class="todo-inline-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Mi Día
+        </button>
+        ${prefix==='res'?`<button onclick="event.stopPropagation();archivar('${c.num}')" style="font-size:10px;font-weight:700;color:var(--mist);background:none;border:1px solid var(--smoke);border-radius:6px;padding:4px 12px;cursor:pointer;display:flex;align-items:center;gap:5px;">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
           Archivar
-        </button>
-      </div>`:''}
+        </button>`:''}
+      </div>
     </div>
   </div>`;
+}
+
+// Añadir cotización a Mi Día (To-Do List)
+function OCT_addCotToTodo(num, btn){
+  const c = (typeof COTS!=='undefined'?COTS:[]).find(x=>x.num===num);
+  if(!c){ if(window.OCT_addTodo) OCT_addTodo({title:'Seguimiento cotización '+num, source:'cotizacion'}); return; }
+  const sinG = c.estado==='Enviada' && !c.gestion;
+  const title = sinG ? `Hacer seguimiento a ${c.inst||c.cliente||'cliente'} (cot. ${c.num})`
+                     : `Revisar cotización ${c.num} · ${c.inst||c.cliente||''}`;
+  const ctx = `${c.exec.split(' ')[0]} · ${typeof fmt==='function'?fmt(c.neto):c.neto}`;
+  if(window.OCT_addTodo){
+    OCT_addTodo({title, source:'cotizacion', priority:sinG?'alta':'media', context:ctx, toast:'Añadido a Mi Día'});
+  }
+  if(btn){
+    btn.classList.add('added');
+    btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> Añadido';
+    setTimeout(()=>{
+      btn.classList.remove('added');
+      btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Mi Día';
+    }, 1800);
+  }
 }
 
 function setResumenMes(m){ filtroResumenMes=m; renderResumen(); }
@@ -3770,6 +4009,303 @@ function renderGraficosReuniones(){
   setInterval(cargarPagos, 5 * 60 * 1000);
   setInterval(cargarFaqs, 5 * 60 * 1000);
 })();
+</script>
+
+<!-- ════════════════════════════════════════════
+     TO-DO LIST · "MI DÍA"
+═══════════════════════════════════════════════ -->
+<button class="todo-fab" id="todoFab" onclick="OCT_togglePanel()" title="Mi Día — Lista de pendientes" aria-label="Abrir Mi Día">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+  <span class="todo-fab-badge zero" id="todoFabBadge">0</span>
+</button>
+
+<aside class="todo-panel" id="todoPanel" aria-label="Mi Día">
+  <div class="todo-head">
+    <div class="todo-head-row">
+      <div class="todo-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Mi Día
+      </div>
+      <button class="todo-close" onclick="OCT_togglePanel()" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="todo-sub">Tu lista personal de pendientes</div>
+    <div class="todo-tabs" id="todoTabs">
+      <button class="todo-tab on" data-tab="all" onclick="OCT_setTab('all')">Todo <span class="tab-count" id="tc-all">0</span></button>
+      <button class="todo-tab" data-tab="alta" onclick="OCT_setTab('alta')">Urgente <span class="tab-count" id="tc-alta">0</span></button>
+      <button class="todo-tab" data-tab="doing" onclick="OCT_setTab('doing')">En curso <span class="tab-count" id="tc-doing">0</span></button>
+    </div>
+  </div>
+  <div class="todo-body" id="todoBody"></div>
+  <div class="todo-foot">
+    <button class="todo-add-btn" id="todoAddBtn" onclick="OCT_showForm()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Nueva tarea
+    </button>
+    <div class="todo-form" id="todoForm">
+      <textarea class="todo-form-input" id="todoFormText" rows="2" placeholder="¿Qué necesitas hacer?"></textarea>
+      <div class="todo-form-row">
+        <select class="todo-form-select" id="todoFormPrio">
+          <option value="alta">Prioridad alta</option>
+          <option value="media" selected>Prioridad media</option>
+          <option value="baja">Prioridad baja</option>
+        </select>
+        <input type="date" class="todo-form-select" id="todoFormDate" title="Fecha límite (opcional)">
+      </div>
+      <div class="todo-form-buttons">
+        <button class="todo-form-save" onclick="OCT_saveForm()">Agregar</button>
+        <button class="todo-form-cancel" onclick="OCT_hideForm()">Cancelar</button>
+      </div>
+    </div>
+    <div class="todo-history-link" onclick="OCT_showHistory()" id="todoHistLink">Ver historial de completadas</div>
+  </div>
+</aside>
+
+<div class="todo-toast" id="todoToast">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+  <span id="todoToastText">Añadido a Mi Día</span>
+</div>
+
+<script>
+/* ════════════════════════════════════════════
+   TO-DO MODULE · Mi Día
+═══════════════════════════════════════════════ */
+const OCT_LS = 'oct_todos_v1';
+let OCT_todos = [];
+let OCT_tab = 'all';
+
+function OCT_load(){
+  try{ OCT_todos = JSON.parse(localStorage.getItem(OCT_LS)||'[]'); }
+  catch(e){ OCT_todos=[]; }
+}
+function OCT_save(){ localStorage.setItem(OCT_LS, JSON.stringify(OCT_todos)); }
+
+function OCT_uid(){ return 't'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+function OCT_togglePanel(){
+  document.getElementById('todoPanel').classList.toggle('open');
+}
+function OCT_openPanel(){ document.getElementById('todoPanel').classList.add('open'); }
+
+function OCT_setTab(tab){
+  OCT_tab = tab;
+  document.querySelectorAll('.todo-tab').forEach(b=>b.classList.toggle('on', b.dataset.tab===tab));
+  OCT_render();
+}
+
+function OCT_showForm(){
+  document.getElementById('todoForm').classList.add('on');
+  document.getElementById('todoAddBtn').style.display='none';
+  setTimeout(()=>document.getElementById('todoFormText').focus(),60);
+}
+function OCT_hideForm(){
+  document.getElementById('todoForm').classList.remove('on');
+  document.getElementById('todoAddBtn').style.display='';
+  document.getElementById('todoFormText').value='';
+  document.getElementById('todoFormDate').value='';
+  document.getElementById('todoFormPrio').value='media';
+}
+function OCT_saveForm(){
+  const text=document.getElementById('todoFormText').value.trim();
+  if(!text) return;
+  OCT_addTodo({
+    title:text,
+    priority:document.getElementById('todoFormPrio').value,
+    due:document.getElementById('todoFormDate').value||'',
+    source:'manual'
+  });
+  OCT_hideForm();
+}
+
+// API pública para añadir desde otros lugares del Dashboard
+window.OCT_addTodo = function(opts){
+  const t={
+    id:OCT_uid(),
+    title:opts.title||'Nueva tarea',
+    state:'pending',
+    priority:opts.priority||'media',
+    source:opts.source||'manual',
+    context:opts.context||null,
+    due:opts.due||'',
+    createdAt:new Date().toISOString(),
+    doneAt:null
+  };
+  OCT_todos.unshift(t);
+  OCT_save();
+  OCT_render();
+  OCT_toast(opts.toast||'Añadido a Mi Día');
+  return t.id;
+};
+
+function OCT_toast(msg){
+  const el=document.getElementById('todoToast');
+  document.getElementById('todoToastText').textContent=msg;
+  el.classList.add('on');
+  clearTimeout(window._oct_tt);
+  window._oct_tt=setTimeout(()=>el.classList.remove('on'),2200);
+}
+
+function OCT_toggleDoing(id){
+  const t=OCT_todos.find(x=>x.id===id); if(!t) return;
+  t.state = t.state==='doing' ? 'pending' : 'doing';
+  OCT_save();
+  OCT_render();
+}
+
+function OCT_complete(id){
+  const t=OCT_todos.find(x=>x.id===id); if(!t) return;
+  t.state='done'; t.doneAt=new Date().toISOString();
+  OCT_save();
+  // animación de salida
+  const el=document.querySelector(`[data-todo-id="${id}"]`);
+  if(el){ el.classList.add('removing'); setTimeout(OCT_render,260); }
+  else OCT_render();
+}
+
+function OCT_delete(id){
+  if(!confirm('¿Eliminar esta tarea?')) return;
+  OCT_todos = OCT_todos.filter(x=>x.id!==id);
+  OCT_save();
+  OCT_render();
+}
+
+function OCT_setPrio(id, prio){
+  const t=OCT_todos.find(x=>x.id===id); if(!t) return;
+  t.priority=prio; OCT_save(); OCT_render();
+}
+
+function OCT_visibleTodos(){
+  let list=OCT_todos.filter(t=>t.state!=='done');
+  if(OCT_tab==='alta') list=list.filter(t=>t.priority==='alta');
+  if(OCT_tab==='doing') list=list.filter(t=>t.state==='doing');
+  // ordenar: en curso primero, luego por prioridad alta>media>baja, luego por fecha de creación
+  const prioRank={alta:0,media:1,baja:2};
+  list.sort((a,b)=>{
+    if(a.state!==b.state){ return a.state==='doing'?-1:1; }
+    if(a.priority!==b.priority){ return prioRank[a.priority]-prioRank[b.priority]; }
+    return new Date(b.createdAt)-new Date(a.createdAt);
+  });
+  return list;
+}
+
+const OCT_SOURCE_META = {
+  manual:    {label:'Manual',     svg:'<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>'},
+  reunion:   {label:'Reunión',    svg:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'},
+  cotizacion:{label:'Cotización', svg:'<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'},
+  fndr:      {label:'FNDR',       svg:'<path d="M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4z"/>'},
+  contacto:  {label:'Contacto',   svg:'<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>'}
+};
+
+function OCT_esc(s){
+  if(s==null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function OCT_render(){
+  const body=document.getElementById('todoBody');
+  if(!body) return;
+  const list=OCT_visibleTodos();
+
+  // contadores tabs
+  const allActive=OCT_todos.filter(t=>t.state!=='done').length;
+  const altaActive=OCT_todos.filter(t=>t.state!=='done'&&t.priority==='alta').length;
+  const doingActive=OCT_todos.filter(t=>t.state==='doing').length;
+  document.getElementById('tc-all').textContent=allActive;
+  document.getElementById('tc-alta').textContent=altaActive;
+  document.getElementById('tc-doing').textContent=doingActive;
+
+  // badge FAB
+  const badge=document.getElementById('todoFabBadge');
+  badge.textContent=allActive;
+  badge.classList.toggle('zero', allActive===0);
+
+  if(!list.length){
+    const msg = OCT_tab==='alta' ? 'Ninguna tarea urgente' :
+                OCT_tab==='doing' ? 'No hay tareas en curso' :
+                'Tu día está despejado';
+    body.innerHTML=`<div class="todo-empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      <div class="todo-empty-t">${msg}</div>
+      <div>Agrega una tarea con el botón de abajo o desde una cotización / reunión / FNDR.</div>
+    </div>`;
+    return;
+  }
+
+  // Agrupar por estado solo cuando estamos en "all"
+  let html='';
+  if(OCT_tab==='all'){
+    const doing=list.filter(t=>t.state==='doing');
+    const pending=list.filter(t=>t.state==='pending');
+    if(doing.length){
+      html+=`<div class="todo-section-lbl">En curso</div>`;
+      html+=doing.map(OCT_itemHtml).join('');
+    }
+    if(pending.length){
+      html+=`<div class="todo-section-lbl">Pendientes</div>`;
+      html+=pending.map(OCT_itemHtml).join('');
+    }
+  } else {
+    html=list.map(OCT_itemHtml).join('');
+  }
+  body.innerHTML=html;
+}
+
+function OCT_itemHtml(t){
+  const meta=OCT_SOURCE_META[t.source]||OCT_SOURCE_META.manual;
+  const ctxLine = t.context ? ` <span style="color:var(--mist);font-weight:500;">· ${OCT_esc(t.context)}</span>` : '';
+  let dueTag='';
+  if(t.due){
+    const d=new Date(t.due+'T00:00:00');
+    const today=new Date(); today.setHours(0,0,0,0);
+    const diff=Math.round((d-today)/(1000*60*60*24));
+    const overdue=diff<0;
+    const txt = diff===0?'Hoy' : diff===1?'Mañana' : diff===-1?'Ayer' : (overdue?`Hace ${Math.abs(diff)}d`:`En ${diff}d`);
+    dueTag=`<span class="todo-tag tag-due ${overdue?'overdue':''}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      ${txt}
+    </span>`;
+  }
+  const doingTag = t.state==='doing' ? `<span class="todo-tag tag-doing">EN CURSO</span>` : '';
+  return `<div class="todo-item prio-${t.priority} ${t.state==='doing'?'doing':''}" data-todo-id="${t.id}">
+    <div class="todo-check ${t.state==='done'?'checked':''}" onclick="OCT_complete('${t.id}')" title="Marcar completada">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <div class="todo-main">
+      <div class="todo-text">${OCT_esc(t.title)}${ctxLine}</div>
+      <div class="todo-meta">
+        ${doingTag}
+        <span class="todo-tag src-${t.source}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${meta.svg}</svg>
+          ${meta.label}
+        </span>
+        ${dueTag}
+      </div>
+    </div>
+    <div class="todo-actions">
+      <button class="todo-act act-doing" onclick="OCT_toggleDoing('${t.id}')" title="${t.state==='doing'?'Volver a pendiente':'Mover a En curso'}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${t.state==='doing'?'<polyline points="15 18 9 12 15 6"/>':'<polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/>'}</svg>
+      </button>
+      <button class="todo-act act-del" onclick="OCT_delete('${t.id}')" title="Eliminar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+      </button>
+    </div>
+  </div>`;
+}
+
+function OCT_showHistory(){
+  const done=OCT_todos.filter(t=>t.state==='done').sort((a,b)=>new Date(b.doneAt)-new Date(a.doneAt));
+  if(!done.length){ OCT_toast('Aún no has completado tareas'); return; }
+  const lines=done.slice(0,30).map(t=>{
+    const fmt = t.doneAt ? new Date(t.doneAt).toLocaleDateString('es-CL',{day:'2-digit',month:'short'}) : '';
+    return `• ${t.title}  (${fmt})`;
+  }).join('\n');
+  alert('Últimas completadas:\n\n'+lines+(done.length>30?'\n\n…y más':''));
+}
+
+// Init después de que el DOM y el resto del script ya cargaron
+OCT_load();
+OCT_render();
 </script>
 </body>
 </html>

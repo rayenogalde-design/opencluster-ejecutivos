@@ -986,6 +986,24 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
           </div>
           <!-- ── FIN RETIRO EN BODEGA ── -->
 
+          <!-- ── DESPACHO URGENTE SANTIAGO (solo sin retiro + destino RM) ── -->
+          <div id="despachoSantiagoPanel" style="display:none;background:#fff4ea;border:1.5px solid #ffd199;border-radius:8px;padding:10px 12px;margin-bottom:10px;">
+            <div style="font-size:9.5px;font-weight:800;color:var(--orange);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">⚡ Despacho a Santiago</div>
+            <div style="font-size:9px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:5px;">¿Es despacho urgente?</div>
+            <div style="display:flex;gap:8px;margin-bottom:8px;">
+              <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:6px;border:1.5px solid #ffd199;border-radius:6px;background:white;cursor:pointer;font-size:10px;font-weight:700;color:#888;transition:all .15s;" id="lblDespUrgSi">
+                <input type="radio" name="despachoUrgente" value="si" onchange="onDespachoUrgenteChange()" style="display:none"> ⚡ Sí — urgente
+              </label>
+              <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:6px;border:1.5px solid #ffd199;border-radius:6px;background:white;cursor:pointer;font-size:10px;font-weight:700;color:#888;transition:all .15s;" id="lblDespUrgNo">
+                <input type="radio" name="despachoUrgente" value="no" onchange="onDespachoUrgenteChange()" checked style="display:none"> Normal
+              </label>
+            </div>
+            <div id="panelDespUrgInfo" style="display:none;background:#ffe0c4;border:1px solid #ffd199;border-radius:6px;padding:7px 10px;margin-bottom:6px;font-size:9.5px;color:var(--orange);font-weight:700;">
+              ⚡ Despacho urgente Santiago: $200.000 fijo
+            </div>
+          </div>
+          <!-- ── FIN DESPACHO URGENTE SANTIAGO ── -->
+
           <!-- Vehículo -->
 
 
@@ -1000,7 +1018,7 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
               <input type="text" id="calcDestino" placeholder="Ej: Santiago" oninput="calcLogistica()" list="lista-ciudades" autocomplete="off">
             </div>
           </div>
-          <input type="number" id="calcBencina" value="1558" min="0" style="display:none" oninput="calcLogistica()">
+          <input type="number" id="calcBencina" value="1309" min="0" style="display:none" oninput="calcLogistica()">
           <span id="crPrecioLt" style="display:none"></span>
         <input type="number" id="calcRend" value="5" min="1" style="display:none">
           <div id="dieselPrecioBadge" style="font-size:9px;color:#888;margin-bottom:6px;font-weight:600;">⛽ Cargando precio diésel...</div>
@@ -1876,7 +1894,7 @@ function setVehiculo(tipo) {
   const precio = document.getElementById("calcBencina");
   if(tipo === "furgo") {
     rend.value   = 5;
-    precio.value = window._dieselPrecio || 1508;
+    precio.value = window._dieselPrecio || 1309;
   } else {
     rend.value   = 5;
     precio.value = 928;
@@ -1936,6 +1954,19 @@ function onRetiroUrgenteChange() {
     const lbl = document.getElementById("lblProv"+n);
     if(lbl) lbl.style.cssText += ";border-color:#c8d8f8;background:white;color:#888";
   });
+  calcLogistica();
+}
+
+function onDespachoUrgenteChange() {
+  const val = document.querySelector('input[name="despachoUrgente"]:checked')?.value || "no";
+  const info = document.getElementById("panelDespUrgInfo");
+  if(info) info.style.display = val === "si" ? "block" : "none";
+  const si = document.getElementById("lblDespUrgSi");
+  const no = document.getElementById("lblDespUrgNo");
+  const sel = "border-color:var(--orange);background:#fff4ea;color:var(--orange)";
+  const def = "border-color:#ffd199;background:white;color:#888";
+  if(si) si.style.cssText += ";" + (val==="si" ? sel : def);
+  if(no) no.style.cssText += ";" + (val==="no" ? sel : def);
   calcLogistica();
 }
 
@@ -2059,10 +2090,31 @@ async function calcLogistica() {
   // Retiro en bodega
   const retiro = getRetiroCosto();
   const retiroCost = retiro.costo;
-  // Si es urgente Y destino en RM → solo retiro urgente, sin despacho
-  const soloRetiroUrgente = retiro.urgente && esDestinoSantiago(dest);
+  const isRM = esDestinoSantiago(dest);
+  const hayRetiro = retiroCost > 0;
+
+  // Pregunta "¿Despacho urgente?" solo aparece cuando NO hay retiro Y destino = RM
+  const panelDespStgo = document.getElementById("despachoSantiagoPanel");
+  if (panelDespStgo) panelDespStgo.style.display = (!hayRetiro && isRM) ? "block" : "none";
+  const despachoUrgenteRM = !hayRetiro && isRM &&
+    (document.querySelector('input[name="despachoUrgente"]:checked')?.value === "si");
+
   const despachoBase = combCost + peajeCost + alojCost + sueldoCost + viaticoCost;
-  const total = soloRetiroUrgente ? retiroCost : retiroCost + despachoBase;
+
+  // Lógica de total (reglas especiales sólo cuando destino = RM):
+  //   RM + retiro urgente          → $200.000
+  //   RM + retiro no-urgente       → retiroCost + $50.000 (despacho RM fijo)
+  //   RM + sin retiro + urgente    → $200.000
+  //   RM + sin retiro + no-urgente → despacho tradicional
+  //   fuera de RM                  → retiroCost + despacho tradicional
+  let total;
+  if (isRM && hayRetiro && retiro.urgente)        total = retiroCost;
+  else if (isRM && hayRetiro && !retiro.urgente)  total = retiroCost + 50000;
+  else if (despachoUrgenteRM)                     total = 200000;
+  else                                            total = retiroCost + despachoBase;
+
+  const soloRetiroUrgente = isRM && hayRetiro && retiro.urgente;
+  const ignoraDespacho    = isRM && (hayRetiro || despachoUrgenteRM);
 
   // Actualizar celdas
   document.getElementById("crDist").textContent  = `${distKm} km ida — ${distIV} km ida+vuelta`;
@@ -2093,6 +2145,10 @@ async function calcLogistica() {
       if(retiro.urgente) {
         if(crRetiro) crRetiro.textContent = "$200.000";
         if(rowRetiroSub) rowRetiroSub.textContent = soloRetiroUrgente ? "Urgente — solo retiro (destino RM)" : "Urgente";
+      } else if (isRM) {
+        // RM + no urgente: retiroCost + 50k despacho fijo
+        if(crRetiro) crRetiro.textContent = `$${(retiroCost + 50000).toLocaleString("es-CL")}`;
+        if(rowRetiroSub) rowRetiroSub.textContent = `${retiro.proveedores} × $50.000 + $50.000 despacho RM`;
       } else {
         if(crRetiro) crRetiro.textContent = `$${retiroCost.toLocaleString("es-CL")}`;
         if(rowRetiroSub) rowRetiroSub.textContent = `${retiro.proveedores} proveedor${retiro.proveedores>1?"es":""} × $50.000`;
@@ -2156,7 +2212,7 @@ async function calcLogistica() {
 
     if(box) box.style.display = "block";
   if(btnUsar) { btnUsar.style.display="block"; btnUsar.dataset.val = total; }
-  actualizarResumenEnvio(combCost, peajeCost, alojCost, sueldoCost, viaticoCost, true, retiroCost, soloRetiroUrgente);
+  actualizarResumenEnvio(combCost, peajeCost, alojCost, sueldoCost, viaticoCost, true, retiroCost, ignoraDespacho, total);
 }
 
 function calcManual() {
@@ -2217,7 +2273,7 @@ function usarCostoCalc() {
   upd();
 }
 
-function actualizarResumenEnvio(combCost, peajeCost, alojCost, sueldoCost, viaticoCost, esLogistica, retiroCost=0, soloRetiroUrgente=false) {
+function actualizarResumenEnvio(combCost, peajeCost, alojCost, sueldoCost, viaticoCost, esLogistica, retiroCost=0, ignoraDespacho=false, totalForzado=null) {
   const box = document.getElementById("resumenEnvioBox");
   if(!box) return;
 
@@ -2255,9 +2311,9 @@ function actualizarResumenEnvio(combCost, peajeCost, alojCost, sueldoCost, viati
     const b4 = document.getElementById("btnRemViatico2");
     if(eV) eV.textContent = viaticoRem ? "Removido" : (viaticoCost > 0 ? `$${viaticoCost.toLocaleString("es-CL")}` : "No aplica");
     if(b4) { b4.textContent = viaticoRem ? "Restaurar" : "Remover"; }
-    // Total (con retiro incluido)
-    const despachoTotal = soloRetiroUrgente ? 0 : (combCost + peajeCost + alojCost + sueldoCost + viaticoCost);
-    const total = retiroCost + despachoTotal;
+    // Total (con retiro incluido) — si totalForzado viene definido, usarlo
+    const despachoTotal = ignoraDespacho ? 0 : (combCost + peajeCost + alojCost + sueldoCost + viaticoCost);
+    const total = (totalForzado !== null) ? totalForzado : (retiroCost + despachoTotal);
     const eEnv = document.getElementById("eEnv");
     if(eEnv) eEnv.textContent = `$${total.toLocaleString("es-CL")}`;
     document.getElementById("eEnvioVal").value = total;
@@ -2993,7 +3049,7 @@ function upd() {
 
 // ── Precio diésel fijo ───────────────────────────────────────────────────────
 // Para actualizar el precio, cambiar solo este valor:
-const DIESEL_PRECIO = 1558;
+const DIESEL_PRECIO = 1309;
 
 function fetchPrecioDiesel() {
   const badge = document.getElementById("dieselPrecioBadge");
@@ -3393,7 +3449,7 @@ async function actualizarEstado() {
   }
   if(!num) { alert("⚠️ No hay N° de cotización en el formulario actual."); return; }
 
-  const SHEET_URL_UPDATE = "https://script.google.com/macros/s/AKfycbx4ACbicGNU3GdJEuY-N6PS9w4iO51eKFdmfC2f5YRsIssDrVkV2l0RC3U68LpVt8-G/exec";
+  const SHEET_URL_UPDATE = "https://script.google.com/macros/s/AKfycby7WmQLWguRvIl2L2z2NhPz7d9kMhqQLTEUCh5Tm6esCJTyGE34q_2ZdfDsuZKDGj9f/exec";
 
   try {
     await fetch(SHEET_URL_UPDATE, {
@@ -3423,7 +3479,7 @@ async function actualizarEstado() {
 }
 
 // ── Registrar cotización en Google Sheets ─────────────────────────────────
-const SHEET_URL = "https://script.google.com/macros/s/AKfycbx4ACbicGNU3GdJEuY-N6PS9w4iO51eKFdmfC2f5YRsIssDrVkV2l0RC3U68LpVt8-G/exec";
+const SHEET_URL = "https://script.google.com/macros/s/AKfycby7WmQLWguRvIl2L2z2NhPz7d9kMhqQLTEUCh5Tm6esCJTyGE34q_2ZdfDsuZKDGj9f/exec";
 
 async function registrarCotizacion() {
   const btn = document.getElementById("btnRegistrar");
@@ -3567,16 +3623,13 @@ async function registrarCotizacion() {
     localStorage.setItem("oc_ultimo_registro_ms", String(Date.now()));
     _modoReemplazo=false;
     btn.style.background="";
-    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> <span>${esReemplazo?'Cotización reemplazada!':'Cotización registrada!'}</span>`;
+    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> <span>${esReemplazo?'Cotización reemplazada ✓ — bloqueada':'Cotización registrada ✓ — bloqueada'}</span>`;
     btn.classList.add("enviado");
+    // Bloqueo permanente: el botón queda deshabilitado hasta que el usuario cree una nueva cotización
+    // (vía "Duplicar", "Nueva cotización", "Reemplazar") — esas rutinas re-habilitan explícitamente.
+    btn.disabled = true;
     // Cargar siguiente número SOLO si NO es reemplazo (en reemplazo el número debe quedarse igual para el PDF)
     if(!esReemplazo) fetchSiguienteNumero();
-    setTimeout(() => {
-      btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg> <span>Registrar cotización</span>`;
-      btn.classList.remove("enviado");
-      btn.disabled = false;
-      window._registrandoCotizacion = false;
-    }, 3000);
   } catch(err) {
     alert("❌ Error al registrar. Revisa tu conexión a internet.");
     btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg> <span>Registrar cotización</span>`;
@@ -3852,7 +3905,12 @@ async function crearNuevaDesdeCargada() {
   // Mostrar confirmación
   // Cambiar botón de registrar
   const btnReg = document.getElementById("btnRegistrar");
-  if(btnReg) btnReg.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg> <span>Registrar Nueva Cotización</span>`;
+  if(btnReg) {
+    btnReg.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg> <span>Registrar Nueva Cotización</span>`;
+    btnReg.disabled = false;
+    btnReg.classList.remove("enviado");
+    window._registrandoCotizacion = false;
+  }
   showToast("✓ Nueva cotización creada con número " + numEl.value + ". Los datos del producto se mantienen.", "ok");
   const confirmBanner = document.createElement("div");
   confirmBanner.style.cssText = "position:fixed;top:16px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,var(--navy),#002a90);color:white;padding:12px 24px;border-radius:10px;font-family:Montserrat,sans-serif;font-size:13px;font-weight:700;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.2);text-align:center;";
@@ -3872,7 +3930,12 @@ function duplicarParaMismoCliente(){
   if(banner)banner.remove();
   _modoReemplazo=false;
   const btnReg=document.getElementById('btnRegistrar');
-  if(btnReg)btnReg.innerHTML=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg> <span>Registrar Nueva Cotización</span>`;
+  if(btnReg){
+    btnReg.innerHTML=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg> <span>Registrar Nueva Cotización</span>`;
+    btnReg.disabled=false;
+    btnReg.classList.remove('enviado');
+    window._registrandoCotizacion=false;
+  }
   showToast('Nueva cotización creada. Modifica lo que necesites y registra cuando esté lista.','ok');
   upd();
 }
@@ -3899,8 +3962,13 @@ function reemplazarCotizacion(){
   _modoReemplazo=true;
   // Cambiar botón de registrar
   const btnReg=document.getElementById("btnRegistrar");
-  if(btnReg)btnReg.innerHTML=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg> <span>Reemplazar Cotización ${num}</span>`;
-  btnReg.style.background="linear-gradient(135deg,#c0392b,#e74c3c)";
+  if(btnReg){
+    btnReg.innerHTML=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg> <span>Reemplazar Cotización ${num}</span>`;
+    btnReg.disabled=false;
+    btnReg.classList.remove("enviado");
+    window._registrandoCotizacion=false;
+    btnReg.style.background="linear-gradient(135deg,#c0392b,#e74c3c)";
+  }
   // Quitar bloqueo de duplicado para este número
   localStorage.removeItem("oc_reg_"+num);
   showToast("Modo reemplazo activado para "+num+". Edita los datos y presiona Reemplazar.","ok");
@@ -3990,7 +4058,7 @@ function goTab(t) {
 }
 
 // ── Form reuniones ────────────────────────────────────────────────
-const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbx4ACbicGNU3GdJEuY-N6PS9w4iO51eKFdmfC2f5YRsIssDrVkV2l0RC3U68LpVt8-G/exec";
+const URL_SCRIPT = "https://script.google.com/macros/s/AKfycby7WmQLWguRvIl2L2z2NhPz7d9kMhqQLTEUCh5Tm6esCJTyGE34q_2ZdfDsuZKDGj9f/exec";
 const REXECS = ["Roberto","Ximena","Maximiliano","Germán","Rayen","William","Hernán","Mario"];
 let rTipo="", rRes="", rCot="no", rExecs=[], rInited=false;
 
@@ -4338,34 +4406,61 @@ function showToast(msg, tipo) {
 
 <div id="oc-toast"></div>
 
-<!-- Datalist ciudades Chile — generado desde DISTANCIAS y COORDS -->
+<!-- Datalist ciudades Chile — 346 comunas oficiales (INE/SUBDERE) + fallback desde DISTANCIAS/COORDS -->
 <datalist id="lista-ciudades"></datalist>
 <script>
+// Lista oficial de las 346 comunas de Chile (INE)
+const COMUNAS_CHILE = [
+"Arica","Camarones","General Lagos","Putre",
+"Alto Hospicio","Camiña","Colchane","Huara","Iquique","Pica","Pozo Almonte",
+"Antofagasta","Calama","María Elena","Mejillones","Ollagüe","San Pedro de Atacama","Sierra Gorda","Taltal","Tocopilla",
+"Alto del Carmen","Caldera","Chañaral","Copiapó","Diego de Almagro","Freirina","Huasco","Tierra Amarilla","Vallenar",
+"Andacollo","Canela","Combarbalá","Coquimbo","Illapel","La Higuera","La Serena","Los Vilos","Monte Patria","Ovalle","Paiguano","Punitaqui","Río Hurtado","Salamanca","Vicuña",
+"Algarrobo","Cabildo","Calera","Calle Larga","Cartagena","Casablanca","Catemu","Concón","El Quisco","El Tabo","Hijuelas","Isla de Pascua","Juan Fernández","La Cruz","La Ligua","Limache","Llaillay","Los Andes","Nogales","Olmué","Panquehue","Papudo","Petorca","Puchuncaví","Putaendo","Quillota","Quilpué","Quintero","Rinconada","San Antonio","San Esteban","San Felipe","Santa María","Santo Domingo","Valparaíso","Villa Alemana","Viña del Mar","Zapallar",
+"Alhué","Buin","Calera de Tango","Cerrillos","Cerro Navia","Colina","Conchalí","Curacaví","El Bosque","El Monte","Estación Central","Huechuraba","Independencia","Isla de Maipo","La Cisterna","La Florida","La Granja","La Pintana","La Reina","Lampa","Las Condes","Lo Barnechea","Lo Espejo","Lo Prado","Macul","Maipú","María Pinto","Melipilla","Ñuñoa","Padre Hurtado","Paine","Pedro Aguirre Cerda","Peñaflor","Peñalolén","Pirque","Providencia","Pudahuel","Puente Alto","Quilicura","Quinta Normal","Recoleta","Renca","San Bernardo","San Joaquín","San José de Maipo","San Miguel","San Pedro","San Ramón","Santiago","Talagante","Tiltil","Vitacura",
+"Chimbarongo","Chépica","Codegua","Coinco","Coltauco","Doñihue","Graneros","La Estrella","Las Cabras","Litueche","Lolol","Machalí","Malloa","Marchihue","Mostazal","Nancagua","Navidad","Olivar","Palmilla","Paredones","Peralillo","Peumo","Pichidegua","Pichilemu","Placilla","Pumanque","Quinta de Tilcoco","Rancagua","Rengo","Requínoa","San Fernando","San Vicente","Santa Cruz",
+"Cauquenes","Chanco","Colbún","Constitución","Curepto","Curicó","Empedrado","Hualañé","Licantén","Linares","Longaví","Maule","Molina","Parral","Pelarco","Pelluhue","Pencahue","Rauco","Retiro","Río Claro","Romeral","Sagrada Familia","San Clemente","San Javier","San Rafael","Talca","Teno","Vichuquén","Villa Alegre","Yerbas Buenas",
+"Bulnes","Chillán","Chillán Viejo","Cobquecura","Coelemu","Coihueco","El Carmen","Ninhue","Ñiquén","Pemuco","Pinto","Portezuelo","Quillón","Quirihue","Ránquil","San Carlos","San Fabián","San Ignacio","San Nicolás","Treguaco","Yungay",
+"Alto Biobío","Antuco","Arauco","Cabrero","Cañete","Chiguayante","Concepción","Contulmo","Coronel","Curanilahue","Florida","Hualpén","Hualqui","Laja","Lebu","Los Álamos","Los Ángeles","Lota","Mulchén","Nacimiento","Negrete","Penco","Quilaco","Quilleco","San Pedro de la Paz","San Rosendo","Santa Bárbara","Santa Juana","Talcahuano","Tirúa","Tomé","Tucapel","Yumbel",
+"Angol","Carahue","Cholchol","Collipulli","Cunco","Curacautín","Curarrehue","Ercilla","Freire","Galvarino","Gorbea","Lautaro","Loncoche","Lonquimay","Los Sauces","Lumaco","Melipeuco","Nueva Imperial","Padre Las Casas","Perquenco","Pitrufquén","Pucón","Purén","Renaico","Saavedra","Temuco","Teodoro Schmidt","Toltén","Traiguén","Victoria","Vilcún","Villarrica",
+"Corral","Futrono","La Unión","Lago Ranco","Lanco","Los Lagos","Máfil","Mariquina","Paillaco","Panguipulli","Río Bueno","Valdivia",
+"Ancud","Calbuco","Castro","Chaitén","Chonchi","Cochamó","Curaco de Vélez","Dalcahue","Fresia","Frutillar","Futaleufú","Hualaihué","Llanquihue","Los Muermos","Maullín","Osorno","Palena","Puerto Montt","Puerto Octay","Puerto Varas","Puqueldón","Purranque","Puyehue","Queilén","Quellón","Quemchi","Quinchao","Río Negro","San Juan de la Costa","San Pablo",
+"Aysén","Chile Chico","Cisnes","Cochrane","Coyhaique","Guaitecas","Lago Verde","O'Higgins","Río Ibáñez","Tortel",
+"Antártica","Cabo de Hornos","Laguna Blanca","Natales","Porvenir","Primavera","Punta Arenas","Río Verde","San Gregorio","Timaukel","Torres del Paine"
+];
+
 (function(){
-  var ciudades = new Set();
-  // Extraer destinos desde DISTANCIAS (clave: "belloto-santiago" => "santiago")
+  var vistas = new Set();
+  var out = [];
+  function agregar(nombre){
+    var k = nombre.toLowerCase();
+    if(vistas.has(k)) return;
+    vistas.add(k);
+    out.push(nombre);
+  }
+  // 1) Comunas oficiales
+  COMUNAS_CHILE.forEach(agregar);
+  // 2) Fallback: ciudades desde DISTANCIAS/COORDS (capitalizadas)
+  function capitalizar(c){
+    return c.split(' ').map(function(w){
+      return w.charAt(0).toUpperCase() + w.slice(1);
+    }).join(' ');
+  }
   if(typeof DISTANCIAS !== 'undefined'){
     Object.keys(DISTANCIAS).forEach(function(k){
       var p = k.split('-');
-      if(p.length >= 2){
-        // juntar todo excepto el primer segmento (origen)
-        ciudades.add(p.slice(1).join(' '));
-      }
+      if(p.length >= 2) agregar(capitalizar(p.slice(1).join(' ')));
     });
   }
-  // Agregar también las de COORDS que pueden tener tilde
   if(typeof COORDS !== 'undefined'){
-    Object.keys(COORDS).forEach(function(k){ ciudades.add(k); });
+    Object.keys(COORDS).forEach(function(k){ agregar(capitalizar(k)); });
   }
+  out.sort(function(a,b){ return a.localeCompare(b,'es'); });
   var dl = document.getElementById('lista-ciudades');
   if(!dl) return;
-  var lista = Array.from(ciudades).sort();
-  lista.forEach(function(c){
+  out.forEach(function(c){
     var opt = document.createElement('option');
-    // Capitalizar cada palabra
-    opt.value = c.split(' ').map(function(w){
-      return w.charAt(0).toUpperCase() + w.slice(1);
-    }).join(' ');
+    opt.value = c;
     dl.appendChild(opt);
   });
 })();

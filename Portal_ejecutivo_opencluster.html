@@ -1447,6 +1447,8 @@ async function iniciarApp(modoDemo=false){
   if(USUARIO==='Rayen Ogalde' && typeof OCT_enableForRayen==='function'){
     OCT_enableForRayen();
   }
+  // Sincronizar Primeros Contactos con el Sheet (fuente de verdad)
+  sincronizarContactos();
 }
 
 async function recargarDatos(){
@@ -3003,8 +3005,43 @@ async function guardarSeg(numCot,accId,instLabel,fechaCot){
 // ════════════════════════════════════════════
 // PRIMER CONTACTO
 // ════════════════════════════════════════════
+// Cache local (rápido), pero la fuente de verdad es el Sheet
 let CONTACTOS=JSON.parse(localStorage.getItem('oc_contactos_'+window.location.hostname)||'[]');
 let _medioContacto='';
+
+// Clave única para deduplicar contactos entre local y remoto
+function _contactoKey(c){
+  return [
+    String(c.ejecutivo||'').trim().toLowerCase(),
+    String(c.nombre||'').trim().toLowerCase(),
+    String(c.institucion||'').trim().toLowerCase(),
+    String(c.fecha||'').trim()
+  ].join('|');
+}
+
+// Trae los contactos del Sheet para el usuario activo y los mergea con los locales
+async function sincronizarContactos(){
+  if(!USUARIO) return;
+  try{
+    const res = await apiGet({accion:'datos_contactos_ejecutivo', ejecutivo:USUARIO});
+    const remotos = Array.isArray(res.contactos) ? res.contactos : [];
+    // Mergear: el Sheet manda. Si un contacto local no está en remotos, se conserva (puede estar sincronizando aún)
+    const remotaKeys = new Set(remotos.map(_contactoKey));
+    // Solo mantenemos locales de este ejecutivo cuya clave NO esté ya en el remoto
+    const localesPropios = CONTACTOS.filter(c => {
+      const delEj = String(c.ejecutivo||'').toLowerCase().indexOf(String(USUARIO).split(' ')[0].toLowerCase()) >= 0;
+      return delEj && !remotaKeys.has(_contactoKey(c));
+    });
+    // Y todos los contactos locales de OTROS ejecutivos que estuvieran (por ejemplo si otro usuario usó el mismo navegador)
+    const localesOtros = CONTACTOS.filter(c => {
+      const delEj = String(c.ejecutivo||'').toLowerCase().indexOf(String(USUARIO).split(' ')[0].toLowerCase()) >= 0;
+      return !delEj;
+    });
+    CONTACTOS = [...localesOtros, ...remotos, ...localesPropios];
+    localStorage.setItem('oc_contactos_'+window.location.hostname, JSON.stringify(CONTACTOS));
+    renderContactos();
+  }catch(e){ console.warn('No se pudo sincronizar contactos con el Sheet:', e); }
+}
 
 function selMedioContacto(medio,btn){
   document.querySelectorAll('#s-contactos .exec-chip').forEach(c=>c.classList.remove('sel'));

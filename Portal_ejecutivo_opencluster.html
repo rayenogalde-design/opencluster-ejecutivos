@@ -444,10 +444,13 @@ select.login-inp{appearance:none;cursor:pointer;}
 .todo-tag.tag-due{background:#fff;color:var(--ink3);}
 .todo-tag.tag-due.overdue{background:#FDECEA;color:#C0392B;border-color:transparent;}
 
-.todo-actions{display:flex;flex-direction:column;gap:2px;margin-left:4px;}
+.todo-top-row{display:flex;align-items:flex-start;gap:6px;}
+.todo-top-row .todo-text{flex:1;min-width:0;}
+.todo-inline-actions{display:flex;gap:1px;flex-shrink:0;margin-top:-1px;}
+.todo-actions{display:none;}
 .todo-act{
   background:transparent;border:none;cursor:pointer;color:var(--mist);
-  width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;
+  width:20px;height:20px;border-radius:5px;display:flex;align-items:center;justify-content:center;
   transition:.13s;padding:0;
 }
 .todo-act:hover{background:var(--paper);color:var(--ink2);}
@@ -4068,26 +4071,25 @@ function OCT_itemHtml(t){
   }
   var doingTag = t.state==='doing' ? '<span class="todo-tag tag-doing">EN CURSO</span>' : '';
   var doingArrow = t.state==='doing' ? '<polyline points="15 18 9 12 15 6"/>' : '<polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/>';
+  var srcTag = t.source==='manual' ? '' : '<span class="todo-tag src-'+t.source+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+meta.svg+'</svg>'+meta.label+'</span>';
+  var metaRow = (doingTag||srcTag||dueTag) ? '<div class="todo-meta">'+doingTag+srcTag+dueTag+'</div>' : '';
   return '<div class="todo-item prio-'+t.priority+' '+(t.state==='doing'?'doing':'')+'" data-todo-id="'+t.id+'">'+
-    '<div class="todo-check '+(t.state==='done'?'checked':'')+'" onclick="OCT_complete(\''+t.id+'\')" title="Marcar completada">'+
+    '<div class="todo-check '+(t.state==='done'?'checked':'')+'" onclick="event.stopPropagation();OCT_complete(\''+t.id+'\')" title="Marcar completada">'+
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'+
     '</div>'+
     '<div class="todo-main">'+
-      '<div class="todo-text">'+OCT_esc(t.title)+ctxLine+'</div>'+
-      '<div class="todo-meta">'+doingTag+
-        '<span class="todo-tag src-'+t.source+'">'+
-          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+meta.svg+'</svg>'+
-          meta.label+
-        '</span>'+dueTag+
+      '<div class="todo-top-row">'+
+        '<div class="todo-text">'+OCT_esc(t.title)+ctxLine+'</div>'+
+        '<div class="todo-inline-actions">'+
+          '<button class="todo-act act-doing" onclick="event.stopPropagation();OCT_toggleDoing(\''+t.id+'\')" title="'+(t.state==='doing'?'Volver a pendiente':'Mover a En curso')+'">'+
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+doingArrow+'</svg>'+
+          '</button>'+
+          '<button class="todo-act act-del" onclick="event.stopPropagation();OCT_delete(\''+t.id+'\')" title="Eliminar">'+
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>'+
+          '</button>'+
+        '</div>'+
       '</div>'+
-    '</div>'+
-    '<div class="todo-actions">'+
-      '<button class="todo-act act-doing" onclick="OCT_toggleDoing(\''+t.id+'\')" title="'+(t.state==='doing'?'Volver a pendiente':'Mover a En curso')+'">'+
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+doingArrow+'</svg>'+
-      '</button>'+
-      '<button class="todo-act act-del" onclick="OCT_delete(\''+t.id+'\')" title="Eliminar">'+
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>'+
-      '</button>'+
+      metaRow+
     '</div>'+
   '</div>';
 }
@@ -4105,6 +4107,15 @@ function OCT_enableForRayen(){
   OCT_load(); OCT_render();
   window.addEventListener('storage', function(e){ if(e.key===OCT_LS) OCT_render(); });
 }
+// Click afuera del panel → cerrar
+document.addEventListener('click', function(e){
+  var panel=document.getElementById('todoPanel');
+  if(!panel||!panel.classList.contains('open')) return;
+  var fab=document.getElementById('todoFab');
+  if(panel.contains(e.target)) return;
+  if(fab&&fab.contains(e.target)) return;
+  panel.classList.remove('open');
+});
 function OCT_disable(){
   var fab=document.getElementById('todoFab'); if(fab) fab.classList.remove('show');
   var p=document.getElementById('todoPanel'); if(p) p.classList.remove('open');

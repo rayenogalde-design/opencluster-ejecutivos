@@ -971,16 +971,16 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
                 <div style="font-size:9px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:5px;">¿Cuántos proveedores?</div>
                 <div style="display:flex;gap:6px;">
                   <label style="flex:1;display:flex;align-items:center;justify-content:center;padding:7px 4px;border:1.5px solid #c8d8f8;border-radius:6px;background:white;cursor:pointer;font-size:11px;font-weight:800;color:#888;transition:all .15s;" id="lblProv1">
-                    <input type="radio" name="nProveedores" value="1" onchange="calcLogistica()" style="display:none"> 1
+                    <input type="radio" name="nProveedores" value="1" onchange="onProveedoresChange(1)" style="display:none"> 1
                   </label>
                   <label style="flex:1;display:flex;align-items:center;justify-content:center;padding:7px 4px;border:1.5px solid #c8d8f8;border-radius:6px;background:white;cursor:pointer;font-size:11px;font-weight:800;color:#888;transition:all .15s;" id="lblProv2">
-                    <input type="radio" name="nProveedores" value="2" onchange="calcLogistica()" style="display:none"> 2
+                    <input type="radio" name="nProveedores" value="2" onchange="onProveedoresChange(2)" style="display:none"> 2
                   </label>
                   <label style="flex:1;display:flex;align-items:center;justify-content:center;padding:7px 4px;border:1.5px solid #c8d8f8;border-radius:6px;background:white;cursor:pointer;font-size:11px;font-weight:800;color:#888;transition:all .15s;" id="lblProv3">
-                    <input type="radio" name="nProveedores" value="3" onchange="calcLogistica()" style="display:none"> 3
+                    <input type="radio" name="nProveedores" value="3" onchange="onProveedoresChange(3)" style="display:none"> 3
                   </label>
                   <label style="flex:1;display:flex;align-items:center;justify-content:center;padding:7px 4px;border:1.5px solid #c8d8f8;border-radius:6px;background:white;cursor:pointer;font-size:11px;font-weight:800;color:#888;transition:all .15s;" id="lblProv4">
-                    <input type="radio" name="nProveedores" value="4" onchange="calcLogistica()" style="display:none"> 4
+                    <input type="radio" name="nProveedores" value="4" onchange="onProveedoresChange(4)" style="display:none"> 4
                   </label>
                 </div>
                 <div style="font-size:9px;color:#888;margin-top:4px;text-align:right;" id="txtCostoRetiro"></div>
@@ -1941,13 +1941,17 @@ function onRetiroBodegaChange() {
     const rNo = document.querySelector('input[name="retiroUrgente"][value="no"]');
     if(rNo) { rNo.checked = true; onRetiroUrgenteChange(); }
   }
-  // actualizar estilos botones retiro
+  // actualizar estilos botones retiro (sincrónico para feedback instantáneo)
   const si = document.getElementById("lblRetiroSi");
   const no = document.getElementById("lblRetiroNo");
-  const sel = "border-color:var(--navy);background:#eaf0ff;color:var(--navy)";
-  const def = "border-color:#c8d8f8;background:white;color:#888";
-  if(si) si.style.cssText += ";" + (val==="si" ? sel : def);
-  if(no) no.style.cssText += ";" + (val==="no" ? sel : def);
+  function setStyle(el, active){
+    if(!el) return;
+    el.style.borderColor = active ? "var(--navy)" : "#c8d8f8";
+    el.style.background  = active ? "#eaf0ff"     : "white";
+    el.style.color       = active ? "var(--navy)" : "#888";
+  }
+  setStyle(si, val==="si");
+  setStyle(no, val==="no");
   calcLogistica();
 }
 
@@ -1957,18 +1961,45 @@ function onRetiroUrgenteChange() {
   const panelProv    = document.getElementById("panelProveedores");
   if(panelUrgente) panelUrgente.style.display = val === "si" ? "block" : "none";
   if(panelProv)    panelProv.style.display    = val === "no" ? "block" : "none";
-  // estilos botones urgente
+  // estilos botones urgente (sincrónico)
   const si = document.getElementById("lblUrgenteSi");
   const no = document.getElementById("lblUrgenteNo");
-  const sel = "border-color:var(--orange);background:#fff4ea;color:var(--orange)";
-  const def = "border-color:#ffd199;background:white;color:#888";
-  if(si) si.style.cssText += ";" + (val==="si" ? sel : def);
-  if(no) no.style.cssText += ";" + (val==="no" ? sel : def);
-  // estilos botones proveedores — reset al cambiar
+  function setStyleU(el, active){
+    if(!el) return;
+    el.style.borderColor = active ? "var(--orange)" : "#ffd199";
+    el.style.background  = active ? "#fff4ea"       : "white";
+    el.style.color       = active ? "var(--orange)" : "#888";
+  }
+  setStyleU(si, val==="si");
+  setStyleU(no, val==="no");
+  // reset estilos botones proveedores al cambiar
   [1,2,3,4].forEach(n => {
     const lbl = document.getElementById("lblProv"+n);
-    if(lbl) lbl.style.cssText += ";border-color:#c8d8f8;background:white;color:#888";
+    if(!lbl) return;
+    lbl.style.borderColor = "#c8d8f8";
+    lbl.style.background  = "white";
+    lbl.style.color       = "#888";
   });
+  calcLogistica();
+}
+
+// Feedback visual inmediato al elegir proveedor; después dispara cálculo
+function onProveedoresChange(n) {
+  [1,2,3,4].forEach(i => {
+    const lbl = document.getElementById("lblProv"+i);
+    if(!lbl) return;
+    if(i === n) {
+      lbl.style.borderColor = "var(--navy)";
+      lbl.style.background  = "#eaf0ff";
+      lbl.style.color       = "var(--navy)";
+    } else {
+      lbl.style.borderColor = "#c8d8f8";
+      lbl.style.background  = "white";
+      lbl.style.color       = "#888";
+    }
+  });
+  const txt = document.getElementById("txtCostoRetiro");
+  if(txt && n > 0) txt.textContent = `${n} × $50.000 = $${(n*50000).toLocaleString("es-CL")}`;
   calcLogistica();
 }
 
@@ -1991,15 +2022,7 @@ function getRetiroCosto() {
   const urgente = document.querySelector('input[name="retiroUrgente"]:checked')?.value === "si";
   if(urgente) return { costo: 200000, urgente: true, proveedores: 0 };
   const nProv = parseInt(document.querySelector('input[name="nProveedores"]:checked')?.value || 0);
-  // actualizar estilos botones proveedores
-  [1,2,3,4].forEach(n => {
-    const lbl = document.getElementById("lblProv"+n);
-    if(!lbl) return;
-    const activo = n === nProv;
-    lbl.style.cssText += ";" + (activo
-      ? "border-color:var(--navy);background:#eaf0ff;color:var(--navy)"
-      : "border-color:#c8d8f8;background:white;color:#888");
-  });
+  // Los estilos ya se actualizan sincrónicamente en onProveedoresChange — no tocar aquí
   const txt = document.getElementById("txtCostoRetiro");
   if(txt && nProv > 0) txt.textContent = `${nProv} × $50.000 = $${(nProv*50000).toLocaleString("es-CL")}`;
   else if(txt) txt.textContent = "";

@@ -153,8 +153,11 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
 .calc-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:8px; }
 .calc-field label { font-size:9px; font-weight:600; color:#555; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:3px; font-family:'Open Sans',sans-serif; }
 .calc-field input { width:100%; padding:5px 8px; border:1px solid #e0c88a; border-radius:5px; font-size:11px; box-sizing:border-box; background:white; font-family:'Open Sans',sans-serif; }
-/* Tabla de resultados */
+/* Tabla de resultados — OCULTA: el desglose se muestra solo en la tarjeta azul (resumenEnvioBox) */
 .calc-result {
+  display:none !important;
+}
+.calc-result-legacy {
   background:#fafafa; border:1px solid #e8e0d0;
   border-radius:6px; padding:0; margin:8px 0; font-size:10px; overflow:hidden;
 }
@@ -1015,7 +1018,7 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
             </div>
             <div class="calc-field">
               <label>Destino</label>
-              <input type="text" id="calcDestino" placeholder="Ej: Santiago" oninput="calcLogistica()" list="lista-ciudades" autocomplete="off">
+              <input type="text" id="calcDestino" placeholder="Ej: Santiago" oninput="calcLogisticaDebounced()" list="lista-ciudades" autocomplete="off">
             </div>
           </div>
           <input type="number" id="calcBencina" value="1309" min="0" style="display:none" oninput="calcLogistica()">
@@ -1177,6 +1180,18 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
 
     <div class="totbox" id="resumenEnvioBox" style="display:none">
       <div style="font-size:9px;font-weight:700;color:#7af;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Resumen costo de envío</div>
+      <div class="trow" id="rDistancia" style="display:none;opacity:.75;font-size:10.5px;">
+        <span class="tl">📍 Distancia</span>
+        <span class="tv" id="eDistancia">—</span>
+      </div>
+      <div class="trow" id="rRetiroBlue" style="display:none">
+        <span class="tl">📦 Retiro en bodega<span id="eRetiroSub" style="display:block;font-weight:400;font-size:9px;opacity:.7;margin-top:1px"></span></span>
+        <span class="tv" id="eRetiroBlue">$0</span>
+      </div>
+      <div class="trow" id="rDespUrg" style="display:none">
+        <span class="tl">⚡ Despacho urgente Santiago</span>
+        <span class="tv" id="eDespUrg">$200.000</span>
+      </div>
       <div class="trow" id="rBencina" style="display:none">
         <span class="tl">⛽ Bencina / Combustible</span>
         <span class="tv" id="eBencina">$0</span>
@@ -2004,6 +2019,13 @@ function esDestinoSantiago(dest) {
   return rm.includes(normCity(dest));
 }
 
+// Debounce para evitar múltiples llamadas OSRM en vuelo mientras el usuario tipea
+let _calcLogisticaTimeout = null;
+function calcLogisticaDebounced() {
+  clearTimeout(_calcLogisticaTimeout);
+  _calcLogisticaTimeout = setTimeout(() => { calcLogistica(); }, 400);
+}
+
 async function calcLogistica() {
   const orig    = document.getElementById("calcOrigen")?.value.trim() || "";
   const dest    = document.getElementById("calcDestino")?.value.trim() || "";
@@ -2212,7 +2234,12 @@ async function calcLogistica() {
 
     if(box) box.style.display = "block";
   if(btnUsar) { btnUsar.style.display="block"; btnUsar.dataset.val = total; }
-  actualizarResumenEnvio(combCost, peajeCost, alojCost, sueldoCost, viaticoCost, true, retiroCost, ignoraDespacho, total);
+  actualizarResumenEnvio(combCost, peajeCost, alojCost, sueldoCost, viaticoCost, true, retiroCost, ignoraDespacho, total, {
+    distKm: distKm,
+    retiroUrgente: retiro.urgente,
+    retiroProveedores: retiro.proveedores,
+    despachoUrgenteRM: despachoUrgenteRM
+  });
 }
 
 function calcManual() {
@@ -2273,27 +2300,74 @@ function usarCostoCalc() {
   upd();
 }
 
-function actualizarResumenEnvio(combCost, peajeCost, alojCost, sueldoCost, viaticoCost, esLogistica, retiroCost=0, ignoraDespacho=false, totalForzado=null) {
+function actualizarResumenEnvio(combCost, peajeCost, alojCost, sueldoCost, viaticoCost, esLogistica, retiroCost=0, ignoraDespacho=false, totalForzado=null, opts={}) {
   const box = document.getElementById("resumenEnvioBox");
   if(!box) return;
 
-  const SUELDO_VAL  = 50420;
-  const ALOJ_VAL    = 42050;
   const sueldoRem   = window._sueldoRemovido  || false;
   const alojRem     = window._alojRemovido    || false;
   const viaticoRem  = window._viaticoRemovido || false;
 
+  // Opts: { distKm, retiroUrgente, retiroProveedores, despachoUrgenteRM }
+  const distKm            = opts.distKm;
+  const retiroUrgente     = opts.retiroUrgente     || false;
+  const retiroProveedores = opts.retiroProveedores || 0;
+  const despachoUrgenteRM = opts.despachoUrgenteRM || false;
+  const hayRetiro         = retiroCost > 0;
+
   if(esLogistica) {
     box.style.display = "block";
-    // Bencina
+
+    // Distancia (informativa)
+    const rDist = document.getElementById("rDistancia");
+    const eDist = document.getElementById("eDistancia");
+    if(rDist) rDist.style.display = distKm ? "flex" : "none";
+    if(eDist && distKm) eDist.textContent = `${distKm} km ida — ${distKm*2} km ida+vuelta`;
+
+    // Fila Retiro (con subtexto según tipo)
+    const rRet = document.getElementById("rRetiroBlue");
+    const eRet = document.getElementById("eRetiroBlue");
+    const eRetSub = document.getElementById("eRetiroSub");
+    if(rRet) rRet.style.display = hayRetiro ? "flex" : "none";
+    if(hayRetiro) {
+      if(retiroUrgente) {
+        if(eRet) eRet.textContent = "$200.000";
+        if(eRetSub) eRetSub.textContent = "Urgente — incluye retiro y despacho";
+      } else if(ignoraDespacho) {
+        // retiro + RM no urgente: (50k×n) + 50k
+        if(eRet) eRet.textContent = `$${(retiroCost + 50000).toLocaleString("es-CL")}`;
+        if(eRetSub) eRetSub.textContent = `${retiroProveedores} × $50.000 + $50.000 despacho RM`;
+      } else {
+        if(eRet) eRet.textContent = `$${retiroCost.toLocaleString("es-CL")}`;
+        if(eRetSub) eRetSub.textContent = `${retiroProveedores} proveedor${retiroProveedores>1?"es":""} × $50.000`;
+      }
+    }
+
+    // Fila Despacho urgente Santiago (solo caso sin-retiro + RM + urgente)
+    const rDesp = document.getElementById("rDespUrg");
+    if(rDesp) rDesp.style.display = despachoUrgenteRM ? "flex" : "none";
+
+    // Si ignoraDespacho (modo RM especial): ocultar bencina/peaje/aloj/sueldo/viático
     const rB = document.getElementById("rBencina");
-    const eB = document.getElementById("eBencina");
-    if(rB) rB.style.display = combCost > 0 ? "flex" : "none";
-    if(eB) eB.textContent = `$${combCost.toLocaleString("es-CL")}`;
-    // Peajes
     const rP = document.getElementById("rPeaje");
+    const rA = document.getElementById("rAloj");
+    const rS = document.getElementById("rSueldo");
+    const rV = document.getElementById("rViatico");
+    if(ignoraDespacho) {
+      [rB,rP,rA,rS,rV].forEach(el => { if(el) el.style.display = "none"; });
+    } else {
+      // Mostrar según corresponda
+      if(rB) rB.style.display = combCost > 0 ? "flex" : "none";
+      if(rP) rP.style.display = peajeCost > 0 ? "flex" : "none";
+      if(rA) rA.style.display = "flex";
+      if(rS) rS.style.display = "flex";
+      if(rV) rV.style.display = "flex";
+    }
+
+    // Valores (aunque ocultos, igual actualizamos para consistencia)
+    const eB = document.getElementById("eBencina");
     const eP = document.getElementById("ePeaje");
-    if(rP) rP.style.display = peajeCost > 0 ? "flex" : "none";
+    if(eB) eB.textContent = `$${combCost.toLocaleString("es-CL")}`;
     if(eP) eP.textContent = `$${peajeCost.toLocaleString("es-CL")}`;
     // Alojamiento
     const eA = document.getElementById("eAloj");
@@ -2306,12 +2380,12 @@ function actualizarResumenEnvio(combCost, peajeCost, alojCost, sueldoCost, viati
     if(eS) eS.textContent = sueldoRem ? "Removido" : `$${sueldoCost.toLocaleString("es-CL")}`;
     if(b3) { b3.textContent = sueldoRem ? "Restaurar" : "Remover"; }
     // Viático
-    const nChoferes = parseInt(document.querySelector('input[name="nChoferes"]:checked')?.value || 1);
     const eV = document.getElementById("eViatico");
     const b4 = document.getElementById("btnRemViatico2");
     if(eV) eV.textContent = viaticoRem ? "Removido" : (viaticoCost > 0 ? `$${viaticoCost.toLocaleString("es-CL")}` : "No aplica");
     if(b4) { b4.textContent = viaticoRem ? "Restaurar" : "Remover"; }
-    // Total (con retiro incluido) — si totalForzado viene definido, usarlo
+
+    // Total — si totalForzado viene definido, usarlo
     const despachoTotal = ignoraDespacho ? 0 : (combCost + peajeCost + alojCost + sueldoCost + viaticoCost);
     const total = (totalForzado !== null) ? totalForzado : (retiroCost + despachoTotal);
     const eEnv = document.getElementById("eEnv");

@@ -296,7 +296,7 @@
   .todo-add-btn:hover{border-color:var(--gold);color:#8A6520;background:rgba(201,169,110,.06);}
   .todo-add-btn svg{width:15px;height:15px;}
 
-  .todo-form{display:none;flex-direction:column;gap:9px;}
+  .todo-form{display:none;flex-direction:column;gap:10px;}
   .todo-form.on{display:flex;}
   .todo-form-input{
     width:100%;padding:10px 12px;border:1.5px solid rgba(0,26,96,.1);border-radius:9px;
@@ -304,23 +304,29 @@
     resize:none;transition:.15s;outline:none;
   }
   .todo-form-input:focus{border-color:var(--gold);background:#fff;}
-  .todo-form-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
-  .todo-form-select{
-    padding:9px 11px;border:1.5px solid rgba(0,26,96,.1);border-radius:9px;
-    font-family:'Open Sans',sans-serif;font-size:12px;color:var(--text);background:#fff;
-    cursor:pointer;outline:none;
+  .todo-prio-hint{font-size:10.5px;color:var(--subtle);text-align:center;font-weight:600;letter-spacing:.4px;text-transform:uppercase;margin-bottom:-2px;}
+  .todo-prio-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;}
+  .todo-prio-btn{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+    padding:13px 6px;border:2px solid transparent;border-radius:11px;cursor:pointer;
+    font-family:'Montserrat',sans-serif;font-size:11.5px;font-weight:700;letter-spacing:.2px;
+    transition:transform .12s,background .15s,border-color .15s,box-shadow .15s;
   }
-  .todo-form-buttons{display:flex;gap:7px;}
-  .todo-form-save{
-    flex:1;padding:10px;border:none;border-radius:9px;cursor:pointer;
-    background:linear-gradient(135deg,var(--navy),#0a2e8a);color:#fff;
-    font-family:'Montserrat',sans-serif;font-size:12.5px;font-weight:700;
-    transition:.15s;letter-spacing:.3px;
-  }
-  .todo-form-save:hover{background:linear-gradient(135deg,#0a2e8a,var(--sky));}
+  .todo-prio-btn:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.08);}
+  .todo-prio-btn:active{transform:translateY(0);}
+  .todo-prio-btn .prio-dot{width:20px;height:20px;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.18) inset;}
+  .prio-btn-alta{background:#FEE2E2;color:#991B1B;border-color:rgba(220,38,38,.25);}
+  .prio-btn-alta .prio-dot{background:#DC2626;}
+  .prio-btn-alta:hover{background:#FECACA;border-color:#DC2626;}
+  .prio-btn-media{background:#FEF3C7;color:#78350F;border-color:rgba(245,158,11,.3);}
+  .prio-btn-media .prio-dot{background:#F59E0B;}
+  .prio-btn-media:hover{background:#FDE68A;border-color:#F59E0B;}
+  .prio-btn-baja{background:#D1FAE5;color:#065F46;border-color:rgba(16,185,129,.3);}
+  .prio-btn-baja .prio-dot{background:#10B981;}
+  .prio-btn-baja:hover{background:#A7F3D0;border-color:#10B981;}
   .todo-form-cancel{
-    padding:10px 15px;border:1px solid rgba(0,26,96,.1);border-radius:9px;cursor:pointer;
-    background:#fff;color:var(--subtle);font-family:'Montserrat',sans-serif;font-size:12px;font-weight:600;
+    padding:8px;border:1px solid rgba(0,26,96,.1);border-radius:9px;cursor:pointer;
+    background:#fff;color:var(--subtle);font-family:'Montserrat',sans-serif;font-size:11.5px;font-weight:600;
   }
   .todo-form-cancel:hover{color:var(--text);}
 
@@ -674,19 +680,20 @@
       Nueva tarea
     </button>
     <div class="todo-form" id="todoForm">
-      <textarea class="todo-form-input" id="todoFormText" rows="2" placeholder="¿Qué necesitas hacer?" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();OCT_saveForm();}"></textarea>
-      <div class="todo-form-row">
-        <select class="todo-form-select" id="todoFormPrio">
-          <option value="alta">Prioridad alta</option>
-          <option value="media" selected>Prioridad media</option>
-          <option value="baja">Prioridad baja</option>
-        </select>
-        <input type="date" class="todo-form-select" id="todoFormDate" title="Fecha límite (opcional)">
+      <textarea class="todo-form-input" id="todoFormText" rows="2" placeholder="¿Qué necesitas hacer?"></textarea>
+      <div class="todo-prio-hint">Toca un color para agregar</div>
+      <div class="todo-prio-grid">
+        <button class="todo-prio-btn prio-btn-alta" onclick="OCT_saveForm('alta')" title="Urgente — hazlo ya">
+          <span class="prio-dot"></span>Urgente
+        </button>
+        <button class="todo-prio-btn prio-btn-media" onclick="OCT_saveForm('media')" title="Normal — cuando puedas">
+          <span class="prio-dot"></span>Normal
+        </button>
+        <button class="todo-prio-btn prio-btn-baja" onclick="OCT_saveForm('baja')" title="Después — sin apuro">
+          <span class="prio-dot"></span>Después
+        </button>
       </div>
-      <div class="todo-form-buttons">
-        <button class="todo-form-save" onclick="OCT_saveForm()">Agregar</button>
-        <button class="todo-form-cancel" onclick="OCT_hideForm()">Cancelar</button>
-      </div>
+      <button class="todo-form-cancel" onclick="OCT_hideForm()">Cancelar</button>
     </div>
     <div class="todo-history-link" onclick="OCT_showHistory()">Ver historial de completadas</div>
   </div>
@@ -726,16 +733,14 @@ function OCT_hideForm(){
   document.getElementById('todoForm').classList.remove('on');
   document.getElementById('todoAddBtn').style.display='';
   document.getElementById('todoFormText').value='';
-  document.getElementById('todoFormDate').value='';
-  document.getElementById('todoFormPrio').value='media';
 }
-function OCT_saveForm(){
-  var text=document.getElementById('todoFormText').value.trim();
-  if(!text) return;
+function OCT_saveForm(priority){
+  var input=document.getElementById('todoFormText');
+  var text=input.value.trim();
+  if(!text){ input.focus(); return; }
   OCT_addTodo({
     title:text,
-    priority:document.getElementById('todoFormPrio').value,
-    due:document.getElementById('todoFormDate').value||'',
+    priority:priority||'media',
     source:'manual'
   });
   OCT_hideForm();

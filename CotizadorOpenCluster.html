@@ -1844,28 +1844,204 @@ function getDistancia(orig, dest) {
   return _distCache[a+"-"+b] || _distCache[b+"-"+a] || DISTANCIAS[a+"-"+b] || DISTANCIAS[b+"-"+a] || null;
 }
 
-// Coordenadas conocidas de ciudades chilenas para OSRM
+// Coordenadas de comunas chilenas para cálculo rápido (Haversine)
+// Formato: [lon, lat]. Si falta una comuna, se intenta geocode con Nominatim.
 const COORDS = {
+  // V Región (origen + cercanías)
   "belloto":[-71.4833,-33.0500],"quilpue":[-71.4500,-33.0500],"villa alemana":[-71.3700,-33.0400],
   "valparaiso":[-71.6167,-33.0458],"viña del mar":[-71.5500,-33.0244],"vina del mar":[-71.5500,-33.0244],
-  "quillota":[-71.2500,-32.8800],"la calera":[-71.2000,-32.7900],"los andes":[-70.5978,-32.8339],
-  "san felipe":[-70.7247,-32.7500],"san antonio":[-71.6072,-33.5928],"casablanca":[-71.4189,-33.3172],
-  "santiago":[-70.6483,-33.4569],"maipu":[-70.7581,-33.5116],"puente alto":[-70.5757,-33.6116],
-  "san bernardo":[-70.6989,-33.5928],"quilicura":[-70.7500,-33.3700],"las condes":[-70.5326,-33.4172],
-  "providencia":[-70.6100,-33.4317],"nunoa":[-70.5981,-33.4567],"la florida":[-70.5878,-33.5233],
-  "rancagua":[-70.7408,-34.1703],"san fernando":[-70.9861,-34.5856],"santa cruz":[-71.3639,-34.6381],
-  "talca":[-71.6675,-35.4264],"curico":[-71.2417,-34.9814],"linares":[-71.5961,-35.8461],
-  "chillan":[-72.1194,-36.6067],"concepcion":[-73.0572,-36.8201],"los angeles":[-72.3528,-37.4697],
-  "temuco":[-72.5898,-38.7359],"valdivia":[-73.2458,-39.8142],"osorno":[-73.1333,-40.5731],
-  "puerto montt":[-72.9367,-41.4693],"castro":[-73.7617,-42.4814],"coyhaique":[-72.0667,-45.5714],
-  "punta arenas":[-70.9167,-53.1500],"arica":[-70.3333,-18.4833],"iquique":[-70.1500,-20.2167],
-  "antofagasta":[-70.3997,-23.6500],"calama":[-68.9167,-22.4500],"copiapo":[-70.3333,-27.3667],
-  "copiapó":[-70.3333,-27.3667],"la serena":[-71.2500,-29.9000],"coquimbo":[-71.3500,-29.9667],
-  "ovalle":[-71.2000,-30.6000],"illapel":[-71.1667,-31.6333],"los vilos":[-71.5000,-31.9167],
-  "la union":[-72.8333,-40.2833],"puerto varas":[-72.9667,-41.3167],"ancud":[-73.8333,-41.8667],
-  "angol":[-72.7081,-37.7956],"victoria":[-72.3333,-38.2167],"pucon":[-71.9667,-39.2833],
-  "villarrica":[-72.2333,-39.2833],"valdivia":[-73.2458,-39.8142],"panguipulli":[-72.3333,-39.6333]
+  "concon":[-71.5333,-32.9333],"quintero":[-71.5333,-32.7833],"puchuncavi":[-71.4167,-32.7333],
+  "zapallar":[-71.4667,-32.5500],"papudo":[-71.4500,-32.5167],"la ligua":[-71.2333,-32.4500],
+  "cabildo":[-71.0667,-32.4333],"petorca":[-70.9333,-32.2500],"catemu":[-70.9667,-32.7833],
+  "llaillay":[-70.9500,-32.8333],"panquehue":[-70.9500,-32.8000],"putaendo":[-70.7167,-32.6333],
+  "rinconada":[-70.7167,-32.8333],"santa maria":[-70.6833,-32.7333],"santa maría":[-70.6833,-32.7333],
+  "limache":[-71.2667,-33.0167],"olmue":[-71.1833,-33.0000],"olmué":[-71.1833,-33.0000],
+  "quillota":[-71.2500,-32.8800],"la calera":[-71.2000,-32.7900],"calera":[-71.2000,-32.7900],
+  "la cruz":[-71.2333,-32.8333],"hijuelas":[-71.1500,-32.8000],"nogales":[-71.2167,-32.7500],
+  "los andes":[-70.5978,-32.8339],"san felipe":[-70.7247,-32.7500],"san esteban":[-70.5833,-32.7833],
+  "calle larga":[-70.6333,-32.8500],"san antonio":[-71.6072,-33.5928],"cartagena":[-71.6000,-33.5500],
+  "el tabo":[-71.6667,-33.4500],"el quisco":[-71.6833,-33.4000],"algarrobo":[-71.6667,-33.3667],
+  "santo domingo":[-71.6333,-33.6333],"casablanca":[-71.4189,-33.3172],
+  "isla de pascua":[-109.4167,-27.1500],"juan fernandez":[-78.8500,-33.6333],
+  // Metropolitana (Santiago y cercanías)
+  "santiago":[-70.6483,-33.4569],"maipu":[-70.7581,-33.5116],"maipú":[-70.7581,-33.5116],
+  "puente alto":[-70.5757,-33.6116],"san bernardo":[-70.6989,-33.5928],
+  "quilicura":[-70.7500,-33.3700],"las condes":[-70.5326,-33.4172],"providencia":[-70.6100,-33.4317],
+  "nunoa":[-70.5981,-33.4567],"ñuñoa":[-70.5981,-33.4567],"la florida":[-70.5878,-33.5233],
+  "la reina":[-70.5500,-33.4500],"macul":[-70.6000,-33.4833],"penalolen":[-70.5333,-33.4833],
+  "peñalolen":[-70.5333,-33.4833],"peñalolén":[-70.5333,-33.4833],
+  "estacion central":[-70.6833,-33.4500],"estación central":[-70.6833,-33.4500],
+  "pudahuel":[-70.7667,-33.4333],"cerrillos":[-70.7167,-33.5000],"lo prado":[-70.7167,-33.4500],
+  "quinta normal":[-70.7000,-33.4333],"independencia":[-70.6667,-33.4167],
+  "recoleta":[-70.6333,-33.4000],"conchali":[-70.6833,-33.3833],"conchalí":[-70.6833,-33.3833],
+  "huechuraba":[-70.6333,-33.3667],"renca":[-70.7333,-33.4167],"cerro navia":[-70.7333,-33.4333],
+  "lo barnechea":[-70.5167,-33.3500],"vitacura":[-70.5833,-33.3833],
+  "la cisterna":[-70.6667,-33.5333],"san miguel":[-70.6500,-33.5000],
+  "san joaquin":[-70.6333,-33.4833],"san joaquín":[-70.6333,-33.4833],
+  "san ramon":[-70.6500,-33.5333],"san ramón":[-70.6500,-33.5333],
+  "la granja":[-70.6167,-33.5333],"la pintana":[-70.6333,-33.5833],
+  "el bosque":[-70.6667,-33.5667],"lo espejo":[-70.6833,-33.5167],
+  "pedro aguirre cerda":[-70.6667,-33.4833],
+  "buin":[-70.7333,-33.7333],"paine":[-70.7500,-33.8167],"colina":[-70.6833,-33.2000],
+  "lampa":[-70.8833,-33.2833],"tiltil":[-70.9333,-33.0833],"til til":[-70.9333,-33.0833],
+  "pirque":[-70.5833,-33.6500],"san jose de maipo":[-70.3500,-33.6500],"san josé de maipo":[-70.3500,-33.6500],
+  "talagante":[-70.9333,-33.6667],"peñaflor":[-70.8833,-33.6000],"penaflor":[-70.8833,-33.6000],
+  "el monte":[-71.0000,-33.6833],"isla de maipo":[-70.9000,-33.7500],
+  "melipilla":[-71.2167,-33.6833],"maria pinto":[-71.1167,-33.5500],"maría pinto":[-71.1167,-33.5500],
+  "curacavi":[-71.1500,-33.4000],"curacaví":[-71.1500,-33.4000],
+  "padre hurtado":[-70.8167,-33.5667],"calera de tango":[-70.7833,-33.6333],
+  "alhue":[-71.1000,-34.0333],"alhué":[-71.1000,-34.0333],
+  // O'Higgins
+  "rancagua":[-70.7408,-34.1703],"machali":[-70.6500,-34.1833],"machalí":[-70.6500,-34.1833],
+  "graneros":[-70.7333,-34.0667],"mostazal":[-70.7167,-34.0000],"codegua":[-70.6667,-34.0333],
+  "coltauco":[-71.0833,-34.2833],"coinco":[-70.9667,-34.2500],"doñihue":[-70.9500,-34.2333],
+  "donihue":[-70.9500,-34.2333],"olivar":[-70.7833,-34.2167],"requinoa":[-70.8167,-34.2833],
+  "requínoa":[-70.8167,-34.2833],"rengo":[-70.8667,-34.4000],"san vicente":[-71.0833,-34.4333],
+  "malloa":[-70.9500,-34.4500],"pichidegua":[-71.2833,-34.3500],"peumo":[-71.1833,-34.3833],
+  "las cabras":[-71.3000,-34.2833],"la estrella":[-71.6833,-34.2667],
+  "litueche":[-71.7167,-34.1167],"marchihue":[-71.6167,-34.4000],"marchigue":[-71.6167,-34.4000],
+  "navidad":[-71.8500,-33.9500],"paredones":[-71.9000,-34.6500],"pichilemu":[-72.0000,-34.3833],
+  "san fernando":[-70.9861,-34.5856],"chimbarongo":[-71.0500,-34.7167],"placilla":[-71.1167,-34.6333],
+  "nancagua":[-71.2167,-34.6500],"santa cruz":[-71.3639,-34.6381],"palmilla":[-71.3500,-34.5833],
+  "peralillo":[-71.4667,-34.4833],"chépica":[-71.2833,-34.7333],"chepica":[-71.2833,-34.7333],
+  "lolol":[-71.6333,-34.7333],"pumanque":[-71.6667,-34.6000],
+  "quinta de tilcoco":[-70.9833,-34.3833],
+  // Maule
+  "talca":[-71.6675,-35.4264],"curico":[-71.2417,-34.9814],"curicó":[-71.2417,-34.9814],
+  "molina":[-71.2833,-35.1167],"sagrada familia":[-71.4000,-35.0833],"hualañe":[-71.8000,-34.9667],
+  "hualañé":[-71.8000,-34.9667],"licanten":[-72.0667,-34.9833],"licantén":[-72.0667,-34.9833],
+  "vichuquen":[-72.1333,-34.8833],"vichuquén":[-72.1333,-34.8833],"rauco":[-71.2000,-34.9333],
+  "romeral":[-71.1500,-35.0000],"teno":[-71.1667,-34.8667],"pencahue":[-71.8167,-35.3833],
+  "pelarco":[-71.4500,-35.3667],"rio claro":[-71.2500,-35.3667],"río claro":[-71.2500,-35.3667],
+  "san clemente":[-71.4833,-35.5333],"san rafael":[-71.5333,-35.3000],"maule":[-71.7000,-35.5167],
+  "empedrado":[-72.2833,-35.5833],"constitucion":[-72.4167,-35.3333],"constitución":[-72.4167,-35.3333],
+  "curepto":[-72.0167,-35.0833],"chanco":[-72.5333,-35.7333],"pelluhue":[-72.5833,-35.8167],
+  "linares":[-71.5961,-35.8461],"san javier":[-71.7000,-35.6000],"villa alegre":[-71.7500,-35.6833],
+  "yerbas buenas":[-71.6333,-35.7333],"colbun":[-71.4167,-35.7000],"colbún":[-71.4167,-35.7000],
+  "longavi":[-71.6833,-35.9667],"longaví":[-71.6833,-35.9667],"retiro":[-71.7667,-36.0500],
+  "parral":[-71.8333,-36.1500],"cauquenes":[-72.3167,-35.9667],
+  // Ñuble
+  "chillan":[-72.1194,-36.6067],"chillán":[-72.1194,-36.6067],
+  "chillan viejo":[-72.1167,-36.6167],"chillán viejo":[-72.1167,-36.6167],
+  "bulnes":[-72.3000,-36.7333],"coihueco":[-71.8333,-36.6333],"pinto":[-71.8833,-36.7000],
+  "pemuco":[-72.1000,-36.9667],"el carmen":[-72.0333,-36.8833],"san ignacio":[-72.0333,-36.8167],
+  "yungay":[-72.0167,-37.1167],"quillon":[-72.4833,-36.7333],"quillón":[-72.4833,-36.7333],
+  "san carlos":[-71.9667,-36.4167],"niquen":[-71.9000,-36.3000],"ñiquén":[-71.9000,-36.3000],
+  "san nicolas":[-72.2000,-36.5000],"san nicolás":[-72.2000,-36.5000],"san fabian":[-71.5500,-36.5500],
+  "san fabián":[-71.5500,-36.5500],"coelemu":[-72.7000,-36.4833],"treguaco":[-72.6667,-36.4167],
+  "ninhue":[-72.4000,-36.4000],"portezuelo":[-72.4333,-36.5167],"cobquecura":[-72.7833,-36.1333],
+  "quirihue":[-72.5333,-36.2833],"ranquil":[-72.6333,-36.6333],"ránquil":[-72.6333,-36.6333],
+  // Biobío
+  "concepcion":[-73.0572,-36.8201],"concepción":[-73.0572,-36.8201],
+  "talcahuano":[-73.1167,-36.7167],"hualpen":[-73.1167,-36.7833],"hualpén":[-73.1167,-36.7833],
+  "san pedro de la paz":[-73.1000,-36.8500],"chiguayante":[-73.0333,-36.9167],
+  "hualqui":[-72.9333,-36.9667],"florida":[-72.6667,-36.8167],"penco":[-72.9833,-36.7500],
+  "tome":[-72.9500,-36.6167],"tomé":[-72.9500,-36.6167],"coronel":[-73.1500,-37.0333],
+  "lota":[-73.1667,-37.0833],"santa juana":[-72.9333,-37.1667],"los angeles":[-72.3528,-37.4697],
+  "los ángeles":[-72.3528,-37.4697],"cabrero":[-72.4000,-37.0333],"laja":[-72.7167,-37.2833],
+  "san rosendo":[-72.7167,-37.2500],"yumbel":[-72.5667,-37.0833],"tucapel":[-71.9500,-37.2833],
+  "antuco":[-71.6833,-37.3333],"quilaco":[-71.9833,-37.6833],"quilleco":[-72.0500,-37.4500],
+  "mulchen":[-72.2333,-37.7167],"mulchén":[-72.2333,-37.7167],"negrete":[-72.5333,-37.6000],
+  "nacimiento":[-72.6667,-37.5000],"santa barbara":[-72.0167,-37.6667],"santa bárbara":[-72.0167,-37.6667],
+  "alto biobio":[-71.4000,-38.0333],"alto biobío":[-71.4000,-38.0333],
+  "arauco":[-73.3167,-37.2500],"curanilahue":[-73.3333,-37.4833],"lebu":[-73.6500,-37.6167],
+  "los alamos":[-73.4667,-37.6167],"los álamos":[-73.4667,-37.6167],
+  "canete":[-73.4000,-37.8000],"cañete":[-73.4000,-37.8000],"contulmo":[-73.2333,-38.0167],
+  "tirua":[-73.4833,-38.3333],"tirúa":[-73.4833,-38.3333],
+  // Araucanía
+  "temuco":[-72.5898,-38.7359],"padre las casas":[-72.6000,-38.7667],
+  "lautaro":[-72.4333,-38.5333],"vilcun":[-72.2333,-38.6667],"vilcún":[-72.2333,-38.6667],
+  "cunco":[-72.0333,-38.9333],"melipeuco":[-71.7000,-38.8500],"curarrehue":[-71.5833,-39.3667],
+  "pucon":[-71.9667,-39.2833],"pucón":[-71.9667,-39.2833],"villarrica":[-72.2333,-39.2833],
+  "loncoche":[-72.6333,-39.3667],"gorbea":[-72.6833,-39.1000],"pitrufquen":[-72.6500,-38.9833],
+  "pitrufquén":[-72.6500,-38.9833],"freire":[-72.6167,-38.9500],"cholchol":[-72.8500,-38.6000],
+  "nueva imperial":[-72.9500,-38.7500],"carahue":[-73.1500,-38.7000],"saavedra":[-73.4000,-38.7833],
+  "teodoro schmidt":[-73.0833,-39.0333],"tolten":[-73.2167,-39.2167],"toltén":[-73.2167,-39.2167],
+  "perquenco":[-72.4167,-38.4167],"galvarino":[-72.7833,-38.4000],"traiguen":[-72.6833,-38.2500],
+  "traiguén":[-72.6833,-38.2500],"los sauces":[-72.8333,-37.9833],"purén":[-73.0833,-38.0333],
+  "puren":[-73.0833,-38.0333],"lumaco":[-72.9167,-38.1500],"collipulli":[-72.4333,-37.9500],
+  "ercilla":[-72.3833,-38.0500],"victoria":[-72.3333,-38.2167],"angol":[-72.7081,-37.7956],
+  "renaico":[-72.5833,-37.6500],"curacautin":[-71.8833,-38.4333],"curacautín":[-71.8833,-38.4333],
+  "lonquimay":[-71.2500,-38.4500],
+  // Los Ríos
+  "valdivia":[-73.2458,-39.8142],"mariquina":[-72.9833,-39.5333],"lanco":[-72.7667,-39.4500],
+  "corral":[-73.4333,-39.8833],"paillaco":[-72.8833,-40.0667],"los lagos":[-72.8333,-39.8500],
+  "mafil":[-72.9500,-39.6500],"máfil":[-72.9500,-39.6500],"panguipulli":[-72.3333,-39.6333],
+  "futrono":[-72.4000,-40.1167],"lago ranco":[-72.5000,-40.3167],"la union":[-72.8333,-40.2833],
+  "la unión":[-72.8333,-40.2833],"rio bueno":[-72.9500,-40.3333],"río bueno":[-72.9500,-40.3333],
+  // Los Lagos
+  "osorno":[-73.1333,-40.5731],"san pablo":[-73.0000,-40.4167],"san juan de la costa":[-73.4667,-40.5333],
+  "puyehue":[-72.6167,-40.6833],"rio negro":[-73.2167,-40.8000],"río negro":[-73.2167,-40.8000],
+  "purranque":[-73.1667,-40.9167],"puerto octay":[-72.8833,-40.9833],
+  "llanquihue":[-72.9833,-41.2500],"frutillar":[-73.0500,-41.1333],
+  "puerto varas":[-72.9667,-41.3167],"puerto montt":[-72.9367,-41.4693],
+  "calbuco":[-73.1333,-41.7667],"los muermos":[-73.4667,-41.4000],"maullin":[-73.6000,-41.6167],
+  "maullín":[-73.6000,-41.6167],"fresia":[-73.4000,-41.1500],"cochamo":[-72.3000,-41.4833],
+  "cochamó":[-72.3000,-41.4833],"hualaihue":[-72.4167,-42.0833],"hualaihué":[-72.4167,-42.0833],
+  "ancud":[-73.8333,-41.8667],"quemchi":[-73.4833,-42.1500],"dalcahue":[-73.6500,-42.3833],
+  "castro":[-73.7617,-42.4814],"chonchi":[-73.7833,-42.6167],"puqueldon":[-73.6833,-42.5333],
+  "puqueldón":[-73.6833,-42.5333],"curaco de velez":[-73.6000,-42.4500],"curaco de vélez":[-73.6000,-42.4500],
+  "quinchao":[-73.4833,-42.4667],"queilen":[-73.4833,-42.8833],"queilén":[-73.4833,-42.8833],
+  "quellon":[-73.6167,-43.1167],"quellón":[-73.6167,-43.1167],"chaiten":[-72.7167,-42.9167],
+  "chaitén":[-72.7167,-42.9167],"futaleufu":[-71.8667,-43.1833],"futaleufú":[-71.8667,-43.1833],
+  "palena":[-71.8000,-43.6167],
+  // Coquimbo
+  "la serena":[-71.2500,-29.9000],"coquimbo":[-71.3500,-29.9667],"andacollo":[-71.0833,-30.2333],
+  "la higuera":[-71.2667,-29.5333],"vicuña":[-70.7167,-30.0333],"vicuna":[-70.7167,-30.0333],
+  "paiguano":[-70.5167,-30.0333],"ovalle":[-71.2000,-30.6000],"monte patria":[-70.9667,-30.7000],
+  "punitaqui":[-71.2667,-30.8333],"combarbala":[-71.0167,-31.1833],"combarbalá":[-71.0167,-31.1833],
+  "rio hurtado":[-70.8500,-30.4833],"río hurtado":[-70.8500,-30.4833],"salamanca":[-70.9667,-31.7833],
+  "illapel":[-71.1667,-31.6333],"canela":[-71.3500,-31.4000],"los vilos":[-71.5000,-31.9167],
+  // Atacama
+  "copiapo":[-70.3333,-27.3667],"copiapó":[-70.3333,-27.3667],"tierra amarilla":[-70.2833,-27.4833],
+  "caldera":[-70.8333,-27.0667],"chanaral":[-70.6167,-26.3500],"chañaral":[-70.6167,-26.3500],
+  "diego de almagro":[-70.0500,-26.3667],"vallenar":[-70.7667,-28.5667],
+  "alto del carmen":[-70.4667,-28.7500],"freirina":[-71.0833,-28.5167],"huasco":[-71.2167,-28.4667],
+  // Antofagasta
+  "antofagasta":[-70.3997,-23.6500],"calama":[-68.9167,-22.4500],"tocopilla":[-70.2000,-22.0833],
+  "mejillones":[-70.4500,-23.1000],"taltal":[-70.4833,-25.4000],"maria elena":[-69.6667,-22.3333],
+  "maría elena":[-69.6667,-22.3333],"san pedro de atacama":[-68.2000,-22.9167],
+  "sierra gorda":[-69.3000,-22.8833],"ollague":[-68.2500,-21.2167],"ollagüe":[-68.2500,-21.2167],
+  // Tarapacá
+  "iquique":[-70.1500,-20.2167],"alto hospicio":[-70.1000,-20.2833],"pozo almonte":[-69.7833,-20.2667],
+  "pica":[-69.3333,-20.4833],"huara":[-69.7667,-19.9833],"camina":[-69.4333,-19.3000],
+  "camiña":[-69.4333,-19.3000],"colchane":[-68.6333,-19.2833],
+  // Arica y Parinacota
+  "arica":[-70.3333,-18.4833],"camarones":[-69.9500,-19.2000],"general lagos":[-69.5833,-17.6167],
+  "putre":[-69.5667,-18.1833],
+  // Aysén
+  "coyhaique":[-72.0667,-45.5714],"coihaique":[-72.0667,-45.5714],"aysen":[-72.6833,-45.4000],
+  "aysén":[-72.6833,-45.4000],"puerto aysen":[-72.6833,-45.4000],"cisnes":[-72.6667,-44.7500],
+  "guaitecas":[-73.7833,-43.9000],"lago verde":[-71.8500,-44.2500],"chile chico":[-71.7333,-46.5333],
+  "rio ibañez":[-72.0333,-46.3000],"río ibáñez":[-72.0333,-46.3000],"cochrane":[-72.5833,-47.2500],
+  "tortel":[-73.5333,-47.8000],"o'higgins":[-72.5833,-48.4667],"ohiggins":[-72.5833,-48.4667],
+  // Magallanes
+  "punta arenas":[-70.9167,-53.1500],"rio verde":[-71.5833,-52.6333],"río verde":[-71.5833,-52.6333],
+  "san gregorio":[-70.0333,-52.6333],"laguna blanca":[-71.1833,-52.5167],
+  "puerto natales":[-72.5000,-51.7333],"natales":[-72.5000,-51.7333],"torres del paine":[-72.9667,-50.9167],
+  "cabo de hornos":[-67.6167,-55.1167],"antartica":[-58.9500,-63.3167],"antártica":[-58.9500,-63.3167],
+  "porvenir":[-70.3667,-53.2833],"primavera":[-69.3667,-52.7167],"timaukel":[-69.3333,-54.0833]
 };
+
+// Haversine: distancia en km entre dos puntos (lat,lon) en la superficie de la Tierra
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// Distancia rápida (sincrónica) usando COORDS + Haversine × 1.25 (factor carretera)
+// Retorna km redondeados, o null si falta alguna coordenada.
+function getDistanciaRapida(orig, dest) {
+  const a = normCity(orig), b = normCity(dest);
+  const co = COORDS[a], cd = COORDS[b];
+  if(!co || !cd) return null;
+  // COORDS es [lon, lat]
+  const km = haversineKm(co[1], co[0], cd[1], cd[0]);
+  return Math.round(km * 1.25); // factor carretera chileno aproximado
+}
 
 // Geocoder: busca coordenadas de cualquier ciudad chilena via Nominatim
 const _geocodeCache = {};
@@ -2087,9 +2263,21 @@ async function calcLogistica() {
   const crDist = document.getElementById("crDist");
   if(crDist) crDist.textContent = "Calculando...";
 
-  // Intentar OSRM primero, luego tabla local
-  let distKm = await getDistanciaOSRM(orig, dest);
-  if(!distKm) distKm = getDistancia(orig, dest);
+  // Request ID para descartar respuestas asíncronas obsoletas
+  window._calcReqId = (window._calcReqId || 0) + 1;
+  const reqId = window._calcReqId;
+
+  // 1) Distancia SINCRÓNICA: tabla local DISTANCIAS (precisa) o Haversine desde COORDS (aproximado).
+  //    Esto es instantáneo — no bloquea la UI con llamadas OSRM.
+  let distKm = getDistancia(orig, dest) || getDistanciaRapida(orig, dest);
+  // 2) Si falta (comuna desconocida), kick off OSRM en background con protección anti-race.
+  //    Cuando complete, re-dispara calcLogistica con el cache poblado.
+  if(!distKm) {
+    getDistanciaOSRM(orig, dest).then(km => {
+      if(reqId !== window._calcReqId) return; // respuesta obsoleta: descartar
+      if(km) calcLogistica();
+    });
+  }
 
   if(!distKm && distManualKm > 0) {
     distKm = distManualKm;

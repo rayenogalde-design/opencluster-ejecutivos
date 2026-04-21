@@ -935,7 +935,7 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
 
           <!-- ── RETIRO EN BODEGA ── -->
           <div style="background:#f0f4ff;border:1.5px solid #c8d8f8;border-radius:8px;padding:10px 12px;margin-bottom:10px;">
-            <div style="font-size:9.5px;font-weight:800;color:var(--navy);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">📦 Retiro en bodega de proveedor</div>
+            <div style="font-size:9.5px;font-weight:800;color:var(--navy);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">📦 Retiro en bodega de proveedor — SANTIAGO</div>
 
             <!-- ¿Incluye retiro? -->
             <div style="display:flex;gap:8px;margin-bottom:8px;">
@@ -983,8 +983,12 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
                     <input type="radio" name="nProveedores" value="4" onchange="onProveedoresChange(4)" style="display:none"> 4
                   </label>
                 </div>
-                <div style="font-size:9px;color:#888;margin-top:4px;text-align:right;" id="txtCostoRetiro"></div>
               </div>
+            </div>
+            <!-- Total costo retiro en bodega -->
+            <div id="panelTotalRetiro" style="display:none;margin-top:8px;padding-top:8px;border-top:1.5px solid #c8d8f8;display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:10.5px;font-weight:700;color:var(--navy);">Total costo retiro en bodega:</span>
+              <span style="font-size:13px;font-weight:800;color:var(--navy);" id="txtCostoRetiro">$0</span>
             </div>
           </div>
           <!-- ── FIN RETIRO EN BODEGA ── -->
@@ -1010,17 +1014,21 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
           <!-- Vehículo -->
 
 
-          <!-- Origen / Destino -->
-          <div class="calc-grid">
-            <div class="calc-field">
-              <label>Origen</label>
-              <input type="text" id="calcOrigen" value="Belloto" readonly style="background:#f5f5f5;color:#999;cursor:not-allowed">
-            </div>
-            <div class="calc-field">
-              <label>Destino</label>
-              <input type="text" id="calcDestino" placeholder="Ej: Santiago" oninput="calcLogisticaDebounced()" list="lista-ciudades" autocomplete="off">
+          <!-- ── DESPACHO FINAL ── -->
+          <div style="background:#eaf6ff;border:1.5px solid #c8e0f8;border-radius:8px;padding:10px 12px;margin-bottom:10px;">
+            <div style="font-size:9.5px;font-weight:800;color:var(--navy);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">🚚 Despacho final</div>
+            <div class="calc-grid">
+              <div class="calc-field">
+                <label>Origen</label>
+                <input type="text" id="calcOrigen" value="Belloto" readonly style="background:#f5f5f5;color:#999;cursor:not-allowed">
+              </div>
+              <div class="calc-field">
+                <label>Destino final</label>
+                <input type="text" id="calcDestino" value="Santiago" placeholder="Ej: Santiago" oninput="calcLogisticaDebounced()" list="lista-ciudades" autocomplete="off">
+              </div>
             </div>
           </div>
+          <!-- ── FIN DESPACHO FINAL ── -->
           <input type="number" id="calcBencina" value="1309" min="0" style="display:none" oninput="calcLogistica()">
           <span id="crPrecioLt" style="display:none"></span>
         <input type="number" id="calcRend" value="5" min="1" style="display:none">
@@ -1185,12 +1193,12 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
         <span class="tv" id="eDistancia">—</span>
       </div>
       <div class="trow" id="rRetiroBlue" style="display:none">
-        <span class="tl">📦 Retiro en bodega<span id="eRetiroSub" style="display:block;font-weight:400;font-size:9px;opacity:.7;margin-top:1px"></span></span>
+        <span class="tl">📦 Retiro en bodega — Santiago<span id="eRetiroSub" style="display:block;font-weight:400;font-size:9px;opacity:.7;margin-top:1px"></span></span>
         <span class="tv" id="eRetiroBlue">$0</span>
       </div>
-      <div class="trow" id="rDespUrg" style="display:none">
-        <span class="tl">⚡ Despacho urgente Santiago</span>
-        <span class="tv" id="eDespUrg">$200.000</span>
+      <div class="trow" id="rDespFinal" style="display:none">
+        <span class="tl">🚚 Despacho final<span id="eDespFinalSub" style="display:block;font-weight:400;font-size:9px;opacity:.7;margin-top:1px"></span></span>
+        <span class="tv" id="eDespFinal">$0</span>
       </div>
       <div class="trow" id="rBencina" style="display:none">
         <span class="tl">⛽ Bencina / Combustible</span>
@@ -1227,7 +1235,7 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
         </span>
         <span class="tv" id="eViatico">$0</span>
       </div>
-      <div class="trow main"><span class="tl">💰 Total costo de envío</span><span class="tv" id="eEnv">$0</span></div>
+      <div class="trow main"><span class="tl">💰 Costo total de despacho de productos</span><span class="tv" id="eEnv">$0</span></div>
     </div>
     <!-- totales ocultos para cálculo interno -->
     <div style="display:none">
@@ -1936,6 +1944,9 @@ function onRetiroBodegaChange() {
   const val = document.querySelector('input[name="retiroBodega"]:checked')?.value || "no";
   const sub = document.getElementById("retiroSubpanel");
   if(sub) sub.style.display = val === "si" ? "block" : "none";
+  // Panel "Total costo retiro" solo cuando hay retiro
+  const tot = document.getElementById("panelTotalRetiro");
+  if(tot) tot.style.display = val === "si" ? "flex" : "none";
   // resetear urgente a "no" al activar
   if(val === "si") {
     const rNo = document.querySelector('input[name="retiroUrgente"][value="no"]');
@@ -1980,6 +1991,9 @@ function onRetiroUrgenteChange() {
     lbl.style.background  = "white";
     lbl.style.color       = "#888";
   });
+  // Actualizar txtCostoRetiro sincrónicamente: urgente=200k, no-urgente=depende de # proveedor (reset a 0)
+  const txt = document.getElementById("txtCostoRetiro");
+  if(txt) txt.textContent = val === "si" ? "$200.000" : "$0";
   calcLogistica();
 }
 
@@ -1998,8 +2012,9 @@ function onProveedoresChange(n) {
       lbl.style.color       = "#888";
     }
   });
+  // Actualizar el total del retiro en bodega de forma sincrónica (no esperar OSRM)
   const txt = document.getElementById("txtCostoRetiro");
-  if(txt && n > 0) txt.textContent = `${n} × $50.000 = $${(n*50000).toLocaleString("es-CL")}`;
+  if(txt) txt.textContent = n > 0 ? `$${(n*50000).toLocaleString("es-CL")}` : "$0";
   calcLogistica();
 }
 
@@ -2018,15 +2033,20 @@ function onDespachoUrgenteChange() {
 
 function getRetiroCosto() {
   const incluyeRetiro = document.querySelector('input[name="retiroBodega"]:checked')?.value === "si";
-  if(!incluyeRetiro) return { costo: 0, urgente: false, proveedores: 0 };
-  const urgente = document.querySelector('input[name="retiroUrgente"]:checked')?.value === "si";
-  if(urgente) return { costo: 200000, urgente: true, proveedores: 0 };
-  const nProv = parseInt(document.querySelector('input[name="nProveedores"]:checked')?.value || 0);
-  // Los estilos ya se actualizan sincrónicamente en onProveedoresChange — no tocar aquí
   const txt = document.getElementById("txtCostoRetiro");
-  if(txt && nProv > 0) txt.textContent = `${nProv} × $50.000 = $${(nProv*50000).toLocaleString("es-CL")}`;
-  else if(txt) txt.textContent = "";
-  return { costo: nProv * 50000, urgente: false, proveedores: nProv };
+  if(!incluyeRetiro) {
+    if(txt) txt.textContent = "$0";
+    return { costo: 0, urgente: false, proveedores: 0 };
+  }
+  const urgente = document.querySelector('input[name="retiroUrgente"]:checked')?.value === "si";
+  if(urgente) {
+    if(txt) txt.textContent = "$200.000";
+    return { costo: 200000, urgente: true, proveedores: 0 };
+  }
+  const nProv = parseInt(document.querySelector('input[name="nProveedores"]:checked')?.value || 0);
+  const costo = nProv * 50000;
+  if(txt) txt.textContent = costo > 0 ? `$${costo.toLocaleString("es-CL")}` : "$0";
+  return { costo, urgente: false, proveedores: nProv };
 }
 
 function esDestinoSantiago(dest) {
@@ -2132,7 +2152,7 @@ async function calcLogistica() {
     ? VIATICO_VAL * nChoferes * diasRuta
     : (!viaticoRemovido ? VIATICO_V5_VAL * nChoferes : 0);
 
-  // Retiro en bodega
+  // Retiro en bodega (SIEMPRE en Santiago — es solo el costo del retiro)
   const retiro = getRetiroCosto();
   const retiroCost = retiro.costo;
   const isRM = esDestinoSantiago(dest);
@@ -2146,20 +2166,21 @@ async function calcLogistica() {
 
   const despachoBase = combCost + peajeCost + alojCost + sueldoCost + viaticoCost;
 
-  // Lógica de total (reglas especiales sólo cuando destino = RM):
-  //   RM + retiro urgente          → $200.000
-  //   RM + retiro no-urgente       → retiroCost + $50.000 (despacho RM fijo)
-  //   RM + sin retiro + urgente    → $200.000
-  //   RM + sin retiro + no-urgente → despacho tradicional
-  //   fuera de RM                  → retiroCost + despacho tradicional
-  let total;
-  if (isRM && hayRetiro && retiro.urgente)        total = retiroCost;
-  else if (isRM && hayRetiro && !retiro.urgente)  total = retiroCost + 50000;
-  else if (despachoUrgenteRM)                     total = 200000;
-  else                                            total = retiroCost + despachoBase;
+  // Despacho final (separado del retiro):
+  //   Retiro urgente           → $0 (incluido en los $200.000 del retiro)
+  //   Sin retiro + urgente RM  → $200.000
+  //   Destino = Santiago       → $50.000 fijo
+  //   Destino fuera Santiago   → despacho tradicional (combustible+peaje+aloj+sueldo+viático)
+  let despachoFinal;
+  if (retiro.urgente)                      despachoFinal = 0;
+  else if (despachoUrgenteRM)              despachoFinal = 200000;
+  else if (isRM)                           despachoFinal = 50000;
+  else                                     despachoFinal = despachoBase;
 
-  const soloRetiroUrgente = isRM && hayRetiro && retiro.urgente;
-  const ignoraDespacho    = isRM && (hayRetiro || despachoUrgenteRM);
+  const total = retiroCost + despachoFinal;
+
+  const soloRetiroUrgente = hayRetiro && retiro.urgente;
+  const ignoraDespacho    = isRM; // cuando destino Santiago: no mostrar desglose bencina/peaje/aloj/sueldo/viático
 
   // Actualizar celdas
   document.getElementById("crDist").textContent  = `${distKm} km ida — ${distIV} km ida+vuelta`;
@@ -2261,7 +2282,10 @@ async function calcLogistica() {
     distKm: distKm,
     retiroUrgente: retiro.urgente,
     retiroProveedores: retiro.proveedores,
-    despachoUrgenteRM: despachoUrgenteRM
+    despachoUrgenteRM: despachoUrgenteRM,
+    despachoFinal: despachoFinal,
+    isRM: isRM,
+    destino: dest
   });
 }
 
@@ -2347,7 +2371,12 @@ function actualizarResumenEnvio(combCost, peajeCost, alojCost, sueldoCost, viati
     if(rDist) rDist.style.display = distKm ? "flex" : "none";
     if(eDist && distKm) eDist.textContent = `${distKm} km ida — ${distKm*2} km ida+vuelta`;
 
-    // Fila Retiro (con subtexto según tipo)
+    // Opts adicionales para despacho final
+    const despachoFinal = opts.despachoFinal != null ? opts.despachoFinal : null;
+    const isRM          = opts.isRM          || false;
+    const destino       = opts.destino       || "";
+
+    // Fila Retiro (solo el costo del retiro, sin mezclar con despacho)
     const rRet = document.getElementById("rRetiroBlue");
     const eRet = document.getElementById("eRetiroBlue");
     const eRetSub = document.getElementById("eRetiroSub");
@@ -2355,31 +2384,42 @@ function actualizarResumenEnvio(combCost, peajeCost, alojCost, sueldoCost, viati
     if(hayRetiro) {
       if(retiroUrgente) {
         if(eRet) eRet.textContent = "$200.000";
-        if(eRetSub) eRetSub.textContent = "Urgente — incluye retiro y despacho";
-      } else if(ignoraDespacho) {
-        // retiro + RM no urgente: (50k×n) + 50k
-        if(eRet) eRet.textContent = `$${(retiroCost + 50000).toLocaleString("es-CL")}`;
-        if(eRetSub) eRetSub.textContent = `${retiroProveedores} × $50.000 + $50.000 despacho RM`;
+        if(eRetSub) eRetSub.textContent = "Urgente — incluye despacho final";
       } else {
         if(eRet) eRet.textContent = `$${retiroCost.toLocaleString("es-CL")}`;
-        if(eRetSub) eRetSub.textContent = `${retiroProveedores} proveedor${retiroProveedores>1?"es":""} × $50.000`;
+        if(eRetSub) eRetSub.textContent = `${retiroProveedores} proveedor${retiroProveedores>1?"es":""}`;
       }
     }
 
-    // Fila Despacho urgente Santiago (solo caso sin-retiro + RM + urgente)
-    const rDesp = document.getElementById("rDespUrg");
-    if(rDesp) rDesp.style.display = despachoUrgenteRM ? "flex" : "none";
+    // Fila Despacho final (con destino como subtexto)
+    const rDespFinal = document.getElementById("rDespFinal");
+    const eDespFinal = document.getElementById("eDespFinal");
+    const eDespFinalSub = document.getElementById("eDespFinalSub");
+    if(rDespFinal && despachoFinal != null) {
+      rDespFinal.style.display = "flex";
+      eDespFinal.textContent = `$${despachoFinal.toLocaleString("es-CL")}`;
+      if(retiroUrgente) {
+        eDespFinalSub.textContent = "Incluido en retiro urgente";
+      } else if(despachoUrgenteRM) {
+        eDespFinalSub.textContent = "⚡ Urgente — " + (destino || "Santiago");
+      } else if(isRM) {
+        eDespFinalSub.textContent = "Santiago — despacho fijo RM";
+      } else {
+        eDespFinalSub.textContent = "Belloto → " + (destino || "destino");
+      }
+    }
 
-    // Si ignoraDespacho (modo RM especial): ocultar bencina/peaje/aloj/sueldo/viático
+    // Si destino = Santiago (RM) o retiro urgente: ocultar desglose bencina/peaje/aloj/sueldo/viático
+    // (el despacho final ya está representado como una sola línea arriba)
     const rB = document.getElementById("rBencina");
     const rP = document.getElementById("rPeaje");
     const rA = document.getElementById("rAloj");
     const rS = document.getElementById("rSueldo");
     const rV = document.getElementById("rViatico");
-    if(ignoraDespacho) {
+    const ocultarDesglose = isRM || retiroUrgente;
+    if(ocultarDesglose) {
       [rB,rP,rA,rS,rV].forEach(el => { if(el) el.style.display = "none"; });
     } else {
-      // Mostrar según corresponda
       if(rB) rB.style.display = combCost > 0 ? "flex" : "none";
       if(rP) rP.style.display = peajeCost > 0 ? "flex" : "none";
       if(rA) rA.style.display = "flex";
@@ -2434,6 +2474,9 @@ function switchModoEnvio(modo) {
     bManual.style.cssText += ";" + def;
     const r = document.querySelector('input[name="modoEnvio"][value="calc"]');
     if(r) r.checked = true;
+    // Auto-calcular con Santiago como destino por default
+    const destInp = document.getElementById("calcDestino");
+    if(destInp && destInp.value.trim()) calcLogistica();
   } else {
     pCalc.style.display   = "none";
     pManual.style.display = "block";

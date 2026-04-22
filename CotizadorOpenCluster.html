@@ -330,22 +330,26 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
 .pclient-card {
   display:grid;
   grid-template-columns:1fr 1fr 1fr;
-  grid-auto-flow:dense;
-  gap:1px;
-  background:var(--ltblue);
+  gap:0;
   border:1.5px solid var(--ltblue);
   border-radius:8px;
   overflow:hidden;
   margin-bottom:7px;
+  background:white;
 }
 .pclient-cell {
   padding:5px 10px;
+  border-right:1px solid var(--ltblue);
+  border-bottom:1px solid var(--ltblue);
   background:white;
   box-sizing:border-box;
   min-width:0;
 }
-.pclient-cell.span-2 { grid-column:span 2; }
-.pclient-cell.span-3 { grid-column:1 / -1; }
+.pclient-cell:nth-child(3n) { border-right:none; }
+.pclient-cell:nth-last-child(-n+3):nth-child(3n+1),
+.pclient-cell:nth-last-child(-n+3):nth-child(3n+2),
+.pclient-cell:nth-last-child(-n+2):nth-child(3n+1),
+.pclient-cell:last-child { border-bottom:none; }
 .pclient-label {
   font-size:6.5pt; font-weight:700; text-transform:uppercase;
   letter-spacing:0.4px; color:var(--sky); margin-bottom:1px; display:block;
@@ -354,8 +358,6 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
   font-size:9pt; color:#1a2535; font-weight:600; line-height:1.3;
   display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
-.pclient-cell.span-2 .pclient-value,
-.pclient-cell.span-3 .pclient-value { white-space:normal; overflow:visible; text-overflow:clip; }
 .pclient-value.inst { font-weight:700; }
 
 /* ── TABLE ── */
@@ -605,16 +607,12 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
 
 @media print {
   @page { size:letter; margin:0; -webkit-margin-before:0; }
-  * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; font-variant-ligatures:none !important; font-feature-settings:"liga" 0,"clig" 0,"dlig" 0 !important; }
-  /* Forzar fuente del sistema sin ligaduras problemáticas */
+  * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+  /* Forzar fuente del sistema — mantener texto seleccionable/copiable en el PDF */
   .page, .page * {
     font-family: 'Segoe UI', Calibri, Arial, Helvetica, sans-serif !important;
-    font-variant-ligatures: none !important;
-    font-feature-settings: "liga" 0, "clig" 0, "dlig" 0, "kern" 0 !important;
-    text-rendering: geometricPrecision !important;
     -webkit-font-smoothing: antialiased !important;
     font-style: normal !important;
-    letter-spacing: 0.01px !important;
   }
   /* Reducir peso visual en PDF */
   .page .nv, .page .tv, .page td, .page .prod-cell-top,
@@ -3162,13 +3160,7 @@ function upd() {
     <div class="pclient-card">
       ${clientFields.map(f=>{
         const isInst = f.label === "Institución/Empresa";
-        const len = String(f.val||"").length;
-        // Ancho dinámico: cada celda ocupa 1/3, 2/3 o fila completa según el texto.
-        // Grid con auto-flow dense rellena los huecos con los siguientes campos cortos.
-        let span = 1;
-        if(len > 60) span = 3;
-        else if(len > 28) span = 2;
-        return `<div class="pclient-cell span-${span}">
+        return `<div class="pclient-cell">
           <span class="pclient-label">${f.label}</span>
           <span class="pclient-value${isInst ? " inst" : ""}">${f.val}</span>
         </div>`;
@@ -3202,7 +3194,7 @@ function upd() {
       <tr><td class="tl">SUBTOTAL PRODUCTOS</td><td class="tv">${CLP(sub)}</td></tr>
       ${(!envNoIncluido && !salaActiva) ? `<tr><td class="tl">COSTO ENVÍO <span style="font-weight:400;font-size:7pt;color:#666"> — ${envDesc}</span></td><td class="tv">${CLP(envVal)}</td></tr>` : ""}
       ${salaActiva && salaValNeto > 0 ? `<tr><td class="tl">INSTALACIÓN / TRANSPORTE / CAPACITACIÓN <span style="font-weight:400;font-size:7pt;color:#666"> — Salas Multisensoriales${(()=>{const s=document.getElementById("salaRegion");return s&&s.value?(" · "+s.options[s.selectedIndex]?.text):"";})()}</span></td><td class="tv">${CLP(salaValNeto)}</td></tr>` : ""}
-      ${itemsAdicionales.filter(i=>i.nombre&&i.valor>0).map(i=>`<tr><td class="tl">${i.nombre}</td><td class="tv">${CLP(i.valor)}</td></tr>`).join("")}
+      ${itemsAdicionales.filter(i=>i.nombre&&i.valor>0).map(i=>`<tr><td class="tl">${i.nombre}${i.desc?` <span style="font-weight:400;font-size:7pt;color:#666"> — ${i.desc}</span>`:""}</td><td class="tv">${CLP(i.valor)}</td></tr>`).join("")}
       <tr class="sep"><td colspan="2"></td></tr>
       <tr><td class="tl">TOTAL NETO</td><td class="tv">${CLP(tn)}</td></tr>
       <tr><td class="tl">IVA (19%)</td><td class="tv">${CLP(iva)}</td></tr>
@@ -3396,12 +3388,12 @@ function fetchPrecioDiesel() {
 }
 
 // ── Ítems Adicionales ────────────────────────────────────────────────────
-const itemsAdicionales = []; // [{id, nombre, valor, modo}]
+const itemsAdicionales = []; // [{id, nombre, desc, valor, modo}]
 let _itemAdicId = 0;
 
 function addItemAdicional() {
   const id = _itemAdicId++;
-  itemsAdicionales.push({id, nombre:"", valor:0, modo:"neto"});
+  itemsAdicionales.push({id, nombre:"", desc:"", valor:0, modo:"neto"});
   renderItemsAdicionales();
 }
 
@@ -3434,8 +3426,10 @@ function updateItemAdicional(id) {
   const item = itemsAdicionales.find(i => i.id === id);
   if(!item) return;
   const nombreEl = document.getElementById("itemNombre"+id);
+  const descEl   = document.getElementById("itemDesc"+id);
   const valEl    = document.getElementById("itemVal"+id);
   if(nombreEl) item.nombre = nombreEl.value;
+  if(descEl)   item.desc   = descEl.value;
   if(valEl) {
     const raw = parseFloat(valEl.value) || 0;
     item.valor = item.modo === "iva" ? raw / 1.19 : raw;
@@ -3456,7 +3450,10 @@ function renderItemsAdicionales() {
     <div style="background:white;border:1.5px solid #e0e8f8;border-radius:7px;padding:8px 10px;margin-bottom:6px;position:relative;">
       <button onclick="removeItemAdicional(${item.id})" style="position:absolute;top:5px;right:5px;background:none;border:none;color:#ccc;font-size:13px;cursor:pointer;padding:2px 4px;border-radius:3px;" onmouseover="this.style.color='#e74c3c'" onmouseout="this.style.color='#ccc'">✕</button>
       <input type="text" id="itemNombre${item.id}" value="${item.nombre}" placeholder="Nombre del concepto (ej: Flete especial)"
-        style="width:100%;padding:5px 8px;border:1.5px solid #e0e8f8;border-radius:5px;font-family:'Open Sans',sans-serif;font-size:11px;margin-bottom:6px;box-sizing:border-box;outline:none;"
+        style="width:100%;padding:5px 8px;border:1.5px solid #e0e8f8;border-radius:5px;font-family:'Open Sans',sans-serif;font-size:11px;margin-bottom:4px;box-sizing:border-box;outline:none;"
+        oninput="updateItemAdicional(${item.id})">
+      <input type="text" id="itemDesc${item.id}" value="${item.desc||''}" placeholder="Descripción (opcional)"
+        style="width:100%;padding:4px 8px;border:1px solid #eef1f7;border-radius:5px;font-family:'Open Sans',sans-serif;font-size:9.5px;color:#888;font-style:italic;margin-bottom:6px;box-sizing:border-box;outline:none;background:#fafbfd;"
         oninput="updateItemAdicional(${item.id})">
       <div style="display:flex;gap:4px;align-items:center;">
         <div style="display:flex;border:1.5px solid #e0e8f8;border-radius:5px;overflow:hidden;flex-shrink:0;">
@@ -3971,7 +3968,40 @@ async function registrarCotizacion() {
 }
 
 // ── Guardar cotización en computadora ─────────────────────────────────────
-function guardarCotizacion() {
+// ── Persistencia de la última carpeta usada (IndexedDB) ──────────────────
+const _OC_DB_NAME = "cotizadorOC";
+const _OC_DB_STORE = "handles";
+const _OC_DB_KEY = "lastSaveHandle";
+function _ocOpenDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(_OC_DB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(_OC_DB_STORE);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror  = () => reject(req.error);
+  });
+}
+async function _ocSaveHandle(handle) {
+  const db = await _ocOpenDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(_OC_DB_STORE, "readwrite");
+    tx.objectStore(_OC_DB_STORE).put(handle, _OC_DB_KEY);
+    tx.oncomplete = () => resolve();
+    tx.onerror    = () => reject(tx.error);
+  });
+}
+async function _ocLoadHandle() {
+  try {
+    const db = await _ocOpenDB();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(_OC_DB_STORE, "readonly");
+      const req = tx.objectStore(_OC_DB_STORE).get(_OC_DB_KEY);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror   = () => reject(req.error);
+    });
+  } catch (e) { return null; }
+}
+
+async function guardarCotizacion() {
   const datos = {
     version: "1.0",
     fecha_guardado: new Date().toLocaleString("es-CL"),
@@ -4030,7 +4060,7 @@ function guardarCotizacion() {
     },
     // Ítems adicionales
     itemsAdicionales: itemsAdicionales.map(i => ({
-      nombre: i.nombre, valor: i.valor, modo: i.modo
+      nombre: i.nombre, desc: i.desc||"", valor: i.valor, modo: i.modo
     })),
     // Productos
     productos: [...document.querySelectorAll(".pi")].map(d => {
@@ -4050,17 +4080,40 @@ function guardarCotizacion() {
     }).filter(Boolean),
   };
 
-  const json = JSON.stringify(datos, null, 2);
+  const json   = JSON.stringify(datos, null, 2);
+  const numCot = datos.num || "cotizacion";
+  const cliente = document.getElementById("eCNombre")?.value.trim() || "";
+  const inst    = document.getElementById("eCInstitucion")?.value.trim() || "";
+  const destino = inst || cliente || "cliente";
+  const nombreArchivo = "Cotizacion_" + (numCot !== "cotizacion" ? numCot + "_" : "") + destino.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ ]/g,"").replace(/ +/g,"_");
+
+  // Chrome/Edge: usar File System Access API para recordar la carpeta elegida
+  if (window.showSaveFilePicker) {
+    try {
+      const opts = {
+        suggestedName: nombreArchivo + ".json",
+        types: [{ description: "Cotización JSON", accept: {"application/json": [".json"]} }],
+      };
+      const prevHandle = await _ocLoadHandle();
+      if (prevHandle) opts.startIn = prevHandle;  // abre el diálogo en la misma carpeta
+      const handle   = await window.showSaveFilePicker(opts);
+      const writable = await handle.createWritable();
+      await writable.write(json);
+      await writable.close();
+      await _ocSaveHandle(handle);
+      return;
+    } catch (err) {
+      if (err && err.name === "AbortError") return;  // usuario canceló — salir silenciosamente
+      console.error("Error guardando:", err);
+      // Si falla por otro motivo, cae al fallback de abajo
+    }
+  }
+
+  // Fallback (navegadores sin File System Access API)
   const blob = new Blob([json], {type:"application/json"});
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement("a");
-  const numCot = datos.num || "cotizacion";
   a.href     = url;
-  // Nombre del archivo = mismo que el PDF
-  const cliente = document.getElementById("eCNombre")?.value.trim() || "";
-  const inst = document.getElementById("eCInstitucion")?.value.trim() || "";
-  const destino = inst || cliente || "cliente";
-  const nombreArchivo = "Cotizacion_" + (numCot !== "cotizacion" ? numCot + "_" : "") + destino.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ ]/g,"").replace(/ +/g,"_");
   a.download = nombreArchivo + ".json";
   a.click();
   URL.revokeObjectURL(url);
@@ -4176,7 +4229,7 @@ function cargarCotizacion(input) {
         _itemAdicId = 0;
         d.itemsAdicionales.forEach(i => {
           const id = _itemAdicId++;
-          itemsAdicionales.push({id, nombre: i.nombre, valor: i.valor, modo: i.modo || "neto"});
+          itemsAdicionales.push({id, nombre: i.nombre, desc: i.desc||"", valor: i.valor, modo: i.modo || "neto"});
         });
         renderItemsAdicionales();
         // Restaurar valores en inputs

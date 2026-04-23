@@ -879,7 +879,7 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
       <span class="elabel">Tipo de despacho</span>
       <div class="envio-tipo">
         <label><input type="radio" name="envioTipo" value="noincluido" onchange="switchEnvio('noincluido')" checked> No incluido</label>
-        <label><input type="radio" name="envioTipo" value="retiro" onchange="switchEnvio('retiro')"> Retiro en bodega</label>
+        <label><input type="radio" name="envioTipo" value="retiro" onchange="switchEnvio('retiro')"> Retiro en nuestras bodegas</label>
         <label><input type="radio" name="envioTipo" value="propio" onchange="switchEnvio('propio')"> Logística propia</label>
         <label><input type="radio" name="envioTipo" value="courrier" onchange="switchEnvio('courrier')"> Courrier externo</label>
       </div>
@@ -2665,14 +2665,14 @@ function calcManualTotal() {
 function switchEnvio(tipo) {
   document.getElementById("panelPropio").classList.toggle("active", tipo==="propio");
   document.getElementById("panelCourrier").classList.toggle("active", tipo==="courrier");
-  // Banner retiro en bodega
+  // Banner retiro en nuestras bodegas
   let bannerRetiro=document.getElementById("bannerRetiroBodega");
   if(tipo==="retiro"){
     if(!bannerRetiro){
       bannerRetiro=document.createElement("div");
       bannerRetiro.id="bannerRetiroBodega";
       bannerRetiro.style.cssText="background:linear-gradient(135deg,#001a60,#002a90);color:white;padding:14px 20px;border-radius:10px;margin:12px 0;text-align:center;";
-      bannerRetiro.innerHTML='<div style="font-size:14px;font-weight:800;font-family:Montserrat,sans-serif;margin-bottom:4px;">📦 Productos se retiran en bodega</div><div style="font-size:11px;opacity:.8;">Cliente retira productos directamente desde bodega ubicada en Quilpué, V Región, Chile.</div>';
+      bannerRetiro.innerHTML='<div style="font-size:14px;font-weight:800;font-family:Montserrat,sans-serif;margin-bottom:4px;">📦 Retiro en nuestras bodegas</div><div style="font-size:11px;opacity:.85;">Cliente retira productos directamente desde nuestras bodegas ubicadas en Quilpué, V Región, Chile. Sin costo de envío.</div>';
       const envioBox=document.querySelector(".envio-box");
       if(envioBox)envioBox.parentNode.insertBefore(bannerRetiro,envioBox.nextSibling);
     }
@@ -2680,9 +2680,15 @@ function switchEnvio(tipo) {
   } else {
     if(bannerRetiro)bannerRetiro.style.display="none";
   }
-  if(tipo==="propio") {
+  if(tipo==="retiro") {
+    // Cliente viene a buscar los productos: forzar costo de envío a 0 y limpiar cualquier residuo
+    const ev  = document.getElementById("eEnvioVal");
+    const evC = document.getElementById("eEnvioValC");
+    if(ev)  ev.value  = 0;
+    if(evC) evC.value = 0;
+  } else if(tipo==="propio") {
     document.getElementById("eEnvioValC").value = 0;
-  } else if(tipo!=="retiro") {
+  } else {
     // Courrier o no incluido: ocultar resumen logística
     const box = document.getElementById("resumenEnvioBox");
     if(box) box.style.display = "none";
@@ -2974,7 +2980,7 @@ function upd() {
   if(notaAd) condLines.push("Nota: "+notaAd);
   // Tipo de envío — _envioTipo ya está declarado más abajo, así que lo leemos aquí directamente
   const _envTipoFinal = (document.querySelector('input[name="envioTipo"]:checked')?.value || "noincluido");
-  if(_envTipoFinal === "retiro")   condLines.push("Cliente retira productos directamente desde bodega ubicada en Quilpué, V Región, Chile.");
+  if(_envTipoFinal === "retiro")   condLines.push("Cliente retira productos directamente desde nuestras bodegas ubicadas en Quilpué, V Región, Chile. Sin costo de envío.");
   if(_envTipoFinal === "propio")   condLines.push("Costo de envío — Incluido: Logística propia.");
   if(_envTipoFinal === "courrier") condLines.push("Costo de envío — Incluido: Courrier externo.");
   const condHTML=condLines.map(l=>`<div>${l}</div>`).join("");

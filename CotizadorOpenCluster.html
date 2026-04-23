@@ -608,28 +608,10 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
 @media print {
   @page { size:letter; margin:0; -webkit-margin-before:0; }
   * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
-  /* Forzar fuente del sistema — mantener texto seleccionable/copiable en el PDF */
+  /* Mantener las fuentes del diseño en pantalla (Open Sans / Inter / Montserrat) también en el PDF,
+     con sus pesos originales (no forzar 400) y con texto seleccionable. */
   .page, .page * {
-    font-family: 'Segoe UI', Calibri, Arial, Helvetica, sans-serif !important;
     -webkit-font-smoothing: antialiased !important;
-    font-style: normal !important;
-  }
-  /* Reducir peso visual en PDF */
-  .page .nv, .page .tv, .page td, .page .prod-cell-top,
-  .page .prod-cell-desc, .page .prod-link-txt {
-    font-weight: 400 !important;
-    font-style: normal !important;
-  }
-  .page .ptot .tl { font-weight: 600 !important; }
-  .page .ptot .tv { font-weight: 600 !important; }
-  .page .ptot tr.gr .tl, .page .ptot tr.gr .tv { font-weight: 700 !important; }
-  .page .sec { font-weight: 700 !important; }
-  .page .ptitle { font-weight: 700 !important; }
-  /* Excepciones para títulos que usan Montserrat */
-  .page .ptitle, .page .sec, .page .oferta-especial-banner,
-  .page .exec-name, .page .ptot tr.gr.oferta .tl,
-  .page .ptot tr.gr.oferta .tv {
-    font-family: Arial, Helvetica, sans-serif !important;
   }
   /* Links clickeables en PDF — Chrome preserva <a href> como anotación */
   a[href] { color:#0066cc !important; text-decoration:underline !important; -webkit-print-color-adjust:exact !important; }
@@ -3605,7 +3587,7 @@ function fechaHoy() {
   return String(d.getDate()).padStart(2,'0')+" de "+meses[d.getMonth()]+", "+d.getFullYear();
 }
 
-function printDoc() {
+async function printDoc() {
   const emailVal = document.getElementById("eCEmail")?.value.trim() || "";
   if(!emailVal || !emailVal.includes("@")) {
     alert("⚠️ Debes ingresar el email del cliente antes de generar el PDF.");
@@ -3620,6 +3602,9 @@ function printDoc() {
   const partes = [numCot, inst, prods].filter(Boolean);
   document.title = partes.join('_').replace(/[\/\\:*?"<>|]/g,'').replace(/\s+/g,' ');
   window.scrollTo(0, 0);
+  // Esperar a que las Google Fonts terminen de cargar antes de imprimir,
+  // para que Chrome las embeba en el PDF con el peso/grosor correcto.
+  try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch(e) {}
   setTimeout(() => {
     window.print();
     document.title = prevTitle;

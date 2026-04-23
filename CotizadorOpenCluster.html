@@ -604,10 +604,12 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
 }
 
 
+/* Zoom controlado desde el input "Tamaño PDF" — se aplica también en pantalla
+   para que Rayen vea el resultado en vivo antes de guardar */
+.preview { zoom: var(--print-zoom, 1); }
+
 @media print {
   @page { size:letter; margin:0; -webkit-margin-before:0; }
-  /* Zoom controlado desde el select "Tamaño PDF" — permite achicar para que calce en 1 hoja */
-  .preview { zoom: var(--print-zoom, 1); }
   * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
   /* Mantener las fuentes del diseño en pantalla (Open Sans / Inter / Montserrat) también en el PDF,
      con sus pesos originales (no forzar 400) y con texto seleccionable. */
@@ -1516,20 +1518,14 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
       <span>Registrar cotización</span>
     </button>
     <button class="bgen" onclick="printDoc()">Guardar como PDF</button>
-    <div id="pdfZoomWrap" style="margin-top:6px;display:flex;align-items:center;gap:8px;justify-content:center;font-family:'Open Sans',sans-serif;">
-      <label for="pdfZoomSel" style="font-size:10px;color:#777;font-weight:700;text-transform:uppercase;letter-spacing:.4px;">Tamaño PDF:</label>
-      <select id="pdfZoomSel" onchange="localStorage.setItem('_ocPdfZoom', this.value)"
-              style="padding:4px 8px;border:1px solid #d0d0d0;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;background:white;color:#333;">
-        <option value="0.70">70%</option>
-        <option value="0.75">75%</option>
-        <option value="0.80">80%</option>
-        <option value="0.85">85%</option>
-        <option value="0.90">90%</option>
-        <option value="0.95">95%</option>
-        <option value="1.00" selected>100%</option>
-        <option value="1.05">105%</option>
-        <option value="1.10">110%</option>
-      </select>
+    <div id="pdfZoomWrap" style="margin-top:8px;display:flex;align-items:center;gap:6px;justify-content:center;font-family:'Open Sans',sans-serif;background:#fff8ee;padding:6px 10px;border-radius:6px;border:1px solid #f0d8a0;">
+      <label for="pdfZoomSel" style="font-size:10px;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:.4px;">Tamaño PDF:</label>
+      <button type="button" onclick="ajustarZoomPdf(-1)" aria-label="Reducir 1%" style="width:26px;height:26px;padding:0;border:1px solid #d0d0d0;border-radius:5px;background:white;font-size:14px;font-weight:700;cursor:pointer;color:#333;">−</button>
+      <input id="pdfZoomSel" type="number" min="50" max="150" step="1" value="100"
+             oninput="aplicarZoomPdf()" onchange="aplicarZoomPdf()"
+             style="width:58px;padding:4px 6px;border:1px solid #d0d0d0;border-radius:5px;font-size:12px;font-weight:700;text-align:center;background:white;color:#333;">
+      <span style="font-size:11px;color:#555;font-weight:700;">%</span>
+      <button type="button" onclick="ajustarZoomPdf(1)" aria-label="Aumentar 1%" style="width:26px;height:26px;padding:0;border:1px solid #d0d0d0;border-radius:5px;background:white;font-size:14px;font-weight:700;cursor:pointer;color:#333;">+</button>
     </div>
   </div>
 </div>
@@ -3609,6 +3605,26 @@ function fechaHoy() {
   return String(d.getDate()).padStart(2,'0')+" de "+meses[d.getMonth()]+", "+d.getFullYear();
 }
 
+// ── Control de zoom del PDF (input "Tamaño PDF") ───────────────────────
+// Aplica el zoom en vivo al .preview (pantalla + impresión) y lo persiste
+function aplicarZoomPdf() {
+  const input = document.getElementById('pdfZoomSel');
+  if (!input) return;
+  let pct = parseInt(input.value, 10);
+  if (isNaN(pct)) pct = 100;
+  pct = Math.max(50, Math.min(150, pct));
+  input.value = pct;
+  const ratio = (pct / 100).toFixed(2);
+  document.documentElement.style.setProperty('--print-zoom', ratio);
+  localStorage.setItem('_ocPdfZoom', ratio);
+}
+function ajustarZoomPdf(delta) {
+  const input = document.getElementById('pdfZoomSel');
+  if (!input) return;
+  input.value = (parseInt(input.value, 10) || 100) + delta;
+  aplicarZoomPdf();
+}
+
 async function printDoc() {
   const emailVal = document.getElementById("eCEmail")?.value.trim() || "";
   if(!emailVal || !emailVal.includes("@")) {
@@ -3632,9 +3648,7 @@ async function printDoc() {
   // Quitar caracteres inválidos para nombres de archivo Windows: / \ : * ? " < > |
   const nombreFinal = partes.join('_').replace(/[\/\\:*?"<>|]/g,'').trim() || 'Cotizacion';
   document.title = nombreFinal;
-  // Aplicar zoom elegido en el select "Tamaño PDF" (se usa en @media print)
-  const zoomVal = document.getElementById('pdfZoomSel')?.value || '1';
-  document.documentElement.style.setProperty('--print-zoom', zoomVal);
+  // El zoom ya está aplicado en vivo vía aplicarZoomPdf() — no hace falta re-aplicarlo aquí
   window.scrollTo(0, 0);
   // Esperar a que las Google Fonts terminen de cargar antes de imprimir,
   // para que Chrome las embeba en el PDF con el peso/grosor correcto.
@@ -4448,7 +4462,11 @@ window.addEventListener("DOMContentLoaded", () => {
   // Restaurar el zoom de PDF elegido la última vez (localStorage)
   const savedZoom = localStorage.getItem('_ocPdfZoom');
   const zoomSel = document.getElementById('pdfZoomSel');
-  if (savedZoom && zoomSel) zoomSel.value = savedZoom;
+  if (savedZoom && zoomSel) {
+    // savedZoom se guarda como ratio (ej: "0.85"), el input muestra porcentaje (85)
+    zoomSel.value = Math.round(parseFloat(savedZoom) * 100);
+    document.documentElement.style.setProperty('--print-zoom', savedZoom);
+  }
 
   // Siempre limpiar el número al abrir — se asigna al registrar
   const numEl = document.getElementById("eNum");

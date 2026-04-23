@@ -3599,21 +3599,43 @@ async function printDoc() {
     document.getElementById("eCEmail")?.focus();
     return;
   }
-  // Nombre del PDF: NumCotizacion_Institucion_ResumenProductos
+  // Nombre del PDF: NumCotizacion_InstitucionAbreviada_ProductosCompactos
+  // Ej: OC26-3588-AT_I. Municipalidad de PtoMontt_Catres+ColchonX6.pdf
   const prevTitle = document.title;
   const numCot = (document.getElementById("eNum")?.value || "Cotizacion").trim();
-  const inst = (document.getElementById("eCInstitucion")?.value || "").trim();
-  const prods = getProds().filter(p=>p.name).map(p=>p.name.substring(0,25)+(p.cant>1?' x'+p.cant:'')).join(', ').substring(0,80);
+  const abrevInst = (s) => {
+    if (!s) return "";
+    let r = s;
+    r = r.replace(/Puerto Montt/gi, 'PtoMontt');
+    r = r.replace(/Puerto Varas/gi, 'PtoVaras');
+    r = r.replace(/Puerto Ays[eé]n/gi, 'PtoAysen');
+    r = r.replace(/San Antonio/gi, 'SnAntonio');
+    r = r.replace(/\bIlustre\b/gi, 'I.');
+    r = r.replace(/\bSantiago\b/gi, 'Stgo');
+    return r;
+  };
+  const inst = abrevInst((document.getElementById("eCInstitucion")?.value || "").trim());
+  const stripAcc = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const prods = getProds().filter(p=>p.name).map(p=>{
+    const firstWord = stripAcc(p.name.trim().split(/\s+/)[0] || '');
+    const qty = p.cant > 1 ? 'X' + p.cant : '';
+    return firstWord + qty;
+  }).join('+').substring(0,60);
   const partes = [numCot, inst, prods].filter(Boolean);
-  document.title = partes.join('_').replace(/[\/\\:*?"<>|]/g,'').replace(/\s+/g,' ');
+  const nombreFinal = partes.join('_').replace(/[\/\\:*?"<>|]/g,'').replace(/\s+/g,' ').trim() || 'Cotizacion';
+  document.title = nombreFinal;
   window.scrollTo(0, 0);
   // Esperar a que las Google Fonts terminen de cargar antes de imprimir,
   // para que Chrome las embeba en el PDF con el peso/grosor correcto.
   try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch(e) {}
-  setTimeout(() => {
-    window.print();
+  // Restaurar el título SÓLO después que Chrome cerró el diálogo de impresión,
+  // para que alcance a leerlo como nombre sugerido del PDF.
+  const restoreTitle = () => {
     document.title = prevTitle;
-  }, 120);
+    window.removeEventListener('afterprint', restoreTitle);
+  };
+  window.addEventListener('afterprint', restoreTitle);
+  setTimeout(() => { window.print(); }, 150);
 }
 
 async function fetchNumCotizacion() {

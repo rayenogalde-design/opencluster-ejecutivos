@@ -4103,11 +4103,19 @@ async function guardarCotizacion() {
   if (window.showSaveFilePicker) {
     try {
       const opts = {
+        // El id hace que Chrome recuerde la carpeta específicamente para este
+        // tipo de guardado — la primera vez que navegues a tu carpeta de Drive,
+        // las siguientes veces se abre ahí automáticamente.
+        id: 'ocCotizadorJSON',
         suggestedName: nombreArchivo + ".json",
         types: [{ description: "Cotización JSON", accept: {"application/json": [".json"]} }],
       };
+      // Fallback: si Chrome aún no tiene memoria para este id, apuntar al
+      // handle previo guardado en IndexedDB
       const prevHandle = await _ocLoadHandle();
-      if (prevHandle) opts.startIn = prevHandle;  // abre el diálogo en la misma carpeta
+      if (prevHandle) {
+        try { opts.startIn = prevHandle; } catch(e){}
+      }
       const handle   = await window.showSaveFilePicker(opts);
       const writable = await handle.createWritable();
       await writable.write(json);

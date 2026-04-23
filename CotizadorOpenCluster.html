@@ -3599,30 +3599,21 @@ async function printDoc() {
     document.getElementById("eCEmail")?.focus();
     return;
   }
-  // Nombre del PDF: NumCotizacion_InstitucionAbreviada_ProductosCompactos
-  // Ej: OC26-3588-AT_I. Municipalidad de PtoMontt_Catres+ColchonX6.pdf
+  // Nombre del PDF: NumCotizacion_InstituciónSinEspacios_Productox(cant), Productox(cant)
+  // Ej: OC26-3589-AT_IlustreMunicipalidaddePuertoMontt_Catrex1, Colchónx1.pdf
   const prevTitle = document.title;
   const numCot = (document.getElementById("eNum")?.value || "Cotizacion").trim();
-  const abrevInst = (s) => {
-    if (!s) return "";
-    let r = s;
-    r = r.replace(/Puerto Montt/gi, 'PtoMontt');
-    r = r.replace(/Puerto Varas/gi, 'PtoVaras');
-    r = r.replace(/Puerto Ays[eé]n/gi, 'PtoAysen');
-    r = r.replace(/San Antonio/gi, 'SnAntonio');
-    r = r.replace(/\bIlustre\b/gi, 'I.');
-    r = r.replace(/\bSantiago\b/gi, 'Stgo');
-    return r;
-  };
-  const inst = abrevInst((document.getElementById("eCInstitucion")?.value || "").trim());
-  const stripAcc = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '');
+  // Institución: quitar TODOS los espacios, mantener acentos y mayúsculas
+  const inst = (document.getElementById("eCInstitucion")?.value || "").trim().replace(/\s+/g, '');
+  // Productos: primera palabra + x{cantidad}, siempre mostrar cantidad (aunque sea 1)
   const prods = getProds().filter(p=>p.name).map(p=>{
-    const firstWord = stripAcc(p.name.trim().split(/\s+/)[0] || '');
-    const qty = p.cant > 1 ? 'X' + p.cant : '';
-    return firstWord + qty;
-  }).join('+').substring(0,60);
+    const firstWord = p.name.trim().split(/\s+/)[0] || '';
+    const qty = p.cant > 0 ? p.cant : 1;
+    return firstWord + 'x' + qty;
+  }).join(', ');
   const partes = [numCot, inst, prods].filter(Boolean);
-  const nombreFinal = partes.join('_').replace(/[\/\\:*?"<>|]/g,'').replace(/\s+/g,' ').trim() || 'Cotizacion';
+  // Quitar caracteres inválidos para nombres de archivo Windows: / \ : * ? " < > |
+  const nombreFinal = partes.join('_').replace(/[\/\\:*?"<>|]/g,'').trim() || 'Cotizacion';
   document.title = nombreFinal;
   window.scrollTo(0, 0);
   // Esperar a que las Google Fonts terminen de cargar antes de imprimir,

@@ -1619,8 +1619,8 @@ async function fetchDatosSheet() {
 
   // ── Fuente 1: Apps Script (siempre en vivo, no requiere republicar) ──
   try {
-    const r = await fetch(URL_SCRIPT + '?accion=datos&equipo=difusion', {
-      method: 'GET', mode: 'cors', signal: AbortSignal.timeout(8000)
+    const r = await fetch(URL_SCRIPT + '?accion=datos&equipo=difusion&_t=' + Date.now(), {
+      method: 'GET', mode: 'cors', cache: 'no-store', signal: AbortSignal.timeout(8000)
     });
     const d = await r.json();
     const nuevas = toArr(d.cotizaciones || []).map(rowToCot).filter(c => c.num);
@@ -3469,7 +3469,7 @@ async function cargarPagos(){
     // Usar cache local si existe para mostrar rápido
     const cache=localStorage.getItem('oc_pagos_cache');
     if(cache){try{PAGOS=JSON.parse(cache);updatePagosBadge();}catch(e){}}
-    const r=await fetch(URL_SCRIPT+'?accion=datos_pagos',{mode:'cors',signal:AbortSignal.timeout(12000)});
+    const r=await fetch(URL_SCRIPT+'?accion=datos_pagos&_t='+Date.now(),{mode:'cors',cache:'no-store',signal:AbortSignal.timeout(12000)});
     const d=await r.json();
     if(d.pagos&&d.pagos.length>1){
       const h=d.pagos[0];
@@ -3604,7 +3604,7 @@ let FAQS=[];
 
 async function cargarFaqs(){
   try{
-    const r=await fetch(URL_SCRIPT+'?accion=datos_faq',{mode:'cors',signal:AbortSignal.timeout(10000)});
+    const r=await fetch(URL_SCRIPT+'?accion=datos_faq&_t='+Date.now(),{mode:'cors',cache:'no-store',signal:AbortSignal.timeout(10000)});
     const d=await r.json();
     if(d.faqs&&d.faqs.length>1){
       const h=d.faqs[0];

@@ -1434,11 +1434,11 @@ function parseMes(f) {
   const parts = String(f).split(' ');
   // Formato corto: "11 Mar 2026" → parts[1] = "Mar"
   if (parts.length === 3 && parts[1].length === 3) return parts[1];
-  // Formato español: "11 de marzo 2026" → parts[2] = "marzo"
+  // Formato español: "11 de marzo 2026" → parts[2] = "marzo"  |  "15 de abril, 2026" → parts[2] = "abril,"
   if (parts[1] === 'de' && parts[2]) {
     const MMAP = {enero:'Ene',febrero:'Feb',marzo:'Mar',abril:'Abr',mayo:'May',junio:'Jun',
       julio:'Jul',agosto:'Ago',septiembre:'Sep',octubre:'Oct',noviembre:'Nov',diciembre:'Dic'};
-    return MMAP[parts[2].toLowerCase()] || 'Mar';
+    return MMAP[parts[2].toLowerCase().replace(/[,.]+$/,'')] || 'Mar';
   }
   return parts[1] || 'Mar';
 }
@@ -1520,8 +1520,8 @@ function parseFechaES(str) {
   }
   // Ya viene en formato corto
   if (/\d+ [A-Z][a-z]{2} \d{4}/.test(str)) return str;
-  // "11 de marzo 2026"
-  const m = str.match(/(\d+)\s+de\s+(\w+)\s+(\d{4})/i);
+  // "11 de marzo 2026" o "15 de abril, 2026" (con coma)
+  const m = str.match(/(\d+)\s+de\s+(\w+),?\s+(\d{4})/i);
   if (m) {
     const mes = MESES_ES[m[2].toLowerCase()] || m[2].slice(0,3);
     return m[1] + ' ' + mes + ' ' + m[3];

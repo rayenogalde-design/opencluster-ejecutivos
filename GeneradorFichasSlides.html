@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fichas Técnicas · Google Slides · OpenCluster Tech</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#001a60; --sky:#06b3fd; --orange:#ff7e00;
+  --ltblue:#d6eeff; --gold:#c9a96e; --grey:#6b7280;
+  --bg:#f7f9fc; --card:#ffffff; --border:#e5e7eb;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'Open Sans',sans-serif;background:var(--bg);color:var(--navy);font-size:14px;line-height:1.5}
+h1,h2,h3,h4{font-family:'Montserrat',sans-serif;font-weight:700;color:var(--navy)}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font-family:inherit;font-size:14px;color:var(--navy)}
+a{color:var(--sky);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ── Topbar ── */
+.topbar{background:var(--navy);color:#fff;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.1);position:sticky;top:0;z-index:50}
+.topbar h1{color:#fff;font-size:18px;letter-spacing:.3px}
+.topbar .brand{display:flex;align-items:center;gap:12px}
+.topbar .brand .dot{width:10px;height:10px;border-radius:50%;background:var(--sky)}
+.topbar .userbox{display:flex;align-items:center;gap:12px;font-size:13px;opacity:.95}
+.topbar .userbox button{background:rgba(255,255,255,.1);padding:6px 12px;border-radius:6px;color:#fff;font-size:12px;transition:background .15s}
+.topbar .userbox button:hover{background:rgba(255,255,255,.2)}
+
+/* ── Layout ── */
+.shell{max-width:1200px;margin:0 auto;padding:24px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+@media(max-width:900px){.row{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.card h2{font-size:15px;letter-spacing:.3px;margin-bottom:14px;text-transform:uppercase;color:var(--navy);display:flex;align-items:center;gap:8px}
+.card h2::before{content:"";display:block;width:4px;height:16px;background:var(--sky);border-radius:2px}
+
+/* ── Controls ── */
+.input, .select, .textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;transition:border .15s,box-shadow .15s}
+.input:focus, .select:focus, .textarea:focus{outline:none;border-color:var(--sky);box-shadow:0 0 0 3px rgba(6,179,253,.15)}
+.textarea{resize:vertical;min-height:100px;font-family:inherit}
+.label{display:block;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;color:var(--grey);margin-bottom:6px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 18px;border-radius:8px;font-weight:600;font-size:14px;transition:all .15s}
+.btn-primary{background:var(--sky);color:#fff}
+.btn-primary:hover{background:#0396d9;transform:translateY(-1px);box-shadow:0 4px 12px rgba(6,179,253,.3)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-navy{background:var(--navy);color:#fff}
+.btn-navy:hover{background:#001040}
+.btn-ghost{background:#f3f4f6;color:var(--navy);border:1px solid var(--border)}
+.btn-ghost:hover{background:#e5e7eb}
+.btn-block{width:100%}
+
+/* ── Login overlay ── */
+#loginOverlay{position:fixed;inset:0;background:linear-gradient(135deg,var(--navy),#000830);display:flex;align-items:center;justify-content:center;z-index:999}
+#loginOverlay .login-card{background:#fff;border-radius:16px;padding:40px 32px;width:min(420px,90%);box-shadow:0 20px 60px rgba(0,0,0,.4);text-align:center}
+#loginOverlay h1{color:var(--navy);font-size:24px;margin-bottom:8px}
+#loginOverlay .sub{color:var(--grey);font-size:13px;margin-bottom:24px}
+
+/* ── Producto buscador ── */
+.search-box{position:relative;margin-bottom:12px}
+.search-box .icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--grey)}
+.search-box .input{padding-left:36px}
+.product-list{max-height:340px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;background:#fff}
+.product-item{padding:10px 12px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s}
+.product-item:last-child{border-bottom:none}
+.product-item:hover{background:var(--ltblue)}
+.product-item.selected{background:var(--ltblue);border-left:3px solid var(--sky)}
+.product-item img{width:40px;height:40px;object-fit:cover;border-radius:4px;background:#f3f4f6;flex-shrink:0}
+.product-item .ptitle{flex:1;font-size:13px;line-height:1.3;color:var(--navy);font-weight:600}
+.product-item .ptag{font-size:10px;color:var(--grey);margin-top:2px}
+
+/* ── Imagenes ── */
+.img-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px;margin-top:10px}
+.img-thumb{position:relative;aspect-ratio:1;border:2px solid var(--border);border-radius:6px;overflow:hidden;cursor:pointer;background:#fff;transition:border .15s}
+.img-thumb img{width:100%;height:100%;object-fit:cover}
+.img-thumb.selected{border-color:var(--sky);box-shadow:0 0 0 2px rgba(6,179,253,.2)}
+.img-thumb .badge{position:absolute;top:4px;right:4px;background:var(--sky);color:#fff;width:20px;height:20px;border-radius:50%;display:none;align-items:center;justify-content:center;font-size:10px;font-weight:700}
+.img-thumb.selected .badge{display:flex}
+
+/* ── Plantillas ── */
+.templates{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.template-card{border:2px solid var(--border);border-radius:10px;padding:14px 10px;cursor:pointer;transition:all .15s;background:#fff;text-align:center}
+.template-card:hover{border-color:var(--sky)}
+.template-card.selected{border-color:var(--sky);background:var(--ltblue);box-shadow:0 4px 12px rgba(6,179,253,.15)}
+.template-card .tmini{aspect-ratio:16/9;background:linear-gradient(135deg,var(--navy),var(--sky));border-radius:4px;margin-bottom:8px;position:relative;overflow:hidden}
+.template-card .tmini::after{content:"";position:absolute;inset:20% 20% 30% 20%;background:rgba(255,255,255,.3);border-radius:2px}
+.template-card .tname{font-weight:700;font-size:13px;color:var(--navy)}
+.template-card .tdesc{font-size:10px;color:var(--grey);margin-top:3px;line-height:1.3}
+
+/* ── Resultado ── */
+.result-box{background:linear-gradient(135deg,var(--sky),var(--navy));color:#fff;padding:20px;border-radius:12px;margin-top:16px;display:none}
+.result-box.show{display:block;animation:slideIn .3s ease}
+@keyframes slideIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+.result-box h3{color:#fff;margin-bottom:8px;font-size:15px}
+.result-box p{font-size:13px;opacity:.9;margin-bottom:14px}
+.result-box .actions{display:flex;gap:10px;flex-wrap:wrap}
+.result-box a{background:#fff;color:var(--navy);padding:10px 16px;border-radius:6px;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:6px}
+.result-box a:hover{background:var(--ltblue);text-decoration:none}
+
+/* ── Loader ── */
+.loader{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Errors / status ── */
+.status{padding:10px 14px;border-radius:8px;font-size:13px;margin-top:10px;display:none}
+.status.show{display:block}
+.status.error{background:#fee;color:#c23b3b;border:1px solid #fcc}
+.status.ok{background:#e6f9f0;color:#096;border:1px solid #acd}
+.status.info{background:var(--ltblue);color:var(--navy);border:1px solid #b3d8f2}
+
+.hint{font-size:11px;color:var(--grey);margin-top:6px;font-style:italic}
+.hidden{display:none!important}
+.small{font-size:12px}
+.pill{display:inline-block;background:var(--ltblue);color:var(--navy);padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600}
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN ══ -->
+<div id="loginOverlay">
+  <div class="login-card">
+    <h1>Fichas Técnicas</h1>
+    <p class="sub">Google Slides · OpenCluster Tech</p>
+    <label class="label" style="text-align:left">¿Quién eres?</label>
+    <select id="loginSelect" class="select" style="margin-bottom:16px">
+      <option value="">— Selecciona tu nombre —</option>
+      <option value="Rayen Ogalde">Rayen Ogalde</option>
+      <option value="German Alvarado">German Alvarado</option>
+      <option value="William Marin">William Marin</option>
+      <option value="Roberto Caceres">Roberto Caceres</option>
+      <option value="Ximena Romero">Ximena Romero</option>
+      <option value="Maximiliano Astudillo">Maximiliano Astudillo</option>
+    </select>
+    <button class="btn btn-primary btn-block" onclick="doLogin()">Entrar</button>
+  </div>
+</div>
+
+<!-- ══ TOPBAR ══ -->
+<header class="topbar">
+  <div class="brand"><span class="dot"></span><h1>Fichas Técnicas · Slides</h1></div>
+  <div class="userbox">
+    <span id="userName">—</span>
+    <button onclick="logout()">Salir</button>
+  </div>
+</header>
+
+<div class="shell">
+
+  <div class="row">
+    <!-- Columna izquierda: producto -->
+    <div class="card">
+      <h2>1. Producto Shopify</h2>
+      <div class="search-box">
+        <span class="icon">🔍</span>
+        <input id="searchInput" class="input" placeholder="Buscar por nombre..." oninput="filterProducts()">
+      </div>
+      <div id="productStatus" class="status info show">Cargando productos...</div>
+      <div id="productList" class="product-list hidden"></div>
+
+      <div id="productDetail" class="hidden" style="margin-top:16px">
+        <label class="label">Título de la ficha</label>
+        <input id="tituloInput" class="input">
+
+        <label class="label" style="margin-top:12px">Descripción (texto plano)</label>
+        <textarea id="descInput" class="textarea" style="min-height:140px"></textarea>
+        <div class="hint">Se extrae del producto automáticamente. Editala si quieres antes de generar.</div>
+
+        <label class="label" style="margin-top:12px">Categoría / tag principal</label>
+        <input id="categoriaInput" class="input">
+
+        <label class="label" style="margin-top:12px">Características (una por línea o texto libre)</label>
+        <textarea id="caracInput" class="textarea" style="min-height:100px"></textarea>
+
+        <label class="label" style="margin-top:12px">Imágenes del producto (clic para incluir)</label>
+        <div id="imgGrid" class="img-grid"></div>
+        <div class="hint">Se usan hasta 3 imágenes según la plantilla.</div>
+      </div>
+    </div>
+
+    <!-- Columna derecha: plantilla + accion -->
+    <div class="card">
+      <h2>2. Elige plantilla</h2>
+      <div id="templatesBox">
+        <div class="status info show">Cargando plantillas del servidor...</div>
+      </div>
+
+      <h2 style="margin-top:24px">3. Generar ficha</h2>
+      <p class="small" style="color:var(--grey);margin-bottom:12px">
+        Se creará un Google Slides en tu Drive que podrás editar y exportar como PDF.
+      </p>
+      <button id="genBtn" class="btn btn-primary btn-block" onclick="generarFicha()" disabled>
+        <span id="genBtnText">Generar Ficha</span>
+      </button>
+      <div id="genStatus" class="status"></div>
+      <div id="resultBox" class="result-box">
+        <h3>¡Ficha creada!</h3>
+        <p>La ficha se abrió en Google Slides. Ajusta si necesitas y exporta como PDF desde: <strong>Archivo → Descargar → Documento PDF</strong>.</p>
+        <div class="actions">
+          <a id="resultOpen" href="#" target="_blank">📝 Abrir en Slides</a>
+          <a id="resultPdf" href="#" target="_blank">📄 Descargar PDF directo</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════════
+   ⚠️  CONFIGURACION — PEGAR AQUI LA URL DEL APPS SCRIPT STANDALONE  ⚠️
+   ─────────────────────────────────────────────────────────────────
+   Rayen: cuando despliegues el Apps Script nuevo (el del archivo
+   APPS_SCRIPT_FICHAS_STANDALONE.gs), copia la URL del Web App y
+   reemplaza TODO lo que esta entre las comillas. Solo esa linea.
+════════════════════════════════════════════════════════════════════ */
+const APPS_SCRIPT_URL = 'https://script.google.com/a/macros/opencluster-tech.cl/s/AKfycbyCxW0Zy-NZl17Yy7M4dJKa3xAO7GXGImVTRW1i096mISYyChEuJmvbVBbqI4eiqGV6/exec';
+
+const EXEC_DB = {
+  'Rayen Ogalde':      {nombre:'Rayen Ogalde Vega',cargo:'Encargada de Difusión y Vínculos Institucionales',depto:'Departamento Comercial · OpenCluster Tech',tel:'+56 9 5629 4723',email:'rayen.ogalde@opencluster-tech.cl'},
+  'German Alvarado':   {nombre:'German Alvarado Araya',cargo:'Ejecutivo Comercial',depto:'Departamento Comercial · OpenCluster Tech',tel:'+56 9 8772 6906',email:'german.alvarado@opencluster-tech.cl'},
+  'William Marin':     {nombre:'William Marín',cargo:'Ejecutivo Comercial',depto:'Departamento Comercial · OpenCluster Tech',tel:'+56 9 4242 7631',email:'william.marin@opencluster-tech.cl'},
+  'Roberto Caceres':   {nombre:'Roberto Cáceres',cargo:'Ejecutivo Comercial',depto:'Departamento Comercial · OpenCluster Tech',tel:'+56 9 7558 6018',email:'roberto.caceres@opencluster-tech.cl'},
+  'Ximena Romero':     {nombre:'Ximena Romero',cargo:'Ejecutiva de Ventas y Comunicaciones',depto:'Departamento Comercial · OpenCluster Tech',tel:'+56 9 3149 5928',email:'ximena.romero@opencluster-tech.cl'},
+  'Maximiliano Astudillo':{nombre:'Maximiliano Astudillo',cargo:'Terapeuta Ocupacional',depto:'Departamento Comercial · OpenCluster Tech',tel:'+56 9 9037 7357',email:'maximiliano.astudillo@opencluster-tech.cl'}
+};
+
+/* ════════════════════════════════════════════════════════════════════
+   ESTADO
+════════════════════════════════════════════════════════════════════ */
+const state = {
+  exec: null,
+  products: [],
+  filtered: [],
+  selectedProduct: null,
+  selectedImages: [],
+  plantillas: [],
+  plantillaIdx: 0
+};
+
+/* ════════════════════════════════════════════════════════════════════
+   LOGIN
+════════════════════════════════════════════════════════════════════ */
+function doLogin() {
+  const sel = document.getElementById('loginSelect');
+  const name = sel.value;
+  if (!name || !EXEC_DB[name]) { alert('Selecciona un ejecutivo'); return; }
+  state.exec = { key:name, ...EXEC_DB[name] };
+  localStorage.setItem('oc_fs_exec', name);
+  document.getElementById('loginOverlay').style.display = 'none';
+  document.getElementById('userName').textContent = state.exec.nombre;
+  init();
+}
+function logout() {
+  localStorage.removeItem('oc_fs_exec');
+  location.reload();
+}
+(function autoLogin(){
+  const s = localStorage.getItem('oc_fs_exec');
+  if (s && EXEC_DB[s]) {
+    document.getElementById('loginSelect').value = s;
+    doLogin();
+  }
+})();
+
+/* ════════════════════════════════════════════════════════════════════
+   INIT: carga productos + plantillas
+════════════════════════════════════════════════════════════════════ */
+async function init() {
+  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('PEGA_AQUI') >= 0 || !APPS_SCRIPT_URL.startsWith('https://')) {
+    document.body.innerHTML = '<div style="max-width:520px;margin:80px auto;background:#fee;border:2px solid #c23b3b;padding:24px;border-radius:12px;font-family:Open Sans,sans-serif;color:#c23b3b"><h2 style="margin-bottom:12px;font-family:Montserrat,sans-serif">⚠️ Falta configurar la URL</h2><p style="color:#333;line-height:1.5">Abre este archivo HTML con el Bloc de notas (o cualquier editor) y busca la linea que dice:<br><br><code style="background:#fff;padding:4px 8px;border-radius:4px;display:inline-block">const APPS_SCRIPT_URL = ...</code><br><br>Reemplaza el texto entre comillas por la URL del Web App que desplegaste del archivo <strong>APPS_SCRIPT_FICHAS_STANDALONE.gs</strong>, guarda y recarga esta pagina.</p></div>';
+    return;
+  }
+  await Promise.all([loadProducts(), loadPlantillas()]);
+}
+
+/* ── Productos Shopify ── */
+async function loadProducts() {
+  const box = document.getElementById('productStatus');
+  try {
+    // Intento directo (funciona en opencluster-tech.cl o desde archivo local)
+    const resp = await fetch('https://opencluster-tech.cl/products.json?limit=250');
+    const d = await resp.json();
+    if (d.products && d.products.length) {
+      state.products = d.products;
+    } else {
+      throw new Error('Respuesta vacía');
+    }
+  } catch (e) {
+    // Fallback proxy Apps Script
+    try {
+      const resp = await fetch(APPS_SCRIPT_URL + '?accion=productos_shopify');
+      const d = await resp.json();
+      state.products = d.products || [];
+    } catch (e2) {
+      box.className = 'status error show';
+      box.textContent = 'No se pudieron cargar los productos.';
+      return;
+    }
+  }
+  state.filtered = state.products.slice();
+  box.className = 'status ok show';
+  box.textContent = state.products.length + ' productos cargados.';
+  setTimeout(() => box.classList.remove('show'), 2000);
+  document.getElementById('productList').classList.remove('hidden');
+  renderProducts();
+}
+
+function renderProducts() {
+  const list = document.getElementById('productList');
+  if (!state.filtered.length) {
+    list.innerHTML = '<div class="product-item" style="cursor:default;color:var(--grey)">Sin resultados</div>';
+    return;
+  }
+  list.innerHTML = state.filtered.slice(0, 80).map((p, i) => {
+    const img = (p.images && p.images[0] && p.images[0].src) || '';
+    const tag = Array.isArray(p.tags) ? (p.tags[0] || '') : (String(p.tags||'').split(',')[0] || '');
+    const isSel = state.selectedProduct && state.selectedProduct.id === p.id;
+    return `
+      <div class="product-item ${isSel?'selected':''}" onclick="selectProduct(${p.id})">
+        ${img ? `<img src="${img}" loading="lazy">` : '<div style="width:40px;height:40px;background:#f3f4f6;border-radius:4px"></div>'}
+        <div style="flex:1;min-width:0">
+          <div class="ptitle">${escapeHtml(p.title)}</div>
+          ${tag ? `<div class="ptag">${escapeHtml(tag)}</div>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function filterProducts() {
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  if (!q) state.filtered = state.products.slice();
+  else state.filtered = state.products.filter(p =>
+    String(p.title||'').toLowerCase().includes(q) ||
+    String(Array.isArray(p.tags)?p.tags.join(' '):p.tags||'').toLowerCase().includes(q)
+  );
+  renderProducts();
+}
+
+function selectProduct(id) {
+  const p = state.products.find(pp => pp.id === id);
+  if (!p) return;
+  state.selectedProduct = p;
+  renderProducts();
+  populateProductForm(p);
+  document.getElementById('productDetail').classList.remove('hidden');
+  updateGenButton();
+}
+
+function populateProductForm(p) {
+  document.getElementById('tituloInput').value = p.title || '';
+  document.getElementById('descInput').value = cleanDescription(p.body_html || '');
+  const tag = Array.isArray(p.tags) ? (p.tags[0] || '') : (String(p.tags||'').split(',')[0] || '');
+  document.getElementById('categoriaInput').value = tag;
+  document.getElementById('caracInput').value = extractBullets(p.body_html || '');
+
+  // imágenes
+  const imgs = [];
+  const seen = new Set();
+  (p.images||[]).forEach(im => {
+    const base = (im.src||'').split('?')[0];
+    if (base && !seen.has(base)) { seen.add(base); imgs.push(im.src); }
+  });
+  // imágenes embebidas en body_html
+  try {
+    const div = document.createElement('div');
+    div.innerHTML = p.body_html || '';
+    div.querySelectorAll('img').forEach(im => {
+      const src = im.getAttribute('src') || '';
+      const base = src.split('?')[0];
+      if (base && !seen.has(base)) { seen.add(base); imgs.push(src); }
+    });
+  } catch(e) {}
+  state.allImages = imgs;
+  state.selectedImages = imgs.slice(0, Math.min(3, imgs.length));
+  renderImageGrid();
+}
+
+function renderImageGrid() {
+  const grid = document.getElementById('imgGrid');
+  grid.innerHTML = (state.allImages||[]).map((src, i) => {
+    const selIdx = state.selectedImages.indexOf(src);
+    return `
+      <div class="img-thumb ${selIdx>=0?'selected':''}" onclick="toggleImg(${i})">
+        <img src="${src}" loading="lazy">
+        ${selIdx>=0 ? `<span class="badge">${selIdx+1}</span>` : ''}
+      </div>`;
+  }).join('');
+}
+
+function toggleImg(i) {
+  const src = state.allImages[i];
+  if (!src) return;
+  const idx = state.selectedImages.indexOf(src);
+  if (idx >= 0) state.selectedImages.splice(idx, 1);
+  else if (state.selectedImages.length < 3) state.selectedImages.push(src);
+  else { state.selectedImages.shift(); state.selectedImages.push(src); }
+  renderImageGrid();
+}
+
+/* ── Limpieza body_html ── */
+function cleanDescription(html) {
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  div.querySelectorAll('img,script,style').forEach(n => n.remove());
+  // preservar saltos básicos
+  div.querySelectorAll('br').forEach(b => b.replaceWith('\n'));
+  div.querySelectorAll('p,div,li,h1,h2,h3,h4').forEach(p => p.appendChild(document.createTextNode('\n')));
+  const txt = div.textContent.replace(/\n\s*\n+/g, '\n\n').replace(/[ \t]+/g,' ').trim();
+  return txt;
+}
+
+function extractBullets(html) {
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  const bullets = [];
+  div.querySelectorAll('li').forEach(li => {
+    const t = (li.textContent||'').trim();
+    if (t) bullets.push('• ' + t);
+  });
+  return bullets.join('\n');
+}
+
+/* ── Plantillas ── */
+async function loadPlantillas() {
+  const box = document.getElementById('templatesBox');
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL + '?accion=listar_plantillas_fichas');
+    const d = await resp.json();
+    if (!d.ok) {
+      box.innerHTML = `<div class="status error show">${escapeHtml(d.error || 'Error')}</div>
+        <div class="hint">Rayen: abre el editor de Apps Script y ejecuta <strong>setupPlantillasFichas</strong> una sola vez.</div>`;
+      return;
+    }
+    state.plantillas = d.plantillas || [];
+    renderPlantillas();
+  } catch (e) {
+    box.innerHTML = `<div class="status error show">Error de conexión: ${escapeHtml(String(e.message||e))}</div>`;
+  }
+}
+
+function renderPlantillas() {
+  const box = document.getElementById('templatesBox');
+  if (!state.plantillas.length) {
+    box.innerHTML = '<div class="status error show">No hay plantillas configuradas.</div>';
+    return;
+  }
+  box.innerHTML = '<div class="templates">' + state.plantillas.map((t, i) => `
+    <div class="template-card ${i===state.plantillaIdx?'selected':''}" onclick="selectPlantilla(${i})">
+      <div class="tmini"></div>
+      <div class="tname">${escapeHtml(t.nombre)}</div>
+      <div class="tdesc">${escapeHtml(t.descripcion||'')}</div>
+    </div>
+  `).join('') + '</div>';
+}
+
+function selectPlantilla(i) {
+  state.plantillaIdx = i;
+  renderPlantillas();
+  updateGenButton();
+}
+
+function updateGenButton() {
+  const btn = document.getElementById('genBtn');
+  btn.disabled = !state.selectedProduct || !state.plantillas.length;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   GENERAR FICHA
+════════════════════════════════════════════════════════════════════ */
+async function generarFicha() {
+  const btn = document.getElementById('genBtn');
+  const btnText = document.getElementById('genBtnText');
+  const status = document.getElementById('genStatus');
+  const result = document.getElementById('resultBox');
+
+  btn.disabled = true;
+  btnText.innerHTML = '<span class="loader"></span> Generando ficha en Google Slides...';
+  status.className = 'status info show';
+  status.textContent = 'Esto puede tomar 15-30 segundos. Por favor espera...';
+  result.classList.remove('show');
+
+  const payload = {
+    accion: 'generar_ficha_slides',
+    plantilla_idx: state.plantillaIdx,
+    ejecutivo: state.exec,
+    producto: {
+      titulo: document.getElementById('tituloInput').value.trim(),
+      descripcion: document.getElementById('descInput').value.trim(),
+      categoria: document.getElementById('categoriaInput').value.trim(),
+      caracteristicas: document.getElementById('caracInput').value.trim(),
+      imagenes: state.selectedImages.slice(0, 3)
+    }
+  };
+
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: {'Content-Type':'text/plain;charset=utf-8'}
+    });
+    const d = await resp.json();
+    if (!d.ok) {
+      status.className = 'status error show';
+      status.textContent = 'Error: ' + (d.error || 'desconocido');
+      btnText.textContent = 'Reintentar';
+      btn.disabled = false;
+      return;
+    }
+    status.classList.remove('show');
+    document.getElementById('resultOpen').href = d.url;
+    document.getElementById('resultPdf').href = d.pdfUrl;
+    result.classList.add('show');
+    // abrir en nueva pestaña automaticamente
+    window.open(d.url, '_blank');
+    btnText.textContent = 'Generar otra';
+    btn.disabled = false;
+  } catch (e) {
+    status.className = 'status error show';
+    status.textContent = 'Error de conexión: ' + (e.message || e);
+    btnText.textContent = 'Reintentar';
+    btn.disabled = false;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   UTIL
+════════════════════════════════════════════════════════════════════ */
+function escapeHtml(s) {
+  return String(s==null?'':s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+</script>
+</body>
+</html>

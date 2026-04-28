@@ -519,6 +519,37 @@ select.login-inp{appearance:none;cursor:pointer;}
 }
 .todo-toast.on{transform:translateX(0);}
 .todo-toast svg{width:14px;height:14px;color:var(--gold);}
+
+/* ════════════════════════════════════════════
+   WEBINAR PIE MAULE — banner (solo Rayen y William)
+═══════════════════════════════════════════════ */
+.webinar-banner{
+  background:linear-gradient(135deg,#001a60 0%,#002b8c 60%,#0040b0 100%);
+  border:1px solid rgba(201,169,110,.35);border-radius:12px;
+  padding:14px 18px;margin-bottom:14px;color:#fff;
+  box-shadow:0 4px 14px rgba(0,26,96,.18);
+}
+.webinar-banner-row{display:flex;align-items:center;gap:18px;flex-wrap:wrap;justify-content:space-between;}
+.webinar-banner-info{flex:1;min-width:240px;}
+.webinar-banner-eyebrow{font-size:10.5px;font-weight:700;color:#C9A96E;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;}
+.webinar-banner-title{font-family:'Montserrat',sans-serif;font-size:15px;font-weight:700;line-height:1.25;margin-bottom:3px;}
+.webinar-banner-sub{font-size:12px;color:rgba(255,255,255,.78);margin-bottom:6px;}
+.webinar-banner-url{font-size:12.5px;font-weight:600;color:#9bd0ff;font-family:'Open Sans',sans-serif;}
+.webinar-banner-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.webinar-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;
+  font-family:'Montserrat',sans-serif;cursor:pointer;text-decoration:none;
+  border:1.5px solid transparent;transition:.15s;
+}
+.webinar-btn.primary{background:#C9A96E;color:#1A2233;border-color:#C9A96E;}
+.webinar-btn.primary:hover{background:#d4b87f;}
+.webinar-btn.ghost{background:transparent;color:#fff;border-color:rgba(255,255,255,.4);}
+.webinar-btn.ghost:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.7);}
+@media(max-width:560px){
+  .webinar-banner-actions{width:100%;}
+  .webinar-btn{flex:1;justify-content:center;}
+}
 </style>
 </head>
 <body>
@@ -630,6 +661,26 @@ select.login-inp{appearance:none;cursor:pointer;}
         <div class="res-sidebar" id="res-sidebar"></div>
         <!-- Contenido principal -->
         <div class="res-main">
+          <div id="webinar-card" class="webinar-banner" style="display:none">
+            <div class="webinar-banner-row">
+              <div class="webinar-banner-info">
+                <div class="webinar-banner-eyebrow">📅 Campaña activa</div>
+                <div class="webinar-banner-title">Webinar PIE Maule 2026 — Tecnología para la Inclusión</div>
+                <div class="webinar-banner-sub">Encuesta pública abierta · comparte con colegios PIE de Chile</div>
+                <div class="webinar-banner-url" id="webinar-url-text">webinar.opencluster-tech.cl</div>
+              </div>
+              <div class="webinar-banner-actions">
+                <a class="webinar-btn primary" href="https://webinar.opencluster-tech.cl/" target="_blank" rel="noopener">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                  Abrir encuesta
+                </a>
+                <button type="button" class="webinar-btn ghost" id="webinar-copy-btn" onclick="copiarLinkWebinar()">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  Copiar link
+                </button>
+              </div>
+            </div>
+          </div>
           <div id="res-alertas"></div>
           <div class="kpis k4" id="res-kpis"></div>
           <div class="g2" style="margin-bottom:14px;">
@@ -1447,8 +1498,24 @@ async function iniciarApp(modoDemo=false){
   if(USUARIO==='Rayen Ogalde' && typeof OCT_enableForRayen==='function'){
     OCT_enableForRayen();
   }
+  // Webinar PIE Maule — banner solo para Rayen y William
+  const webCard=document.getElementById('webinar-card');
+  if(webCard) webCard.style.display=(USUARIO==='Rayen Ogalde'||USUARIO==='William')?'':'none';
   // Sincronizar Primeros Contactos con el Sheet (fuente de verdad)
   sincronizarContactos();
+}
+
+async function copiarLinkWebinar(){
+  const url='https://webinar.opencluster-tech.cl/';
+  const btn=document.getElementById('webinar-copy-btn');
+  const original=btn.innerHTML;
+  try{
+    await navigator.clipboard.writeText(url);
+    btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><polyline points="20 6 9 17 4 12"/></svg> Copiado';
+  }catch(e){
+    btn.innerHTML='Copia manual: '+url;
+  }
+  setTimeout(()=>{btn.innerHTML=original;},1800);
 }
 
 async function recargarDatos(){

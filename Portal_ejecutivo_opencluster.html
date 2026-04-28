@@ -563,6 +563,41 @@ select.login-inp{appearance:none;cursor:pointer;}
   .webinar-banner-actions{width:100%;}
   .webinar-btn{flex:1;justify-content:center;}
 }
+/* Sub-cards de regiones (resultados por webinar) */
+.webinar-regions{margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.18);}
+.webinar-regions-head{font-size:10px;font-weight:700;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:1.1px;margin-bottom:8px;}
+.webinar-region{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;overflow:hidden;transition:.18s;margin-bottom:6px;}
+.webinar-region:hover{background:rgba(255,255,255,.11);}
+.webinar-region-toggle{width:100%;background:transparent;border:none;color:#fff;padding:10px 12px;display:flex;align-items:center;gap:10px;cursor:pointer;font-family:'Open Sans',sans-serif;font-size:13px;}
+.webinar-region-emoji{font-size:15px;}
+.webinar-region-label{flex:1;text-align:left;font-weight:700;}
+.webinar-region-count{font-size:11px;font-weight:700;background:rgba(201,169,110,.22);color:#C9A96E;padding:3px 9px;border-radius:999px;min-width:42px;text-align:center;}
+.webinar-chevron{width:14px;height:14px;color:rgba(255,255,255,.7);transition:transform .25s;}
+.webinar-region.expanded .webinar-chevron{transform:rotate(180deg);}
+.webinar-region-body{display:none;padding:0 12px 12px;color:#fff;}
+.webinar-region.expanded .webinar-region-body{display:block;}
+.webinar-loading,.webinar-error,.webinar-empty{padding:14px;text-align:center;color:rgba(255,255,255,.7);font-size:12px;}
+.webinar-error{color:#fca5a5;}
+.webinar-stats-row{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
+.webinar-stat{flex:1;min-width:80px;background:rgba(0,0,0,.18);padding:8px 10px;border-radius:8px;text-align:center;}
+.webinar-stat .n{font-size:20px;font-weight:800;color:#C9A96E;font-family:'Montserrat',sans-serif;line-height:1.1;}
+.webinar-stat .l{font-size:9.5px;font-weight:700;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:0.4px;margin-top:2px;}
+.webinar-list-title{font-size:10px;font-weight:700;color:rgba(255,255,255,.85);text-transform:uppercase;letter-spacing:0.8px;margin:12px 0 6px;}
+.webinar-list{list-style:none;padding:0;margin:0;}
+.webinar-list li{padding:6px 10px;background:rgba(0,0,0,.15);border-radius:6px;margin-bottom:3px;display:flex;justify-content:space-between;align-items:center;font-size:12px;gap:10px;}
+.webinar-list li > span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.webinar-list li strong{color:#C9A96E;font-weight:800;flex-shrink:0;}
+.webinar-prefer{background:rgba(0,0,0,.15);padding:8px 12px;border-radius:8px;font-size:12px;display:flex;gap:14px;flex-wrap:wrap;}
+.webinar-prefer strong{color:#9bd0ff;}
+.webinar-table-wrap{overflow-x:auto;background:rgba(0,0,0,.18);border-radius:8px;padding:4px;max-height:260px;overflow-y:auto;}
+.webinar-table{width:100%;border-collapse:collapse;font-size:11px;}
+.webinar-table th,.webinar-table td{padding:6px 8px;text-align:left;border-bottom:1px solid rgba(255,255,255,.08);white-space:nowrap;}
+.webinar-table th{font-weight:700;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:0.5px;font-size:9.5px;position:sticky;top:0;background:rgba(0,26,96,.95);}
+.webinar-table td{color:rgba(255,255,255,.92);}
+.webinar-table tr:last-child td{border-bottom:none;}
+.webinar-region-footer{margin-top:10px;display:flex;gap:8px;justify-content:flex-end;}
+.webinar-region-footer a{font-size:11px;color:#9bd0ff;text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:4px;}
+.webinar-region-footer a:hover{text-decoration:underline;}
 </style>
 </head>
 <body>
@@ -693,6 +728,18 @@ select.login-inp{appearance:none;cursor:pointer;}
                 </div>
               </div>
               <div class="webinar-banner-logo-pill"><img src="logos/oct-logo-pill.png" alt="OpenCluster Tech"></div>
+            </div>
+            <div class="webinar-regions">
+              <div class="webinar-regions-head">Resultados por región</div>
+              <div class="webinar-region" data-webinar="PIE_Maule_2026">
+                <button type="button" class="webinar-region-toggle" onclick="OCT_toggleRegion(this)">
+                  <span class="webinar-region-emoji">🌎</span>
+                  <span class="webinar-region-label">Región del Maule</span>
+                  <span class="webinar-region-count" id="count-PIE_Maule_2026">…</span>
+                  <svg class="webinar-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+                <div class="webinar-region-body" id="body-PIE_Maule_2026"></div>
+              </div>
             </div>
           </div>
           <div id="res-alertas"></div>
@@ -1514,7 +1561,11 @@ async function iniciarApp(modoDemo=false){
   }
   // Webinar PIE Maule — banner solo para Rayen y William
   const webCard=document.getElementById('webinar-card');
-  if(webCard) webCard.style.display=(USUARIO==='Rayen Ogalde'||USUARIO==='William')?'':'none';
+  if(webCard){
+    const visible=(USUARIO==='Rayen Ogalde'||USUARIO==='William');
+    webCard.style.display=visible?'':'none';
+    if(visible && typeof OCT_loadWebinarKPIs==='function') OCT_loadWebinarKPIs();
+  }
   // Sincronizar Primeros Contactos con el Sheet (fuente de verdad)
   sincronizarContactos();
 }
@@ -1530,6 +1581,99 @@ async function copiarLinkWebinar(){
     btn.innerHTML='Copia manual: '+url;
   }
   setTimeout(()=>{btn.innerHTML=original;},1800);
+}
+
+// ════════════════════════════════════════════
+// WEBINAR RESULTS — sub-cards por region
+// ════════════════════════════════════════════
+const WEBINAR_API='https://script.google.com/macros/s/AKfycbws21oUtUYoOck3ScLpIFYybeLMz6QpfD-Tk2FtI-Iv69gTuEqzIRgmSLzuiarsiiK2MA/exec';
+function _escHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function _topN(obj,n){return Object.entries(obj||{}).sort((a,b)=>b[1]-a[1]).slice(0,n);}
+
+async function OCT_loadWebinarKPIs(){
+  const regiones=document.querySelectorAll('#webinar-card .webinar-region');
+  for(const r of regiones){
+    const w=r.dataset.webinar;
+    try{
+      const res=await fetch(`${WEBINAR_API}?action=kpis&webinar=${encodeURIComponent(w)}`);
+      const data=await res.json();
+      if(data.ok){
+        const el=document.getElementById(`count-${w}`);
+        if(el) el.textContent=(data.total||0)+' insc.';
+        r.dataset.kpis=JSON.stringify(data);
+      }
+    }catch(e){console.error('Webinar KPIs error',e);}
+  }
+}
+
+async function OCT_toggleRegion(btn){
+  const region=btn.closest('.webinar-region');
+  const body=region.querySelector('.webinar-region-body');
+  const expanded=region.classList.toggle('expanded');
+  if(!expanded) return;
+  if(region.dataset.loaded==='1') return;
+  body.innerHTML='<div class="webinar-loading">Cargando resultados…</div>';
+  const w=region.dataset.webinar;
+  try{
+    const [kpisR,respR]=await Promise.all([
+      fetch(`${WEBINAR_API}?action=kpis&webinar=${encodeURIComponent(w)}`).then(r=>r.json()),
+      fetch(`${WEBINAR_API}?action=respuestas&webinar=${encodeURIComponent(w)}`).then(r=>r.json())
+    ]);
+    if(!kpisR.ok||!respR.ok) throw new Error('API error');
+    body.innerHTML=_renderWebinarDetail(kpisR,respR,w);
+    region.dataset.loaded='1';
+  }catch(e){
+    body.innerHTML='<div class="webinar-error">No se pudieron cargar los datos. Verifica conexión y reintenta.</div>';
+  }
+}
+
+function _renderWebinarDetail(kpis,resp,webinar){
+  if((kpis.total||0)===0){
+    return '<div class="webinar-empty">Aún no hay inscripciones para este webinar.</div>';
+  }
+  let h='';
+  // Stats principales
+  h+='<div class="webinar-stats-row">';
+  h+=`<div class="webinar-stat"><div class="n">${kpis.total||0}</div><div class="l">Inscritos</div></div>`;
+  h+=`<div class="webinar-stat"><div class="n">${kpis.comunas||0}</div><div class="l">Comunas</div></div>`;
+  h+=`<div class="webinar-stat"><div class="n">${kpis.establecimientos||0}</div><div class="l">Estab.</div></div>`;
+  h+='</div>';
+  // Top temas
+  const tT=_topN(kpis.temas,5);
+  if(tT.length){
+    h+='<div class="webinar-list-title">Temas más solicitados</div><ul class="webinar-list">';
+    for(const [k,c] of tT) h+=`<li><span>${_escHtml(k)}</span><strong>${c}</strong></li>`;
+    h+='</ul>';
+  }
+  // Top dependencia + tipo
+  const tDep=_topN(kpis.dependencia,3);
+  const tTipo=_topN(kpis.tipo,3);
+  if(tDep.length||tTipo.length){
+    h+='<div class="webinar-list-title">Perfil de establecimientos</div><ul class="webinar-list">';
+    for(const [k,c] of tDep) h+=`<li><span>📋 ${_escHtml(k)}</span><strong>${c}</strong></li>`;
+    for(const [k,c] of tTipo) h+=`<li><span>🏫 ${_escHtml(k)}</span><strong>${c}</strong></li>`;
+    h+='</ul>';
+  }
+  // Día/franja preferidos
+  const tDia=_topN(kpis.dia,1)[0];
+  const tFranja=_topN(kpis.franja,1)[0];
+  if(tDia||tFranja){
+    h+='<div class="webinar-list-title">Disponibilidad preferida</div><div class="webinar-prefer">';
+    if(tDia) h+=`<div><strong>Día:</strong> ${_escHtml(tDia[0])} (${tDia[1]})</div>`;
+    if(tFranja) h+=`<div><strong>Horario:</strong> ${_escHtml(tFranja[0])} (${tFranja[1]})</div>`;
+    h+='</div>';
+  }
+  // Tabla de inscritos (últimos 20, más recientes primero)
+  if(resp.respuestas&&resp.respuestas.length){
+    h+='<div class="webinar-list-title">Inscritos recientes</div><div class="webinar-table-wrap"><table class="webinar-table">';
+    h+='<thead><tr><th>Fecha</th><th>Nombre</th><th>Establecimiento</th><th>Comuna</th><th>Email</th></tr></thead><tbody>';
+    const ultimos=resp.respuestas.slice(-20).reverse();
+    for(const r of ultimos){
+      h+=`<tr><td>${_escHtml(r.fecha||'')}</td><td>${_escHtml(r.nombre||'')}</td><td>${_escHtml(r.establecimiento||'')}</td><td>${_escHtml(r.comuna||'')}</td><td>${_escHtml(r.email||'')}</td></tr>`;
+    }
+    h+='</tbody></table></div>';
+  }
+  return h;
 }
 
 async function recargarDatos(){

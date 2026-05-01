@@ -58,9 +58,30 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
 .g2 { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
 .pi {
   background:#F7F9FC; border:1.5px solid var(--mgray);
-  border-radius:8px; padding:8px 8px 6px; margin-bottom:6px; position:relative;
+  border-radius:8px; padding:8px 8px 6px 22px; margin-bottom:6px; position:relative;
 }
 .pi:hover { border-color:var(--sky); }
+.phandle {
+  position:absolute; left:2px; top:0; bottom:0; width:18px;
+  display:flex; align-items:center; justify-content:center;
+  color:#cdd3dc; cursor:grab; user-select:none;
+  border-radius:4px 0 0 4px; transition:color .15s, background .15s;
+}
+.phandle:hover { color:var(--sky); background:rgba(74,179,232,0.10); }
+.phandle:active { cursor:grabbing; }
+.bmove {
+  position:absolute; top:5px;
+  background:none; border:none; color:#bbb;
+  cursor:pointer; padding:2px 3px; border-radius:3px;
+  display:flex; align-items:center; justify-content:center; line-height:1;
+}
+.bmove:hover:not(:disabled) { color:var(--navy); background:#eef4ff; }
+.bmove:disabled { opacity:0.25; cursor:not-allowed; }
+.bmove-down { right:24px; }
+.bmove-up   { right:43px; }
+.pi.dragging { opacity:0.45; border-style:dashed; }
+.pi.drop-above { box-shadow:inset 0 3px 0 0 var(--sky); }
+.pi.drop-below { box-shadow:inset 0 -3px 0 0 var(--sky); }
 .pi-top { display:flex; gap:7px; margin-bottom:5px; align-items:flex-start; }
 .img-box {
   width:52px; height:52px; flex-shrink:0;
@@ -2766,6 +2787,15 @@ function addProd(name="", desc="", cant="", price="") {
   const div = document.createElement("div");
   div.className="pi"; div.id="pi"+id;
   div.innerHTML = `
+    <div class="phandle" title="Arrastrar para reordenar" aria-label="Arrastrar para reordenar">
+      <svg width="10" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.7"/><circle cx="9" cy="12" r="1.7"/><circle cx="9" cy="18" r="1.7"/><circle cx="15" cy="6" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="15" cy="18" r="1.7"/></svg>
+    </div>
+    <button class="bmove bmove-up" onclick="moveProd(${id},-1)" title="Mover arriba" aria-label="Mover arriba">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="18 15 12 9 6 15"/></svg>
+    </button>
+    <button class="bmove bmove-down" onclick="moveProd(${id},1)" title="Mover abajo" aria-label="Mover abajo">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
     <button class="bdel" onclick="delProd(${id})">✕</button>
     <div class="pi-top">
       <div class="img-box">
@@ -2816,6 +2846,8 @@ function addProd(name="", desc="", cant="", price="") {
   if(nameEl) nameEl.value = name || "";
   if(descEl) descEl.value = desc || "";
   rcP(id);
+  wireProdReorder(div);
+  refreshMoveBtns();
 }
 
 function loadImg(id, input) {
@@ -2865,7 +2897,82 @@ function setZoom(id, val) {
 
 function delProd(id) {
   const el = document.getElementById("pi"+id); if(el) el.remove();
-  delete imgStore[id]; delete descStore[id]; upd();
+  delete imgStore[id]; delete descStore[id];
+  refreshMoveBtns();
+  upd();
+}
+
+// ── Reordenar productos ─────────────────────────────────────────────
+function refreshMoveBtns() {
+  const items = [...document.querySelectorAll("#prodList .pi")];
+  items.forEach((el, i) => {
+    const up = el.querySelector(".bmove-up");
+    const dn = el.querySelector(".bmove-down");
+    if(up) up.disabled = (i === 0);
+    if(dn) dn.disabled = (i === items.length - 1);
+  });
+}
+
+function moveProd(id, dir) {
+  const el = document.getElementById("pi"+id);
+  if(!el) return;
+  if(dir < 0 && el.previousElementSibling) {
+    el.parentNode.insertBefore(el, el.previousElementSibling);
+  } else if(dir > 0 && el.nextElementSibling) {
+    el.parentNode.insertBefore(el.nextElementSibling, el);
+  } else {
+    return;
+  }
+  refreshMoveBtns();
+  upd();
+}
+
+let _dragSrc = null;
+
+function wireProdReorder(div) {
+  div.addEventListener("dragstart", e => {
+    _dragSrc = div;
+    div.classList.add("dragging");
+    e.dataTransfer.effectAllowed = "move";
+    try { e.dataTransfer.setData("text/plain", div.id); } catch(_) {}
+  });
+  div.addEventListener("dragend", () => {
+    div.classList.remove("dragging");
+    document.querySelectorAll(".pi.drop-above,.pi.drop-below")
+      .forEach(n => n.classList.remove("drop-above","drop-below"));
+    div.draggable = false;
+    _dragSrc = null;
+  });
+  div.addEventListener("dragover", e => {
+    if(!_dragSrc || div === _dragSrc) return;
+    e.preventDefault();
+    const r = div.getBoundingClientRect();
+    const above = (e.clientY - r.top) < r.height / 2;
+    div.classList.toggle("drop-above", above);
+    div.classList.toggle("drop-below", !above);
+  });
+  div.addEventListener("dragleave", e => {
+    // Solo limpiar cuando el cursor sale realmente del .pi
+    if(!div.contains(e.relatedTarget)) {
+      div.classList.remove("drop-above","drop-below");
+    }
+  });
+  div.addEventListener("drop", e => {
+    if(!_dragSrc || div === _dragSrc) return;
+    e.preventDefault();
+    const above = div.classList.contains("drop-above");
+    div.classList.remove("drop-above","drop-below");
+    if(above) div.parentNode.insertBefore(_dragSrc, div);
+    else      div.parentNode.insertBefore(_dragSrc, div.nextSibling);
+    refreshMoveBtns();
+    upd();
+  });
+  // El handle es lo único que activa draggable, para no romper la selección de texto en los inputs
+  const handle = div.querySelector(".phandle");
+  if(handle) {
+    handle.addEventListener("mousedown",  () => { div.draggable = true; });
+    handle.addEventListener("touchstart", () => { div.draggable = true; }, {passive:true});
+  }
 }
 
 // Store de modos: 'neto' (default) o 'iva'
@@ -4485,6 +4592,13 @@ window.addEventListener("DOMContentLoaded", () => {
   });
   // Inicializar visual del selector de equipo
   onEquipoChange();
+
+  // Reset global de draggable: si el usuario tocó el handle pero no arrastró,
+  // dejamos los .pi otra vez no-draggable para que la selección de texto en los inputs funcione.
+  document.addEventListener("mouseup", () => {
+    document.querySelectorAll("#prodList .pi[draggable='true']")
+      .forEach(p => { p.draggable = false; });
+  });
 });
 
 // ── Pestañas ──────────────────────────────────────────────────────

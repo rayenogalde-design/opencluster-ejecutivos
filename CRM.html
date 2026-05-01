@@ -23,6 +23,7 @@ body{
   color:var(--ink); -webkit-font-smoothing:antialiased;
 }
 a{color:inherit;}
+button{font-family:inherit;}
 
 /* ════ Top bar ════ */
 .topbar{
@@ -40,9 +41,7 @@ a{color:inherit;}
   transition:background .15s;
 }
 .topbar-back:hover{background:rgba(255,255,255,.22);}
-.topbar-title{
-  font-family:'Playfair Display',serif; font-size:20px; font-weight:700;
-}
+.topbar-title{ font-family:'Playfair Display',serif; font-size:20px; font-weight:700; }
 .topbar-sub{
   font-size:11px; color:rgba(255,255,255,.7); font-weight:500;
   margin-left:auto; display:flex; align-items:center; gap:8px;
@@ -53,31 +52,21 @@ a{color:inherit;}
 }
 
 /* ════ Layout ════ */
-.app{
-  display:grid; grid-template-columns:220px 1fr;
-  min-height:calc(100vh - 56px);
-}
-.sidebar{
-  background:white; border-right:1px solid var(--smoke);
-  padding:18px 0; overflow-y:auto;
-}
+.app{ display:grid; grid-template-columns:220px 1fr; min-height:calc(100vh - 56px); }
+.sidebar{ background:white; border-right:1px solid var(--smoke); padding:18px 0; overflow-y:auto; }
 .side-section{
   font-family:'Montserrat',sans-serif; font-size:9.5px; font-weight:800;
   color:var(--mist); text-transform:uppercase; letter-spacing:1.2px;
   padding:14px 22px 6px;
 }
 .side-tab{
-  display:flex; align-items:center; gap:10px;
-  padding:10px 22px; cursor:pointer;
-  font-size:13px; font-weight:600; color:var(--ink);
+  display:flex; align-items:center; gap:10px; padding:10px 22px;
+  cursor:pointer; font-size:13px; font-weight:600; color:var(--ink);
   border-left:3px solid transparent;
   transition:background .12s, color .12s, border-color .12s;
 }
 .side-tab:hover{background:var(--paper);}
-.side-tab.act{
-  background:var(--purple-lt); color:var(--purple-dk);
-  border-left-color:var(--purple);
-}
+.side-tab.act{ background:var(--purple-lt); color:var(--purple-dk); border-left-color:var(--purple); }
 .side-tab svg{flex-shrink:0;}
 .side-tab .badge{
   margin-left:auto; min-width:20px; height:18px; padding:0 6px;
@@ -87,38 +76,150 @@ a{color:inherit;}
 .side-tab.admin{color:var(--purple-dk);}
 .side-tab.admin svg{color:var(--purple);}
 
-.main{
-  padding:24px 28px; overflow-y:auto;
-}
-.view{display:none;}
-.view.act{display:block;}
-.view-head{
-  display:flex; align-items:flex-end; justify-content:space-between;
-  margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid var(--smoke);
-}
-.view-head h2{
-  font-family:'Playfair Display',serif; font-size:22px; color:var(--navy); margin:0 0 4px;
-}
-.view-head p{font-size:12px; color:var(--subtle); margin:0;}
+.main{ overflow-y:auto; }
+.view{ display:none; height:100%; }
+.view.act{ display:block; }
 
-/* ════ Estado en construcción (provisional) ════ */
-.placeholder{
-  background:white; border:2px dashed var(--smoke); border-radius:14px;
-  padding:42px 28px; text-align:center; color:var(--mist);
+/* ════ Vista lista|ficha ════ */
+.split{ display:grid; grid-template-columns:340px 1fr; min-height:calc(100vh - 56px); }
+.list-pane{ background:white; border-right:1px solid var(--smoke); display:flex; flex-direction:column; }
+.list-head{ padding:18px 18px 12px; border-bottom:1px solid var(--smoke); }
+.list-head h2{ font-family:'Playfair Display',serif; font-size:18px; color:var(--navy); margin:0 0 3px; }
+.list-head p{ font-size:11px; color:var(--subtle); margin:0; }
+.searchbox{
+  margin-top:10px; position:relative;
 }
-.placeholder .ph-step{
-  display:inline-block; padding:5px 12px; border-radius:14px;
-  background:var(--purple-lt); color:var(--purple-dk);
-  font-size:10.5px; font-weight:800; letter-spacing:.8px; text-transform:uppercase;
-  margin-bottom:14px;
+.searchbox input{
+  width:100%; padding:9px 11px 9px 32px; border:1.5px solid var(--mgray); border-radius:8px;
+  font-size:12.5px; font-family:inherit; outline:none;
+  transition:border-color .15s;
 }
-.placeholder h3{
-  font-family:'Playfair Display',serif; color:var(--navy);
-  font-size:19px; margin:0 0 8px;
+.searchbox input:focus{ border-color:var(--purple); }
+.searchbox svg{ position:absolute; left:9px; top:9px; color:var(--mist); pointer-events:none; }
+.list-stats{
+  font-size:10.5px; color:var(--subtle); margin-top:7px; display:flex; gap:12px;
 }
-.placeholder p{font-size:13px; line-height:1.55; max-width:520px; margin:0 auto;}
+.list-stats b{ color:var(--purple-dk); font-weight:700; }
+.list-items{ flex:1; overflow-y:auto; padding:6px 0; }
+.contact-card{
+  padding:11px 18px; border-bottom:1px solid var(--paper); cursor:pointer;
+  transition:background .12s;
+}
+.contact-card:hover{ background:var(--paper); }
+.contact-card.sel{ background:var(--purple-lt); border-left:3px solid var(--purple); padding-left:15px; }
+.contact-card .cc-name{ font-size:13px; font-weight:700; color:var(--ink); margin-bottom:2px; }
+.contact-card .cc-inst{ font-size:11px; color:var(--subtle); }
+.contact-card .cc-meta{ display:flex; gap:8px; margin-top:5px; font-size:10px; }
+.cc-pill{
+  padding:2px 7px; border-radius:9px; font-weight:700;
+  background:var(--paper); color:var(--subtle);
+}
+.cc-pill.lead{ background:#dbeafe; color:#1e40af; }
+.cc-pill.contactado{ background:#fef3c7; color:#92400e; }
+.cc-pill.reunion{ background:#fce7f3; color:#9d174d; }
+.cc-pill.cotizacion{ background:#e9d5ff; color:#5b21b6; }
+.cc-pill.cierre{ background:#fed7aa; color:#9a3412; }
+.cc-pill.cliente{ background:#d1fae5; color:#065f46; }
+.cc-pill.inactivo{ background:#e5e7eb; color:#4b5563; }
+.cc-pill.huerfano{ background:#fee2e2; color:#991b1b; }
 
-/* ════ Login overlay (mismo estilo que index.html) ════ */
+.detail-pane{
+  padding:24px 30px; overflow-y:auto;
+}
+.empty-detail{
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  height:100%; color:var(--mist); text-align:center; padding:60px 20px;
+}
+.empty-detail svg{ color:var(--smoke); margin-bottom:14px; }
+.empty-detail h3{ font-family:'Playfair Display',serif; color:var(--subtle); margin:0 0 6px; }
+.empty-detail p{ font-size:12.5px; max-width:340px; line-height:1.5; }
+
+/* ════ Ficha ════ */
+.profile{
+  background:white; border-radius:14px; box-shadow:0 1px 3px rgba(0,0,0,.04);
+  padding:0; overflow:hidden;
+}
+.profile-header{
+  background:linear-gradient(135deg,var(--purple-lt) 0%, #fff 100%);
+  padding:22px 26px 18px; border-bottom:1px solid var(--smoke);
+}
+.profile-name{
+  font-family:'Playfair Display',serif; font-size:24px; color:var(--navy);
+  margin:0 0 3px;
+}
+.profile-sub{ font-size:13px; color:var(--subtle); margin:0 0 14px; }
+.profile-meta{
+  display:flex; flex-wrap:wrap; gap:10px 18px; font-size:12px;
+}
+.profile-meta-item{ display:inline-flex; align-items:center; gap:5px; color:var(--ink); }
+.profile-meta-item svg{ color:var(--purple); flex-shrink:0; }
+.profile-meta-item a{ color:var(--purple-dk); text-decoration:none; font-weight:600; }
+.profile-meta-item a:hover{ text-decoration:underline; }
+
+.profile-actions{
+  padding:14px 22px; background:white; display:flex; gap:8px; flex-wrap:wrap;
+  border-bottom:1px solid var(--smoke);
+}
+.btn-action{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:8px 14px; border:1.5px solid var(--mgray); border-radius:8px;
+  background:white; cursor:pointer; font-size:12px; font-weight:700;
+  color:var(--ink); transition:all .15s;
+}
+.btn-action svg{ color:var(--purple); }
+.btn-action:hover{ border-color:var(--purple); background:var(--purple-lt); }
+.btn-action.primary{ background:var(--purple); color:white; border-color:var(--purple); }
+.btn-action.primary svg{ color:white; }
+.btn-action.primary:hover{ background:var(--purple-dk); border-color:var(--purple-dk); }
+.btn-action.wa{ background:#25D366; color:white; border-color:#25D366; }
+.btn-action.wa svg{ color:white; }
+.btn-action.wa:hover{ background:#1da851; border-color:#1da851; }
+
+.suggestion{
+  margin:14px 22px; padding:12px 16px; background:#fef9c3; border:1px solid #fde047;
+  border-radius:8px; font-size:12.5px; color:#713f12; display:flex; align-items:center; gap:10px;
+}
+.suggestion svg{ color:#a16207; flex-shrink:0; }
+.suggestion b{ font-weight:700; color:#854d0e; }
+
+.profile-section{
+  padding:18px 26px;
+}
+.section-title{
+  font-family:'Montserrat',sans-serif; font-size:10px; font-weight:800;
+  color:var(--mist); text-transform:uppercase; letter-spacing:1.2px;
+  margin:0 0 12px;
+}
+
+/* ════ Timeline ════ */
+.timeline{ position:relative; padding-left:22px; }
+.timeline::before{
+  content:''; position:absolute; left:7px; top:6px; bottom:6px; width:2px;
+  background:linear-gradient(180deg,var(--purple-lt) 0%, transparent 100%);
+}
+.tl-event{ position:relative; padding-bottom:18px; }
+.tl-event::before{
+  content:''; position:absolute; left:-19px; top:5px; width:12px; height:12px;
+  border-radius:50%; background:white; border:2.5px solid var(--purple);
+}
+.tl-event.cotizacion::before{ border-color:var(--gold); }
+.tl-event.reunion::before{ border-color:var(--sky); }
+.tl-event.interaccion::before{ border-color:var(--purple); }
+.tl-head{ display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+.tl-fecha{ font-size:10.5px; font-weight:800; color:var(--mist); text-transform:uppercase; letter-spacing:.6px; }
+.tl-tipo{
+  font-size:9.5px; font-weight:800; padding:1px 7px; border-radius:9px;
+  text-transform:uppercase; letter-spacing:.6px;
+}
+.tl-tipo.cotizacion{ background:#FFF8EC; color:#8A6520; }
+.tl-tipo.reunion{ background:var(--pale); color:var(--navy); }
+.tl-tipo.interaccion{ background:var(--purple-lt); color:var(--purple-dk); }
+.tl-titulo{ font-size:13.5px; font-weight:700; color:var(--ink); margin:3px 0 2px; }
+.tl-detalle{ font-size:12px; color:var(--subtle); line-height:1.45; }
+.tl-ejecutivo{ font-size:10.5px; color:var(--mist); margin-top:3px; }
+.tl-empty{ font-size:12px; color:var(--mist); font-style:italic; padding:10px 0; }
+
+/* ════ Login overlay ════ */
 .login-mask{
   position:fixed; inset:0; background:rgba(0,10,40,.94);
   display:flex; align-items:center; justify-content:center; z-index:1000;
@@ -127,24 +228,17 @@ a{color:inherit;}
   background:white; border-radius:18px; padding:32px 30px;
   width:340px; box-shadow:0 22px 80px rgba(0,0,0,.4);
 }
-.login-box h1{
-  font-family:'Playfair Display',serif; color:var(--navy);
-  font-size:22px; margin:0 0 6px; text-align:center;
-}
-.login-box p{
-  font-size:12px; color:var(--subtle); text-align:center; margin:0 0 20px;
-}
-.login-box label{font-size:10.5px; font-weight:700; color:var(--subtle); text-transform:uppercase; letter-spacing:.5px;}
+.login-box h1{ font-family:'Playfair Display',serif; color:var(--navy); font-size:22px; margin:0 0 6px; text-align:center; }
+.login-box p{ font-size:12px; color:var(--subtle); text-align:center; margin:0 0 20px; }
+.login-box label{ font-size:10.5px; font-weight:700; color:var(--subtle); text-transform:uppercase; letter-spacing:.5px; }
 .login-box input, .login-box select{
   width:100%; padding:11px 13px; border:1.5px solid var(--mgray); border-radius:9px;
-  font-family:'Open Sans',sans-serif; font-size:13px; margin:5px 0 14px;
-  outline:none; box-sizing:border-box;
+  font-family:inherit; font-size:13px; margin:5px 0 14px; outline:none; box-sizing:border-box;
 }
-.login-box input:focus, .login-box select:focus{border-color:var(--purple);}
+.login-box input:focus, .login-box select:focus{ border-color:var(--purple); }
 .login-box button{
   width:100%; padding:12px; background:linear-gradient(90deg,var(--purple),var(--purple-dk));
-  color:white; border:none; border-radius:9px;
-  font-family:'Open Sans',sans-serif; font-size:13px; font-weight:700;
+  color:white; border:none; border-radius:9px; font-size:13px; font-weight:700;
   cursor:pointer; box-shadow:0 4px 14px rgba(124,58,237,.3);
 }
 .login-err{
@@ -152,16 +246,47 @@ a{color:inherit;}
   font-size:11.5px; margin-bottom:12px; display:none;
 }
 
+/* ════ Loading & error ════ */
+.loading-state{
+  display:flex; flex-direction:column; align-items:center; gap:12px;
+  padding:40px 20px; color:var(--mist); font-size:12.5px;
+}
+.spinner{
+  width:28px; height:28px; border:3px solid var(--smoke);
+  border-top-color:var(--purple); border-radius:50%; animation:spin .9s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+.error-state{
+  background:#fef2f2; border:1px solid #fecaca; border-radius:10px;
+  padding:14px 18px; margin:14px; font-size:12.5px; color:#991b1b;
+}
+
+/* ════ Placeholder de pasos no implementados ════ */
+.placeholder{
+  background:white; border:2px dashed var(--smoke); border-radius:14px;
+  padding:42px 28px; text-align:center; color:var(--mist); margin:24px;
+}
+.placeholder .ph-step{
+  display:inline-block; padding:5px 12px; border-radius:14px;
+  background:var(--purple-lt); color:var(--purple-dk);
+  font-size:10.5px; font-weight:800; letter-spacing:.8px; text-transform:uppercase;
+  margin-bottom:14px;
+}
+.placeholder h3{ font-family:'Playfair Display',serif; color:var(--navy); font-size:19px; margin:0 0 8px; }
+.placeholder p{ font-size:13px; line-height:1.55; max-width:520px; margin:0 auto; }
+
 @media (max-width:760px){
-  .app{grid-template-columns:1fr;}
-  .sidebar{border-right:none; border-bottom:1px solid var(--smoke); padding:8px 0;}
-  .topbar-title{font-size:17px;}
+  .app{ grid-template-columns:1fr; }
+  .sidebar{ border-right:none; border-bottom:1px solid var(--smoke); padding:8px 0; }
+  .topbar-title{ font-size:17px; }
+  .split{ grid-template-columns:1fr; }
+  .list-pane{ border-right:none; border-bottom:1px solid var(--smoke); }
 }
 </style>
 </head>
 <body>
 
-<!-- ════ LOGIN OVERLAY (solo si no hay sesión) ════ -->
+<!-- ════ LOGIN OVERLAY ════ -->
 <div id="loginMask" class="login-mask" style="display:none;">
   <div class="login-box">
     <h1>CRM OpenCluster</h1>
@@ -183,7 +308,7 @@ a{color:inherit;}
   </div>
 </div>
 
-<!-- ════ APP (oculto hasta que haya sesión) ════ -->
+<!-- ════ APP ════ -->
 <div id="appWrap" style="display:none;">
 
   <div class="topbar">
@@ -191,9 +316,7 @@ a{color:inherit;}
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
       Central
     </a>
-    <div>
-      <div class="topbar-title">CRM OpenCluster</div>
-    </div>
+    <div><div class="topbar-title">CRM OpenCluster</div></div>
     <div class="topbar-sub">
       <span id="tbInfo">Gestión de contactos por territorio</span>
       <span class="topbar-user" id="tbUser">—</span>
@@ -211,6 +334,11 @@ a{color:inherit;}
       <div class="side-tab" data-view="vTodos" onclick="goView('vTodos')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         Todos los contactos
+      </div>
+      <div class="side-tab" data-view="vSinCat" onclick="goView('vSinCat')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6M12 18h.01"/></svg>
+        Categorizar urgente
+        <span class="badge" id="badgeSinCat" style="display:none;">0</span>
       </div>
       <div class="side-tab" data-view="vDup" onclick="goView('vDup')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
@@ -232,58 +360,89 @@ a{color:inherit;}
     <!-- ════ MAIN ════ -->
     <div class="main">
 
+      <!-- vMis -->
       <div class="view act" id="vMis">
-        <div class="view-head">
-          <div><h2>Mis contactos</h2><p>Contactos asignados a las sub-categorías de tu territorio</p></div>
-        </div>
-        <div class="placeholder">
-          <div class="ph-step">Paso 1 de 8</div>
-          <h3>Estructura base lista</h3>
-          <p>El esqueleto del CRM ya está navegable. En el próximo paso conecto los endpoints del Apps Script para traer los contactos consolidados desde el Sheet (Primer Contacto + Cotizaciones + Reuniones + Webinar).</p>
+        <div class="split">
+          <div class="list-pane">
+            <div class="list-head">
+              <h2>Mis contactos</h2>
+              <p>Asignados a tus sub-categorías</p>
+              <div class="searchbox">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input type="text" id="searchMis" oninput="filtrarLista('vMis', this.value)" placeholder="Buscar por nombre, institución, email…">
+              </div>
+              <div class="list-stats"><span><b id="cntMis">0</b> contactos</span></div>
+            </div>
+            <div class="list-items" id="listMis"></div>
+          </div>
+          <div class="detail-pane" id="detailMis">
+            <div class="empty-detail">
+              <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg>
+              <h3>Seleccioná un contacto</h3>
+              <p>Hacé clic en uno de los contactos de la lista para ver su ficha completa, timeline e interacciones.</p>
+            </div>
+          </div>
         </div>
       </div>
 
+      <!-- vTodos -->
       <div class="view" id="vTodos">
-        <div class="view-head">
-          <div><h2>Todos los contactos</h2><p>Vista completa del equipo</p></div>
-        </div>
-        <div class="placeholder">
-          <div class="ph-step">Próximo paso</div>
-          <h3>Lista global con buscador</h3>
-          <p>Va a tener buscador en tiempo real, filtros por sub-categoría, ejecutivo, región y resultado.</p>
+        <div class="split">
+          <div class="list-pane">
+            <div class="list-head">
+              <h2>Todos los contactos</h2>
+              <p>Vista completa del equipo</p>
+              <div class="searchbox">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input type="text" id="searchTodos" oninput="filtrarLista('vTodos', this.value)" placeholder="Buscar en todo el equipo…">
+              </div>
+              <div class="list-stats"><span><b id="cntTodos">0</b> contactos totales</span></div>
+            </div>
+            <div class="list-items" id="listTodos"></div>
+          </div>
+          <div class="detail-pane" id="detailTodos">
+            <div class="empty-detail">
+              <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <h3>Seleccioná un contacto</h3>
+              <p>Esta vista muestra los contactos de todo el equipo. Hacé clic en uno para ver su ficha.</p>
+            </div>
+          </div>
         </div>
       </div>
 
+      <!-- vSinCat -->
+      <div class="view" id="vSinCat">
+        <div class="placeholder">
+          <div class="ph-step">Paso 7</div>
+          <h3>Categorizar urgente</h3>
+          <p>Acá van a aparecer los contactos huérfanos que vos originaste (de cotizaciones, reuniones o webinars) y que todavía no tienen sub-categoría asignada. Vos los categorizás y se distribuyen al territorio que corresponda.</p>
+        </div>
+      </div>
+
+      <!-- vDup -->
       <div class="view" id="vDup">
-        <div class="view-head">
-          <div><h2>Duplicados pendientes</h2><p>Contactos que el sistema sospecha que son la misma persona</p></div>
-        </div>
         <div class="placeholder">
-          <div class="ph-step">Paso futuro</div>
-          <h3>Modal comparador de fusión</h3>
-          <p>Cuando haya duplicados pendientes asignados a vos, aparecerá un modal bloqueante con los dos contactos lado a lado para confirmar o rechazar la fusión.</p>
+          <div class="ph-step">Paso 5</div>
+          <h3>Duplicados pendientes</h3>
+          <p>Modal bloqueante con comparador lado-a-lado para confirmar o rechazar fusión cuando el sistema detecte un posible duplicado.</p>
         </div>
       </div>
 
+      <!-- vTerritorios -->
       <div class="view" id="vTerritorios">
-        <div class="view-head">
-          <div><h2>Territorios</h2><p>Asignación de sub-categorías a ejecutivos</p></div>
-        </div>
         <div class="placeholder">
-          <div class="ph-step">Solo Rayen</div>
-          <h3>Asignar sub-categorías a ejecutivos</h3>
-          <p>Cada ejecutivo recibirá un conjunto de sub-categorías (DAEM, Programa PIE, CESFAM, Iglesia/Parroquia, etc.). Los contactos de esas sub-categorías se le asignan automáticamente.</p>
+          <div class="ph-step">Paso 8 · Solo Rayen</div>
+          <h3>Territorios</h3>
+          <p>Asignación de sub-categorías a ejecutivos. Cada sub-categoría asignada distribuye automáticamente sus contactos al ejecutivo dueño.</p>
         </div>
       </div>
 
+      <!-- vAud -->
       <div class="view" id="vAud">
-        <div class="view-head">
-          <div><h2>Auditoría</h2><p>Log completo de actividad — solo visible para vos</p></div>
-        </div>
         <div class="placeholder">
-          <div class="ph-step">Solo Rayen</div>
-          <h3>Actividad reciente · Fusiones · Duplicados pendientes · Por ejecutivo · Cambios sensibles</h3>
-          <p>Va a registrar: creación/edición/eliminación de contactos, agregar/editar/eliminar interacciones, fusiones (aceptadas y rechazadas), reasignaciones, vinculaciones automáticas, última conexión y interacciones por semana.</p>
+          <div class="ph-step">Paso 8 · Solo Rayen</div>
+          <h3>Auditoría</h3>
+          <p>Log completo de actividad: creaciones, ediciones, eliminaciones, fusiones, reasignaciones, vinculaciones automáticas, métricas por ejecutivo.</p>
         </div>
       </div>
 
@@ -293,20 +452,23 @@ a{color:inherit;}
 
 <script>
 // ════════════════════════════════════════════════
-// SESIÓN — comparte llave con el Portal y la Central
+// CONFIGURACIÓN
 // ════════════════════════════════════════════════
-const HOST = window.location.hostname;
+const CRM_API = 'https://script.google.com/macros/s/AKfycby7WmQLWguRvIl2L2z2NhPz7d9kMhqQLTEUCh5Tm6esCJTyGE34q_2ZdfDsuZKDGj9f/exec';
+// Misma URL que usan Portal y Cotizador. Si Rayen hace deploy nuevo y cambia, actualizar acá.
+
 const KEY_USER = 'oc_central_user';
 const KEY_PASS = 'oc_central_pass';
 const KEY_OK   = 'oc_central_ok';
 
-// Endpoint del Apps Script (mismo que usa el Portal)
-const CRM_API = 'https://script.google.com/macros/s/AKfycbz9_vDi3J_xL8rgHYMeWZXR2pT5gj_PLACEHOLDER/exec';
-// NOTA: este endpoint se actualiza en el paso 2 cuando publiquemos el Apps Script con
-// los endpoints CRM. Por ahora el esqueleto funciona sin backend.
-
 let USUARIO = null;
+let CACHE_CONTACTOS = { vMis: [], vTodos: [] };
+let CACHE_FILTRO   = { vMis: '',  vTodos: ''  };
+let SELECTED_ID    = null;
 
+// ════════════════════════════════════════════════
+// LOGIN
+// ════════════════════════════════════════════════
 function lgDo(){
   const u = document.getElementById('lgUser').value;
   const p = document.getElementById('lgPass').value;
@@ -316,8 +478,6 @@ function lgDo(){
     err.style.display = 'block';
     return;
   }
-  // Por ahora aceptamos cualquier sesión que ya exista en localStorage o
-  // simplemente la guardamos. El Apps Script va a validar de verdad en el paso 2.
   localStorage.setItem(KEY_USER, u);
   localStorage.setItem(KEY_PASS, p);
   localStorage.setItem(KEY_OK,   '1');
@@ -329,19 +489,194 @@ function initApp(user){
   document.getElementById('loginMask').style.display = 'none';
   document.getElementById('appWrap').style.display   = '';
   document.getElementById('tbUser').textContent      = user;
-  // Mostrar sección admin solo para Rayen
   const esAdmin = (user === 'Rayen Ogalde');
   document.getElementById('adminSection').style.display = esAdmin ? '' : 'none';
   document.getElementById('navTerr').style.display      = esAdmin ? '' : 'none';
   document.getElementById('navAud').style.display       = esAdmin ? '' : 'none';
+  cargarContactos('vMis');
 }
 
 function goView(id){
   document.querySelectorAll('.side-tab').forEach(t => t.classList.toggle('act', t.dataset.view === id));
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('act', v.id === id));
+  // Cargar datos según vista
+  if(id === 'vMis'   && !CACHE_CONTACTOS.vMis.length)   cargarContactos('vMis');
+  if(id === 'vTodos' && !CACHE_CONTACTOS.vTodos.length) cargarContactos('vTodos');
 }
 
-// Bootstrap: si ya hay sesión guardada, entrar directo
+// ════════════════════════════════════════════════
+// CARGA DE CONTACTOS
+// ════════════════════════════════════════════════
+async function cargarContactos(view){
+  const containerId = view === 'vMis' ? 'listMis' : 'listTodos';
+  const cntId       = view === 'vMis' ? 'cntMis'  : 'cntTodos';
+  const container = document.getElementById(containerId);
+  container.innerHTML = '<div class="loading-state"><div class="spinner"></div><div>Cargando contactos…</div></div>';
+  try{
+    // Para vTodos, solo Rayen ve realmente todos. El backend filtra según permisos.
+    const url = CRM_API + '?accion=crm_contactos&solicitante=' + encodeURIComponent(USUARIO);
+    const res = await fetch(url, { method:'GET', mode:'cors' });
+    const data = await res.json();
+    if(!data.ok){
+      container.innerHTML = '<div class="error-state"><b>Error:</b> ' + (data.error || 'desconocido') + '</div>';
+      return;
+    }
+    CACHE_CONTACTOS[view] = data.contactos || [];
+    document.getElementById(cntId).textContent = CACHE_CONTACTOS[view].length;
+    renderLista(view);
+  } catch(err){
+    container.innerHTML =
+      '<div class="error-state">' +
+      '<b>No se pudo conectar al backend.</b><br>' +
+      'Verificá que el deploy del Apps Script esté hecho. Si seguís viendo este error, avisale a Claude para revisar la URL del endpoint.<br><br>' +
+      '<small>Detalle: ' + err.message + '</small>' +
+      '</div>';
+  }
+}
+
+function renderLista(view){
+  const containerId = view === 'vMis' ? 'listMis' : 'listTodos';
+  const container = document.getElementById(containerId);
+  let lista = CACHE_CONTACTOS[view] || [];
+  const q = (CACHE_FILTRO[view] || '').toLowerCase().trim();
+  if(q){
+    lista = lista.filter(c =>
+      (c.nombre||'').toLowerCase().includes(q) ||
+      (c.institucion||'').toLowerCase().includes(q) ||
+      (c.cargo||'').toLowerCase().includes(q) ||
+      (c.email||'').toLowerCase().includes(q) ||
+      (c.ciudad||'').toLowerCase().includes(q) ||
+      (c.telefono||'').toLowerCase().includes(q)
+    );
+  }
+  if(!lista.length){
+    container.innerHTML =
+      '<div class="loading-state" style="padding:30px 20px;">' +
+      (q ? 'Ningún contacto coincide con "' + esc(q) + '"' : 'No hay contactos en esta vista todavía') +
+      '</div>';
+    return;
+  }
+  container.innerHTML = lista.map(c => {
+    const sel = String(c.id) === String(SELECTED_ID) ? ' sel' : '';
+    const pipe = (c.pipeline_estado || 'Lead').toLowerCase();
+    const pipeClass = ({
+      'lead':'lead','contactado':'contactado','reunión pactada':'reunion','reunion pactada':'reunion',
+      'cotización enviada':'cotizacion','cotizacion enviada':'cotizacion','en cierre':'cierre',
+      'cliente activo':'cliente','inactivo':'inactivo'
+    })[pipe] || 'lead';
+    const huerfano = !c.sub_categoria;
+    return '<div class="contact-card' + sel + '" onclick="abrirFicha(\'' + esc(c.id) + '\', \'' + view + '\')">' +
+      '<div class="cc-name">' + esc(c.nombre || c.institucion || '(sin nombre)') + '</div>' +
+      '<div class="cc-inst">' + esc(c.institucion || '') + (c.cargo ? ' · ' + esc(c.cargo) : '') + '</div>' +
+      '<div class="cc-meta">' +
+        '<span class="cc-pill ' + pipeClass + '">' + esc(c.pipeline_estado || 'Lead') + '</span>' +
+        (huerfano ? '<span class="cc-pill huerfano">Sin categoría</span>' : '<span class="cc-pill">' + esc(c.sub_categoria) + '</span>') +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function filtrarLista(view, q){
+  CACHE_FILTRO[view] = q;
+  renderLista(view);
+}
+
+// ════════════════════════════════════════════════
+// FICHA DE CONTACTO
+// ════════════════════════════════════════════════
+async function abrirFicha(id, view){
+  SELECTED_ID = id;
+  // Marcar selección visual
+  document.querySelectorAll('.contact-card').forEach(card => {
+    card.classList.remove('sel');
+    if(card.getAttribute('onclick') && card.getAttribute('onclick').indexOf("'" + id + "'") >= 0){
+      card.classList.add('sel');
+    }
+  });
+  const detailId = view === 'vMis' ? 'detailMis' : 'detailTodos';
+  const detail = document.getElementById(detailId);
+  detail.innerHTML = '<div class="loading-state"><div class="spinner"></div><div>Cargando ficha…</div></div>';
+  try{
+    const url = CRM_API + '?accion=crm_perfil&id=' + encodeURIComponent(id) + '&solicitante=' + encodeURIComponent(USUARIO);
+    const res = await fetch(url, { method:'GET', mode:'cors' });
+    const data = await res.json();
+    if(!data.ok){
+      detail.innerHTML = '<div class="error-state"><b>Error:</b> ' + (data.error || 'desconocido') + '</div>';
+      return;
+    }
+    renderFicha(detail, data);
+  } catch(err){
+    detail.innerHTML = '<div class="error-state"><b>No se pudo cargar la ficha:</b> ' + err.message + '</div>';
+  }
+}
+
+function renderFicha(container, data){
+  const c = data.contacto || {};
+  const tl = data.timeline || [];
+  const sug = data.sugerencia;
+  const tel = (c.telefono || '').toString();
+  const telLimpio = tel.replace(/\D/g, '');
+  const waNum = telLimpio.length >= 8 ? (telLimpio.startsWith('56') ? telLimpio : '56' + telLimpio) : '';
+  const waMsg = encodeURIComponent('Hola ' + (c.nombre || '') + ', soy ' + USUARIO + ' de OpenCluster Tech. Te escribo respecto a…');
+
+  container.innerHTML =
+    '<div class="profile">' +
+      '<div class="profile-header">' +
+        '<h1 class="profile-name">' + esc(c.nombre || c.institucion || '(sin nombre)') + '</h1>' +
+        '<p class="profile-sub">' + esc(c.institucion || '') + (c.cargo ? ' · ' + esc(c.cargo) : '') + '</p>' +
+        '<div class="profile-meta">' +
+          (c.email ? '<div class="profile-meta-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><a href="mailto:' + esc(c.email) + '">' + esc(c.email) + '</a></div>' : '') +
+          (c.telefono ? '<div class="profile-meta-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><a href="tel:' + esc(c.telefono) + '">' + esc(c.telefono) + '</a></div>' : '') +
+          (c.ciudad ? '<div class="profile-meta-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 7-8 13-8 13s-8-6-8-13a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>' + esc(c.ciudad) + (c.region ? ', ' + esc(c.region) : '') + '</div>' : '') +
+          (c.sub_categoria ? '<div class="profile-meta-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><circle cx="7" cy="7" r="1"/></svg>' + esc(c.sub_categoria) + '</div>' : '') +
+          (c.ejecutivo_asignado ? '<div class="profile-meta-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg>Ejecutivo: <b style="margin-left:3px;">' + esc(c.ejecutivo_asignado) + '</b></div>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div class="profile-actions">' +
+        '<button class="btn-action primary" onclick="alert(\'Próximamente — paso 4\')">' +
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> Nueva interacción' +
+        '</button>' +
+        (c.email ? '<button class="btn-action" onclick="alert(\'Plantillas en paso 8\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg> Enviar correo</button>' : '') +
+        (waNum ? '<a class="btn-action wa" target="_blank" href="https://wa.me/' + waNum + '?text=' + waMsg + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.2-.7.2-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.2-1.2-.4-2.4-1.4-.9-.8-1.5-1.7-1.6-2-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5 0-.2 0-.4 0-.5-.1-.2-.7-1.6-.9-2.2-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.2.2 2.2 3.4 5.3 4.7.7.3 1.3.5 1.8.6.7.2 1.4.2 1.9.1.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.2-.3-.3-.6-.4z"/><path d="M20.5 3.5C18.3 1.2 15.3 0 12.1 0 5.6 0 .3 5.3.3 11.8c0 2.1.6 4.1 1.6 5.9L0 24l6.5-1.7c1.7.9 3.6 1.4 5.6 1.4h.1c6.5 0 11.8-5.3 11.8-11.8 0-3.2-1.2-6.1-3.5-8.4zM12.1 21.7c-1.8 0-3.5-.5-5-1.4l-.4-.2-3.7 1 1-3.6-.2-.4c-1-1.6-1.5-3.4-1.5-5.3 0-5.4 4.4-9.8 9.8-9.8 2.6 0 5.1 1 6.9 2.9 1.9 1.9 2.9 4.3 2.9 6.9 0 5.4-4.4 9.9-9.8 9.9z"/></svg> WhatsApp</a>' : '') +
+        '<button class="btn-action" onclick="alert(\'Cotizar desde ficha en paso 6\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg> Enviar cotización</button>' +
+      '</div>' +
+      (sug ? '<div class="suggestion"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 21h6"/><path d="M12 17v4"/><path d="M12 3a6 6 0 0 0-6 6c0 3 2 5 3 6h6c1-1 3-3 3-6a6 6 0 0 0-6-6z"/></svg><span><b>Próxima acción:</b> ' + esc(sug.mensaje) + '</span></div>' : '') +
+      '<div class="profile-section">' +
+        '<div class="section-title">Línea de tiempo</div>' +
+        (tl.length === 0 ?
+          '<div class="tl-empty">Aún no hay actividad registrada para este contacto.</div>' :
+          '<div class="timeline">' +
+            tl.map(ev => {
+              const tipoClass = ev.tipo || 'interaccion';
+              return '<div class="tl-event ' + tipoClass + '">' +
+                '<div class="tl-head">' +
+                  '<span class="tl-fecha">' + esc(formatFecha(ev.fecha)) + '</span>' +
+                  '<span class="tl-tipo ' + tipoClass + '">' + esc(({cotizacion:'Cotización',reunion:'Reunión',interaccion:'Interacción'})[tipoClass] || tipoClass) + '</span>' +
+                '</div>' +
+                '<div class="tl-titulo">' + esc(ev.titulo) + '</div>' +
+                (ev.detalle ? '<div class="tl-detalle">' + esc(ev.detalle) + '</div>' : '') +
+                (ev.ejecutivo ? '<div class="tl-ejecutivo">por ' + esc(ev.ejecutivo) + '</div>' : '') +
+              '</div>';
+            }).join('') +
+          '</div>'
+        ) +
+      '</div>' +
+    '</div>';
+}
+
+// ════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function formatFecha(f){
+  if(!f) return '';
+  const s = String(f);
+  // Si viene "yyyy-MM-dd HH:mm:ss" o "dd-mm-yyyy" lo dejamos como está, normalizando un poco
+  if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0, 10);
+  return s;
+}
+
+// Bootstrap
 (function(){
   const u = localStorage.getItem(KEY_USER);
   const ok = localStorage.getItem(KEY_OK);

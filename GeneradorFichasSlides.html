@@ -235,13 +235,13 @@ body:not([data-tpl="editorial"]) .tpl-editorial-only{display:none !important}
 .ed-extra-img img{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain}
 
 /* Indicado para — TARJETA NARANJA COMPACTA flotando bajo Características (lado derecho) */
-.ed-indicado{flex-shrink:0;background:linear-gradient(135deg, #ec7c2e 0%, #c95e1f 100%);border-radius:10px;padding:0.14in 0.20in 0.14in 0.20in;margin-top:0.18in;margin-right:0.39in;margin-bottom:0.06in;position:relative;z-index:2;min-width:0;box-shadow:0 5px 14px rgba(197,94,31,.22)}
+.ed-indicado{flex-shrink:0;background:linear-gradient(135deg, #ec7c2e 0%, #c95e1f 100%);border-radius:10px;padding:calc(0.14in * var(--ed-indicado-pad-mult, 1)) 0.20in;margin-top:auto;margin-bottom:auto;margin-left:auto;margin-right:auto;position:relative;z-index:2;min-width:0;box-shadow:0 5px 14px rgba(197,94,31,.22);width:var(--ed-indicado-w, 100%);max-width:100%;transform:scale(var(--ed-indicado-scale, 1));transform-origin:center center}
 /* Marco fino interior translúcido (detalle elegante alrededor) */
 .ed-indicado::before{content:'';position:absolute;top:5px;left:5px;right:5px;bottom:5px;border:1px solid rgba(255,255,255,0.20);border-radius:7px;pointer-events:none}
-.ed-indicado h4{font-family:'Montserrat',sans-serif;font-weight:800;font-size:9pt;color:rgba(255,255,255,0.96);margin:0 0 6px 0;letter-spacing:2.4px;text-transform:uppercase;position:relative;z-index:2}
+.ed-indicado h4{font-family:'Montserrat',sans-serif;font-weight:800;font-size:9pt;color:rgba(255,255,255,0.96);margin:0 0 calc(6px * var(--ed-indicado-pad-mult, 1)) 0;letter-spacing:2.4px;text-transform:uppercase;position:relative;z-index:2}
 /* Distribución uniforme con CSS Columns (fluye como periódico, sin huecos del grid) */
 .ed-indicado ul{list-style:none;padding:0;margin:0;min-width:0;columns:2;column-gap:20px;position:relative;z-index:2}
-.ed-indicado li{font-size:8.5pt;line-height:1.3;color:rgba(255,255,255,0.93);padding-left:13px;position:relative;margin:0 0 5px 0;word-break:break-word;overflow-wrap:anywhere;hyphens:auto;font-weight:500;font-family:'Open Sans',sans-serif;break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid}
+.ed-indicado li{font-size:8.5pt;line-height:1.3;color:rgba(255,255,255,0.93);padding-left:13px;position:relative;margin:0 0 calc(5px * var(--ed-indicado-pad-mult, 1)) 0;word-break:break-word;overflow-wrap:anywhere;hyphens:auto;font-weight:500;font-family:'Open Sans',sans-serif;break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid}
 .ed-indicado li:last-child{margin-bottom:0}
 .ed-indicado li::before{content:'';position:absolute;left:0;top:5px;width:5px;height:5px;background:rgba(255,255,255,0.85);border-radius:50%}
 
@@ -1011,7 +1011,24 @@ body[data-active-mode="1page"] .modo2-only::after{content:'Activá "2 páginas" 
         </label>
         <div id="f_indicado_box" style="margin-top:8px">
           <textarea id="f_indicado_text" oninput="if(this.value.trim()){document.getElementById('f_indicado_on').checked=true;}actualizarPreview()" rows="4" placeholder="Una condición / usuario por línea, por ejemplo:&#10;Dificultades en el habla&#10;Lesión medular, esclerosis múltiple, ELA&#10;Parálisis cerebral&#10;Daño cerebral: ictus, traumatismo craneoencefálico&#10;Síndrome de Rett&#10;ACV / afasia"></textarea>
-          <div class="hint" style="margin-top:4px">Aparece en la plantilla Editorial debajo de la imagen extra. Lista de perfiles de usuarios o condiciones a las que aplica el producto.</div>
+          <div class="hint" style="margin-top:4px">Aparece en la plantilla Editorial debajo de las características. Lista de perfiles o condiciones a las que aplica el producto.</div>
+          <div class="row2" style="margin-top:10px">
+            <div class="field">
+              <label>Ancho del bloque <span class="vlbl" id="lbl_indicadoW">100 %</span></label>
+              <input type="range" id="ds_indicadoW" min="50" max="100" step="2" value="100" oninput="aplicarDiseno()">
+            </div>
+            <div class="field">
+              <label>Alto del bloque <span class="vlbl" id="lbl_indicadoH">100 %</span></label>
+              <input type="range" id="ds_indicadoH" min="60" max="150" step="5" value="100" oninput="aplicarDiseno()">
+            </div>
+          </div>
+          <div class="row2">
+            <div class="field">
+              <label>Escala general <span class="vlbl" id="lbl_indicadoScale">100 %</span></label>
+              <input type="range" id="ds_indicadoScale" min="70" max="130" step="2" value="100" oninput="aplicarDiseno()">
+            </div>
+          </div>
+          <div class="hint" style="margin-top:4px;font-size:10.5px"><b>Ancho:</b> achica horizontalmente (queda centrado). <b>Alto:</b> compacta o expande padding y separación entre items. <b>Escala general:</b> aplica zoom a todo el bloque proporcional. Cuando achicas, el bloque se centra automáticamente entre características y el footer.</div>
         </div>
       </div>
     </div>
@@ -1964,6 +1981,22 @@ function aplicarDiseno(){
   set('--ed-title-shift','ds_edTitleShift','in','lbl_edTitleShift',2);
   set('--ed-info-shift','ds_edInfoShift','in','lbl_edInfoShift',2);
   set('--ed-title-size','ds_edTitleSize','pt','lbl_edTitleSize',1);
+  // Indicado para — sliders (ancho %, multiplicador de padding/gap, escala general)
+  const indW = document.getElementById('ds_indicadoW');
+  if(indW){
+    fichas.forEach(f => f.style.setProperty('--ed-indicado-w', indW.value + '%'));
+    const lbl = document.getElementById('lbl_indicadoW'); if(lbl) lbl.textContent = indW.value + ' %';
+  }
+  const indH = document.getElementById('ds_indicadoH');
+  if(indH){
+    fichas.forEach(f => f.style.setProperty('--ed-indicado-pad-mult', (parseFloat(indH.value)/100).toFixed(2)));
+    const lbl = document.getElementById('lbl_indicadoH'); if(lbl) lbl.textContent = indH.value + ' %';
+  }
+  const indS = document.getElementById('ds_indicadoScale');
+  if(indS){
+    fichas.forEach(f => f.style.setProperty('--ed-indicado-scale', (parseFloat(indS.value)/100).toFixed(2)));
+    const lbl = document.getElementById('lbl_indicadoScale'); if(lbl) lbl.textContent = indS.value + ' %';
+  }
 
   // Re-aplicar auto-shrink + redistribuir caracts/specs (importante al cambiar tamaño de texto)
   setTimeout(() => {

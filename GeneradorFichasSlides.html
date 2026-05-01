@@ -3725,6 +3725,22 @@ function fitTextsInside(sel, opts){
 
 /* ══ Datos demo del Catre Clínico ══ */
 function precargarDemoCatre(){
+  // Reset COMPLETO: limpiar imágenes y campos opcionales para que el demo no se mezcle con datos previos
+  state.selected = null;
+  state.selectedImages = [];
+  state.allImages = [];
+  state.img3 = null;
+  state.img4 = null;
+  state.imgWide = null;
+  // Quitar imágenes guardadas en localStorage para que no se rellenen automáticamente
+  try{ localStorage.removeItem('oc_fichas_img3'); localStorage.removeItem('oc_fichas_img4'); localStorage.removeItem('oc_fichas_img_wide'); }catch(e){}
+  // Limpiar campos opcionales
+  const limpiar = ['f_indicado_text','f_caja_text','f_p2_mas_detalles','f_p2_caracts_manual','f_p2_titulo_corto','f_titulo_linea2'];
+  limpiar.forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  // Re-renderizar grids de imágenes 3 y 4 (vacías)
+  if(typeof renderImg3Grid === 'function') renderImg3Grid();
+  if(typeof renderImg4Grid === 'function') renderImg4Grid();
+  // Datos demo del catre
   document.getElementById('f_titulo').value = 'CATRE CLÍNICO ELÉCTRICO + COLCHÓN';
   document.getElementById('f_descripcion').value = 'Catre clínico eléctrico de 4 funciones que permiten posicionar al usuario según su necesidad. Altura regulable que evita lesiones de espalda. Batería de emergencia incluida. Control con función RCP. Ideal para atención clínica o procesos de recuperación domiciliaria.';
   document.getElementById('f_datos_rapidos').value = 'Categoría: Catre Clínico\nSub-categoría: Eléctrico\nFunciones: 4\nGarantía: 12 meses';
@@ -3732,6 +3748,11 @@ function precargarDemoCatre(){
 '#Tamaño\nLargo: 215 cm\nAncho: 96 cm\nAlto: 46 - 72 cm\n#Control remoto\nTodas las funciones y movimientos operados eléctricamente\n#Incluye\nColchón seccionado de 8 cm\nPortasueros de acero inoxidable de altura ajustable con gancho de drenaje\nBatería de emergencia\nCertificaciones CE, FDA, ISO 13485, ISO 9001, NQA y UKAS\nGarantía 12 meses';
   document.getElementById('f_specs').value =
 'Marco | Metálico con pintura anticorrosiva\nCabecero/pie de cama | Plástico PP\nTableros de cama | Acero de 4 partes\nAjuste de altura | 540 - 790 mm\nBarandas Laterales abatibles | Aluminio resistente\nÁngulo ascendente respaldo | 0° a 80°\nÁngulo ascendente reposapiés | 0° a 40°\nPeso máximo usuario | 250 kg\n4 Ruedas | Silenciosas con control de frenado\nDimensiones base del colchón | 190 x 90 cm\nFunción CPR | Incluida en el control';
+  // Resetear checkboxes opcionales (no marcados por default)
+  ['f_p2_imagen3_on','f_p2_imagen4_on','f_p2_detalles_on','f_p2_caracts_manual_on','f_indicado_on','f_caja_on'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.checked = false;
+  });
 }
 
 /* ══════════════ INTEGRACIÓN BIBLIOTECA DE FICHAS ══════════════ */

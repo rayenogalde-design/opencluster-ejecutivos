@@ -241,7 +241,7 @@ body:not([data-tpl="editorial"]) .tpl-editorial-only{display:none !important}
 .ed-indicado h4{font-family:'Montserrat',sans-serif;font-weight:800;font-size:9pt;color:rgba(255,255,255,0.96);margin:0 0 calc(6px * var(--ed-indicado-pad-mult, 1)) 0;letter-spacing:2.4px;text-transform:uppercase;position:relative;z-index:2}
 /* Distribución uniforme con CSS Columns (fluye como periódico, sin huecos del grid) */
 .ed-indicado ul{list-style:none;padding:0;margin:0;min-width:0;columns:2;column-gap:20px;position:relative;z-index:2}
-.ed-indicado li{font-size:8.5pt;line-height:1.3;color:rgba(255,255,255,0.93);padding-left:13px;position:relative;margin:0 0 calc(5px * var(--ed-indicado-pad-mult, 1)) 0;word-break:break-word;overflow-wrap:anywhere;hyphens:auto;font-weight:500;font-family:'Open Sans',sans-serif;break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid}
+.ed-indicado li{font-size:var(--ed-indicado-fs, 8.5pt);line-height:1.3;color:rgba(255,255,255,0.93);padding-left:13px;position:relative;margin:0 0 calc(5px * var(--ed-indicado-pad-mult, 1)) 0;word-break:break-word;overflow-wrap:anywhere;hyphens:auto;font-weight:500;font-family:'Open Sans',sans-serif;break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid}
 .ed-indicado li:last-child{margin-bottom:0}
 .ed-indicado li::before{content:'';position:absolute;left:0;top:5px;width:5px;height:5px;background:rgba(255,255,255,0.85);border-radius:50%}
 
@@ -1042,6 +1042,10 @@ body[data-active-mode="1page"] .modo2-only::after{content:'Activá "2 páginas" 
             <div class="field">
               <label>Escala general <span class="vlbl" id="lbl_indicadoScale">100 %</span></label>
               <input type="range" id="ds_indicadoScale" min="70" max="130" step="2" value="100" oninput="aplicarDiseno()">
+            </div>
+            <div class="field">
+              <label>Tamaño del texto <span class="vlbl" id="lbl_indicadoFs">8.5 pt</span></label>
+              <input type="range" id="ds_indicadoFs" min="7" max="12" step="0.25" value="8.5" oninput="aplicarDiseno()">
             </div>
           </div>
           <div class="hint" style="margin-top:4px;font-size:10.5px"><b>Ancho:</b> achica horizontalmente (queda centrado). <b>Alto:</b> compacta o expande padding y separación entre items. <b>Escala general:</b> aplica zoom a todo el bloque proporcional. Cuando achicas, el bloque se centra automáticamente entre características y el footer.</div>
@@ -2053,6 +2057,11 @@ function aplicarDiseno(){
   if(indS){
     fichas.forEach(f => f.style.setProperty('--ed-indicado-scale', (parseFloat(indS.value)/100).toFixed(2)));
     const lbl = document.getElementById('lbl_indicadoScale'); if(lbl) lbl.textContent = indS.value + ' %';
+  }
+  const indFs = document.getElementById('ds_indicadoFs');
+  if(indFs){
+    fichas.forEach(f => f.style.setProperty('--ed-indicado-fs', indFs.value + 'pt'));
+    const lbl = document.getElementById('lbl_indicadoFs'); if(lbl) lbl.textContent = indFs.value + ' pt';
   }
 
   // Re-aplicar auto-shrink + redistribuir caracts/specs (importante al cambiar tamaño de texto)

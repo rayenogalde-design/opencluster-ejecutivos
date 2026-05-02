@@ -1449,6 +1449,15 @@ body[data-active-mode="1page"] .modo2-only::after{content:'Activá "2 páginas" 
       <div id="biblio_exec_label" style="margin-bottom:12px;padding:10px 12px;background:#fff8f0;border:1px solid #ffd9b3;border-radius:8px;font-size:13px;color:var(--navy);font-weight:600"></div>
       <button class="btn-pdf" onclick="descargarPDF()" style="margin-bottom:8px">Descargar PDF</button>
       <div class="hint" style="margin-bottom:14px">Se abrirá la ventana del navegador para guardar como PDF. Asegúrate de elegir <b>"Guardar como PDF"</b> en Destino y <b>tamaño Carta</b>.</div>
+
+      <div style="margin-bottom:14px;padding:12px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px">
+        <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#0369a1;margin-bottom:8px">Respaldo local (recomendado antes de publicar)</label>
+        <button class="btn-pdf" onclick="descargarFichaJSON()" style="background:linear-gradient(135deg,#0369a1,#0284c7);margin-bottom:8px">Guardar JSON local</button>
+        <button class="btn-pdf" onclick="document.getElementById('f_cargar_json').click()" style="background:#fff;color:#0369a1;border:2px solid #0284c7;box-shadow:none">Cargar JSON guardado</button>
+        <input type="file" id="f_cargar_json" accept="application/json,.json" style="display:none" onchange="cargarFichaJSON(this)">
+        <div class="hint" style="margin-top:6px;font-size:11px">Antes de publicar: guarda un JSON local como respaldo. Si algo falla puedes <b>cargar JSON guardado</b> y recuperar todo el trabajo (textos + imágenes + sliders).</div>
+      </div>
+
       <button class="btn-pdf" onclick="publicarFichaBiblioteca()" style="background:linear-gradient(135deg,var(--orange),#c54a35)">Generar ficha técnica para equipo de difusión</button>
       <div class="hint" style="margin-top:6px">Sube la ficha a la <b>Biblioteca de Fichas Técnicas</b> de la Central. Una vez publicada, todo el equipo puede acceder y descargarla en PDF.</div>
     </div>
@@ -4073,6 +4082,57 @@ async function publicarFichaBiblioteca(){
   } finally {
     if(btn){ btn.disabled = false; btn.textContent = 'Generar ficha técnica para equipo de difusión'; }
   }
+}
+
+/* Descarga el JSON de la ficha actual como archivo local (respaldo antes de publicar) */
+function descargarFichaJSON(){
+  try{
+    const ficha = serializarFichaCompleta();
+    const titulo = (document.getElementById('f_titulo') || {}).value || 'ficha';
+    const slug = titulo.trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,60) || 'ficha';
+    const fechaISO = new Date().toISOString().slice(0,10);
+    const filename = 'OC_ficha_' + slug + '_' + fechaISO + '.json';
+    const blob = new Blob([JSON.stringify(ficha, null, 2)], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+    biblioToast('JSON guardado: ' + filename, 'ok');
+  }catch(e){
+    biblioToast('Error al guardar el JSON: ' + (e.message || 'desconocido'), 'error');
+    console.error('descargarFichaJSON:', e);
+  }
+}
+
+/* Carga un JSON respaldo desde el PC del usuario y lo aplica al generador */
+function cargarFichaJSON(input){
+  const f = input.files && input.files[0];
+  if(!f){ return; }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try{
+      const ficha = JSON.parse(e.target.result);
+      aplicarFichaCompleta(ficha);
+      // Refrescar grids y preview
+      if(typeof renderImageGrid === 'function') renderImageGrid();
+      if(typeof renderImg3Grid === 'function') renderImg3Grid();
+      if(typeof renderImg4Grid === 'function') renderImg4Grid();
+      actualizarPreview();
+      biblioToast('JSON cargado: ' + f.name, 'ok');
+    }catch(err){
+      biblioToast('No se pudo leer el JSON: ' + (err.message || 'archivo inválido'), 'error');
+      console.error('cargarFichaJSON:', err);
+    }
+  };
+  reader.onerror = () => {
+    biblioToast('Error al leer el archivo.', 'error');
+  };
+  reader.readAsText(f);
+  // Permitir cargar el mismo archivo dos veces seguidas (limpiar value)
+  input.value = '';
 }
 
 /* Carga una ficha existente desde URL params (?fileId=...) */

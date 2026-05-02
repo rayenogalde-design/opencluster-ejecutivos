@@ -4053,16 +4053,21 @@ async function publicarFichaBiblioteca(){
     const datosStr = JSON.stringify(fichaJSON);
     const tamMB = (datosStr.length / 1024 / 1024).toFixed(2);
     if(btn){ btn.textContent = 'Publicando ' + tamMB + ' MB...'; }
-    // Usar URLSearchParams (application/x-www-form-urlencoded) — Apps Script lo acepta
-    // como "simple request" sin preflight CORS (FormData multipart sí dispara preflight
-    // y Apps Script no responde OPTIONS, generando bloqueo CORS).
-    const body = new URLSearchParams();
-    body.set('accion', 'publicar_ficha');
-    body.set('producto', titulo);
-    body.set('categoria', categoria);
-    body.set('ejecutivo', ej);
-    body.set('datos', datosStr);
-    const resp = await fetch(BIBLIO_API_URL, { method:'POST', body: body });
+    // POST con Content-Type: text/plain (evita CORS preflight). Apps Script lee
+    // e.postData.contents y parsea el JSON.
+    const payload = {
+      accion: 'publicar_ficha',
+      producto: titulo,
+      categoria: categoria,
+      ejecutivo: ej,
+      datos: datosStr
+    };
+    const resp = await fetch(BIBLIO_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload),
+      redirect: 'follow'
+    });
     if(!resp.ok){
       biblioToast('Error HTTP ' + resp.status + ' al publicar (payload: ' + tamMB + ' MB). Probablemente el JSON pesa demasiado.', 'error');
       console.error('HTTP error:', resp.status, resp.statusText);

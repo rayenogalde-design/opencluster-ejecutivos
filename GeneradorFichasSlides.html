@@ -4041,24 +4041,35 @@ async function publicarFichaBiblioteca(){
   if(btn){ btn.disabled = true; btn.textContent = 'Publicando...'; }
   try{
     const fichaJSON = serializarFichaCompleta();
-    const body = new URLSearchParams();
-    body.set('accion', 'publicar_ficha');
-    body.set('producto', titulo);
-    body.set('categoria', categoria);
-    body.set('ejecutivo', ej);
-    body.set('datos', JSON.stringify(fichaJSON));
-    const resp = await fetch(BIBLIO_API_URL, { method:'POST', body: body });
+    const datosStr = JSON.stringify(fichaJSON);
+    const tamMB = (datosStr.length / 1024 / 1024).toFixed(2);
+    if(btn){ btn.textContent = 'Publicando ' + tamMB + ' MB...'; }
+    // Usar FormData (multipart/form-data) en lugar de URLSearchParams (form-urlencoded)
+    // — más confiable para payloads grandes con imágenes en base64
+    const formData = new FormData();
+    formData.set('accion', 'publicar_ficha');
+    formData.set('producto', titulo);
+    formData.set('categoria', categoria);
+    formData.set('ejecutivo', ej);
+    formData.set('datos', datosStr);
+    const resp = await fetch(BIBLIO_API_URL, { method:'POST', body: formData });
+    if(!resp.ok){
+      biblioToast('Error HTTP ' + resp.status + ' al publicar (payload: ' + tamMB + ' MB). Probablemente el JSON pesa demasiado.', 'error');
+      console.error('HTTP error:', resp.status, resp.statusText);
+      return;
+    }
     const data = await resp.json();
     if(data.ok){
-      biblioToast('Ficha publicada en la Biblioteca. ID: ' + data.id, 'ok');
+      biblioToast('Ficha publicada en la Biblioteca (' + tamMB + ' MB). ID: ' + data.id, 'ok');
       // Actualizar caché local de fichas
       await cargarBiblioFichas();
     } else {
       biblioToast('Error al publicar: ' + (data.error || 'desconocido'), 'error');
     }
   } catch(e){
-    biblioToast('Error de conexión al publicar la ficha. Revisa tu internet.', 'error');
-    console.error(e);
+    const msg = (e && e.message) ? e.message : 'desconocido';
+    biblioToast('Error: ' + msg, 'error');
+    console.error('Error publicarFicha:', e);
   } finally {
     if(btn){ btn.disabled = false; btn.textContent = 'Generar ficha técnica para equipo de difusión'; }
   }

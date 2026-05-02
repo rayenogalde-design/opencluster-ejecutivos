@@ -4263,37 +4263,73 @@ async function registrarFichaEnDrive(){
   }
   const btn = event && event.target && event.target.closest('button');
   if(btn){ btn.disabled = true; btn.textContent = 'Comprimiendo imágenes...'; }
+  let etapa = 'inicio';
   try{
+    // Verificar que Google Identity Services cargó
+    etapa = 'cargar Google Identity Services';
+    if(typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2){
+      throw new Error('Google Identity Services no cargó. Recarga la página con Ctrl+Shift+F5 y reintenta.');
+    }
+
+    etapa = 'comprimir imágenes';
     await comprimirImagenesParaSubir(900, 0.75);
     if(typeof renderImg3Grid === 'function') renderImg3Grid();
     if(typeof renderImg4Grid === 'function') renderImg4Grid();
     actualizarPreview();
 
+    etapa = 'obtener carpeta de Drive (Apps Script)';
     if(btn){ btn.textContent = 'Buscando carpeta de Drive...'; }
     const resp = await fetch(BIBLIO_API_URL + '?accion=listar_fichas');
+    if(!resp.ok) throw new Error('Apps Script HTTP ' + resp.status);
     const data = await resp.json();
     const folderId = data.folderId;
     if(!folderId){
-      throw new Error('No se pudo obtener el ID de la carpeta. Recarga e intenta de nuevo.');
+      throw new Error('Apps Script no devolvió folderId. ¿Redeployaste el script con la versión nueva?');
     }
 
-    if(btn){ btn.textContent = 'Autorizando acceso a Drive...'; }
+    etapa = 'autorización OAuth';
+    if(btn){ btn.textContent = 'Autorizando Drive (acepta el popup)...'; }
+    const token = await obtenerAccessTokenOAuth();
+    if(!token) throw new Error('No se obtuvo el token de OAuth.');
+
+    etapa = 'subir JSON a Drive';
     const ficha = serializarFichaCompleta();
     const filename = _nombreArchivoFicha() + '.json';
     const jsonString = JSON.stringify(ficha);
     const tamMB = (jsonString.length / 1024 / 1024).toFixed(2);
-
     if(btn){ btn.textContent = 'Subiendo ' + tamMB + ' MB a Drive...'; }
-    const result = await subirJSONaDriveOAuth(filename, jsonString, folderId);
 
-    if(result.id){
-      biblioToast('✓ Ficha publicada en Drive (' + tamMB + ' MB). Ya está disponible en la Biblioteca.', 'ok');
+    const metadata = { name: filename, parents: [folderId], mimeType: 'application/json' };
+    const boundary = '-------OpenCluster' + Date.now();
+    const delim = '\r\n--' + boundary + '\r\n';
+    const closeDelim = '\r\n--' + boundary + '--';
+    const body =
+      delim + 'Content-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(metadata) +
+      delim + 'Content-Type: application/json\r\n\r\n' + jsonString +
+      closeDelim;
+    const driveResp = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'multipart/related; boundary=' + boundary
+      },
+      body: body
+    });
+    if(!driveResp.ok){
+      const errText = await driveResp.text();
+      throw new Error('Drive API HTTP ' + driveResp.status + ': ' + errText.slice(0, 200));
+    }
+    const result = await driveResp.json();
+
+    if(result && result.id){
+      biblioToast('✓ Ficha publicada en Drive (' + tamMB + ' MB). Ya disponible en la Biblioteca.', 'ok');
     } else {
-      biblioToast('Subida completada pero sin ID en respuesta. Revisa la Biblioteca.', 'error');
+      biblioToast('Subida completada pero sin ID. Revisa la Biblioteca.', 'error');
     }
   }catch(e){
-    biblioToast('Error al subir: ' + (e.message || 'desconocido') + '. Como respaldo, usa "Guardar JSON local" y súbelo manualmente a Drive.', 'error');
-    console.error('registrarFichaEnDrive:', e);
+    const msg = (e && e.message) ? e.message : 'desconocido';
+    biblioToast('Error en etapa "' + etapa + '": ' + msg, 'error');
+    console.error('registrarFichaEnDrive [' + etapa + ']:', e);
   }finally{
     if(btn){ btn.disabled = false; btn.textContent = 'Registrar ficha técnica'; }
   }

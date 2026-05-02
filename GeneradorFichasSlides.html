@@ -4071,17 +4071,24 @@ async function publicarFichaBiblioteca(){
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload)
     });
-    // Esperar a que Apps Script procese y guarde. Para JSONs grandes puede tardar varios segundos.
-    if(btn){ btn.textContent = 'Verificando publicación...'; }
-    await new Promise(r => setTimeout(r, 4500));
-    await cargarBiblioFichas();
-    const nuevaFicha = (_biblioFichas || []).find(f => !fichasAntesIds.has(f.id));
+    // Apps Script puede tardar varios segundos en procesar payloads grandes.
+    // Reintentar la verificación cada 3 segundos hasta 30 segundos.
+    let nuevaFicha = null;
+    const maxIntentos = 10;
+    for(let i = 0; i < maxIntentos; i++){
+      await new Promise(r => setTimeout(r, 3000));
+      const segundosTranscurridos = (i + 1) * 3;
+      if(btn){ btn.textContent = 'Verificando... (' + segundosTranscurridos + 's de 30s)'; }
+      await cargarBiblioFichas();
+      nuevaFicha = (_biblioFichas || []).find(f => !fichasAntesIds.has(f.id));
+      if(nuevaFicha) break;
+    }
     if(nuevaFicha){
-      biblioToast('Ficha publicada en la Biblioteca (' + tamMB + ' MB). ID: ' + nuevaFicha.id, 'ok');
+      biblioToast('✓ Ficha publicada en la Biblioteca (' + tamMB + ' MB). ID: ' + nuevaFicha.id, 'ok');
     } else if((_biblioFichas || []).length > fichasAntes){
-      biblioToast('Ficha publicada en la Biblioteca (' + tamMB + ' MB).', 'ok');
+      biblioToast('✓ Ficha publicada en la Biblioteca (' + tamMB + ' MB).', 'ok');
     } else {
-      biblioToast('No se confirmó la publicación todavía. Espera 30 seg y recarga la Biblioteca; si no aparece, vuelve a publicar.', 'error');
+      biblioToast('No se confirmó la publicación tras 30 seg. Abre la Biblioteca en otra pestaña: si la ficha está, OK; si no, vuelve a intentar.', 'error');
     }
   } catch(e){
     const msg = (e && e.message) ? e.message : 'desconocido';

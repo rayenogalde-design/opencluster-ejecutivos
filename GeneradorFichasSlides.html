@@ -1969,10 +1969,19 @@ async function init(){
   await loadProducts();
   // Cargar la lista de fichas existentes en la Biblioteca (para chequeo de duplicado)
   await cargarBiblioFichas();
-  // Si la URL trae ?fileId=X, cargar la ficha existente para edición; si no, datos demo
+  // Si la URL trae ?fileId=X, cargar la ficha existente para edición; si no, dejar vacío para que el ejecutivo elija un producto
   const cargada = await cargarFichaDesdeURL();
   if(!cargada){
-    precargarDemoCatre();
+    // Estado limpio (sin demo precargado) — la usuaria selecciona producto y se rellena
+    state.selected = null;
+    state.selectedImages = [];
+    state.allImages = [];
+    state.img3 = null;
+    state.img4 = null;
+    state.imgWide = null;
+    try{ localStorage.removeItem('oc_fichas_img3'); localStorage.removeItem('oc_fichas_img4'); localStorage.removeItem('oc_fichas_img_wide'); }catch(e){}
+    ['f_titulo','f_titulo_linea2','f_descripcion','f_caracteristicas','f_specs','f_datos_rapidos','f_indicado_text','f_caja_text','f_p2_mas_detalles','f_p2_caracts_manual','f_p2_titulo_corto'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+    ['f_p2_imagen3_on','f_p2_imagen4_on','f_p2_detalles_on','f_p2_caracts_manual_on','f_indicado_on','f_caja_on'].forEach(id => { const el = document.getElementById(id); if(el) el.checked = false; });
   }
   // Pintar label del ejecutivo
   pintarLabelEjecutivo();

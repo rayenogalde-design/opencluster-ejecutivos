@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Fichas Técnicas · OpenCluster Tech</title>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<!-- Google Identity Services (OAuth para subir directo a Drive) -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 :root{
   --navy:#001a60;
@@ -1458,7 +1460,7 @@ body[data-active-mode="1page"] .modo2-only::after{content:'Activá "2 páginas" 
       </div>
 
       <button class="btn-pdf" onclick="registrarFichaEnDrive()" style="background:linear-gradient(135deg,var(--orange),#c54a35)">Registrar ficha técnica</button>
-      <div class="hint" style="margin-top:6px;font-size:11.5px"><b>Al hacer clic:</b> (1) se descarga el JSON a tu PC; (2) se abre la carpeta de Drive en una pestaña nueva. <b>Arrastra el JSON descargado</b> a esa carpeta para que aparezca en la <b>Biblioteca de Fichas Técnicas</b> de la Central.</div>
+      <div class="hint" style="margin-top:6px;font-size:11.5px"><b>Sube la ficha directo a Drive.</b> La primera vez Google te pedirá autorización (aceptas con tu cuenta @opencluster-tech.cl). De ahí en adelante todo es automático y la ficha aparece en la <b>Biblioteca de Fichas Técnicas</b> al instante.</div>
     </div>
 
   </section>
@@ -4177,9 +4179,82 @@ function descargarFichaJSON(){
   }
 }
 
-/* Registrar ficha en la Biblioteca:
-   1) descarga el JSON local automáticamente
-   2) abre la carpeta de Drive en pestaña nueva para que el usuario arrastre el JSON */
+/* === OAuth + Drive API (subida directa, sin descargar a PC) === */
+const OAUTH_CLIENT_ID = '1006878042668-v7aft4fm0ldn5q75lp479hbpc7cohsr2.apps.googleusercontent.com';
+const OAUTH_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+let _oauthTokenClient = null;
+let _oauthAccessToken = null;
+
+function inicializarOAuth(){
+  if(typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2){
+    return false;
+  }
+  if(_oauthTokenClient) return true;
+  _oauthTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: OAUTH_CLIENT_ID,
+    scope: OAUTH_SCOPE,
+    callback: ''
+  });
+  return true;
+}
+
+function obtenerAccessTokenOAuth(){
+  return new Promise((resolve, reject) => {
+    if(!inicializarOAuth()){
+      reject(new Error('Google Identity Services no cargó. Recarga la página.'));
+      return;
+    }
+    _oauthTokenClient.callback = (response) => {
+      if(response.error){
+        reject(new Error(response.error_description || response.error));
+        return;
+      }
+      _oauthAccessToken = response.access_token;
+      resolve(response.access_token);
+    };
+    if(_oauthAccessToken){
+      _oauthTokenClient.requestAccessToken({ prompt: '' });
+    } else {
+      _oauthTokenClient.requestAccessToken({ prompt: 'consent' });
+    }
+  });
+}
+
+async function subirJSONaDriveOAuth(filename, jsonString, folderId){
+  const token = await obtenerAccessTokenOAuth();
+  const metadata = {
+    name: filename,
+    parents: [folderId],
+    mimeType: 'application/json'
+  };
+  const boundary = '-------OpenCluster' + Date.now();
+  const delim = '\r\n--' + boundary + '\r\n';
+  const closeDelim = '\r\n--' + boundary + '--';
+  const body =
+    delim +
+    'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+    JSON.stringify(metadata) +
+    delim +
+    'Content-Type: application/json\r\n\r\n' +
+    jsonString +
+    closeDelim;
+  const resp = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + token,
+      'Content-Type': 'multipart/related; boundary=' + boundary
+    },
+    body: body
+  });
+  if(!resp.ok){
+    const errText = await resp.text();
+    throw new Error('Drive API ' + resp.status + ': ' + errText);
+  }
+  return resp.json();
+}
+
+/* Registrar ficha técnica: sube directamente a la carpeta de Drive vía OAuth.
+   El usuario autoriza UNA VEZ y de ahí en adelante todo automático. */
 async function registrarFichaEnDrive(){
   const titulo = (document.getElementById('f_titulo') || {}).value || '';
   if(!titulo.trim()){
@@ -4189,24 +4264,35 @@ async function registrarFichaEnDrive(){
   const btn = event && event.target && event.target.closest('button');
   if(btn){ btn.disabled = true; btn.textContent = 'Comprimiendo imágenes...'; }
   try{
-    // Comprimir imágenes para que el JSON sea liviano
     await comprimirImagenesParaSubir(900, 0.75);
     if(typeof renderImg3Grid === 'function') renderImg3Grid();
     if(typeof renderImg4Grid === 'function') renderImg4Grid();
     actualizarPreview();
-    if(btn){ btn.textContent = 'Descargando JSON...'; }
-    descargarFichaJSON();
-    // Abrir carpeta de Drive en pestaña nueva (URL la trae listar_fichas)
-    if(btn){ btn.textContent = 'Abriendo carpeta de Drive...'; }
-    const folderUrl = await obtenerFolderUrl();
-    if(folderUrl){
-      window.open(folderUrl, '_blank');
-      biblioToast('JSON descargado. Arrástralo a la carpeta de Drive que se abrió en otra pestaña.', 'ok');
+
+    if(btn){ btn.textContent = 'Buscando carpeta de Drive...'; }
+    const resp = await fetch(BIBLIO_API_URL + '?accion=listar_fichas');
+    const data = await resp.json();
+    const folderId = data.folderId;
+    if(!folderId){
+      throw new Error('No se pudo obtener el ID de la carpeta. Recarga e intenta de nuevo.');
+    }
+
+    if(btn){ btn.textContent = 'Autorizando acceso a Drive...'; }
+    const ficha = serializarFichaCompleta();
+    const filename = _nombreArchivoFicha() + '.json';
+    const jsonString = JSON.stringify(ficha);
+    const tamMB = (jsonString.length / 1024 / 1024).toFixed(2);
+
+    if(btn){ btn.textContent = 'Subiendo ' + tamMB + ' MB a Drive...'; }
+    const result = await subirJSONaDriveOAuth(filename, jsonString, folderId);
+
+    if(result.id){
+      biblioToast('✓ Ficha publicada en Drive (' + tamMB + ' MB). Ya está disponible en la Biblioteca.', 'ok');
     } else {
-      biblioToast('JSON descargado. Sube el archivo manualmente a la carpeta "OpenCluster Fichas Tecnicas" en Drive.', 'ok');
+      biblioToast('Subida completada pero sin ID en respuesta. Revisa la Biblioteca.', 'error');
     }
   }catch(e){
-    biblioToast('Error: ' + (e.message || 'desconocido'), 'error');
+    biblioToast('Error al subir: ' + (e.message || 'desconocido') + '. Como respaldo, usa "Guardar JSON local" y súbelo manualmente a Drive.', 'error');
     console.error('registrarFichaEnDrive:', e);
   }finally{
     if(btn){ btn.disabled = false; btn.textContent = 'Registrar ficha técnica'; }

@@ -1451,15 +1451,14 @@ body[data-active-mode="1page"] .modo2-only::after{content:'Activá "2 páginas" 
       <div class="hint" style="margin-bottom:14px">Se abrirá la ventana del navegador para guardar como PDF. Asegúrate de elegir <b>"Guardar como PDF"</b> en Destino y <b>tamaño Carta</b>.</div>
 
       <div style="margin-bottom:14px;padding:12px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px">
-        <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#0369a1;margin-bottom:8px">Respaldo local (recomendado antes de publicar)</label>
-        <button class="btn-pdf" onclick="descargarFichaJSON()" style="background:linear-gradient(135deg,#0369a1,#0284c7);margin-bottom:8px">Guardar JSON local</button>
+        <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#0369a1;margin-bottom:8px">Recuperar trabajo guardado</label>
         <button class="btn-pdf" onclick="document.getElementById('f_cargar_json').click()" style="background:#fff;color:#0369a1;border:2px solid #0284c7;box-shadow:none">Cargar JSON guardado</button>
         <input type="file" id="f_cargar_json" accept="application/json,.json" style="display:none" onchange="cargarFichaJSON(this)">
-        <div class="hint" style="margin-top:6px;font-size:11px">Antes de publicar: guarda un JSON local como respaldo. Si algo falla puedes <b>cargar JSON guardado</b> y recuperar todo el trabajo (textos + imágenes + sliders).</div>
+        <div class="hint" style="margin-top:6px;font-size:11px">Si guardaste un JSON antes y quieres seguir editando, cárgalo aquí.</div>
       </div>
 
-      <button class="btn-pdf" onclick="publicarFichaBiblioteca()" style="background:linear-gradient(135deg,var(--orange),#c54a35)">Generar ficha técnica para equipo de difusión</button>
-      <div class="hint" style="margin-top:6px">Sube la ficha a la <b>Biblioteca de Fichas Técnicas</b> de la Central. Una vez publicada, todo el equipo puede acceder y descargarla en PDF.</div>
+      <button class="btn-pdf" onclick="registrarFichaEnDrive()" style="background:linear-gradient(135deg,var(--orange),#c54a35)">Registrar ficha técnica</button>
+      <div class="hint" style="margin-top:6px;font-size:11.5px"><b>Al hacer clic:</b> (1) se descarga el JSON a tu PC; (2) se abre la carpeta de Drive en una pestaña nueva. <b>Arrastra el JSON descargado</b> a esa carpeta para que aparezca en la <b>Biblioteca de Fichas Técnicas</b> de la Central.</div>
     </div>
 
   </section>
@@ -4175,6 +4174,54 @@ function descargarFichaJSON(){
   }catch(e){
     biblioToast('Error al guardar el JSON: ' + (e.message || 'desconocido'), 'error');
     console.error('descargarFichaJSON:', e);
+  }
+}
+
+/* Registrar ficha en la Biblioteca:
+   1) descarga el JSON local automáticamente
+   2) abre la carpeta de Drive en pestaña nueva para que el usuario arrastre el JSON */
+async function registrarFichaEnDrive(){
+  const titulo = (document.getElementById('f_titulo') || {}).value || '';
+  if(!titulo.trim()){
+    biblioToast('Falta el nombre del producto. Selecciona un producto en la sección 1.', 'error');
+    return;
+  }
+  const btn = event && event.target && event.target.closest('button');
+  if(btn){ btn.disabled = true; btn.textContent = 'Comprimiendo imágenes...'; }
+  try{
+    // Comprimir imágenes para que el JSON sea liviano
+    await comprimirImagenesParaSubir(900, 0.75);
+    if(typeof renderImg3Grid === 'function') renderImg3Grid();
+    if(typeof renderImg4Grid === 'function') renderImg4Grid();
+    actualizarPreview();
+    if(btn){ btn.textContent = 'Descargando JSON...'; }
+    descargarFichaJSON();
+    // Abrir carpeta de Drive en pestaña nueva (URL la trae listar_fichas)
+    if(btn){ btn.textContent = 'Abriendo carpeta de Drive...'; }
+    const folderUrl = await obtenerFolderUrl();
+    if(folderUrl){
+      window.open(folderUrl, '_blank');
+      biblioToast('JSON descargado. Arrástralo a la carpeta de Drive que se abrió en otra pestaña.', 'ok');
+    } else {
+      biblioToast('JSON descargado. Sube el archivo manualmente a la carpeta "OpenCluster Fichas Tecnicas" en Drive.', 'ok');
+    }
+  }catch(e){
+    biblioToast('Error: ' + (e.message || 'desconocido'), 'error');
+    console.error('registrarFichaEnDrive:', e);
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = 'Registrar ficha técnica'; }
+  }
+}
+
+/* Obtiene la URL de la carpeta de Drive desde el endpoint listar_fichas */
+async function obtenerFolderUrl(){
+  try{
+    const resp = await fetch(BIBLIO_API_URL + '?accion=listar_fichas');
+    const data = await resp.json();
+    return data.folderUrl || null;
+  }catch(e){
+    console.warn('No se pudo obtener folderUrl:', e);
+    return null;
   }
 }
 

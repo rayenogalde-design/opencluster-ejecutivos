@@ -4053,8 +4053,11 @@ async function publicarFichaBiblioteca(){
     const datosStr = JSON.stringify(fichaJSON);
     const tamMB = (datosStr.length / 1024 / 1024).toFixed(2);
     if(btn){ btn.textContent = 'Publicando ' + tamMB + ' MB...'; }
-    // POST con Content-Type: text/plain (evita CORS preflight). Apps Script lee
-    // e.postData.contents y parsea el JSON.
+    // Bug conocido de Apps Script: el POST funciona pero el redirect 302 que devuelve
+    // dispara CORS. Workaround: enviar con mode:'no-cors' (response opaque, no se puede leer)
+    // y verificar el éxito recargando la lista de fichas y comparando con la cantidad previa.
+    const fichasAntes = (_biblioFichas || []).length;
+    const fichasAntesIds = new Set((_biblioFichas || []).map(f => f.id));
     const payload = {
       accion: 'publicar_ficha',
       producto: titulo,
@@ -4062,24 +4065,23 @@ async function publicarFichaBiblioteca(){
       ejecutivo: ej,
       datos: datosStr
     };
-    const resp = await fetch(BIBLIO_API_URL, {
+    await fetch(BIBLIO_API_URL, {
       method: 'POST',
+      mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload),
-      redirect: 'follow'
+      body: JSON.stringify(payload)
     });
-    if(!resp.ok){
-      biblioToast('Error HTTP ' + resp.status + ' al publicar (payload: ' + tamMB + ' MB). Probablemente el JSON pesa demasiado.', 'error');
-      console.error('HTTP error:', resp.status, resp.statusText);
-      return;
-    }
-    const data = await resp.json();
-    if(data.ok){
-      biblioToast('Ficha publicada en la Biblioteca (' + tamMB + ' MB). ID: ' + data.id, 'ok');
-      // Actualizar caché local de fichas
-      await cargarBiblioFichas();
+    // Esperar a que Apps Script procese y guarde. Para JSONs grandes puede tardar varios segundos.
+    if(btn){ btn.textContent = 'Verificando publicación...'; }
+    await new Promise(r => setTimeout(r, 4500));
+    await cargarBiblioFichas();
+    const nuevaFicha = (_biblioFichas || []).find(f => !fichasAntesIds.has(f.id));
+    if(nuevaFicha){
+      biblioToast('Ficha publicada en la Biblioteca (' + tamMB + ' MB). ID: ' + nuevaFicha.id, 'ok');
+    } else if((_biblioFichas || []).length > fichasAntes){
+      biblioToast('Ficha publicada en la Biblioteca (' + tamMB + ' MB).', 'ok');
     } else {
-      biblioToast('Error al publicar: ' + (data.error || 'desconocido'), 'error');
+      biblioToast('No se confirmó la publicación todavía. Espera 30 seg y recarga la Biblioteca; si no aparece, vuelve a publicar.', 'error');
     }
   } catch(e){
     const msg = (e && e.message) ? e.message : 'desconocido';

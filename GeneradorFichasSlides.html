@@ -4053,15 +4053,16 @@ async function publicarFichaBiblioteca(){
     const datosStr = JSON.stringify(fichaJSON);
     const tamMB = (datosStr.length / 1024 / 1024).toFixed(2);
     if(btn){ btn.textContent = 'Publicando ' + tamMB + ' MB...'; }
-    // Usar FormData (multipart/form-data) en lugar de URLSearchParams (form-urlencoded)
-    // — más confiable para payloads grandes con imágenes en base64
-    const formData = new FormData();
-    formData.set('accion', 'publicar_ficha');
-    formData.set('producto', titulo);
-    formData.set('categoria', categoria);
-    formData.set('ejecutivo', ej);
-    formData.set('datos', datosStr);
-    const resp = await fetch(BIBLIO_API_URL, { method:'POST', body: formData });
+    // Usar URLSearchParams (application/x-www-form-urlencoded) — Apps Script lo acepta
+    // como "simple request" sin preflight CORS (FormData multipart sí dispara preflight
+    // y Apps Script no responde OPTIONS, generando bloqueo CORS).
+    const body = new URLSearchParams();
+    body.set('accion', 'publicar_ficha');
+    body.set('producto', titulo);
+    body.set('categoria', categoria);
+    body.set('ejecutivo', ej);
+    body.set('datos', datosStr);
+    const resp = await fetch(BIBLIO_API_URL, { method:'POST', body: body });
     if(!resp.ok){
       biblioToast('Error HTTP ' + resp.status + ' al publicar (payload: ' + tamMB + ' MB). Probablemente el JSON pesa demasiado.', 'error');
       console.error('HTTP error:', resp.status, resp.statusText);
@@ -4084,14 +4085,19 @@ async function publicarFichaBiblioteca(){
   }
 }
 
+/* Genera nombre estándar para los archivos: "{Producto}.Ficha_Tecnica.OCT" */
+function _nombreArchivoFicha(){
+  const titulo = (document.getElementById('f_titulo') || {}).value || 'Ficha';
+  // Limpiar caracteres no válidos en nombres de archivo (Windows/Mac/Linux)
+  const limpio = titulo.trim().replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').slice(0, 80) || 'Ficha';
+  return limpio + '.Ficha_Tecnica.OCT';
+}
+
 /* Descarga el JSON de la ficha actual como archivo local (respaldo antes de publicar) */
 function descargarFichaJSON(){
   try{
     const ficha = serializarFichaCompleta();
-    const titulo = (document.getElementById('f_titulo') || {}).value || 'ficha';
-    const slug = titulo.trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,60) || 'ficha';
-    const fechaISO = new Date().toISOString().slice(0,10);
-    const filename = 'OC_ficha_' + slug + '_' + fechaISO + '.json';
+    const filename = _nombreArchivoFicha() + '.json';
     const blob = new Blob([JSON.stringify(ficha, null, 2)], { type: 'application/json;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -4159,10 +4165,15 @@ async function cargarFichaDesdeURL(){
   }
 }
 
-/* ══ Descarga PDF — con recordatorio personalizado ══ */
+/* ══ Descarga PDF — con recordatorio personalizado y nombre estándar ══ */
 function descargarPDF(){
   mostrarRecordatorioPDF(() => {
     actualizarPreview();
+    // Cambiar el title temporalmente para que Chrome use ese nombre como sugerido en "Guardar como PDF"
+    const titleOriginal = document.title;
+    document.title = _nombreArchivoFicha();
+    const restaurarTitle = () => { document.title = titleOriginal; window.removeEventListener('afterprint', restaurarTitle); };
+    window.addEventListener('afterprint', restaurarTitle);
     setTimeout(()=> window.print(), 100);
   });
 }

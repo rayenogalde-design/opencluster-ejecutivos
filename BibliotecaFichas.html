@@ -146,7 +146,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;colo
     <div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:13px;color:#c54a35;letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px">¿Cómo publicar una ficha nueva?</div>
     <div style="font-size:13px;line-height:1.5;color:#3a4555">1. Crea la ficha en el <b>Generador</b> y haz clic en <b>"Registrar ficha técnica"</b>. <br>2. Se descarga el JSON a tu PC y se abre la carpeta de Drive. <br>3. <b>Arrastra el JSON</b> a la carpeta. <br>4. Recarga esta página y la ficha aparecerá en la lista.</div>
   </div>
-  <a id="btnAbrirDrive" href="#" target="_blank" rel="noopener" style="padding:11px 22px;background:linear-gradient(135deg,#ff7e00,#c54a35);color:#fff;border-radius:8px;font-family:Montserrat,sans-serif;font-weight:700;font-size:13px;text-decoration:none;letter-spacing:.3px;flex-shrink:0;box-shadow:0 4px 12px rgba(255,126,0,.25)">Abrir carpeta de Drive</a>
+  <a id="btnAbrirDrive" href="https://drive.google.com/drive/search?q=OpenCluster%20Fichas%20Tecnicas" target="_blank" rel="noopener" onclick="abrirCarpetaDrive(event)" style="padding:11px 22px;background:linear-gradient(135deg,#ff7e00,#c54a35);color:#fff;border-radius:8px;font-family:Montserrat,sans-serif;font-weight:700;font-size:13px;text-decoration:none;letter-spacing:.3px;flex-shrink:0;box-shadow:0 4px 12px rgba(255,126,0,.25)">Abrir carpeta de Drive</a>
 </div>
 
 <!-- Search -->
@@ -201,22 +201,42 @@ function obtenerAccessTokenOAuth(){
       reject(new Error('Google Identity Services no cargó. Recarga la página.'));
       return;
     }
+    let resolved = false;
+    const timeoutId = setTimeout(() => {
+      if(!resolved){
+        resolved = true;
+        reject(new Error('Timeout esperando autorización OAuth (90s). Habilita popups y reintenta.'));
+      }
+    }, 90000);
     _oauthTokenClient.callback = (response) => {
+      if(resolved) return;
+      resolved = true;
+      clearTimeout(timeoutId);
       if(response.error){ reject(new Error(response.error_description || response.error)); return; }
       _oauthAccessToken = response.access_token;
       resolve(response.access_token);
     };
-    if(_oauthAccessToken){
-      _oauthTokenClient.requestAccessToken({ prompt: '' });
-    } else {
-      _oauthTokenClient.requestAccessToken({ prompt: 'consent' });
+    _oauthTokenClient.error_callback = (err) => {
+      if(resolved) return;
+      resolved = true;
+      clearTimeout(timeoutId);
+      reject(new Error('OAuth error: ' + (err && err.type ? err.type : 'desconocido')));
+    };
+    try{
+      if(_oauthAccessToken){
+        _oauthTokenClient.requestAccessToken({ prompt: '' });
+      } else {
+        _oauthTokenClient.requestAccessToken({ prompt: 'consent' });
+      }
+    }catch(e){
+      if(!resolved){ resolved = true; clearTimeout(timeoutId); reject(e); }
     }
   });
 }
 
-async function buscarOCrearCarpetaFichas(){
+async function buscarOCrearCarpetaFichas(tokenParam){
   if(_fichasFolderId) return _fichasFolderId;
-  const token = await obtenerAccessTokenOAuth();
+  const token = tokenParam || _oauthAccessToken || await obtenerAccessTokenOAuth();
   const q = encodeURIComponent("name='" + FICHAS_FOLDER_NAME + "' and mimeType='application/vnd.google-apps.folder' and trashed=false");
   const respBuscar = await fetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,name)', {
     headers: { 'Authorization': 'Bearer ' + token }
@@ -334,11 +354,36 @@ function filterFichas() {
   renderCards(filtered);
 }
 
+/* Abre carpeta de Drive: si ya tenemos folderId va directo; si no, hace OAuth y la abre.
+   Si OAuth falla, deja el href default (búsqueda en Drive por nombre). */
+async function abrirCarpetaDrive(ev){
+  if(_fichasFolderId){
+    return; // deja que el href haga su trabajo
+  }
+  ev.preventDefault();
+  const btn = ev.currentTarget;
+  const originalText = btn.textContent;
+  btn.textContent = 'Resolviendo carpeta...';
+  try{
+    const token = await obtenerAccessTokenOAuth();
+    const folderId = await buscarOCrearCarpetaFichas(token);
+    const url = 'https://drive.google.com/drive/folders/' + folderId;
+    btn.href = url;
+    window.open(url, '_blank', 'noopener');
+  }catch(e){
+    console.error('abrirCarpetaDrive:', e);
+    // fallback: abrir búsqueda por nombre en Drive
+    window.open('https://drive.google.com/drive/search?q=OpenCluster%20Fichas%20Tecnicas', '_blank', 'noopener');
+  }finally{
+    btn.textContent = originalText;
+  }
+}
+
 async function loadFichas() {
   showLoading();
   try {
     const token = await obtenerAccessTokenOAuth();
-    const folderId = await buscarOCrearCarpetaFichas();
+    const folderId = await buscarOCrearCarpetaFichas(token);
     const folderUrl = 'https://drive.google.com/drive/folders/' + folderId;
     const btnDrive = document.getElementById('btnAbrirDrive');
     if(btnDrive) btnDrive.href = folderUrl;

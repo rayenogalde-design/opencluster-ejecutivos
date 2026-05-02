@@ -4031,6 +4031,50 @@ function aplicarFichaCompleta(ficha){
   }catch(e){}
 }
 
+/* Comprime una imagen base64 a JPEG con max width y calidad ajustables */
+function comprimirImagenBase64(dataUrl, maxWidth, quality){
+  return new Promise((resolve) => {
+    if(!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')){
+      // Si no es base64 (es URL externa), devolver tal cual
+      resolve(dataUrl);
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      try{
+        const ratio = Math.min(1, maxWidth / img.width);
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * ratio);
+        canvas.height = Math.round(img.height * ratio);
+        const ctx = canvas.getContext('2d');
+        // Fondo blanco para JPEG (que no soporta transparencia)
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      }catch(e){
+        console.warn('Compresión falló, usando original:', e);
+        resolve(dataUrl);
+      }
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
+/* Comprime todas las imágenes base64 del state antes de subir (reduce tamaño 80-90%) */
+async function comprimirImagenesParaSubir(maxWidth, quality){
+  maxWidth = maxWidth || 900;
+  quality = quality || 0.75;
+  // Comprimir state.selectedImages (las que son base64; las URL Shopify quedan igual)
+  if(Array.isArray(state.selectedImages)){
+    state.selectedImages = await Promise.all(state.selectedImages.map(src => comprimirImagenBase64(src, maxWidth, quality)));
+  }
+  if(state.img3) state.img3 = await comprimirImagenBase64(state.img3, maxWidth, quality);
+  if(state.img4) state.img4 = await comprimirImagenBase64(state.img4, maxWidth, quality);
+  if(state.imgWide) state.imgWide = await comprimirImagenBase64(state.imgWide, maxWidth, quality);
+}
+
 /* Publica la ficha actual en la biblioteca de la Central */
 async function publicarFichaBiblioteca(){
   const titulo = (document.getElementById('f_titulo') || {}).value || '';
@@ -4049,6 +4093,13 @@ async function publicarFichaBiblioteca(){
   const btn = event && event.target && event.target.closest('button');
   if(btn){ btn.disabled = true; btn.textContent = 'Publicando...'; }
   try{
+    // Comprimir imágenes antes de serializar — reduce el JSON drásticamente
+    if(btn){ btn.textContent = 'Comprimiendo imágenes...'; }
+    await comprimirImagenesParaSubir(900, 0.75);
+    // Re-renderizar grids con las imágenes comprimidas
+    if(typeof renderImg3Grid === 'function') renderImg3Grid();
+    if(typeof renderImg4Grid === 'function') renderImg4Grid();
+    actualizarPreview();
     const fichaJSON = serializarFichaCompleta();
     const datosStr = JSON.stringify(fichaJSON);
     const tamMB = (datosStr.length / 1024 / 1024).toFixed(2);

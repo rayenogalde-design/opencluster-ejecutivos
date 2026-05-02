@@ -4206,9 +4206,9 @@ let _fichasFolderId = null;
 let _oauthTokenClient = null;
 let _oauthAccessToken = null;
 
-async function buscarOCrearCarpetaFichas(){
+async function buscarOCrearCarpetaFichas(tokenParam){
   if(_fichasFolderId) return _fichasFolderId;
-  const token = await obtenerAccessTokenOAuth();
+  const token = tokenParam || _oauthAccessToken || await obtenerAccessTokenOAuth();
   const q = encodeURIComponent("name='" + FICHAS_FOLDER_NAME + "' and mimeType='application/vnd.google-apps.folder' and trashed=false");
   const respBuscar = await fetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,name)', {
     headers: { 'Authorization': 'Bearer ' + token }
@@ -4260,7 +4260,17 @@ function obtenerAccessTokenOAuth(){
       reject(new Error('Google Identity Services no cargó. Recarga la página.'));
       return;
     }
+    let resolved = false;
+    const timeoutId = setTimeout(() => {
+      if(!resolved){
+        resolved = true;
+        reject(new Error('Timeout esperando autorización OAuth (90s). El popup quedó colgado o fue bloqueado por el navegador. Habilita popups para este sitio y reintenta.'));
+      }
+    }, 90000);
     _oauthTokenClient.callback = (response) => {
+      if(resolved) return;
+      resolved = true;
+      clearTimeout(timeoutId);
       if(response.error){
         reject(new Error(response.error_description || response.error));
         return;
@@ -4268,10 +4278,20 @@ function obtenerAccessTokenOAuth(){
       _oauthAccessToken = response.access_token;
       resolve(response.access_token);
     };
-    if(_oauthAccessToken){
-      _oauthTokenClient.requestAccessToken({ prompt: '' });
-    } else {
-      _oauthTokenClient.requestAccessToken({ prompt: 'consent' });
+    _oauthTokenClient.error_callback = (err) => {
+      if(resolved) return;
+      resolved = true;
+      clearTimeout(timeoutId);
+      reject(new Error('OAuth error: ' + (err && err.type ? err.type : 'desconocido') + ' — ' + (err && err.message ? err.message : '')));
+    };
+    try{
+      if(_oauthAccessToken){
+        _oauthTokenClient.requestAccessToken({ prompt: '' });
+      } else {
+        _oauthTokenClient.requestAccessToken({ prompt: 'consent' });
+      }
+    }catch(e){
+      if(!resolved){ resolved = true; clearTimeout(timeoutId); reject(e); }
     }
   });
 }
@@ -4340,7 +4360,7 @@ async function registrarFichaEnDrive(){
 
     etapa = 'buscar/crear carpeta de Drive';
     if(btn){ btn.textContent = 'Buscando carpeta de Drive...'; }
-    const folderId = await buscarOCrearCarpetaFichas();
+    const folderId = await buscarOCrearCarpetaFichas(token);
     if(!folderId) throw new Error('No se pudo obtener el ID de la carpeta.');
 
     etapa = 'subir JSON a Drive';

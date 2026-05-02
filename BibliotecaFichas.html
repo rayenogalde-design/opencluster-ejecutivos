@@ -173,8 +173,69 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;colo
   </div>
 </div>
 
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
-const API_URL = 'https://script.google.com/macros/s/AKfycbyFTa-KNE57_xTGcGmr__jggBxBna_OFWkUDdWUYoiZoVG1p2yT-lILYPpXAN6DoZda/exec';
+// === OAuth + Drive API directo (sin Apps Script) ===
+const OAUTH_CLIENT_ID = '1006878042668-v7aft4fm0ldn5q75lp479hbpc7cohsr2.apps.googleusercontent.com';
+const OAUTH_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+const FICHAS_FOLDER_NAME = 'OpenCluster Fichas Tecnicas';
+let _oauthTokenClient = null;
+let _oauthAccessToken = null;
+let _fichasFolderId = null;
+
+function inicializarOAuth(){
+  if(typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) return false;
+  if(_oauthTokenClient) return true;
+  _oauthTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: OAUTH_CLIENT_ID,
+    scope: OAUTH_SCOPE,
+    callback: ''
+  });
+  return true;
+}
+
+function obtenerAccessTokenOAuth(){
+  return new Promise((resolve, reject) => {
+    if(!inicializarOAuth()){
+      reject(new Error('Google Identity Services no cargó. Recarga la página.'));
+      return;
+    }
+    _oauthTokenClient.callback = (response) => {
+      if(response.error){ reject(new Error(response.error_description || response.error)); return; }
+      _oauthAccessToken = response.access_token;
+      resolve(response.access_token);
+    };
+    if(_oauthAccessToken){
+      _oauthTokenClient.requestAccessToken({ prompt: '' });
+    } else {
+      _oauthTokenClient.requestAccessToken({ prompt: 'consent' });
+    }
+  });
+}
+
+async function buscarOCrearCarpetaFichas(){
+  if(_fichasFolderId) return _fichasFolderId;
+  const token = await obtenerAccessTokenOAuth();
+  const q = encodeURIComponent("name='" + FICHAS_FOLDER_NAME + "' and mimeType='application/vnd.google-apps.folder' and trashed=false");
+  const respBuscar = await fetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,name)', {
+    headers: { 'Authorization': 'Bearer ' + token }
+  });
+  if(respBuscar.ok){
+    const dataBuscar = await respBuscar.json();
+    if(dataBuscar.files && dataBuscar.files.length > 0){
+      _fichasFolderId = dataBuscar.files[0].id;
+      return _fichasFolderId;
+    }
+  }
+  const respCrear = await fetch('https://www.googleapis.com/drive/v3/files', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: FICHAS_FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' })
+  });
+  const created = await respCrear.json();
+  _fichasFolderId = created.id;
+  return _fichasFolderId;
+}
 
 let fichas = [];
 const grid = document.getElementById('grid');
@@ -275,20 +336,31 @@ function filterFichas() {
 async function loadFichas() {
   showLoading();
   try {
-    const resp = await fetch(API_URL + '?accion=listar_fichas');
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const token = await obtenerAccessTokenOAuth();
+    const folderId = await buscarOCrearCarpetaFichas();
+    const folderUrl = 'https://drive.google.com/drive/folders/' + folderId;
+    const btnDrive = document.getElementById('btnAbrirDrive');
+    if(btnDrive) btnDrive.href = folderUrl;
+
+    const q = encodeURIComponent("'" + folderId + "' in parents and trashed=false");
+    const resp = await fetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,name,modifiedTime,owners(displayName,emailAddress))&pageSize=200&orderBy=modifiedTime desc', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if(!resp.ok) throw new Error('Drive API HTTP ' + resp.status);
     const data = await resp.json();
-    fichas = Array.isArray(data.fichas) ? data.fichas : [];
-    // Actualizar el botón "Abrir carpeta de Drive" con la URL real
-    if(data.folderUrl){
-      const btnDrive = document.getElementById('btnAbrirDrive');
-      if(btnDrive) btnDrive.href = data.folderUrl;
-    }
+    fichas = (data.files || []).filter(f => /\.json$/i.test(f.name)).map(f => ({
+      id: f.id,
+      fileId: f.id,
+      producto: f.name.replace(/\.json$/i, '').replace(/\.Ficha_Tecnica\.OCT$/i, ''),
+      fecha: f.modifiedTime ? f.modifiedTime.slice(0, 10) : '',
+      creador: (f.owners && f.owners[0]) ? f.owners[0].displayName : '',
+      categoria: ''
+    }));
     if (!fichas.length) { showEmpty(); return; }
     renderCards(fichas);
   } catch (e) {
     console.error('Error cargando fichas:', e);
-    showError();
+    showError(e.message || 'Error al cargar. Asegúrate de aceptar los permisos de Drive.');
   }
 }
 
@@ -303,12 +375,14 @@ function quickView(fileId) {
     <p>Cargando datos de la ficha...</p>`;
   modal.classList.add('active');
 
-  fetch(API_URL + '?accion=obtener_ficha&fileId=' + encodeURIComponent(fileId))
-    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-    .then(data => {
-      if (!data.ok) throw new Error(data.error || 'Error al obtener ficha');
+  obtenerAccessTokenOAuth()
+    .then(token => fetch('https://www.googleapis.com/drive/v3/files/' + fileId + '?alt=media', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    }))
+    .then(r => { if (!r.ok) throw new Error('Drive API HTTP ' + r.status); return r.text(); })
+    .then(text => {
       let datos;
-      try { datos = typeof data.datos === 'string' ? JSON.parse(data.datos) : data.datos; } catch(e) { datos = data.datos; }
+      try { datos = JSON.parse(text); } catch(e) { datos = { producto: 'Sin datos' }; }
       box.innerHTML = `
         <button class="modal-close" onclick="closeModal()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>

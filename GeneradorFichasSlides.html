@@ -3822,12 +3822,30 @@ function pintarLabelEjecutivo(){
   }
 }
 
-/* Carga la lista de fichas existentes (para chequeo de duplicado) */
+/* Carga la lista de fichas existentes desde Drive (para chequeo de duplicado).
+   Solo se ejecuta cuando ya tenemos token OAuth (lazy: la primera vez que se necesita). */
 async function cargarBiblioFichas(){
   try{
-    const resp = await fetch(BIBLIO_API_URL + '?accion=listar_fichas');
+    if(!_oauthAccessToken){
+      // Sin token aún — no llamamos a Drive (evitamos popup OAuth no solicitado al cargar la página)
+      _biblioFichas = [];
+      return;
+    }
+    const folderId = await buscarOCrearCarpetaFichas();
+    const q = encodeURIComponent("'" + folderId + "' in parents and trashed=false");
+    const resp = await fetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,name,modifiedTime,owners(displayName))&pageSize=200', {
+      headers: { 'Authorization': 'Bearer ' + _oauthAccessToken }
+    });
+    if(!resp.ok) throw new Error('Drive API HTTP ' + resp.status);
     const data = await resp.json();
-    _biblioFichas = Array.isArray(data.fichas) ? data.fichas : [];
+    _biblioFichas = (data.files || []).filter(f => /\.json$/i.test(f.name)).map(f => ({
+      id: f.id,
+      fileId: f.id,
+      producto: f.name.replace(/\.json$/i, '').replace(/\.Ficha_Tecnica\.OCT$/i, ''),
+      fecha: f.modifiedTime ? f.modifiedTime.slice(0,10) : '',
+      creador: (f.owners && f.owners[0]) ? f.owners[0].displayName : '',
+      categoria: ''
+    }));
   }catch(e){
     console.warn('No se pudo cargar la biblioteca de fichas:', e);
     _biblioFichas = [];
@@ -4179,11 +4197,48 @@ function descargarFichaJSON(){
   }
 }
 
-/* === OAuth + Drive API (subida directa, sin descargar a PC) === */
+/* === OAuth + Drive API directo (sin Apps Script intermedio) === */
 const OAUTH_CLIENT_ID = '1006878042668-v7aft4fm0ldn5q75lp479hbpc7cohsr2.apps.googleusercontent.com';
 const OAUTH_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+const FICHAS_FOLDER_NAME = 'OpenCluster Fichas Tecnicas';
+let _fichasFolderId = null;
 let _oauthTokenClient = null;
 let _oauthAccessToken = null;
+
+async function buscarOCrearCarpetaFichas(){
+  if(_fichasFolderId) return _fichasFolderId;
+  const token = await obtenerAccessTokenOAuth();
+  const q = encodeURIComponent("name='" + FICHAS_FOLDER_NAME + "' and mimeType='application/vnd.google-apps.folder' and trashed=false");
+  const respBuscar = await fetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,name)', {
+    headers: { 'Authorization': 'Bearer ' + token }
+  });
+  if(respBuscar.ok){
+    const dataBuscar = await respBuscar.json();
+    if(dataBuscar.files && dataBuscar.files.length > 0){
+      _fichasFolderId = dataBuscar.files[0].id;
+      return _fichasFolderId;
+    }
+  }
+  // Crear si no existe
+  const respCrear = await fetch('https://www.googleapis.com/drive/v3/files', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + token,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      name: FICHAS_FOLDER_NAME,
+      mimeType: 'application/vnd.google-apps.folder'
+    })
+  });
+  if(!respCrear.ok){
+    const errText = await respCrear.text();
+    throw new Error('No se pudo crear/encontrar la carpeta: ' + errText.slice(0,200));
+  }
+  const created = await respCrear.json();
+  _fichasFolderId = created.id;
+  return _fichasFolderId;
+}
 
 function inicializarOAuth(){
   if(typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2){
@@ -4277,20 +4332,15 @@ async function registrarFichaEnDrive(){
     if(typeof renderImg4Grid === 'function') renderImg4Grid();
     actualizarPreview();
 
-    etapa = 'obtener carpeta de Drive (Apps Script)';
-    if(btn){ btn.textContent = 'Buscando carpeta de Drive...'; }
-    const resp = await fetch(BIBLIO_API_URL + '?accion=listar_fichas');
-    if(!resp.ok) throw new Error('Apps Script HTTP ' + resp.status);
-    const data = await resp.json();
-    const folderId = data.folderId;
-    if(!folderId){
-      throw new Error('Apps Script no devolvió folderId. ¿Redeployaste el script con la versión nueva?');
-    }
-
     etapa = 'autorización OAuth';
     if(btn){ btn.textContent = 'Autorizando Drive (acepta el popup)...'; }
     const token = await obtenerAccessTokenOAuth();
     if(!token) throw new Error('No se obtuvo el token de OAuth.');
+
+    etapa = 'buscar/crear carpeta de Drive';
+    if(btn){ btn.textContent = 'Buscando carpeta de Drive...'; }
+    const folderId = await buscarOCrearCarpetaFichas();
+    if(!folderId) throw new Error('No se pudo obtener el ID de la carpeta.');
 
     etapa = 'subir JSON a Drive';
     const ficha = serializarFichaCompleta();
@@ -4375,18 +4425,22 @@ function cargarFichaJSON(input){
   input.value = '';
 }
 
-/* Carga una ficha existente desde URL params (?fileId=...) */
+/* Carga una ficha existente desde URL params (?fileId=...). Usa Drive API directo. */
 async function cargarFichaDesdeURL(){
   try{
     const params = new URLSearchParams(window.location.search);
     const fileId = params.get('fileId');
     if(!fileId) return false;
     _biblioFichaActualFileId = fileId;
-    const resp = await fetch(BIBLIO_API_URL + '?accion=obtener_ficha&fileId=' + encodeURIComponent(fileId));
-    const data = await resp.json();
-    if(!data.ok) return false;
+    // Drive API requiere OAuth — pedir token al usuario
+    const token = await obtenerAccessTokenOAuth();
+    const resp = await fetch('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(fileId) + '?alt=media', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if(!resp.ok) return false;
+    const text = await resp.text();
     let ficha;
-    try{ ficha = typeof data.datos === 'string' ? JSON.parse(data.datos) : data.datos; }catch(e){ ficha = data.datos; }
+    try{ ficha = JSON.parse(text); }catch(e){ return false; }
     if(!ficha) return false;
     // Buscar metadata en _biblioFichas (lista de fichas) para mostrar autor/fecha
     const meta = _biblioFichas.find(f => f.fileId === fileId);

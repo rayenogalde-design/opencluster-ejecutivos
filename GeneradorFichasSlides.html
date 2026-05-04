@@ -212,9 +212,10 @@ body:not([data-tpl="editorial"]) .tpl-editorial-only{display:none !important}
 /* Alineación global de contenido escrito (controlada por pills en sección 4) */
 .ficha[data-template="editorial"] .ed-caracts li,
 .ficha[data-template="editorial"] .ed-cont-flow .ed-caracts-list li,
-.ficha[data-template="editorial"] .ed-indicado li,
 .ficha[data-template="editorial"] .ed-mas-detalles p,
 .ficha[data-template="editorial"] .ed-detalles-bottom p{text-align:var(--ficha-content-align, left)}
+/* Indicado para — SIEMPRE alineado a la izquierda, ignora la alineación global (se ve feo justificado) */
+.ficha[data-template="editorial"] .ed-indicado li{text-align:left !important}
 
 /* Body — 2 columnas. Distinción por color cálido (crema, no gris ni celeste) */
 .ed-body{flex:1;display:grid;grid-template-columns:35fr 65fr;gap:0;min-height:0;position:relative;z-index:2}
@@ -3238,6 +3239,15 @@ function actualizarPreview(){
   document.querySelectorAll('.ficha .especificaciones').forEach(el => {
     el.style.display = specsShow ? '' : 'none';
   });
+  // Editorial: ocultar bloque de características pág 1 (.ed-caracts) y pág 2 (título + lista dentro de .ed-cont-flow)
+  document.querySelectorAll('.ficha[data-template="editorial"] .ed-caracts').forEach(el => {
+    el.style.display = caractsShow ? '' : 'none';
+  });
+  // Pág 2 Editorial: el título "Más características" y la ul #ed_caracts2 viven dentro de .ed-cont-flow junto al img3-float
+  const edCaracts2Title = document.querySelector('.ficha[data-template="editorial"] .ed-cont-flow > .ed-section-title');
+  if(edCaracts2Title) edCaracts2Title.style.display = caractsShow ? '' : 'none';
+  const edCaracts2List = document.getElementById('ed_caracts2');
+  if(edCaracts2List) edCaracts2List.style.display = caractsShow ? '' : 'none';
   // Editorial: ocultar wrap de specs (pág 1) y de pág 2 cuando el checkbox está desactivado
   document.querySelectorAll('.ed-specs-wrap, .ed-specs-pag2').forEach(el => {
     if(!specsShow) el.style.display = 'none';

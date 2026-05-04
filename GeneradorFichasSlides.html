@@ -1999,15 +1999,19 @@ async function init(){
   }
   _syncP2TituloCorto();
   actualizarPreview();
+  // Si se cargó una ficha desde la biblioteca (?fileId=...) esperamos a que las
+  // imágenes terminen de cargar y re-renderizamos para que la distribución de
+  // caracts/specs/indicado-para mida heights correctos (sin esto, el layout se corre).
+  if(cargada && typeof refrescarPreviewTrasCarga === 'function'){
+    await refrescarPreviewTrasCarga();
+  }
   // Auto-PDF: si la URL trae ?autopdf=1 y la ficha cargó OK, disparar el print automáticamente
   // (para el flujo "un click → PDF" desde la Biblioteca de Fichas Técnicas)
   try{
     const autoPdf = new URLSearchParams(window.location.search).get('autopdf');
     if(cargada && (autoPdf === '1' || autoPdf === 'true')){
-      // Esperar a que las fuentes estén cargadas (memoria PDF: NO imprimir antes de document.fonts.ready)
-      // y darle a las imágenes ~1s para terminar el layout final antes de window.print()
-      if(document.fonts && document.fonts.ready){ await document.fonts.ready; }
-      setTimeout(() => _disparoPrintPDF(), 1000);
+      // Las fuentes/imágenes ya esperaron en refrescarPreviewTrasCarga arriba — disparamos directo
+      setTimeout(() => _disparoPrintPDF(), 300);
     }
   }catch(e){ console.warn('autopdf:', e); }
 }
@@ -4471,12 +4475,43 @@ async function obtenerFolderUrl(){
   }
 }
 
+/* Espera a que las imágenes del preview terminen de decodificarse para que
+   distribuirEdCaracts/distribuirEdSpecs/aplicarAutoShrink midan alturas correctas.
+   Sin este wait, al cargar JSON/ficha desde Drive el layout se corre porque
+   las mediciones ocurren antes de que las base64 estén listas en pantalla. */
+async function esperarImagenesPreview(){
+  try{
+    const imgs = document.querySelectorAll('.ficha img');
+    await Promise.all(Array.from(imgs).map(img => {
+      if(img.complete && img.naturalWidth > 0) return Promise.resolve();
+      return new Promise(resolve => {
+        const done = () => { img.removeEventListener('load', done); img.removeEventListener('error', done); resolve(); };
+        img.addEventListener('load', done, { once: true });
+        img.addEventListener('error', done, { once: true });
+        setTimeout(done, 2500); // safety timeout
+      });
+    }));
+    if(document.fonts && document.fonts.ready) await document.fonts.ready;
+  }catch(e){ /* no bloquear el flujo si algo falla */ }
+}
+
+/* Re-renderiza el preview una vez que las imágenes/fuentes terminaron de cargar
+   para que la distribución de caracts/specs use mediciones correctas. */
+async function refrescarPreviewTrasCarga(){
+  await esperarImagenesPreview();
+  // Doble pasada con un frame en medio: el primer actualizarPreview reposiciona,
+  // el segundo recalcula con los nuevos heights ya estables.
+  if(typeof actualizarPreview === 'function') actualizarPreview();
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  if(typeof actualizarPreview === 'function') actualizarPreview();
+}
+
 /* Carga un JSON respaldo desde el PC del usuario y lo aplica al generador */
 function cargarFichaJSON(input){
   const f = input.files && input.files[0];
   if(!f){ return; }
   const reader = new FileReader();
-  reader.onload = (e) => {
+  reader.onload = async (e) => {
     try{
       const ficha = JSON.parse(e.target.result);
       aplicarFichaCompleta(ficha);
@@ -4485,6 +4520,8 @@ function cargarFichaJSON(input){
       if(typeof renderImg3Grid === 'function') renderImg3Grid();
       if(typeof renderImg4Grid === 'function') renderImg4Grid();
       actualizarPreview();
+      // Esperar a que las imágenes carguen y re-renderizar para que la distribución sea correcta
+      await refrescarPreviewTrasCarga();
       biblioToast('JSON cargado: ' + f.name, 'ok');
     }catch(err){
       biblioToast('No se pudo leer el JSON: ' + (err.message || 'archivo inválido'), 'error');

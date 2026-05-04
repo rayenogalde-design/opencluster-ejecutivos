@@ -2021,10 +2021,48 @@ async function init(){
   // (para el flujo "un click → PDF" desde la Biblioteca de Fichas Técnicas)
   try{
     if(cargada && autoPdf){
-      // Las fuentes/imágenes ya esperaron en refrescarPreviewTrasCarga arriba — disparamos directo
-      setTimeout(() => _disparoPrintPDF(), 200);
+      // Mostrar un banner con botón fallback ANTES de auto-disparar, por si el navegador
+      // bloquea window.print() (tab en background, popup blocker, etc.)
+      mostrarBannerAutoPdf();
+      // Intentar enfocar la pestaña (ayuda si Chrome la abrió en background)
+      try{ window.focus(); }catch(e){}
+      // Disparar window.print() — si está bloqueado, el banner fallback queda visible para click manual
+      setTimeout(() => {
+        try{ _disparoPrintPDF(); }catch(e){ console.warn('print() error:', e); }
+      }, 250);
     }
   }catch(e){ console.warn('autopdf:', e); }
+}
+
+/* Banner overlay para flujo autopdf — fallback si el navegador bloquea window.print() */
+function mostrarBannerAutoPdf(){
+  if(document.getElementById('autopdfBanner')) return; // ya está
+  const bar = document.createElement('div');
+  bar.id = 'autopdfBanner';
+  bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:linear-gradient(135deg,#ff7e00,#c54a35);color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:18px;font-family:Montserrat,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.18)';
+  bar.innerHTML = `
+    <div style="display:flex;align-items:center;gap:14px;flex:1;min-width:0">
+      <div style="width:22px;height:22px;border:3px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:autopdf-spin .9s linear infinite;flex-shrink:0"></div>
+      <div style="font-weight:700;font-size:14px;line-height:1.3">
+        Generando PDF...
+        <div style="font-weight:500;font-size:12px;opacity:.92;margin-top:2px">Si el diálogo de impresión no aparece automáticamente, hacé click en el botón a la derecha.</div>
+      </div>
+    </div>
+    <button id="autopdfManualBtn" type="button" style="padding:11px 22px;background:#fff;color:#c54a35;border:none;border-radius:8px;font-family:Montserrat,sans-serif;font-weight:800;font-size:13px;letter-spacing:.4px;cursor:pointer;flex-shrink:0;text-transform:uppercase">Descargar PDF</button>
+  `;
+  // Animación del spinner
+  if(!document.getElementById('autopdfSpinStyle')){
+    const st = document.createElement('style');
+    st.id = 'autopdfSpinStyle';
+    st.textContent = '@keyframes autopdf-spin{to{transform:rotate(360deg)}}@media print{#autopdfBanner{display:none !important}}';
+    document.head.appendChild(st);
+  }
+  document.body.appendChild(bar);
+  // El click manual SIEMPRE viene de un user gesture → no lo bloquea ningún navegador
+  document.getElementById('autopdfManualBtn').addEventListener('click', () => {
+    try{ window.focus(); }catch(e){}
+    _disparoPrintPDF();
+  });
 }
 
 /* ══ Aplicar valores de los sliders de diseño a las CSS variables ══ */

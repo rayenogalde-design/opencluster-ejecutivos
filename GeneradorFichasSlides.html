@@ -1960,6 +1960,12 @@ function _syncP2TituloCorto(){
 }
 
 async function init(){
+  // Detectar fast path: si vienen ?fileId=X y ?autopdf=1, saltamos loadProducts/cargarBiblioFichas
+  // (la usuaria solo va a imprimir, no necesita la lista de productos ni el chequeo de duplicados)
+  const params = new URLSearchParams(window.location.search);
+  const autoPdf = params.get('autopdf') === '1' || params.get('autopdf') === 'true';
+  const fastPath = autoPdf && !!params.get('fileId');
+
   // Restaurar zoom guardado
   try{
     const sz = localStorage.getItem('oc_fichas_zoom');
@@ -1973,11 +1979,17 @@ async function init(){
   aplicarDiseno();
   setupInlineSliders();
   setupCollapsibleSections();
-  await loadProducts();
-  // Cargar la lista de fichas existentes en la Biblioteca (para chequeo de duplicado)
-  await cargarBiblioFichas();
-  // Si la URL trae ?fileId=X, cargar la ficha existente para edición; si no, dejar vacío para que el ejecutivo elija un producto
-  const cargada = await cargarFichaDesdeURL();
+
+  let cargada = false;
+  if(fastPath){
+    // FAST PATH: solo descargamos la ficha desde Apps Script. Sin Shopify, sin biblioteca.
+    cargada = await cargarFichaDesdeURL();
+  } else {
+    // PATH NORMAL: editor completo
+    await loadProducts();
+    await cargarBiblioFichas();
+    cargada = await cargarFichaDesdeURL();
+  }
   if(!cargada){
     // Estado limpio (sin demo precargado) — la usuaria selecciona producto y se rellena
     state.selected = null;
@@ -2008,10 +2020,9 @@ async function init(){
   // Auto-PDF: si la URL trae ?autopdf=1 y la ficha cargó OK, disparar el print automáticamente
   // (para el flujo "un click → PDF" desde la Biblioteca de Fichas Técnicas)
   try{
-    const autoPdf = new URLSearchParams(window.location.search).get('autopdf');
-    if(cargada && (autoPdf === '1' || autoPdf === 'true')){
+    if(cargada && autoPdf){
       // Las fuentes/imágenes ya esperaron en refrescarPreviewTrasCarga arriba — disparamos directo
-      setTimeout(() => _disparoPrintPDF(), 300);
+      setTimeout(() => _disparoPrintPDF(), 200);
     }
   }catch(e){ console.warn('autopdf:', e); }
 }

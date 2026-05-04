@@ -1899,6 +1899,23 @@ function doLogin(){
 }
 function logout(){ localStorage.removeItem('oc_fichas_exec'); location.reload(); }
 (function(){
+  // Si la URL trae ?autopdf=1, saltear el login (la ejecutiva solo va a imprimir
+  // desde la biblioteca; no necesita identificarse para descargar el PDF)
+  try{
+    const urlParams = new URLSearchParams(window.location.search);
+    const autoPdf = urlParams.get('autopdf');
+    if(autoPdf === '1' || autoPdf === 'true'){
+      const overlay = document.getElementById('loginOverlay');
+      if(overlay) overlay.style.display = 'none';
+      // Setear un exec dummy mínimo para que el resto del código no falle
+      state.exec = { key: 'autopdf', nombre: 'Generador PDF', email: '' };
+      const userNameEl = document.getElementById('userName');
+      if(userNameEl) userNameEl.textContent = state.exec.nombre;
+      init();
+      return;
+    }
+  }catch(e){ console.warn('autopdf bypass:', e); }
+  // Flujo normal: auto-login si tiene ejecutivo guardado
   const s = localStorage.getItem('oc_fichas_exec');
   if(s && EXEC_DB[s]){ document.getElementById('loginSelect').value=s; doLogin(); }
 })();

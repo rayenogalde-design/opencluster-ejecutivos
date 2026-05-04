@@ -146,7 +146,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;colo
     <div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:13px;color:#c54a35;letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px">¿Cómo publicar una ficha nueva?</div>
     <div style="font-size:13px;line-height:1.5;color:#3a4555">1. Crea la ficha en el <b>Generador</b> y haz clic en <b>"Registrar ficha técnica"</b>. <br>2. Se descarga el JSON a tu PC y se abre la carpeta de Drive. <br>3. <b>Arrastra el JSON</b> a la carpeta. <br>4. Recarga esta página y la ficha aparecerá en la lista.</div>
   </div>
-  <a id="btnAbrirDrive" href="https://drive.google.com/drive/search?q=OpenCluster%20Fichas%20Tecnicas" target="_blank" rel="noopener" onclick="abrirCarpetaDrive(event)" style="padding:11px 22px;background:linear-gradient(135deg,#ff7e00,#c54a35);color:#fff;border-radius:8px;font-family:Montserrat,sans-serif;font-weight:700;font-size:13px;text-decoration:none;letter-spacing:.3px;flex-shrink:0;box-shadow:0 4px 12px rgba(255,126,0,.25)">Abrir carpeta de Drive</a>
+  <a id="btnAbrirDrive" href="#" target="_blank" rel="noopener" style="padding:11px 22px;background:linear-gradient(135deg,#ff7e00,#c54a35);color:#fff;border-radius:8px;font-family:Montserrat,sans-serif;font-weight:700;font-size:13px;text-decoration:none;letter-spacing:.3px;flex-shrink:0;box-shadow:0 4px 12px rgba(255,126,0,.25)">Abrir carpeta de Drive</a>
 </div>
 
 <!-- Search -->
@@ -176,7 +176,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;colo
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
-// === OAuth + Drive API directo (sin Apps Script) ===
+// === Apps Script Biblioteca API (sin OAuth en el cliente — corre con la cuenta de despliegue) ===
+const BIBLIO_API_URL = 'https://script.google.com/macros/s/AKfycbyzLWKA2rIp15Dn1FK5Zywtvqo7dgkoVlmyv-czqVupmOy-bIH9RHIYfKy76xcX3EAH/exec';
+// === OAuth + Drive API directo (legacy — solo se mantiene por compat) ===
 const OAUTH_CLIENT_ID = '1006878042668-v7aft4fm0ldn5q75lp479hbpc7cohsr2.apps.googleusercontent.com';
 const OAUTH_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const FICHAS_FOLDER_NAME = 'OpenCluster Fichas Tecnicas';
@@ -201,42 +203,22 @@ function obtenerAccessTokenOAuth(){
       reject(new Error('Google Identity Services no cargó. Recarga la página.'));
       return;
     }
-    let resolved = false;
-    const timeoutId = setTimeout(() => {
-      if(!resolved){
-        resolved = true;
-        reject(new Error('Timeout esperando autorización OAuth (90s). Habilita popups y reintenta.'));
-      }
-    }, 90000);
     _oauthTokenClient.callback = (response) => {
-      if(resolved) return;
-      resolved = true;
-      clearTimeout(timeoutId);
       if(response.error){ reject(new Error(response.error_description || response.error)); return; }
       _oauthAccessToken = response.access_token;
       resolve(response.access_token);
     };
-    _oauthTokenClient.error_callback = (err) => {
-      if(resolved) return;
-      resolved = true;
-      clearTimeout(timeoutId);
-      reject(new Error('OAuth error: ' + (err && err.type ? err.type : 'desconocido')));
-    };
-    try{
-      if(_oauthAccessToken){
-        _oauthTokenClient.requestAccessToken({ prompt: '' });
-      } else {
-        _oauthTokenClient.requestAccessToken({ prompt: 'consent' });
-      }
-    }catch(e){
-      if(!resolved){ resolved = true; clearTimeout(timeoutId); reject(e); }
+    if(_oauthAccessToken){
+      _oauthTokenClient.requestAccessToken({ prompt: '' });
+    } else {
+      _oauthTokenClient.requestAccessToken({ prompt: 'consent' });
     }
   });
 }
 
-async function buscarOCrearCarpetaFichas(tokenParam){
+async function buscarOCrearCarpetaFichas(){
   if(_fichasFolderId) return _fichasFolderId;
-  const token = tokenParam || _oauthAccessToken || await obtenerAccessTokenOAuth();
+  const token = await obtenerAccessTokenOAuth();
   const q = encodeURIComponent("name='" + FICHAS_FOLDER_NAME + "' and mimeType='application/vnd.google-apps.folder' and trashed=false");
   const respBuscar = await fetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,name)', {
     headers: { 'Authorization': 'Bearer ' + token }
@@ -331,8 +313,8 @@ function renderCards(list) {
         <span>${icons.user} ${escHtml(f.creador || 'Desconocido')}</span>
       </div>
       <div class="card-actions">
-        <a class="btn btn-primary" href="${generadorUrl}" target="_blank">${icons.open} Abrir en Generador</a>
-        <button class="btn btn-secondary" onclick="quickView('${escAttr(f.fileId)}')">${icons.eye} Vista rapida</button>
+        <a class="btn btn-primary" href="${generadorUrl}&autopdf=1" target="_blank">${icons.open} Generar PDF</a>
+        <a class="btn btn-secondary" href="${generadorUrl}" target="_blank">${icons.eye} Editar antes</a>
       </div>
     </div>`;
   }).join('');
@@ -354,59 +336,31 @@ function filterFichas() {
   renderCards(filtered);
 }
 
-/* Abre carpeta de Drive: si ya tenemos folderId va directo; si no, hace OAuth y la abre.
-   Si OAuth falla, deja el href default (búsqueda en Drive por nombre). */
-async function abrirCarpetaDrive(ev){
-  if(_fichasFolderId){
-    return; // deja que el href haga su trabajo
-  }
-  ev.preventDefault();
-  const btn = ev.currentTarget;
-  const originalText = btn.textContent;
-  btn.textContent = 'Resolviendo carpeta...';
-  try{
-    const token = await obtenerAccessTokenOAuth();
-    const folderId = await buscarOCrearCarpetaFichas(token);
-    const url = 'https://drive.google.com/drive/folders/' + folderId;
-    btn.href = url;
-    window.open(url, '_blank', 'noopener');
-  }catch(e){
-    console.error('abrirCarpetaDrive:', e);
-    // fallback: abrir búsqueda por nombre en Drive
-    window.open('https://drive.google.com/drive/search?q=OpenCluster%20Fichas%20Tecnicas', '_blank', 'noopener');
-  }finally{
-    btn.textContent = originalText;
-  }
-}
-
 async function loadFichas() {
   showLoading();
   try {
-    const token = await obtenerAccessTokenOAuth();
-    const folderId = await buscarOCrearCarpetaFichas(token);
-    const folderUrl = 'https://drive.google.com/drive/folders/' + folderId;
-    const btnDrive = document.getElementById('btnAbrirDrive');
-    if(btnDrive) btnDrive.href = folderUrl;
-
-    const q = encodeURIComponent("'" + folderId + "' in parents and trashed=false");
-    const resp = await fetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,name,modifiedTime,owners(displayName,emailAddress))&pageSize=200&orderBy=modifiedTime desc', {
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
-    if(!resp.ok) throw new Error('Drive API HTTP ' + resp.status);
+    // Listamos vía Apps Script (corre con la cuenta de despliegue, ve TODA la carpeta)
+    const resp = await fetch(BIBLIO_API_URL + '?accion=listar_fichas');
+    if(!resp.ok) throw new Error('Biblioteca API HTTP ' + resp.status);
     const data = await resp.json();
-    fichas = (data.files || []).filter(f => /\.json$/i.test(f.name)).map(f => ({
+    if(!data.ok) throw new Error(data.error || 'Respuesta no OK del Apps Script');
+    // Botón "Abrir en Drive" — usa folderUrl que devuelve el Apps Script
+    const btnDrive = document.getElementById('btnAbrirDrive');
+    if(btnDrive && data.folderUrl) btnDrive.href = data.folderUrl;
+    // Mapear al formato que espera renderCards (ya viene casi listo del Apps Script)
+    fichas = (data.fichas || []).map(f => ({
       id: f.id,
-      fileId: f.id,
-      producto: f.name.replace(/\.json$/i, '').replace(/\.Ficha_Tecnica\.OCT$/i, ''),
-      fecha: f.modifiedTime ? f.modifiedTime.slice(0, 10) : '',
-      creador: (f.owners && f.owners[0]) ? f.owners[0].displayName : '',
-      categoria: ''
+      fileId: f.fileId || f.id,
+      producto: f.producto || (f.name || '').replace(/\.json$/i, '').replace(/\.Ficha_Tecnica\.OCT$/i, ''),
+      fecha: f.fecha || (f.modifiedTime ? f.modifiedTime.slice(0, 10) : ''),
+      creador: f.creador || '',
+      categoria: f.categoria || ''
     }));
     if (!fichas.length) { showEmpty(); return; }
     renderCards(fichas);
   } catch (e) {
     console.error('Error cargando fichas:', e);
-    showError(e.message || 'Error al cargar. Asegúrate de aceptar los permisos de Drive.');
+    showError(e.message || 'No se pudieron cargar las fichas. Verifica tu conexión.');
   }
 }
 
@@ -456,38 +410,7 @@ document.getElementById('modal').addEventListener('click', function(e) {
 });
 
 searchInput.addEventListener('input', filterFichas);
-
-/* Espera a que Google Identity Services cargue antes de pedir auth.
-   El script tiene async defer, asi que en page load aun puede no estar listo. */
-function esperarGIS(maxIntentos){
-  return new Promise((resolve, reject) => {
-    let intentos = 0;
-    const lim = maxIntentos || 50; // 50 x 200ms = 10s
-    const tick = () => {
-      if(typeof google !== 'undefined' && google.accounts && google.accounts.oauth2){
-        resolve();
-        return;
-      }
-      intentos++;
-      if(intentos >= lim){
-        reject(new Error('Google Identity Services no cargo despues de 10s. Verifica tu conexion a internet o desactiva bloqueadores y recarga.'));
-        return;
-      }
-      setTimeout(tick, 200);
-    };
-    tick();
-  });
-}
-
-(async function init(){
-  try{
-    await esperarGIS();
-    await loadFichas();
-  }catch(e){
-    console.error('init biblioteca:', e);
-    showError(e.message);
-  }
-})();
+loadFichas();
 </script>
 </body>
 </html>

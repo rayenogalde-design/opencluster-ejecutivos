@@ -1999,6 +1999,17 @@ async function init(){
   }
   _syncP2TituloCorto();
   actualizarPreview();
+  // Auto-PDF: si la URL trae ?autopdf=1 y la ficha cargó OK, disparar el print automáticamente
+  // (para el flujo "un click → PDF" desde la Biblioteca de Fichas Técnicas)
+  try{
+    const autoPdf = new URLSearchParams(window.location.search).get('autopdf');
+    if(cargada && (autoPdf === '1' || autoPdf === 'true')){
+      // Esperar a que las fuentes estén cargadas (memoria PDF: NO imprimir antes de document.fonts.ready)
+      // y darle a las imágenes ~1s para terminar el layout final antes de window.print()
+      if(document.fonts && document.fonts.ready){ await document.fonts.ready; }
+      setTimeout(() => _disparoPrintPDF(), 1000);
+    }
+  }catch(e){ console.warn('autopdf:', e); }
 }
 
 /* ══ Aplicar valores de los sliders de diseño a las CSS variables ══ */
@@ -3807,6 +3818,8 @@ function precargarDemoCatre(){
 
 /* ══════════════ INTEGRACIÓN BIBLIOTECA DE FICHAS ══════════════ */
 const BIBLIO_API_URL = 'https://script.google.com/macros/s/AKfycbyFTa-KNE57_xTGcGmr__jggBxBna_OFWkUDdWUYoiZoVG1p2yT-lILYPpXAN6DoZda/exec';
+// Nueva API para listar/leer (corre con la cuenta de despliegue, ve toda la carpeta sin OAuth del usuario)
+const BIBLIO_API_URL_V2 = 'https://script.google.com/macros/s/AKfycbyzLWKA2rIp15Dn1FK5Zywtvqo7dgkoVlmyv-czqVupmOy-bIH9RHIYfKy76xcX3EAH/exec';
 let _biblioFichas = [];          // Cache de fichas existentes (para chequeo de duplicado)
 let _biblioFichaActual = null;   // Si se cargó desde URL, info de la ficha original
 let _biblioFichaActualFileId = null;
@@ -3841,29 +3854,21 @@ function pintarLabelEjecutivo(){
   }
 }
 
-/* Carga la lista de fichas existentes desde Drive (para chequeo de duplicado).
-   Solo se ejecuta cuando ya tenemos token OAuth (lazy: la primera vez que se necesita). */
+/* Carga la lista de fichas existentes vía Apps Script (BIBLIO_API_URL_V2).
+   No requiere OAuth — el Apps Script corre con la cuenta de despliegue y ve toda la carpeta. */
 async function cargarBiblioFichas(){
   try{
-    if(!_oauthAccessToken){
-      // Sin token aún — no llamamos a Drive (evitamos popup OAuth no solicitado al cargar la página)
-      _biblioFichas = [];
-      return;
-    }
-    const folderId = await buscarOCrearCarpetaFichas();
-    const q = encodeURIComponent("'" + folderId + "' in parents and trashed=false");
-    const resp = await fetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,name,modifiedTime,owners(displayName))&pageSize=200', {
-      headers: { 'Authorization': 'Bearer ' + _oauthAccessToken }
-    });
-    if(!resp.ok) throw new Error('Drive API HTTP ' + resp.status);
+    const resp = await fetch(BIBLIO_API_URL_V2 + '?accion=listar_fichas');
+    if(!resp.ok) throw new Error('Biblioteca API HTTP ' + resp.status);
     const data = await resp.json();
-    _biblioFichas = (data.files || []).filter(f => /\.json$/i.test(f.name)).map(f => ({
+    if(!data.ok){ _biblioFichas = []; return; }
+    _biblioFichas = (data.fichas || []).map(f => ({
       id: f.id,
-      fileId: f.id,
-      producto: f.name.replace(/\.json$/i, '').replace(/\.Ficha_Tecnica\.OCT$/i, ''),
-      fecha: f.modifiedTime ? f.modifiedTime.slice(0,10) : '',
-      creador: (f.owners && f.owners[0]) ? f.owners[0].displayName : '',
-      categoria: ''
+      fileId: f.fileId || f.id,
+      producto: f.producto || (f.name || '').replace(/\.json$/i, '').replace(/\.Ficha_Tecnica\.OCT$/i, ''),
+      fecha: f.fecha || (f.modifiedTime ? f.modifiedTime.slice(0,10) : ''),
+      creador: f.creador || '',
+      categoria: f.categoria || ''
     }));
   }catch(e){
     console.warn('No se pudo cargar la biblioteca de fichas:', e);
@@ -3971,6 +3976,10 @@ function serializarFichaCompleta(){
     p2_caracts_manual_on: cb('f_p2_caracts_manual_on'),
     p2_caracts_manual: v('f_p2_caracts_manual'),
     p2_titulo_corto: v('f_p2_titulo_corto'),
+    logo_keep_color: cb('f_logo_keep_color'),
+    caja_on: cb('f_caja_on'),
+    caja_text: v('f_caja_text'),
+    footer_visible: cb('f_footer_visible'),
     state: {
       selected: state.selected,
       selectedImages: state.selectedImages,
@@ -4001,7 +4010,8 @@ function serializarFichaCompleta(){
     specs_loc: (function(){ try{ return localStorage.getItem('oc_fichas_ed_specs_loc') || 'auto'; }catch(e){ return 'auto'; } })(),
     specs_cols: (function(){ try{ return localStorage.getItem('oc_fichas_ed_specs_cols') || '1'; }catch(e){ return '1'; } })(),
     specs_style: (function(){ try{ return localStorage.getItem('oc_fichas_ed_specs_style') || 'color'; }catch(e){ return 'color'; } })(),
-    dispo_preset: (function(){ try{ return localStorage.getItem('oc_fichas_dispo_preset') || 'pedido'; }catch(e){ return 'pedido'; } })()
+    dispo_preset: (function(){ try{ return localStorage.getItem('oc_fichas_dispo_preset') || 'pedido'; }catch(e){ return 'pedido'; } })(),
+    caja_loc: (function(){ try{ return localStorage.getItem('oc_fichas_caja_loc') || 'p1-left'; }catch(e){ return 'p1-left'; } })()
   };
   // Capturar todos los sliders ds_*
   document.querySelectorAll('input[id^="ds_"]').forEach(s => { ficha.sliders[s.id] = s.value; });
@@ -4011,7 +4021,7 @@ function serializarFichaCompleta(){
 /* Aplica un JSON guardado al formulario (cuando se carga ficha desde URL) */
 function aplicarFichaCompleta(ficha){
   const setVal = (id,val) => { const el = document.getElementById(id); if(el && val != null){ el.value = val; } };
-  const setCb = (id,val) => { const el = document.getElementById(id); if(el) el.checked = !!val; };
+  const setCb = (id,val) => { const el = document.getElementById(id); if(el && val !== undefined) el.checked = !!val; };
   setVal('f_titulo', ficha.producto);
   setVal('f_titulo_linea2', ficha.titulo_linea2);
   setVal('f_descripcion', ficha.descripcion);
@@ -4023,6 +4033,7 @@ function aplicarFichaCompleta(ficha){
   setVal('f_p2_mas_detalles', ficha.p2_mas_detalles);
   setVal('f_p2_caracts_manual', ficha.p2_caracts_manual);
   setVal('f_p2_titulo_corto', ficha.p2_titulo_corto);
+  setVal('f_caja_text', ficha.caja_text);
   setCb('f_indicado_on', ficha.indicado_on);
   setCb('f_datos_on', ficha.datos_on);
   setCb('f_dispo_on', ficha.dispo_on);
@@ -4032,6 +4043,9 @@ function aplicarFichaCompleta(ficha){
   setCb('f_p2_imagen4_on', ficha.p2_imagen4_on);
   setCb('f_p2_detalles_on', ficha.p2_detalles_on);
   setCb('f_p2_caracts_manual_on', ficha.p2_caracts_manual_on);
+  setCb('f_logo_keep_color', ficha.logo_keep_color);
+  setCb('f_caja_on', ficha.caja_on);
+  setCb('f_footer_visible', ficha.footer_visible);
   // Estado de imágenes
   if(ficha.state){
     state.selected = ficha.state.selected || null;
@@ -4055,18 +4069,33 @@ function aplicarFichaCompleta(ficha){
   if(ficha.sliders){
     Object.keys(ficha.sliders).forEach(id => setVal(id, ficha.sliders[id]));
   }
-  // localStorage para plantilla, modo, etc.
+  // Re-disparar handlers de UI: pills activas + DOM data-attrs + CSS desde localStorage settings
+  // (sin esto, los pills quedan visualmente desactivados aunque el localStorage esté correcto)
   try{
-    if(ficha.plantilla) localStorage.setItem('oc_fichas_tpl', ficha.plantilla);
-    if(ficha.ed_hdr) localStorage.setItem('oc_fichas_ed_hdr', ficha.ed_hdr);
-    if(ficha.modo) localStorage.setItem('oc_fichas_mode', ficha.modo);
-    if(ficha.title_lines) localStorage.setItem('oc_fichas_title_lines', ficha.title_lines);
-    if(ficha.content_align) localStorage.setItem('oc_fichas_content_align', ficha.content_align);
-    if(ficha.specs_loc) localStorage.setItem('oc_fichas_ed_specs_loc', ficha.specs_loc);
-    if(ficha.specs_cols) localStorage.setItem('oc_fichas_ed_specs_cols', ficha.specs_cols);
-    if(ficha.specs_style) localStorage.setItem('oc_fichas_ed_specs_style', ficha.specs_style);
-    if(ficha.dispo_preset) localStorage.setItem('oc_fichas_dispo_preset', ficha.dispo_preset);
-  }catch(e){}
+    if(ficha.plantilla && typeof setTemplate === 'function') setTemplate(ficha.plantilla);
+    if(ficha.ed_hdr && typeof setEdHeaderStyle === 'function') setEdHeaderStyle(ficha.ed_hdr);
+    if(ficha.modo && typeof setMode === 'function') setMode(ficha.modo);
+    if(ficha.content_align && typeof setContentAlign === 'function') setContentAlign(ficha.content_align);
+    if(ficha.title_lines && typeof setTitleLines === 'function') setTitleLines(ficha.title_lines);
+    if(ficha.specs_loc && typeof setSpecsLoc === 'function') setSpecsLoc(ficha.specs_loc);
+    if(ficha.specs_cols && typeof setSpecsCols === 'function') setSpecsCols(ficha.specs_cols);
+    if(ficha.specs_style && typeof setSpecsStyle === 'function') setSpecsStyle(ficha.specs_style);
+    if(ficha.caja_loc && typeof setCajaLoc === 'function') setCajaLoc(ficha.caja_loc);
+    // setDispoPreset sobrescribe f_dispo_text — restaurar el texto guardado después
+    if(ficha.dispo_preset && typeof setDispoPreset === 'function'){
+      setDispoPreset(ficha.dispo_preset);
+      if(ficha.dispo_text != null) setVal('f_dispo_text', ficha.dispo_text);
+    }
+  }catch(e){ console.warn('aplicarFichaCompleta — UI handlers:', e); }
+  // Etiquetas de los sliders (img1/img2 zoom, crops) — el oninput no se dispara al hacer .value=
+  const setLbl = (id, txt) => { const el = document.getElementById(id); if(el) el.textContent = txt; };
+  const z1 = document.getElementById('img1_zoom'); if(z1) setLbl('img1_zoomLabel', z1.value + '%');
+  const z2 = document.getElementById('img2_zoom'); if(z2) setLbl('img2_zoomLabel', z2.value + '%');
+  const cropMap = { img1_crop_top:'lbl_img1_cropT', img1_crop_bottom:'lbl_img1_cropB', img1_crop_left:'lbl_img1_cropL', img1_crop_right:'lbl_img1_cropR' };
+  Object.keys(cropMap).forEach(srcId => { const el = document.getElementById(srcId); if(el) setLbl(cropMap[srcId], el.value + ' %'); });
+  // Aplicar CSS vars desde sliders ds_* + visibilidad de pág2 caracts manual
+  if(typeof aplicarDiseno === 'function') aplicarDiseno();
+  if(typeof togglePag2CaractsManual === 'function') togglePag2CaractsManual();
 }
 
 /* Comprime una imagen base64 a JPEG con max width y calidad ajustables */
@@ -4464,22 +4493,20 @@ function cargarFichaJSON(input){
   input.value = '';
 }
 
-/* Carga una ficha existente desde URL params (?fileId=...). Usa Drive API directo. */
+/* Carga una ficha existente desde URL params (?fileId=...). Usa Apps Script (sin OAuth del usuario). */
 async function cargarFichaDesdeURL(){
   try{
     const params = new URLSearchParams(window.location.search);
     const fileId = params.get('fileId');
     if(!fileId) return false;
     _biblioFichaActualFileId = fileId;
-    // Drive API requiere OAuth — pedir token al usuario
-    const token = await obtenerAccessTokenOAuth();
-    const resp = await fetch('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(fileId) + '?alt=media', {
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
+    // Apps Script corre con la cuenta de despliegue: cualquier ejecutivo lee sin popup
+    const resp = await fetch(BIBLIO_API_URL_V2 + '?accion=get_ficha&fileId=' + encodeURIComponent(fileId));
     if(!resp.ok) return false;
-    const text = await resp.text();
+    const data = await resp.json();
+    if(!data.ok || !data.content) return false;
     let ficha;
-    try{ ficha = JSON.parse(text); }catch(e){ return false; }
+    try{ ficha = JSON.parse(data.content); }catch(e){ return false; }
     if(!ficha) return false;
     // Buscar metadata en _biblioFichas (lista de fichas) para mostrar autor/fecha
     const meta = _biblioFichas.find(f => f.fileId === fileId);
@@ -4492,17 +4519,20 @@ async function cargarFichaDesdeURL(){
   }
 }
 
+/* ══ Disparo del print directo (sin recordatorio) — usado por autopdf y por descargarPDF ══ */
+function _disparoPrintPDF(){
+  actualizarPreview();
+  // Cambiar el title temporalmente para que Chrome use ese nombre como sugerido en "Guardar como PDF"
+  const titleOriginal = document.title;
+  document.title = _nombreArchivoFicha();
+  const restaurarTitle = () => { document.title = titleOriginal; window.removeEventListener('afterprint', restaurarTitle); };
+  window.addEventListener('afterprint', restaurarTitle);
+  setTimeout(()=> window.print(), 100);
+}
+
 /* ══ Descarga PDF — con recordatorio personalizado y nombre estándar ══ */
 function descargarPDF(){
-  mostrarRecordatorioPDF(() => {
-    actualizarPreview();
-    // Cambiar el title temporalmente para que Chrome use ese nombre como sugerido en "Guardar como PDF"
-    const titleOriginal = document.title;
-    document.title = _nombreArchivoFicha();
-    const restaurarTitle = () => { document.title = titleOriginal; window.removeEventListener('afterprint', restaurarTitle); };
-    window.addEventListener('afterprint', restaurarTitle);
-    setTimeout(()=> window.print(), 100);
-  });
+  mostrarRecordatorioPDF(() => { _disparoPrintPDF(); });
 }
 
 /* ══ Util ══ */

@@ -4323,6 +4323,9 @@ function obtenerAccessTokenOAuth(){
         return;
       }
       _oauthAccessToken = response.access_token;
+      // Marcar que ya autorizó al menos una vez en este navegador — para que el próximo
+      // requestAccessToken use prompt:'' (silencioso, sin popup de consentimiento)
+      try{ localStorage.setItem('oc_oauth_consent_done', '1'); }catch(e){}
       resolve(response.access_token);
     };
     _oauthTokenClient.error_callback = (err) => {
@@ -4332,9 +4335,12 @@ function obtenerAccessTokenOAuth(){
       reject(new Error('OAuth error: ' + (err && err.type ? err.type : 'desconocido') + ' — ' + (err && err.message ? err.message : '')));
     };
     try{
-      if(_oauthAccessToken){
+      const yaAutorizado = (function(){ try{ return localStorage.getItem('oc_oauth_consent_done') === '1'; }catch(e){ return false; } })();
+      if(_oauthAccessToken || yaAutorizado){
+        // Re-uso silencioso: si ya autorizó alguna vez en este navegador, no muestra UI
         _oauthTokenClient.requestAccessToken({ prompt: '' });
       } else {
+        // Primera vez en este navegador: pedir consentimiento explícito
         _oauthTokenClient.requestAccessToken({ prompt: 'consent' });
       }
     }catch(e){

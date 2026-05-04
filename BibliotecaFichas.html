@@ -456,7 +456,38 @@ document.getElementById('modal').addEventListener('click', function(e) {
 });
 
 searchInput.addEventListener('input', filterFichas);
-loadFichas();
+
+/* Espera a que Google Identity Services cargue antes de pedir auth.
+   El script tiene async defer, asi que en page load aun puede no estar listo. */
+function esperarGIS(maxIntentos){
+  return new Promise((resolve, reject) => {
+    let intentos = 0;
+    const lim = maxIntentos || 50; // 50 x 200ms = 10s
+    const tick = () => {
+      if(typeof google !== 'undefined' && google.accounts && google.accounts.oauth2){
+        resolve();
+        return;
+      }
+      intentos++;
+      if(intentos >= lim){
+        reject(new Error('Google Identity Services no cargo despues de 10s. Verifica tu conexion a internet o desactiva bloqueadores y recarga.'));
+        return;
+      }
+      setTimeout(tick, 200);
+    };
+    tick();
+  });
+}
+
+(async function init(){
+  try{
+    await esperarGIS();
+    await loadFichas();
+  }catch(e){
+    console.error('init biblioteca:', e);
+    showError(e.message);
+  }
+})();
 </script>
 </body>
 </html>

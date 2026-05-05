@@ -1899,36 +1899,37 @@ function doLogin(){
 }
 function logout(){ localStorage.removeItem('oc_fichas_exec'); location.reload(); }
 (function(){
-  // Si la URL trae ?autopdf=1, saltear el login (la ejecutiva solo va a imprimir
-  // desde la biblioteca; no necesita identificarse para descargar el PDF)
-  try{
-    const urlParams = new URLSearchParams(window.location.search);
-    const autoPdf = urlParams.get('autopdf');
-    if(autoPdf === '1' || autoPdf === 'true'){
-      const overlay = document.getElementById('loginOverlay');
-      if(overlay) overlay.style.display = 'none';
-      // Setear un exec dummy mínimo para que el resto del código no falle
-      state.exec = { key: 'autopdf', nombre: 'Generador PDF', email: '' };
-      const userNameEl = document.getElementById('userName');
-      if(userNameEl) userNameEl.textContent = state.exec.nombre;
-      // Mostrar banner de progreso ANTES de iniciar la carga, así si falla el fetch
-      // la usuaria igual ve el botón manual y el mensaje de error
-      if(typeof mostrarBannerAutoPdf === 'function'){
-        try{ mostrarBannerAutoPdf(); }catch(e){}
-      } else {
-        // mostrarBannerAutoPdf todavía no está definido (no ejecutó el script aún)
-        // — esperamos al DOMContentLoaded para mostrarlo
-        document.addEventListener('DOMContentLoaded', () => {
-          if(typeof mostrarBannerAutoPdf === 'function') mostrarBannerAutoPdf();
-        });
+  // Espera a que TODO el script termine de parsearse (todas las const/let de abajo
+  // del archivo ya inicializadas) antes de ejecutar init(). Sin esto, llamar a
+  // init() acá ejecuta cargarFichaDesdeURL → tira "Cannot access X before initialization"
+  // (TDZ) sobre las constantes BIBLIO_API_URL_V2, _biblioFichaActualFileId, etc.
+  function arrancar(){
+    try{
+      const urlParams = new URLSearchParams(window.location.search);
+      const autoPdf = urlParams.get('autopdf');
+      if(autoPdf === '1' || autoPdf === 'true'){
+        const overlay = document.getElementById('loginOverlay');
+        if(overlay) overlay.style.display = 'none';
+        // Setear un exec dummy mínimo para que el resto del código no falle
+        state.exec = { key: 'autopdf', nombre: 'Generador PDF', email: '' };
+        const userNameEl = document.getElementById('userName');
+        if(userNameEl) userNameEl.textContent = state.exec.nombre;
+        // Mostrar banner de progreso ANTES de iniciar la carga, así si falla el fetch
+        // la usuaria igual ve el botón manual y el mensaje de error
+        if(typeof mostrarBannerAutoPdf === 'function') mostrarBannerAutoPdf();
+        init();
+        return;
       }
-      init();
-      return;
-    }
-  }catch(e){ console.warn('autopdf bypass:', e); }
-  // Flujo normal: auto-login si tiene ejecutivo guardado
-  const s = localStorage.getItem('oc_fichas_exec');
-  if(s && EXEC_DB[s]){ document.getElementById('loginSelect').value=s; doLogin(); }
+    }catch(e){ console.warn('autopdf bypass:', e); }
+    // Flujo normal: auto-login si tiene ejecutivo guardado
+    const s = localStorage.getItem('oc_fichas_exec');
+    if(s && EXEC_DB[s]){ document.getElementById('loginSelect').value=s; doLogin(); }
+  }
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', arrancar);
+  } else {
+    arrancar();
+  }
 })();
 
 /* ══ Acordeón: click en el h2 colapsa/abre la sección ══ */

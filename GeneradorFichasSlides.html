@@ -2400,12 +2400,11 @@ function distribuirEdSpecs(){
   const cont2 = document.getElementById('ed_specs_pag2_wrap');
   if(!tbl1 || !tbl2 || !cont2) return;
 
-  // tbl1 ya tiene las filas frescas desde actualizarPreview (que también limpia tbl2 + cont2).
-  // Solo nos aseguramos del estado inicial por si se llama fuera del flujo normal.
-  if(tbl2.children.length){
-    // Si por alguna razón tbl2 quedó con filas duplicadas, las descartamos (tbl1 ya las tiene frescas)
-    tbl2.innerHTML = '';
-  }
+  // ANTES borrábamos tbl2.innerHTML, lo cual descartaba las filas que estaban allí
+  // cuando esta función se llama desde aplicarDiseno() (sin renderEditorial previo
+  // que repueble tbl1). Resultado: specs desaparecen de ambas páginas. Ahora movemos
+  // las filas de tbl2 DE VUELTA a tbl1 para empezar limpio sin perder datos.
+  while(tbl2.firstChild) tbl1.appendChild(tbl2.firstChild);
   cont2.style.display = 'none';
   // Restaurar visibilidad del wrap de pág 1 (puede haberse ocultado en una llamada previa)
   const wrapP1Init = tbl1.closest('.ed-specs-wrap');

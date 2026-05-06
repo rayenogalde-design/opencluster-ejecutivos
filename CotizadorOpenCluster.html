@@ -3406,20 +3406,33 @@ function upd() {
   // Estrategia: renderizar hoja 1 con N productos, medir si se desborda,
   // si no se desborda agregar más productos hasta que se desborde o no queden más.
   function renderAndMeasure(rows, isFirst, withFinal) {
+    // Wrapper absoluto con tamaño explícito para que el layout flex del .page
+    // se calcule igual que en el render real (estaba rompiéndose con position:fixed).
+    const wrap = document.createElement("div");
+    wrap.style.cssText = "position:absolute;left:-99999px;top:0;width:816px;height:auto;visibility:hidden;pointer-events:none;";
     const testPage = document.createElement("div");
     testPage.className = "page";
-    testPage.style.cssText = "position:fixed;left:-9999px;top:-9999px;width:816px;visibility:hidden;pointer-events:none;";
+    testPage.style.cssText = "width:816px;margin:0;box-shadow:none;";
     const inner = buildPageInner({rows, isFirst, isLast: withFinal}, withFinal);
-    testPage.innerHTML = `<div class="page-inner" style="overflow:visible">${inner}</div><div class="page-bottom"></div>`;
-    document.body.appendChild(testPage);
-    // Forzar reflow
-    const h = testPage.querySelector(".page-inner").getBoundingClientRect().height;
-    document.body.removeChild(testPage);
+    testPage.innerHTML = `<div class="page-inner">${inner}</div><div class="page-bottom"></div>`;
+    wrap.appendChild(testPage);
+    document.body.appendChild(wrap);
+    const innerEl = testPage.querySelector(".page-inner");
+    const h = innerEl.getBoundingClientRect().height;
+    // [DEBUG paginación] — quitar cuando se confirme el fix
+    if(window._cotzDbg !== false) {
+      window._cotzDbgLog = window._cotzDbgLog || [];
+      const entry = { rows: rows.length, isFirst, withFinal, h: +h.toFixed(1), pageH: +testPage.getBoundingClientRect().height.toFixed(1), MAX: +MAX_INNER_H.toFixed(1), fit: h <= MAX_INNER_H };
+      window._cotzDbgLog.push(entry);
+      console.log("[cotz-paginación]", entry);
+    }
+    document.body.removeChild(wrap);
     return h;
   }
 
   // Altura máxima disponible para page-inner (carta 279mm a 96dpi = 1060px, menos líneas top/bottom 10px)
-  const MAX_INNER_H = (279 * 96 / 25.4) - 10;
+  // Tolerancia +6px para sub-pixel rounding del navegador.
+  const MAX_INNER_H = (279 * 96 / 25.4) - 10 + 6;
 
   // Reconstruir grupos con compactación real
   const allProdRows = prodRows; // todos los productos

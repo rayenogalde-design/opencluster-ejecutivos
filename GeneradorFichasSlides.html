@@ -1943,6 +1943,11 @@ function setupCollapsibleSections(){
       const id = h.textContent.trim().split(' ')[0];
       const open = !h.parentElement.classList.contains('collapsed');
       try{ localStorage.setItem('oc_fichas_section_'+id, open?'1':'0'); } catch(e){}
+      // Re-render del preview después de colapsar/expandir — fix del bug donde
+      // las specs (modo "Pág 2") quedaban invisibles si la usuaria editaba algo
+      // y después clickeaba otra sección antes de que corriera el setTimeout
+      // de redistribución (10ms).
+      setTimeout(() => { if(typeof actualizarPreview === 'function') actualizarPreview(); }, 0);
     });
   });
   // Restaurar estado guardado o aplicar default (colapsar las de diseño avanzado)

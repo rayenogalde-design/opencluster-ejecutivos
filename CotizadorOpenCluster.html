@@ -3460,6 +3460,14 @@ function upd() {
       }
       // Asegurarse de al menos 1 producto
       bestFit = Math.max(1, bestFit);
+      // Si el binary search se tragó TODO pero sabemos por hAll que con el
+      // bloque final no cabía, dejar 1 producto para la hoja siguiente.
+      // Si no, terminaríamos con hoja 1 marcada isLast=true (renderiza con
+      // final), Chrome auto-corta físicamente, y queda una hoja 2 huérfana
+      // con solo el final y sin header.
+      if(bestFit === remaining.length && bestFit > 1) {
+        bestFit--;
+      }
       const chunk = remaining.slice(0, bestFit);
       remaining = remaining.slice(bestFit);
       finalGrupos.push({rows: chunk, isFirst: isFirstPage, isLast: remaining.length === 0});

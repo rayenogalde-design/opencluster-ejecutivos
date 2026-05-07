@@ -3759,21 +3759,24 @@ async function printDoc() {
     document.getElementById("eCEmail")?.focus();
     return;
   }
-  // Nombre del PDF: NumCotizacion_InstituciónSinEspacios_Productox(cant), Productox(cant)
-  // Ej: OC26-3589-AT_IlustreMunicipalidaddePuertoMontt_Catrex1, Colchónx1.pdf
+  // Nombre del PDF: "{NumCot} {InstituciónSinEspacios}_{Producto1SinEspacios}+{Producto2SinEspacios}+..."
+  // Ej: OC26-3549-AT HospSnJndeDios_CatresClinicos+ColchonCICMedOneVisco.pdf
+  // - Espacio entre número y institución
+  // - Productos con nombre COMPLETO sin espacios (no solo primera palabra)
+  // - Productos unidos con "+" sin cantidad
   const prevTitle = document.title;
   const numCot = (document.getElementById("eNum")?.value || "Cotizacion").trim();
   // Institución: quitar TODOS los espacios, mantener acentos y mayúsculas
   const inst = (document.getElementById("eCInstitucion")?.value || "").trim().replace(/\s+/g, '');
-  // Productos: primera palabra + x{cantidad}, siempre mostrar cantidad (aunque sea 1)
-  const prods = getProds().filter(p=>p.name).map(p=>{
-    const firstWord = p.name.trim().split(/\s+/)[0] || '';
-    const qty = p.cant > 0 ? p.cant : 1;
-    return firstWord + 'x' + qty;
-  }).join(', ');
-  const partes = [numCot, inst, prods].filter(Boolean);
+  // Productos: nombre COMPLETO sin espacios, unidos con "+"
+  const prods = getProds().filter(p=>p.name)
+    .map(p => p.name.trim().replace(/\s+/g, ''))
+    .join('+');
+  let nombreFinal = numCot;
+  if(inst)  nombreFinal += ' ' + inst;
+  if(prods) nombreFinal += '_' + prods;
   // Quitar caracteres inválidos para nombres de archivo Windows: / \ : * ? " < > |
-  const nombreFinal = partes.join('_').replace(/[\/\\:*?"<>|]/g,'').trim() || 'Cotizacion';
+  nombreFinal = nombreFinal.replace(/[\/\\:*?"<>|]/g,'').trim() || 'Cotizacion';
   document.title = nombreFinal;
   // El zoom ya está aplicado en vivo vía aplicarZoomPdf() — no hace falta re-aplicarlo aquí
   window.scrollTo(0, 0);

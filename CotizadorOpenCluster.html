@@ -655,6 +655,9 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
   }
   .page {
     width:100% !important;
+    /* height (no solo min-height) para que flex distribuya bien el espaciador
+       y la exec-card quede pegada abajo. */
+    height:100vh !important;
     min-height:100vh !important;
     margin:0 !important; padding:0 !important;
     box-shadow:none !important;
@@ -3769,10 +3772,14 @@ async function printDoc() {
   // Esperar a que las Google Fonts terminen de cargar antes de imprimir,
   // para que Chrome las embeba en el PDF con el peso/grosor correcto.
   try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch(e) {}
-  // Restaurar el título SÓLO después que Chrome cerró el diálogo de impresión,
-  // para que alcance a leerlo como nombre sugerido del PDF.
+  // Restaurar el título SÓLO después que Chrome cerró el diálogo de impresión.
+  // OJO: con "Guardar como PDF" en Windows, Chrome dispara afterprint cuando se
+  // cierra la vista previa, pero después abre un diálogo nativo "Guardar
+  // impresión como" que también lee document.title. Si restauramos al toque,
+  // ese segundo diálogo aparece con el nombre vacío. Por eso esperamos 2.5s
+  // tras afterprint antes de restaurar.
   const restoreTitle = () => {
-    document.title = prevTitle;
+    setTimeout(() => { document.title = prevTitle; }, 2500);
     window.removeEventListener('afterprint', restoreTitle);
   };
   window.addEventListener('afterprint', restoreTitle);

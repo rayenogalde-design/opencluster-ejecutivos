@@ -1307,7 +1307,18 @@ body[data-active-mode="1page"] .modo2-only::after{content:'Activá "2 páginas" 
         </label>
         <div id="p2_detalles_box" style="margin-top:8px;display:none">
           <textarea id="f_p2_mas_detalles" oninput="actualizarPreview()" rows="5" placeholder="Notas adicionales, accesorios incluidos, condiciones de garantía, indicaciones de uso, etc..."></textarea>
-          <div class="hint" style="margin-top:4px">Texto libre que aparece en la pág. 2 entre las especificaciones y el footer.</div>
+          <div style="margin-top:10px">
+            <label style="display:block;text-transform:uppercase;color:var(--grey);font-size:10px;font-weight:700;letter-spacing:0.05em;margin-bottom:6px">Ubicación del bloque</label>
+            <div class="ed-hdr-pills" id="detallesLocPills" style="grid-template-columns:repeat(2,1fr)">
+              <button type="button" class="ed-hdr-pill active" data-loc="pag1" onclick="setDetallesLoc('pag1')">
+                <div class="ed-hdr-pill-name">Pág 1</div>
+              </button>
+              <button type="button" class="ed-hdr-pill" data-loc="pag2" onclick="setDetallesLoc('pag2')">
+                <div class="ed-hdr-pill-name">Pág 2</div>
+              </button>
+            </div>
+          </div>
+          <div class="hint" style="margin-top:6px"><b>Pág 1:</b> aparece en la columna izquierda crema. <b>Pág 2:</b> aparece abajo entre las especificaciones y el footer.</div>
         </div>
       </div>
 
@@ -2339,7 +2350,9 @@ function sincronizarPag2(){
 }
 
 /* Distribuye caracts del Editorial: las que NO caben en pág 1 se mueven a pág 2.
-   Si todas caben en pág 1 → pág 2 caracts queda vacío y se oculta el título "Más características". */
+   Si todas caben en pág 1 → pág 2 caracts queda vacío y se oculta el título "Más características".
+   Si Rayen marca "Reemplazar características de pág. 2 manualmente", la pág 2 muestra ese texto
+   manual bajo el título "Características" (en lugar de las que sobraron de pág 1). */
 function distribuirEdCaracts(){
   const wrap = document.getElementById('fichaPages');
   if(!wrap) return;
@@ -2352,15 +2365,33 @@ function distribuirEdCaracts(){
   // Devolver cualquier li que estuviera en ul2 a ul1 para empezar limpio
   while(ul2.firstChild) ul1.appendChild(ul2.firstChild);
 
+  // Helpers para el título "Más características" / "Características" de pág 2
+  const cont2 = ul2.closest('.ed-cont-flow');
+  const title2 = cont2 ? cont2.querySelector('.ed-section-title') : null;
+  const setTitle2 = (txt, show) => {
+    if(!title2) return;
+    if(typeof txt === 'string') title2.textContent = txt;
+    title2.style.display = show ? '' : 'none';
+  };
+
   // En modo 1 página o si la plantilla no es Editorial, dejar pág 2 vacía
   if(mode === '1page' || tpl !== 'editorial') {
-    const cont2 = ul2.closest('.ed-cont-flow');
-    if(cont2){
-      const title2 = cont2.querySelector('.ed-section-title');
-      if(title2) title2.style.display = 'none';
-    }
+    setTitle2('Más características', false);
     return;
   }
+
+  // Reemplazo manual: si está activo y hay texto, ul2 = manual; pág 1 conserva todas sus caracts
+  const manualOnCb = document.getElementById('f_p2_caracts_manual_on');
+  const manualTxt = document.getElementById('f_p2_caracts_manual');
+  const useManual = manualOnCb && manualOnCb.checked && manualTxt && manualTxt.value.trim();
+  if(useManual){
+    ul2.innerHTML = parseCaracts(manualTxt.value);
+    setTitle2('Características', ul2.children.length > 0);
+    return;
+  }
+
+  // Modo auto: título es "Más características"; se oculta si pág 2 queda sin items
+  setTitle2('Más características', true);
 
   // Mover los que sobran de ul1 a ul2 (empezando por el final)
   const parent = ul1.closest('.ed-caracts');
@@ -2381,11 +2412,7 @@ function distribuirEdCaracts(){
   }
 
   // Ocultar el título "Más características" de pág 2 si está vacío
-  const cont2 = ul2.closest('.ed-cont-flow');
-  if(cont2){
-    const title2 = cont2.querySelector('.ed-section-title');
-    if(title2) title2.style.display = ul2.children.length ? '' : 'none';
-  }
+  setTitle2('Más características', ul2.children.length > 0);
 }
 
 /* Distribuye filas de specs Editorial: las que NO caben en pág 1 se mueven a pág 2.
@@ -2465,6 +2492,16 @@ function setSpecsCols(cols){
     p.classList.toggle('active', p.getAttribute('data-cols') === cols);
   });
   try{ localStorage.setItem('oc_fichas_ed_specs_cols', cols); }catch(e){}
+  actualizarPreview();
+}
+
+/* Ubicación del bloque "Más detalles": pág 1 (columna crema) o pág 2 (abajo) */
+function setDetallesLoc(loc){
+  if(!['pag1','pag2'].includes(loc)) loc = 'pag1';
+  document.querySelectorAll('#detallesLocPills .ed-hdr-pill').forEach(p => {
+    p.classList.toggle('active', p.getAttribute('data-loc') === loc);
+  });
+  try{ localStorage.setItem('oc_fichas_ed_detalles_loc', loc); }catch(e){}
   actualizarPreview();
 }
 
@@ -2839,6 +2876,12 @@ function resetLogo(){
   if(savedSpecsCols && document.querySelector('#specsColsPills .ed-hdr-pill[data-cols="'+savedSpecsCols+'"]')){
     document.querySelectorAll('#specsColsPills .ed-hdr-pill').forEach(p => {
       p.classList.toggle('active', p.getAttribute('data-cols') === savedSpecsCols);
+    });
+  }
+  const savedDetallesLoc = localStorage.getItem('oc_fichas_ed_detalles_loc');
+  if(savedDetallesLoc && document.querySelector('#detallesLocPills .ed-hdr-pill[data-loc="'+savedDetallesLoc+'"]')){
+    document.querySelectorAll('#detallesLocPills .ed-hdr-pill').forEach(p => {
+      p.classList.toggle('active', p.getAttribute('data-loc') === savedDetallesLoc);
     });
   }
   const savedSpecsStyle = localStorage.getItem('oc_fichas_ed_specs_style');
@@ -3614,13 +3657,18 @@ function renderEditorial(){
     datosEl.innerHTML = html;
   }
 
-  // Más detalles (lo del checkbox de pág 2 lo reusamos por ahora)
+  // Más detalles — la ubicación (pág 1 vs pág 2) la elige Rayen con los pills.
+  // En modo 1 página forzamos pág 1 (no existe pág 2 visible).
   const detOn = document.getElementById('f_p2_detalles_on') && document.getElementById('f_p2_detalles_on').checked;
   const detTxt = document.getElementById('f_p2_mas_detalles') ? document.getElementById('f_p2_mas_detalles').value.trim() : '';
+  const _wrapMode = (function(){ const w = document.getElementById('fichaPages'); return w ? w.getAttribute('data-mode') : '1page'; })();
+  let detLoc = 'pag1';
+  try{ detLoc = localStorage.getItem('oc_fichas_ed_detalles_loc') || 'pag1'; }catch(e){}
+  if(_wrapMode === '1page') detLoc = 'pag1';
   const detBox = document.getElementById('ed_mas_detalles1');
   const detP = document.getElementById('ed_mas_detalles_text1');
   if(detBox && detP){
-    if(detOn && detTxt){
+    if(detOn && detTxt && detLoc === 'pag1'){
       detBox.style.display = '';
       detP.textContent = detTxt;
     } else {
@@ -3708,13 +3756,15 @@ function renderEditorial(){
   if(s2) s2.innerHTML = '';
   const s2wrap = document.getElementById('ed_specs_pag2_wrap');
   if(s2wrap) s2wrap.style.display = 'none';
-  // Más detalles (bloque inferior — solo si está activo y tiene texto)
+  // Más detalles (bloque inferior pág 2) — solo si Rayen seleccionó "Pág 2" en los pills
   const det2 = document.getElementById('ed_detalles2');
   const detBottom2 = document.getElementById('ed_detalles_bottom2');
   const detOn2 = document.getElementById('f_p2_detalles_on') && document.getElementById('f_p2_detalles_on').checked;
   const detTxt2 = document.getElementById('f_p2_mas_detalles') ? document.getElementById('f_p2_mas_detalles').value.trim() : '';
+  let detLoc2 = 'pag1';
+  try{ detLoc2 = localStorage.getItem('oc_fichas_ed_detalles_loc') || 'pag1'; }catch(e){}
   if(detBottom2 && det2){
-    if(detOn2 && detTxt2){
+    if(detOn2 && detTxt2 && detLoc2 === 'pag2'){
       detBottom2.style.display = '';
       det2.textContent = detTxt2;
     } else {
@@ -4096,6 +4146,7 @@ function serializarFichaCompleta(){
     specs_loc: (function(){ try{ return localStorage.getItem('oc_fichas_ed_specs_loc') || 'auto'; }catch(e){ return 'auto'; } })(),
     specs_cols: (function(){ try{ return localStorage.getItem('oc_fichas_ed_specs_cols') || '1'; }catch(e){ return '1'; } })(),
     specs_style: (function(){ try{ return localStorage.getItem('oc_fichas_ed_specs_style') || 'color'; }catch(e){ return 'color'; } })(),
+    detalles_loc: (function(){ try{ return localStorage.getItem('oc_fichas_ed_detalles_loc') || 'pag1'; }catch(e){ return 'pag1'; } })(),
     dispo_preset: (function(){ try{ return localStorage.getItem('oc_fichas_dispo_preset') || 'pedido'; }catch(e){ return 'pedido'; } })(),
     caja_loc: (function(){ try{ return localStorage.getItem('oc_fichas_caja_loc') || 'p1-left'; }catch(e){ return 'p1-left'; } })()
   };
@@ -4166,6 +4217,7 @@ function aplicarFichaCompleta(ficha){
     if(ficha.specs_loc && typeof setSpecsLoc === 'function') setSpecsLoc(ficha.specs_loc);
     if(ficha.specs_cols && typeof setSpecsCols === 'function') setSpecsCols(ficha.specs_cols);
     if(ficha.specs_style && typeof setSpecsStyle === 'function') setSpecsStyle(ficha.specs_style);
+    if(ficha.detalles_loc && typeof setDetallesLoc === 'function') setDetallesLoc(ficha.detalles_loc);
     if(ficha.caja_loc && typeof setCajaLoc === 'function') setCajaLoc(ficha.caja_loc);
     // setDispoPreset sobrescribe f_dispo_text — restaurar el texto guardado después
     if(ficha.dispo_preset && typeof setDispoPreset === 'function'){

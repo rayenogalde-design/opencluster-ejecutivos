@@ -1335,8 +1335,8 @@ body[data-active-mode="1page"] .modo2-only::after{content:'Activá "2 páginas" 
 
       <div class="field tpl-editorial-only" style="margin-top:10px">
         <label>Título para header pág 2 / pág 3</label>
-        <input id="f_p2_titulo_corto" type="text" oninput="_p2TituloCortoEditado=true;actualizarPreview()" placeholder="Aquí aparecerá el título del producto">
-        <div class="hint" style="margin-top:4px">Aparece automáticamente con el mismo título del producto. Si es muy largo y no entra, edítalo aquí con una versión más corta — solo afecta al header de pág 2 y pág 3.</div>
+        <textarea id="f_p2_titulo_corto" rows="2" oninput="_p2TituloCortoEditado=true;actualizarPreview()" placeholder="Aquí aparecerá el título del producto" style="min-height:48px"></textarea>
+        <div class="hint" style="margin-top:4px">Aparece automáticamente con el mismo título del producto. Si es muy largo y no entra, edítalo aquí con una versión más corta — solo afecta al header de pág 2 y pág 3. <b>Presiona Enter</b> para partir el título en dos líneas.</div>
       </div>
 
       <div class="field tpl-editorial-only" style="margin-top:10px">
@@ -3742,12 +3742,14 @@ function renderEditorial(){
     if(el) el.src = logoSrc;
   });
   // Subtítulo del header de pág 2 y 3: usa el título del producto (o el corto si lo definió Rayen)
+  // Acepta saltos de línea (Enter) → se renderizan como <br> para partir el título en 2+ filas.
   const tituloCorto = v('f_p2_titulo_corto');
-  const subText = (tituloCorto || titulo || '').trim();
+  const subText = (tituloCorto || titulo || '').replace(/^\s+|\s+$/g, '');
   const sub2 = document.getElementById('ed_pag2_sub');
   const sub3 = document.getElementById('ed_pag3_sub');
-  if(sub2) sub2.textContent = subText || 'de producto · pág 2';
-  if(sub3) sub3.textContent = subText || 'de producto · pág 3';
+  const subHtml = subText ? escapeHtml(subText).replace(/\r?\n/g, '<br>') : '';
+  if(sub2) sub2.innerHTML = subHtml || 'de producto · pág 2';
+  if(sub3) sub3.innerHTML = subHtml || 'de producto · pág 3';
 
   // Pág 2: caracts y specs vacías por defecto — se llenan tras distribución (solo las que NO entraron en pág 1)
   const c2 = document.getElementById('ed_caracts2');

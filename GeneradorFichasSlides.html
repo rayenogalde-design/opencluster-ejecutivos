@@ -5133,11 +5133,15 @@ function escapeHtml(s){
   }
 
   function init() {
-    patchLoadProducts();
     renderBadge();
     hookSelectProduct();
     hookClearSelection();
   }
+
+  // Patch SINCRONO: corre apenas se parsea el script, ANTES de DOMContentLoaded.
+  // Asi cuando arrancar() hace `await loadProducts()` ya esta llamando a la version embebida
+  // y la peticion a Shopify nunca se dispara — sin race que sobreescriba state.products.
+  patchLoadProducts();
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

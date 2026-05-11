@@ -354,9 +354,14 @@ body:not([data-tpl="editorial"]) .tpl-editorial-only{display:none !important}
 .ed-cont-img4-block[data-pos="next-to-specs"][data-specs-side="left"]{float:right;margin:var(--ed-specs-pag2-gap, 0.20in) 0 0.12in 0.22in}
 .ed-cont-img4-block[data-pos="next-to-specs"][data-specs-side="right"]{float:left;margin:var(--ed-specs-pag2-gap, 0.20in) 0.22in 0.12in 0}
 
-/* SPECS en pág 2 — anchos configurables (data-ancho en .ed-specs-pag2) */
-.ed-specs-pag2[data-ancho="mitad-izq"]{float:left;clear:left;width:48%;margin-right:0.22in}
-.ed-specs-pag2[data-ancho="mitad-der"]{float:right;clear:right;width:48%;margin-left:0.22in}
+/* SPECS en pág 2 — anchos configurables (data-ancho en .ed-specs-pag2).
+   IMPORTANTE: float requiere que el padre NO sea flex. Por eso cuando ancho es half,
+   activamos la clase .specs-half-active en .ed-cont-pag2 que la cambia a display:block.
+   Ver aplicarSpecsAncho() en el JS. */
+.ed-cont-pag2.specs-half-active{display:block}
+.ed-cont-pag2.specs-half-active > .ed-cont-flow{display:block}
+.ed-specs-pag2[data-ancho="mitad-izq"]{float:left;clear:left;width:48%;margin-right:0.22in;box-sizing:border-box}
+.ed-specs-pag2[data-ancho="mitad-der"]{float:right;clear:right;width:48%;margin-left:0.22in;box-sizing:border-box}
 .ed-specs-pag2[data-ancho="completo"]{float:none;clear:both;width:auto}
 
 /* IMG 3 — lado configurable */
@@ -2691,6 +2696,12 @@ function aplicarSpecsAncho(){
   const efectivo = _effectiveSpecsAncho();
   const wrap = document.getElementById('ed_specs_pag2_wrap');
   if(wrap) wrap.setAttribute('data-ancho', efectivo);
+  // Cambiar .ed-cont-pag2 a display:block cuando ancho es half — para que los floats funcionen.
+  // (En flex container los float:left/right son ignorados.)
+  const isHalf = (efectivo === 'mitad-izq' || efectivo === 'mitad-der');
+  document.querySelectorAll('.ed-cont-pag2').forEach(c => {
+    c.classList.toggle('specs-half-active', isHalf);
+  });
   let setting = 'auto';
   try{ setting = localStorage.getItem('oc_fichas_specs_ancho') || 'auto'; }catch(e){}
   _setActivePill('specsAnchoPills','data-ancho', setting);

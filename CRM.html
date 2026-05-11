@@ -789,6 +789,10 @@ input,select,textarea{font-family:inherit; font-size:14px;}
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6"/><path d="M2.5 22v-6h6"/><path d="M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
             Actualizar categorías (post-migración)
           </button>
+          <button class="btn" onclick="inferirCategorias()" style="background:#C9A96E; color:white; border-color:#C9A96E;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21h6"/><path d="M12 17v4"/><path d="M12 3a6 6 0 0 0-6 6c0 3 2 5 3 6h6c1-1 3-3 3-6a6 6 0 0 0-6-6z"/></svg>
+            Inferir categorías por institución
+          </button>
         </div>
         <div id="migReporte"></div>
       </div>
@@ -1471,6 +1475,36 @@ async function cargarAuditoria(){
         '</tr>'
       ).join('') + '</tbody>' +
     '</table>';
+}
+
+async function inferirCategorias(){
+  const reporteEl = document.getElementById('migReporte');
+  if(!confirm('Esto va a analizar la institución de cada contacto sin categoría y le va a asignar una automáticamente usando palabras clave (ej: "CESFAM" → Salud Pública / CESFAM). ¿Continuar?')) return;
+  reporteEl.innerHTML = '<div class="loading-state"><div class="spinner"></div>Infiriendo categorías…</div>';
+  const r = await fetchAPI('crm_inferir_categorias', null, { solicitante: USUARIO });
+  if(!r.ok){
+    reporteEl.innerHTML = '<div class="error-state"><b>Error:</b> ' + esc(r.error || 'desconocido') + '</div>';
+    return;
+  }
+  const rep = r.reporte || {};
+  const conteo = rep.conteo_por_categoria || {};
+  let conteoHtml = '';
+  Object.keys(conteo).sort().forEach(k => {
+    conteoHtml += '<li>' + esc(k) + ': <b>' + conteo[k] + '</b></li>';
+  });
+  reporteEl.innerHTML =
+    '<div class="card"><div class="card-hd"><h3>Inferencia automática de categorías</h3></div>' +
+    '<div class="card-body" style="font-family:Open Sans,sans-serif;">' +
+      '<ul>' +
+        '<li>Total contactos analizados: <b>' + (rep.total_contactos || 0) + '</b></li>' +
+        '<li>Contactos inferidos (categoría asignada): <b style="color:var(--jade-dk);">' + (rep.inferidos || 0) + '</b></li>' +
+        '<li>Sin match (necesitan categorización manual): <b>' + (rep.sin_match || 0) + '</b></li>' +
+        '<li>Saltados (ya tenían categoría): <b>' + (rep.saltados_ya_tenian || 0) + '</b></li>' +
+      '</ul>' +
+      (conteoHtml ? '<h4>Distribución por categoría inferida</h4><ul>' + conteoHtml + '</ul>' : '') +
+      '<p><b>' + esc(rep.mensaje || '') + '</b></p>' +
+      '<p style="color:var(--mist);font-size:12.5px;">Volvé a "Todos los Contactos" (Ctrl+F5) para verificar. Los que quedan sin match podés categorizar manualmente desde "Categorizar Urgente".</p>' +
+    '</div></div>';
 }
 
 async function actualizarCategorias(){

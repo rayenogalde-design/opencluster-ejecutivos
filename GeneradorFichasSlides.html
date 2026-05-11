@@ -349,20 +349,33 @@ body:not([data-tpl="editorial"]) .tpl-editorial-only{display:none !important}
 .ed-cont-img4-block[data-pos="top-left"]{float:left;clear:none;margin:0 0.22in 0.12in 0}
 .ed-cont-img4-block[data-pos="bottom-left"]{float:left;clear:both;margin:0.18in 0.22in 0.12in 0}
 .ed-cont-img4-block[data-pos="right"]{float:right;clear:none;margin:0 0 0.12in 0.22in}
-/* Preset "Al lado de specs": img 4 se mueve al mismo padre que ed-specs-pag2 y flota en el lado libre */
-.ed-cont-img4-block[data-pos="next-to-specs"]{clear:both;margin:var(--ed-specs-pag2-gap, 0.20in) 0 0.12in 0;width:48%;max-width:48%;float:left}
-.ed-cont-img4-block[data-pos="next-to-specs"][data-specs-side="left"]{float:right;margin:var(--ed-specs-pag2-gap, 0.20in) 0 0.12in 0.22in}
-.ed-cont-img4-block[data-pos="next-to-specs"][data-specs-side="right"]{float:left;margin:var(--ed-specs-pag2-gap, 0.20in) 0.22in 0.12in 0}
 
-/* SPECS en pág 2 — anchos configurables (data-ancho en .ed-specs-pag2).
-   IMPORTANTE: float requiere que el padre NO sea flex. Por eso cuando ancho es half,
-   activamos la clase .specs-half-active en .ed-cont-pag2 que la cambia a display:block.
-   Ver aplicarSpecsAncho() en el JS. */
-.ed-cont-pag2.specs-half-active{display:block}
-.ed-cont-pag2.specs-half-active > .ed-cont-flow{display:block}
-.ed-specs-pag2[data-ancho="mitad-izq"]{float:left;clear:left;width:48%;margin-right:0.22in;box-sizing:border-box}
-.ed-specs-pag2[data-ancho="mitad-der"]{float:right;clear:right;width:48%;margin-left:0.22in;box-sizing:border-box}
-.ed-specs-pag2[data-ancho="completo"]{float:none;clear:both;width:auto}
+/* === SPECS HALF-WIDTH + IMG 4 "Al lado de specs" — flex-row wrapper approach ===
+   En lugar de pelear con floats dentro del flex column de .ed-cont-pag2, creamos un
+   wrapper .ed-specs-row dedicado (display:flex;flex-direction:row) que aloja specs
+   y, opcionalmente, img 4 en preset "next-to-specs". El JS crea/destruye este wrapper.
+   El ancho de specs es controlado por --specs-width (default 48%) y la imagen ocupa
+   automáticamente lo que sobra. */
+.ed-specs-row{
+  display:flex;flex-direction:row;gap:0.22in;align-items:flex-start;
+  margin-top:var(--ed-specs-pag2-gap, 0.20in);width:100%;flex-shrink:0
+}
+.ed-specs-row > .ed-specs-pag2{
+  margin:0 !important;clear:none !important;float:none !important;
+  flex:0 0 var(--specs-width, 48%);min-width:0;max-width:none
+}
+.ed-specs-row > .ed-cont-img4-block{
+  margin:0 !important;clear:none !important;float:none !important;
+  flex:1 1 auto;width:auto !important;max-width:none !important
+}
+/* Orden: mitad-izq → specs primero / mitad-der → specs después */
+.ed-specs-row > .ed-specs-pag2[data-ancho="mitad-izq"]{order:1}
+.ed-specs-row > .ed-specs-pag2[data-ancho="mitad-der"]{order:2}
+.ed-specs-row > .ed-cont-img4-block[data-pos="next-to-specs"][data-specs-side="left"]{order:2}
+.ed-specs-row > .ed-cont-img4-block[data-pos="next-to-specs"][data-specs-side="right"]{order:1}
+/* La imagen dentro de img4-box debe llenar el contenedor disponible cuando está en next-to-specs */
+.ed-specs-row > .ed-cont-img4-block[data-pos="next-to-specs"] .ed-img4-box{width:100%;display:block}
+.ed-specs-row > .ed-cont-img4-block[data-pos="next-to-specs"] .ed-img4-box img{width:100%;height:auto;max-height:var(--ed-img4-h, 2in)}
 
 /* IMG 3 — lado configurable */
 .ed-cont-img3-float[data-pos="left"]{float:left;margin:0 0.22in 0.12in 0}
@@ -1286,7 +1299,12 @@ body[data-active-mode="1page"] .modo2-only::after{content:'Activá "2 páginas" 
           <button type="button" class="ed-hdr-pill" data-ancho="mitad-izq" onclick="setSpecsAncho('mitad-izq')"><div class="ed-hdr-pill-name">Mitad izq</div></button>
           <button type="button" class="ed-hdr-pill" data-ancho="mitad-der" onclick="setSpecsAncho('mitad-der')"><div class="ed-hdr-pill-name">Mitad der</div></button>
         </div>
-        <div class="hint" style="margin-top:6px"><b>Auto:</b> mira dónde está img 4 y se va al lado opuesto. <b>Mitad izq / Mitad der:</b> specs ocupa solo la mitad de la página, dejando la otra libre para una imagen. <b>Tip:</b> combínalo con el preset "Al lado de specs" en img 4 para armar el layout con un clic.</div>
+        <div class="hint" style="margin-top:6px"><b>Auto:</b> mira dónde está img 4 y se va al lado opuesto. <b>Mitad izq / Mitad der:</b> specs ocupa la mitad ajustable de la página, dejando la otra libre para una imagen.</div>
+        <div style="margin-top:10px">
+          <label>Tamaño del ancho de specs (cuando está en Mitad izq/der) <span class="vlbl" id="lbl_specsWidth">48 %</span></label>
+          <input type="range" id="ds_specsWidth" min="30" max="70" step="2" value="48" oninput="onSpecsWidthChange()">
+          <div class="hint" style="margin-top:4px">Mueve para que specs se haga más ancho/angosto. La imagen 4 (cuando está en "Al lado de specs") rellena automáticamente lo que sobra.</div>
+        </div>
       </div>
       <div class="field tpl-editorial-only" id="f_specs_style_field" style="margin-top:10px">
         <label>Estilo visual</label>
@@ -2655,6 +2673,19 @@ function setImg4Pos(pos){
   if(!['below-img3','right','top-left','bottom-left','next-to-specs'].includes(pos)) pos = 'below-img3';
   _setActivePill('img4PosPills','data-img4pos',pos);
   try{ localStorage.setItem('oc_fichas_img4_pos', pos); }catch(e){}
+  // Si el preset es "next-to-specs" y specs está en auto/completo, lo seteamos a "Mitad der"
+  // por default — sin esto, _effectiveSpecsAncho retorna "completo" para 'next-to-specs' y no
+  // se crea el wrapper .ed-specs-row donde img 4 debería entrar.
+  if(pos === 'next-to-specs'){
+    try{
+      const specsAnchoActual = localStorage.getItem('oc_fichas_specs_ancho') || 'auto';
+      if(specsAnchoActual === 'auto' || specsAnchoActual === 'completo'){
+        localStorage.setItem('oc_fichas_specs_ancho', 'mitad-der');
+        _setActivePill('specsAnchoPills','data-ancho','mitad-der');
+      }
+    }catch(e){}
+  }
+  aplicarSpecsAncho();
   aplicarImgPosiciones();
 }
 function setSpecsAncho(ancho){
@@ -2664,6 +2695,13 @@ function setSpecsAncho(ancho){
   aplicarSpecsAncho();
   // Recalcular posición de img 4 (puede afectar el lado del preset "next-to-specs")
   aplicarImgPosiciones();
+}
+
+function onSpecsWidthChange(){
+  const slider = document.getElementById('ds_specsWidth');
+  if(!slider) return;
+  try{ localStorage.setItem('oc_fichas_specs_width', slider.value); }catch(e){}
+  aplicarSpecsAncho();
 }
 
 /* Calcula a qué lado (izq/der/null) está img 4 visualmente. null si no aplica. */
@@ -2691,17 +2729,63 @@ function _effectiveSpecsAncho(){
   return side === 'left' ? 'mitad-der' : 'mitad-izq';
 }
 
-/* Aplica el data-ancho al wrap de specs pág 2 y actualiza las pills */
+/* Aplica el data-ancho al wrap de specs pág 2 y crea/destruye el wrapper .ed-specs-row
+   cuando se necesita poner specs e img 4 lado a lado. */
 function aplicarSpecsAncho(){
   const efectivo = _effectiveSpecsAncho();
   const wrap = document.getElementById('ed_specs_pag2_wrap');
   if(wrap) wrap.setAttribute('data-ancho', efectivo);
-  // Cambiar .ed-cont-pag2 a display:block cuando ancho es half — para que los floats funcionen.
-  // (En flex container los float:left/right son ignorados.)
   const isHalf = (efectivo === 'mitad-izq' || efectivo === 'mitad-der');
-  document.querySelectorAll('.ed-cont-pag2').forEach(c => {
-    c.classList.toggle('specs-half-active', isHalf);
+
+  // Crear/destruir .ed-specs-row en cada .ed-cont-pag2
+  document.querySelectorAll('.ed-cont-pag2').forEach(cont => {
+    let row = cont.querySelector(':scope > .ed-specs-row');
+    const specs = cont.querySelector(':scope > .ed-specs-pag2') ||
+                  (row ? row.querySelector('.ed-specs-pag2') : null);
+    if(isHalf){
+      // Necesitamos el row
+      if(!row){
+        row = document.createElement('div');
+        row.className = 'ed-specs-row';
+        // Insertar después de .ed-cont-flow
+        const flow = cont.querySelector(':scope > .ed-cont-flow');
+        if(flow && flow.nextSibling) cont.insertBefore(row, flow.nextSibling);
+        else cont.appendChild(row);
+      }
+      if(specs && specs.parentElement !== row){
+        row.appendChild(specs);
+      }
+    } else {
+      // Sacar todo del row y eliminarlo
+      if(row){
+        // Mover specs de vuelta al .ed-cont-pag2 (en la posición original — después de .ed-cont-flow)
+        if(specs && specs.parentElement === row){
+          cont.insertBefore(specs, row);
+        }
+        // Si quedó img 4 dentro del row, JS de aplicarImgPosiciones la maneja después.
+        // Aquí solo eliminamos el row si quedó vacío.
+        while(row.firstChild){ cont.insertBefore(row.firstChild, row); }
+        row.remove();
+      }
+    }
   });
+
+  // Aplicar ancho personalizado de specs (--specs-width) si hay slider
+  const slider = document.getElementById('ds_specsWidth');
+  if(slider){
+    // Sincronizar slider desde localStorage si difiere (importante al cargar la página)
+    try{
+      const stored = localStorage.getItem('oc_fichas_specs_width');
+      if(stored && stored !== slider.value) slider.value = stored;
+    }catch(e){}
+    const v = parseFloat(slider.value);
+    document.querySelectorAll('.ed-specs-row').forEach(r => {
+      r.style.setProperty('--specs-width', v + '%');
+    });
+    const lbl = document.getElementById('lbl_specsWidth');
+    if(lbl) lbl.textContent = v.toFixed(0) + ' %';
+  }
+
   let setting = 'auto';
   try{ setting = localStorage.getItem('oc_fichas_specs_ancho') || 'auto'; }catch(e){}
   _setActivePill('specsAnchoPills','data-ancho', setting);
@@ -2754,29 +2838,33 @@ function aplicarImgPosiciones(){
     if(img4X != null) el.style.setProperty('--ed-img4-x', img4X);
     if(img4Y != null) el.style.setProperty('--ed-img4-y', img4Y);
   });
-  // PRESET "Al lado de specs": mover img 4 DOM al mismo padre que ed-specs-pag2 (ed-cont-pag2)
-  // y marcar data-specs-side para que CSS la flote en el lado opuesto.
+  // PRESET "Al lado de specs": mover img 4 al wrapper .ed-specs-row (creado por aplicarSpecsAncho).
+  // IMPORTANTE: llamamos aplicarSpecsAncho ANTES de intentar mover img 4 al row, porque la
+  // función crea/destruye el row. Si lo hacemos al final, el row no existe todavía aquí.
+  if(typeof aplicarSpecsAncho === 'function') aplicarSpecsAncho();
+  // Si no estamos en preset "next-to-specs" o no hay half-mode, devolver img 4 a .ed-cont-flow.
   const img4El = document.getElementById('ed_cont_img4_wrap2');
-  const specsWrap = document.getElementById('ed_specs_pag2_wrap');
   const specsShowCb = document.getElementById('f_specs_show');
   const specsActive = !specsShowCb || specsShowCb.checked;
-  if(img4El && specsWrap){
-    if(img4Pos === 'next-to-specs' && !img4Free && specsActive){
-      // Resolver lado de specs (después de aplicar, el ancho efectivo puede haber cambiado)
-      const ancho = _effectiveSpecsAncho();
-      const specsSide = ancho === 'mitad-izq' ? 'left' : (ancho === 'mitad-der' ? 'right' : 'right');
+  if(img4El){
+    const ancho = _effectiveSpecsAncho();
+    const isHalf = (ancho === 'mitad-izq' || ancho === 'mitad-der');
+    const wantNextToSpecs = (img4Pos === 'next-to-specs' && !img4Free && specsActive && isHalf);
+    if(wantNextToSpecs){
+      const specsSide = ancho === 'mitad-izq' ? 'left' : 'right';
       img4El.setAttribute('data-specs-side', specsSide);
-      // Mover img 4 a ser hermano de specs (justo antes de specs, mismo padre = .ed-cont-pag2)
-      if(img4El.parentElement !== specsWrap.parentElement){
-        if(!img4El.dataset.originalParent) img4El.dataset.originalParent = img4El.parentElement.className;
-        specsWrap.parentElement.insertBefore(img4El, specsWrap);
+      // Buscar el .ed-specs-row dentro de .ed-cont-pag2 (creado por aplicarSpecsAncho antes)
+      const cont = document.querySelector('.ed-cont-pag2');
+      const row = cont ? cont.querySelector(':scope > .ed-specs-row') : null;
+      if(row && img4El.parentElement !== row){
+        if(!img4El.dataset.originalParent) img4El.dataset.originalParent = '1';
+        row.appendChild(img4El);
       }
     } else {
-      // Restaurar img 4 al .ed-cont-flow si fue movida
+      // Restaurar img 4 a .ed-cont-flow
       img4El.removeAttribute('data-specs-side');
       const flow = document.querySelector('.ed-cont-flow');
       if(flow && img4El.parentElement !== flow && img4El.dataset.originalParent){
-        // Re-insertar después del img 3 wrap
         const img3wrap = flow.querySelector('.ed-cont-img3-float');
         if(img3wrap && img3wrap.nextSibling) flow.insertBefore(img4El, img3wrap.nextSibling);
         else flow.appendChild(img4El);
@@ -2791,8 +2879,6 @@ function aplicarImgPosiciones(){
   _setActivePill('img4WrapPills','data-img4wrap', img4Wrap);
   const cb3 = document.getElementById('f_p2_img3_free'); if(cb3) cb3.checked = img3Free;
   const cb4 = document.getElementById('f_p2_img4_free'); if(cb4) cb4.checked = img4Free;
-  // Aplicar ancho de specs (resuelve auto en función del lado de img 4)
-  if(typeof aplicarSpecsAncho === 'function') aplicarSpecsAncho();
   // Re-conectar drag listeners (idempotente)
   _setupDraggable('.ed-cont-img3-float', 'img3');
   _setupDraggable('.ed-cont-img4-block', 'img4');
@@ -4519,7 +4605,8 @@ function serializarFichaCompleta(){
     img3_y: (function(){ try{ return localStorage.getItem('oc_fichas_img3_y') || ''; }catch(e){ return ''; } })(),
     img4_x: (function(){ try{ return localStorage.getItem('oc_fichas_img4_x') || ''; }catch(e){ return ''; } })(),
     img4_y: (function(){ try{ return localStorage.getItem('oc_fichas_img4_y') || ''; }catch(e){ return ''; } })(),
-    specs_ancho: (function(){ try{ return localStorage.getItem('oc_fichas_specs_ancho') || 'auto'; }catch(e){ return 'auto'; } })()
+    specs_ancho: (function(){ try{ return localStorage.getItem('oc_fichas_specs_ancho') || 'auto'; }catch(e){ return 'auto'; } })(),
+    specs_width: (function(){ try{ return localStorage.getItem('oc_fichas_specs_width') || '48'; }catch(e){ return '48'; } })()
   };
   // Capturar todos los sliders ds_*
   document.querySelectorAll('input[id^="ds_"]').forEach(s => { ficha.sliders[s.id] = s.value; });
@@ -4603,6 +4690,7 @@ function aplicarFichaCompleta(ficha){
       if(ficha.img4_x) localStorage.setItem('oc_fichas_img4_x', ficha.img4_x); else localStorage.removeItem('oc_fichas_img4_x');
       if(ficha.img4_y) localStorage.setItem('oc_fichas_img4_y', ficha.img4_y); else localStorage.removeItem('oc_fichas_img4_y');
       if(ficha.specs_ancho) localStorage.setItem('oc_fichas_specs_ancho', ficha.specs_ancho);
+      if(ficha.specs_width) localStorage.setItem('oc_fichas_specs_width', ficha.specs_width);
     }catch(e){}
     if(typeof aplicarImgPosiciones === 'function') aplicarImgPosiciones();
     // setDispoPreset sobrescribe f_dispo_text — restaurar el texto guardado después

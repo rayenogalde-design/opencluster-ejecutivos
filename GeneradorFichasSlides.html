@@ -441,28 +441,42 @@ body:not([data-tpl="editorial"]) .tpl-editorial-only{display:none !important}
 .ed-caja li::before{content:'';position:absolute;left:0;top:7px;width:5px;height:5px;background:var(--coral);border-radius:50%}
 
 /* === MODO LIBRE de la caja "¿Qué hay en la caja?" === */
-/* Cuando data-mode="free", la caja vive como sibling dentro de .ed-cont-flow (pág 2).
-   El usuario la arrastra con el mouse y el texto fluye alrededor. */
-.ed-caja[data-mode="free"]{cursor:move;user-select:none;-webkit-user-select:none;clear:none}
+/* Cuando data-mode="free", la caja vive como sibling dentro de un flow container
+   (pág 1: .ed-caracts / pág 2: .ed-cont-flow). El usuario la arrastra con el mouse
+   y el texto fluye alrededor porque sigue siendo float (NO position:absolute). */
+.ed-caja[data-mode="free"]{cursor:move;user-select:none;-webkit-user-select:none;clear:none;position:relative}
 .ed-caja[data-mode="free"][data-wrap="float"]{
-  float:var(--caja-side, left);max-width:var(--caja-max-w, 3.2in);
+  float:left;max-width:var(--caja-max-w, 3.2in);
   margin:var(--caja-y, 0in) 0.18in 0.12in 0
 }
 .ed-caja[data-mode="free"][data-wrap="float"][data-side="right"]{
+  float:right;
   margin:var(--caja-y, 0in) 0 0.12in 0.18in
 }
 .ed-caja[data-mode="free"][data-wrap="block"]{
   float:none;display:block;clear:both;
   margin:var(--caja-y, 0in) 0 0.18in 0;max-width:100%
 }
+/* Drag handle visible cuando está en modo libre (solo en pantalla, no en print) */
 @media screen{
+  .ed-caja[data-mode="free"]::after{
+    content:'⤧ arrastrar';position:absolute;top:-9px;right:8px;
+    background:var(--orange);color:#fff;font-family:'Montserrat',sans-serif;
+    font-size:7.5pt;font-weight:700;padding:1px 6px;border-radius:6px;
+    letter-spacing:.3px;text-transform:uppercase;pointer-events:none;
+    box-shadow:0 1px 3px rgba(0,0,0,.15);z-index:5
+  }
   .ed-caja[data-mode="free"]{outline:1px dashed transparent;transition:outline-color .15s}
   .ed-caja[data-mode="free"]:hover{outline:2px dashed var(--coral);outline-offset:3px}
   .ed-caja[data-mode="free"].is-dragging{outline:2px solid var(--orange);outline-offset:3px;opacity:.88}
 }
 @media print{
   .ed-caja[data-mode="free"]{outline:none !important;cursor:auto !important}
+  .ed-caja[data-mode="free"]::after{display:none !important}
 }
+/* Para que la caja flote dentro de .ed-caracts (pág 1), necesitamos forzar block
+   en ese contenedor — los floats son ignorados dentro de flex/grid containers. */
+.ed-caracts.has-caja-libre{display:block !important}
 
 /* Pág 2 Editorial: bloque "Más detalles" abajo con diseño cálido */
 .ed-cont-pag2{display:flex;flex-direction:column}
@@ -1194,6 +1208,9 @@ body[data-active-mode="1page"] .modo2-only::after{content:'Activá "2 páginas" 
           Mostrar bloque "¿Qué hay en la caja?"
         </label>
         <div id="f_caja_box" style="margin-top:8px">
+          <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--grey);margin-bottom:4px">Título de la tarjeta</label>
+          <input type="text" id="f_caja_titulo" placeholder="¿Qué hay en la caja?" oninput="actualizarPreview()" style="margin-bottom:8px">
+          <div class="hint" style="margin-bottom:6px">Default "¿Qué hay en la caja?". Puedes cambiarlo a "Más detalles", "No olvidar", etc.</div>
           <textarea id="f_caja_text" oninput="if(this.value.trim()){document.getElementById('f_caja_on').checked=true;}actualizarPreview()" rows="5" placeholder="Un item por línea, por ejemplo:&#10;Rastreador ocular PCEye&#10;Estuche de transporte&#10;Placas de montaje magnéticas&#10;Adaptador USB-A a USB-C&#10;Software de control TD&#10;Guía de inicio rápido"></textarea>
           <div class="hint" style="margin-top:4px">Lista de items que vienen incluidos con el producto. Aparece como tarjeta tipo "Más detalles" con bullets coral.</div>
           <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--grey);margin-top:12px;margin-bottom:6px">Ubicación de la tarjeta</label>
@@ -1218,12 +1235,17 @@ body[data-active-mode="1page"] .modo2-only::after{content:'Activá "2 páginas" 
             </button>
           </div>
           <div id="cajaWrapBox" style="margin-top:10px;display:none">
-            <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--grey);margin-bottom:6px">Flujo del texto alrededor (modo libre)</label>
+            <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--grey);margin-bottom:6px">Página donde vive la caja</label>
+            <div class="ed-hdr-pills" id="cajaPagPills" style="grid-template-columns:repeat(2,1fr)">
+              <button type="button" class="ed-hdr-pill" data-cajapag="1" onclick="setCajaPag('1')"><div class="ed-hdr-pill-name">Pág 1</div></button>
+              <button type="button" class="ed-hdr-pill active" data-cajapag="2" onclick="setCajaPag('2')"><div class="ed-hdr-pill-name">Pág 2</div></button>
+            </div>
+            <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--grey);margin-top:10px;margin-bottom:6px">Flujo del texto alrededor</label>
             <div class="ed-hdr-pills" id="cajaWrapPills" style="grid-template-columns:repeat(2,1fr)">
               <button type="button" class="ed-hdr-pill active" data-cajawrap="float" onclick="setCajaWrap('float')"><div class="ed-hdr-pill-name">Texto rodea</div></button>
               <button type="button" class="ed-hdr-pill" data-cajawrap="block" onclick="setCajaWrap('block')"><div class="ed-hdr-pill-name">Solo arriba y abajo</div></button>
             </div>
-            <div class="hint" style="margin-top:4px">En modo libre la caja se vive en pág 2. <b>Arrástrala con el mouse</b> a donde la quieras. Con "Texto rodea" el contenido fluye al costado opuesto y por abajo (ocupa solo el ancho de la caja). Con "Solo arriba y abajo" la caja toma el ancho completo y el texto va arriba/abajo.</div>
+            <div class="hint" style="margin-top:6px"><b>Arrástrala con el mouse</b> a donde quieras (tendrá una etiqueta "⤧ arrastrar" arriba para que la veas). Con "Texto rodea" el contenido fluye al costado opuesto y por abajo. Con "Solo arriba y abajo" la caja toma el ancho completo.</div>
           </div>
         </div>
       </div>
@@ -3035,6 +3057,15 @@ function setCajaWrap(wrap){
   if(typeof actualizarPreview === 'function') actualizarPreview();
 }
 
+function setCajaPag(pag){
+  if(!['1','2'].includes(pag)) pag = '2';
+  document.querySelectorAll('#cajaPagPills .ed-hdr-pill').forEach(p => {
+    p.classList.toggle('active', p.getAttribute('data-cajapag') === pag);
+  });
+  try{ localStorage.setItem('oc_fichas_caja_pag', pag); }catch(e){}
+  if(typeof actualizarPreview === 'function') actualizarPreview();
+}
+
 /* Drag handler de la caja en modo libre.
    Actualiza --caja-y (margin-top en pulgadas) y data-side (left/right) en tiempo real.
    El texto fluye alrededor porque la caja sigue siendo float, NO position:absolute. */
@@ -3100,6 +3131,11 @@ function renderCaja(){
     caja.style.display = 'none';
     return;
   }
+  // Título editable
+  const tituloInput = document.getElementById('f_caja_titulo');
+  const titulo = (tituloInput && tituloInput.value.trim()) || '¿Qué hay en la caja?';
+  const cajaH4 = caja.querySelector('h4');
+  if(cajaH4) cajaH4.textContent = titulo;
   // Render items
   list.innerHTML = txt.split('\n').map(line => {
     const t = line.trim();
@@ -3110,13 +3146,26 @@ function renderCaja(){
     caja.style.display = '';
     const loc = (function(){ try{ return localStorage.getItem('oc_fichas_caja_loc') || 'p1-left'; }catch(e){ return 'p1-left'; } })();
     if(loc === 'libre'){
-      // Modo libre: la caja vive en .ed-cont-flow de pág 2 como primer hijo, con float
-      const flow = document.querySelector('.ficha.page-2 .ed-cont-flow') ||
-                   document.querySelector('.ed-cont-pag2 .ed-cont-flow') ||
-                   document.querySelector('.ed-cont-flow');
-      if(flow && caja.parentElement !== flow){
-        flow.insertBefore(caja, flow.firstChild);
+      // Modo libre: la caja vive en un flow container de la página elegida
+      const pag = (function(){ try{ return localStorage.getItem('oc_fichas_caja_pag') || '2'; }catch(e){ return '2'; } })();
+      let target = null;
+      if(pag === '1'){
+        // Pág 1 editorial: el contenedor con texto que puede rodear es .ed-caracts (columna derecha)
+        target = document.querySelector('.ficha.page-1 .ed-caracts') ||
+                 document.querySelector('#ed_page1 .ed-caracts') ||
+                 document.querySelector('.ed-caracts');
+      } else {
+        target = document.querySelector('.ficha.page-2 .ed-cont-flow') ||
+                 document.querySelector('.ed-cont-pag2 .ed-cont-flow') ||
+                 document.querySelector('.ed-cont-flow');
       }
+      if(target && caja.parentElement !== target){
+        target.insertBefore(caja, target.firstChild);
+      }
+      // Si la caja vive en .ed-caracts, marcarlo como block para que float funcione
+      document.querySelectorAll('.ed-caracts').forEach(c => {
+        c.classList.toggle('has-caja-libre', pag === '1' && c === target);
+      });
       caja.setAttribute('data-mode', 'free');
       // Wrap (float o block)
       const wrap = (function(){ try{ return localStorage.getItem('oc_fichas_caja_wrap') || 'float'; }catch(e){ return 'float'; } })();
@@ -3127,9 +3176,12 @@ function renderCaja(){
       // Margin-top guardado
       const y = (function(){ try{ return localStorage.getItem('oc_fichas_caja_y') || '0in'; }catch(e){ return '0in'; } })();
       caja.style.setProperty('--caja-y', y);
-      // Reflejar pills del wrap
+      // Reflejar pills (wrap + pag)
       document.querySelectorAll('#cajaWrapPills .ed-hdr-pill').forEach(p => {
         p.classList.toggle('active', p.getAttribute('data-cajawrap') === wrap);
+      });
+      document.querySelectorAll('#cajaPagPills .ed-hdr-pill').forEach(p => {
+        p.classList.toggle('active', p.getAttribute('data-cajapag') === pag);
       });
       _setupCajaDrag(caja);
     } else {
@@ -3138,6 +3190,8 @@ function renderCaja(){
       caja.removeAttribute('data-wrap');
       caja.removeAttribute('data-side');
       caja.style.removeProperty('--caja-y');
+      // Sacar la clase has-caja-libre de cualquier .ed-caracts
+      document.querySelectorAll('.ed-caracts.has-caja-libre').forEach(c => c.classList.remove('has-caja-libre'));
       const slot = document.getElementById('slot_caja_' + loc);
       if(slot && caja.parentElement !== slot){
         slot.appendChild(caja);
@@ -4742,6 +4796,8 @@ function serializarFichaCompleta(){
     caja_wrap: (function(){ try{ return localStorage.getItem('oc_fichas_caja_wrap') || 'float'; }catch(e){ return 'float'; } })(),
     caja_side: (function(){ try{ return localStorage.getItem('oc_fichas_caja_side') || 'left'; }catch(e){ return 'left'; } })(),
     caja_y: (function(){ try{ return localStorage.getItem('oc_fichas_caja_y') || '0in'; }catch(e){ return '0in'; } })(),
+    caja_pag: (function(){ try{ return localStorage.getItem('oc_fichas_caja_pag') || '2'; }catch(e){ return '2'; } })(),
+    caja_titulo: (function(){ const el = document.getElementById('f_caja_titulo'); return el ? el.value : ''; })(),
     img3_lado: (function(){ try{ return localStorage.getItem('oc_fichas_img3_lado') || 'left'; }catch(e){ return 'left'; } })(),
     img3_wrap: (function(){ try{ return localStorage.getItem('oc_fichas_img3_wrap') || 'float'; }catch(e){ return 'float'; } })(),
     img4_pos:  (function(){ try{ return localStorage.getItem('oc_fichas_img4_pos')  || 'below-img3'; }catch(e){ return 'below-img3'; } })(),
@@ -4823,12 +4879,17 @@ function aplicarFichaCompleta(ficha){
     if(ficha.specs_cols && typeof setSpecsCols === 'function') setSpecsCols(ficha.specs_cols);
     if(ficha.specs_style && typeof setSpecsStyle === 'function') setSpecsStyle(ficha.specs_style);
     if(ficha.detalles_loc && typeof setDetallesLoc === 'function') setDetallesLoc(ficha.detalles_loc);
-    // Caja: persistir wrap, side, y antes de llamar setCajaLoc (que dispara actualizarPreview→renderCaja)
+    // Caja: persistir wrap, side, y, pag, titulo antes de llamar setCajaLoc
     try{
       if(ficha.caja_wrap) localStorage.setItem('oc_fichas_caja_wrap', ficha.caja_wrap);
       if(ficha.caja_side) localStorage.setItem('oc_fichas_caja_side', ficha.caja_side);
       if(ficha.caja_y)    localStorage.setItem('oc_fichas_caja_y',    ficha.caja_y);
+      if(ficha.caja_pag)  localStorage.setItem('oc_fichas_caja_pag',  ficha.caja_pag);
     }catch(e){}
+    if(ficha.caja_titulo != null){
+      const ti = document.getElementById('f_caja_titulo');
+      if(ti) ti.value = ficha.caja_titulo;
+    }
     if(ficha.caja_loc && typeof setCajaLoc === 'function') setCajaLoc(ficha.caja_loc);
     // Posiciones / wrap / free de img 3 y 4 (escribimos en localStorage y luego un solo aplicarImgPosiciones)
     try{

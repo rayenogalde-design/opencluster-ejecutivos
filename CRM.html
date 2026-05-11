@@ -334,7 +334,16 @@ input,select,textarea{font-family:inherit; font-size:14px;}
   font-size:13.5px; outline:none;
 }
 .list-stats{ font-size:12px; color:var(--mist); margin-top:10px; font-weight:600; }
-.list-items{ flex:1; overflow-y:auto; padding:10px; }
+.list-items{ flex:1; overflow-y:auto; padding:10px; scrollbar-width:thin; scrollbar-color:var(--purple) var(--paper); }
+.list-items::-webkit-scrollbar{ width:10px; }
+.list-items::-webkit-scrollbar-track{ background:var(--paper); }
+.list-items::-webkit-scrollbar-thumb{ background:var(--purple-lt); border-radius:5px; border:2px solid var(--paper); }
+.list-items::-webkit-scrollbar-thumb:hover{ background:var(--purple); }
+.list-pane::after{
+  content:""; position:sticky; bottom:0; height:24px; display:block;
+  background:linear-gradient(180deg, transparent, rgba(255,255,255,.95));
+  pointer-events:none; margin-top:-24px;
+}
 .contact-card{
   background:white; border:1px solid var(--smoke); border-radius:10px;
   padding:12px 14px; margin-bottom:8px; cursor:pointer;
@@ -1249,20 +1258,68 @@ async function completarTarea(id){
 async function cargarContactos(view){
   const container = document.getElementById(view === 'vMis' ? 'listMis' : 'listTodos');
   const cnt = document.getElementById(view === 'vMis' ? 'cntMis' : 'cntTodos');
-  container.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando contactos…</div>';
+
+  // 1. Cache local (localStorage) — mostrar instantáneo si existe
+  const cacheKey = 'crm_cache_contactos_' + USUARIO;
+  let cachedAll = null;
+  try {
+    const raw = localStorage.getItem(cacheKey);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      if(parsed && Array.isArray(parsed.contactos) && (Date.now() - (parsed.ts || 0) < 86400000)) {
+        cachedAll = parsed.contactos;  // 24h ttl
+      }
+    }
+  } catch(e){}
+
+  if(cachedAll){
+    let lista = cachedAll;
+    if(view === 'vMis'){
+      lista = lista.filter(c => String(c.ejecutivo_asignado || '').indexOf(USUARIO.split(' ')[0]) >= 0 || String(c.ejecutivo_creador || '') === USUARIO);
+    }
+    CACHE[view] = lista;
+    cnt.textContent = lista.length;
+    renderLista(view);
+    // En background actualizar del backend (sin bloquear)
+    refrescarContactosBackground(view, cacheKey);
+    return;
+  }
+
+  // 2. Sin cache → mostrar spinner y esperar backend
+  container.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando contactos del Registro… (puede tardar 30-60 seg la primera vez)</div>';
 
   const r = await fetchAPI('crm_contactos', { solicitante: USUARIO });
   if(!r.ok){
-    container.innerHTML = '<div class="error-state"><b>Error:</b> ' + esc(r.error || 'desconocido') + '</div>';
+    container.innerHTML = '<div class="error-state"><b>Error:</b> ' + esc(r.error || 'desconocido') + '<br><br><small>Intentá refrescar la página en 30 segundos. El Apps Script puede tardar al "calentarse" después de no usarse un rato.</small></div>';
     return;
   }
-  let lista = r.contactos || [];
+  const allContactos = r.contactos || [];
+  // Guardar en cache local
+  try { localStorage.setItem(cacheKey, JSON.stringify({ contactos: allContactos, ts: Date.now() })); } catch(e){}
+  let lista = allContactos;
   if(view === 'vMis'){
     lista = lista.filter(c => String(c.ejecutivo_asignado || '').indexOf(USUARIO.split(' ')[0]) >= 0 || String(c.ejecutivo_creador || '') === USUARIO);
   }
   CACHE[view] = lista;
   cnt.textContent = lista.length;
   renderLista(view);
+}
+
+async function refrescarContactosBackground(view, cacheKey){
+  // Refrescar silenciosamente sin bloquear la UI
+  try {
+    const r = await fetchAPI('crm_contactos', { solicitante: USUARIO });
+    if(!r.ok) return;
+    const allContactos = r.contactos || [];
+    localStorage.setItem(cacheKey, JSON.stringify({ contactos: allContactos, ts: Date.now() }));
+    let lista = allContactos;
+    if(view === 'vMis'){
+      lista = lista.filter(c => String(c.ejecutivo_asignado || '').indexOf(USUARIO.split(' ')[0]) >= 0 || String(c.ejecutivo_creador || '') === USUARIO);
+    }
+    CACHE[view] = lista;
+    document.getElementById(view === 'vMis' ? 'cntMis' : 'cntTodos').textContent = lista.length;
+    renderLista(view);
+  } catch(e){}
 }
 
 function renderLista(view){
@@ -1442,9 +1499,22 @@ const TIPOS_ORG_CRM = {
 let CONTACTO_EDITANDO = null;
 
 async function abrirModalEditarContacto(id){
-  const r = await fetchAPI('crm_perfil', { id: id, solicitante: USUARIO });
-  if(!r.ok){ alert('Error cargando contacto: ' + (r.error || '')); return; }
-  const c = r.contacto || {};
+  // Buscar contacto en cache (instantáneo) en vez de re-llamar al backend
+  let c = null;
+  const caches = ['vMis', 'vTodos', 'vSinCat'];
+  for(const k of caches){
+    const list = CACHE[k];
+    if(Array.isArray(list)){
+      const found = list.find(x => String(x.id) === String(id));
+      if(found){ c = found; break; }
+    }
+  }
+  if(!c){
+    // Fallback: llamar al backend solo si NO está en cache
+    const r = await fetchAPI('crm_perfil', { id: id, solicitante: USUARIO });
+    if(!r.ok){ alert('Error cargando contacto: ' + (r.error || '')); return; }
+    c = r.contacto || {};
+  }
   CONTACTO_EDITANDO = c;
   document.getElementById('edId').value = c.id || '';
   document.getElementById('edNombre').value = c.nombre || '';

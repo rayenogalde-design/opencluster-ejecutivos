@@ -1488,22 +1488,30 @@ async function inferirCategorias(){
   }
   const rep = r.reporte || {};
   const conteo = rep.conteo_por_categoria || {};
+  const huerfanosEj = rep.huerfanos_por_ejecutivo || {};
   let conteoHtml = '';
   Object.keys(conteo).sort().forEach(k => {
     conteoHtml += '<li>' + esc(k) + ': <b>' + conteo[k] + '</b></li>';
   });
+  let huerfHtml = '';
+  Object.keys(huerfanosEj).sort().forEach(k => {
+    huerfHtml += '<li>' + esc(k) + ': <b>' + huerfanosEj[k] + '</b> contactos pendientes</li>';
+  });
   reporteEl.innerHTML =
     '<div class="card"><div class="card-hd"><h3>Inferencia automática de categorías</h3></div>' +
     '<div class="card-body" style="font-family:Open Sans,sans-serif;">' +
+      '<h4 style="margin-top:0;">Resultado del barrido</h4>' +
       '<ul>' +
         '<li>Total contactos analizados: <b>' + (rep.total_contactos || 0) + '</b></li>' +
         '<li>Contactos inferidos (categoría asignada): <b style="color:var(--jade-dk);">' + (rep.inferidos || 0) + '</b></li>' +
-        '<li>Sin match (necesitan categorización manual): <b>' + (rep.sin_match || 0) + '</b></li>' +
+        '<li>Sin match (necesitan categorización manual): <b style="color:var(--amber);">' + (rep.sin_match || 0) + '</b></li>' +
         '<li>Saltados (ya tenían categoría): <b>' + (rep.saltados_ya_tenian || 0) + '</b></li>' +
+        '<li>Tareas urgentes creadas para ejecutivos: <b style="color:var(--purple-dk);">' + (rep.tareas_urgentes_creadas || 0) + '</b></li>' +
       '</ul>' +
       (conteoHtml ? '<h4>Distribución por categoría inferida</h4><ul>' + conteoHtml + '</ul>' : '') +
+      (huerfHtml ? '<h4>Contactos pendientes por ejecutivo</h4><ul>' + huerfHtml + '</ul>' : '') +
       '<p><b>' + esc(rep.mensaje || '') + '</b></p>' +
-      '<p style="color:var(--mist);font-size:12.5px;">Volvé a "Todos los Contactos" (Ctrl+F5) para verificar. Los que quedan sin match podés categorizar manualmente desde "Categorizar Urgente".</p>' +
+      '<p style="color:var(--mist);font-size:12.5px;">Cada ejecutivo va a ver una tarea urgente en su Dashboard. Pueden categorizar sus contactos desde "Categorizar Urgente".</p>' +
     '</div></div>';
 }
 

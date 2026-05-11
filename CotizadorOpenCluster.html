@@ -4098,6 +4098,23 @@ async function registrarCotizacion() {
 
   btn.textContent = "Enviando...";
 
+  // 2026-05-10: cálculo del total real de la cotización (productos + todos los extras) con IVA.
+  // Se manda como "total_cotizacion_iva" — va a la columna "Total Cotización c/IVA" del Sheet,
+  // que es distinta de "Total c/IVA" (solo productos). Pedido explícito de Rayen para no perder
+  // de vista el monto real cuando hay transporte / instalación / contenedores.
+  const totalCotizacionIvaNum = Math.round((subProductos + envVal + salaValReg) * 1.19);
+  // Palabra clave única para la columna "Extras". Por ahora derivado del cotizador:
+  //  - Sala activa + envío  → "Combinado"
+  //  - Sala activa            → "Instalación"
+  //  - Solo envío             → "Transporte"
+  //  - Nada                    → "" (sin extras)
+  // Si Rayen luego quiere distinguir "Contenedores", "Capacitación", etc., puede editar
+  // la celda manualmente o agregamos un selector explícito en el cotizador.
+  let extrasKw = "";
+  if(salaActiva && envVal > 0) extrasKw = "Combinado";
+  else if(salaActiva) extrasKw = "Instalación";
+  else if(envVal > 0) extrasKw = "Transporte";
+
   // Determinar si es reemplazo o nuevo registro
   const esReemplazo=_modoReemplazo;
   const datosEnvio={
@@ -4107,6 +4124,8 @@ async function registrarCotizacion() {
     telefono: document.getElementById("eCTel")?.value.trim() || "",
     neto_productos: "$" + netoProductos.toLocaleString("es-CL"),
     iva_productos:  "$" + ivaProductos.toLocaleString("es-CL"),
+    total_cotizacion_iva: "$" + totalCotizacionIvaNum.toLocaleString("es-CL"),
+    extras: extrasKw,
     transporte: document.getElementById("chkEnvioGratuito")?.checked
       ? "Envío gratuito"
       : costoTransporte > 0

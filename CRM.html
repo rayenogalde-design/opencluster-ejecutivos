@@ -408,6 +408,61 @@ input,select,textarea{font-family:inherit; font-size:14px;}
   margin-bottom:18px;
 }
 .deploy-warning b{ color:#78350f; }
+
+/* ════ Modal genérico ════ */
+.modal-backdrop{
+  display:none; position:fixed; inset:0; background:rgba(15,23,42,.55);
+  z-index:200; align-items:flex-start; justify-content:center;
+  overflow-y:auto; padding:36px 20px;
+}
+.modal-backdrop.show{ display:flex; }
+.modal-box{
+  background:white; border-radius:14px; width:100%; max-width:640px;
+  box-shadow:var(--shadow-lg); overflow:hidden;
+  animation:modalIn .2s ease-out;
+}
+@keyframes modalIn{ from{ opacity:0; transform:translateY(-12px);} to{ opacity:1; transform:none;} }
+.modal-head{
+  padding:18px 22px; border-bottom:1px solid var(--smoke);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.modal-head h2{
+  font-family:'Playfair Display',serif; font-size:20px; font-weight:700;
+  color:var(--ink); margin:0;
+}
+.modal-close{
+  background:transparent; border:none; cursor:pointer; padding:6px;
+  border-radius:7px; color:var(--mist); transition:.15s;
+}
+.modal-close:hover{ background:var(--paper); color:var(--ink); }
+.modal-body{ padding:22px; }
+.modal-foot{
+  padding:16px 22px; border-top:1px solid var(--smoke);
+  display:flex; gap:10px; justify-content:flex-end; background:var(--paper);
+}
+.fld-row{
+  display:grid; grid-template-columns:1fr 1fr; gap:14px;
+  margin-bottom:14px;
+}
+.fld-row.single{ grid-template-columns:1fr; }
+.fld{ display:flex; flex-direction:column; gap:5px; }
+.fld label{
+  font-size:11.5px; font-weight:700; color:var(--subtle);
+  text-transform:uppercase; letter-spacing:.5px;
+}
+.fld input, .fld select, .fld textarea{
+  padding:10px 12px; border:1.5px solid var(--smoke); border-radius:8px;
+  font-size:14px; color:var(--ink); background:white;
+  transition:border-color .14s;
+  font-family:inherit;
+}
+.fld input:focus, .fld select:focus, .fld textarea:focus{
+  outline:none; border-color:var(--purple);
+}
+.fld textarea{ resize:vertical; min-height:72px; }
+@media (max-width: 600px){
+  .fld-row{ grid-template-columns:1fr; }
+}
 </style>
 </head>
 
@@ -793,6 +848,10 @@ input,select,textarea{font-family:inherit; font-size:14px;}
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21h6"/><path d="M12 17v4"/><path d="M12 3a6 6 0 0 0-6 6c0 3 2 5 3 6h6c1-1 3-3 3-6a6 6 0 0 0-6-6z"/></svg>
             Inferir categorías por institución
           </button>
+          <button class="btn" onclick="normalizarNombres()" style="background:#06b3fd; color:white; border-color:#06b3fd;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 11l-3 3l-3-3"/></svg>
+            Normalizar nombres ejecutivos
+          </button>
         </div>
         <div id="migReporte"></div>
       </div>
@@ -800,6 +859,86 @@ input,select,textarea{font-family:inherit; font-size:14px;}
     </div><!-- /.main -->
   </div><!-- /.app -->
 </div><!-- /#appWrap -->
+
+<!-- ════ Modal de edición de contacto ════ -->
+<div class="modal-backdrop" id="modalEditContacto">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2>Editar contacto</h2>
+      <button class="modal-close" onclick="cerrarModalEditarContacto()" aria-label="Cerrar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edId">
+      <div class="fld-row">
+        <div class="fld"><label>Nombre</label><input type="text" id="edNombre"></div>
+        <div class="fld"><label>Institución</label><input type="text" id="edInstitucion"></div>
+      </div>
+      <div class="fld-row">
+        <div class="fld"><label>Cargo</label><input type="text" id="edCargo"></div>
+        <div class="fld"><label>Email</label><input type="email" id="edEmail"></div>
+      </div>
+      <div class="fld-row">
+        <div class="fld"><label>Teléfono</label><input type="tel" id="edTelefono"></div>
+        <div class="fld"><label>Ciudad</label><input type="text" id="edCiudad"></div>
+      </div>
+      <div class="fld-row">
+        <div class="fld"><label>Región</label><input type="text" id="edRegion"></div>
+        <div class="fld"><label>Ejecutivo asignado</label>
+          <select id="edEjecutivoAsignado">
+            <option value="">— Sin asignar —</option>
+            <option value="Rayen Ogalde">Rayen Ogalde</option>
+            <option value="Maximiliano">Maximiliano</option>
+            <option value="Roberto">Roberto</option>
+            <option value="Germán">Germán</option>
+            <option value="William">William</option>
+            <option value="Mario">Mario</option>
+          </select>
+        </div>
+      </div>
+      <div class="fld-row">
+        <div class="fld"><label>Categoría</label>
+          <select id="edTipoCategoria" onchange="actualizarSubcatsEdicion()">
+            <option value="">— Sin categoría —</option>
+            <option>Sector Público Municipal</option>
+            <option>Salud Pública</option>
+            <option>Educación</option>
+            <option>Gobierno Central/Regional</option>
+            <option>Fundaciones y ONGs</option>
+            <option>Organizaciones Comunitarias</option>
+            <option>Profesionales de la Salud</option>
+            <option>Privados</option>
+            <option>Otro</option>
+          </select>
+        </div>
+        <div class="fld"><label>Subcategoría</label>
+          <select id="edSubCategoria"><option value="">— Selecciona categoría primero —</option></select>
+        </div>
+      </div>
+      <div class="fld-row">
+        <div class="fld"><label>Pipeline</label>
+          <select id="edPipeline">
+            <option>Contactado</option>
+            <option>Cotizado</option>
+            <option>Reunión</option>
+            <option>Seguimiento</option>
+            <option>Cerrado / Ganado</option>
+            <option>Perdido</option>
+          </select>
+        </div>
+        <div class="fld"></div>
+      </div>
+      <div class="fld-row single">
+        <div class="fld"><label>Notas públicas</label><textarea id="edNotas" rows="3"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="cerrarModalEditarContacto()">Cancelar</button>
+      <button class="btn primary" onclick="guardarEdicionContacto()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
 
 
 <script>
@@ -1207,7 +1346,8 @@ function renderFicha(container, data){
       '</div>' +
     '</div>' +
     '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;">' +
-      '<button class="btn primary" onclick="alert(\'Próximamente — modal Nueva Interacción\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> Nueva interacción</button>' +
+      '<button class="btn primary" onclick="abrirModalEditarContacto(\'' + esc(c.id) + '\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Editar contacto</button>' +
+      '<button class="btn" onclick="alert(\'Próximamente — modal Nueva Interacción\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> Nueva interacción</button>' +
       (c.email ? '<button class="btn" onclick="abrirEmailPlantilla(\'' + esc(c.id) + '\')">Enviar correo</button>' : '') +
       (waNum ? '<a class="btn" target="_blank" href="https://wa.me/' + waNum + '?text=' + waMsg + '">WhatsApp</a>' : '') +
     '</div>' +
@@ -1233,6 +1373,150 @@ function renderFicha(container, data){
 
 function abrirEmailPlantilla(contactoId){
   alert('Modal de plantillas dinámicas — próxima iteración. Se va a abrir un selector de plantilla con preview del cuerpo renderizado y un botón "Abrir en Gmail" que arme el mailto: con asunto y cuerpo precargados.');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// MODAL DE EDICIÓN DE CONTACTO
+// ════════════════════════════════════════════════════════════════════════════
+
+const TIPOS_ORG_CRM = {
+  "Sector Público Municipal": [
+    "DIDECO (Dirección de Desarrollo Comunitario)","Oficina de Discapacidad Municipal","Oficina del Adulto Mayor",
+    "DAEM (Educación Municipal)","Departamento de Salud Municipal","Otra oficina municipal"
+  ],
+  "Salud Pública": [
+    "CESFAM (Centro de Salud Familiar)","CECOSF / CCR","COSAM (Salud Mental)",
+    "Hospital Público","Servicio de Salud Regional","COMPIN","Otro centro de salud pública"
+  ],
+  "Educación": [
+    "Escuela Especial","Escuela de Lenguaje","Programa PIE (Integración Escolar)",
+    "Colegio regular","Jardín Infantil (JUNJI/Integra)","Universidad / Instituto",
+    "Centro de Padres y Apoderados","Otro"
+  ],
+  "Gobierno Central/Regional": [
+    "SENADIS","SENAMA (Adulto Mayor)","Gobierno Regional (GORE)",
+    "Delegación Presidencial","Ministerio / Seremi","JUNAEB","Otro organismo público"
+  ],
+  "Fundaciones y ONGs": [
+    "Fundación de Discapacidad","Teletón / CRIT","Organización de Pacientes",
+    "Corporación / ONG","Otra fundación"
+  ],
+  "Organizaciones Comunitarias": [
+    "Club de Adulto Mayor","Centro de Madres","Junta de Vecinos",
+    "Organización de Discapacidad","Otra agrupación comunitaria"
+  ],
+  "Profesionales de la Salud": [
+    "Kinesiólogo/a","Terapeuta Ocupacional","Fonoaudiólogo/a",
+    "Psicólogo/a","Psicopedagogo/a","Neurólogo/a / Fisiatra","Otro profesional"
+  ],
+  "Privados": [
+    "Hospital Privado","Clínica Privada","Centro Médico Privado","Centro Pediátrico Privado",
+    "Centro Odontológico Privado","Centro de Rehabilitación Neurológica",
+    "Centro de Rehabilitación Físico / Kinesiológico Privado","Centro de Rehabilitación Infantil Privado",
+    "Hospital Psiquiátrico Privado","Centro de Cuidados Paliativos / Hospicio Privado",
+    "Centro Kinesiología / TO / Fonoaudiología Multi-Profesional","Teletón / Instituto Teletón / CRIT",
+    "Colegio Particular Pagado","Colegio Particular Subvencionado","Jardín Infantil Privado",
+    "Universidad / Instituto Privado","Centro de Aprendizaje / Reforzamiento Privado",
+    "Centro de Estimulación Temprana Privado","Hogar de Ancianos / ELEAM Privado",
+    "Casa de Reposo / Residencia Asistida","Centro de Día para Adulto Mayor Privado",
+    "Centro de Memoria / Alzheimer Privado","Club Senior / Country Club",
+    "Programa Universitario para Adulto Mayor","Banco","Tienda por Departamento",
+    "Supermercado","Centro Comercial / Mall","Cadena de Farmacia",
+    "Hotel Internacional","Hotel Chileno / Cadena Nacional","Resort All-Inclusive",
+    "Termas / Spa Resort","Oficinas de Recursos Humanos de Gran Empresa",
+    "Empresa Mediana con personal con discapacidad","Empresa de RRHH / Reclutamiento Inclusivo",
+    "Inmobiliaria / Constructora","Empresa de Capacitación / Formación",
+    "Parroquia / Iglesia / Centro Religioso","Centro de Rehabilitación de Adicciones",
+    "Distribuidor — Ortopedia","Distribuidor — Farmacia Especializada",
+    "Distribuidor — Importador / Mayorista Médico","Distribuidor — Tienda Online de Productos Médicos",
+    "Distribuidor — Equipamiento Educativo","Distribuidor — Productos Geriátricos",
+    "Distribuidor — Empresas de Telecuidado / Botón SOS","Distribuidor — Representante / Agente Comercial",
+    "Distribuidor — Otro distribuidor",
+    "Clínica / Consulta privada","Centro de Rehabilitación privado","Centro Médico u Ortopédico",
+    "Casa de Reposo / Hogar de Adultos Mayores","Centro de Día Adulto Mayor",
+    "Iglesia / Parroquia","Empresa (inclusión laboral)","Distribuidor / Comercio","Otro privado"
+  ],
+  "Otro": ["Referido por otro cliente","Otro (especificar en notas)"]
+};
+
+let CONTACTO_EDITANDO = null;
+
+async function abrirModalEditarContacto(id){
+  const r = await fetchAPI('crm_perfil', { id: id, solicitante: USUARIO });
+  if(!r.ok){ alert('Error cargando contacto: ' + (r.error || '')); return; }
+  const c = r.contacto || {};
+  CONTACTO_EDITANDO = c;
+  document.getElementById('edId').value = c.id || '';
+  document.getElementById('edNombre').value = c.nombre || '';
+  document.getElementById('edInstitucion').value = c.institucion || '';
+  document.getElementById('edCargo').value = c.cargo || '';
+  document.getElementById('edEmail').value = c.email || '';
+  document.getElementById('edTelefono').value = c.telefono || '';
+  document.getElementById('edCiudad').value = c.ciudad || '';
+  document.getElementById('edRegion').value = c.region || '';
+  document.getElementById('edEjecutivoAsignado').value = c.ejecutivo_asignado || '';
+  document.getElementById('edTipoCategoria').value = c.tipo_categoria || '';
+  actualizarSubcatsEdicion();
+  // Esperar un tick para que se llenen las options antes de setear el valor
+  setTimeout(() => {
+    document.getElementById('edSubCategoria').value = c.sub_categoria || '';
+  }, 50);
+  document.getElementById('edPipeline').value = c.pipeline_estado || 'Contactado';
+  document.getElementById('edNotas').value = c.notas_publicas || '';
+  document.getElementById('modalEditContacto').classList.add('show');
+}
+
+function cerrarModalEditarContacto(){
+  document.getElementById('modalEditContacto').classList.remove('show');
+  CONTACTO_EDITANDO = null;
+}
+
+function actualizarSubcatsEdicion(){
+  const cat = document.getElementById('edTipoCategoria').value;
+  const sel = document.getElementById('edSubCategoria');
+  if(!cat){
+    sel.innerHTML = '<option value="">— Selecciona categoría primero —</option>';
+    return;
+  }
+  const ops = TIPOS_ORG_CRM[cat] || [];
+  sel.innerHTML = '<option value="">— Seleccionar —</option>' +
+    ops.map(o => '<option value="' + esc(o) + '">' + esc(o) + '</option>').join('');
+}
+
+async function guardarEdicionContacto(){
+  const id = document.getElementById('edId').value;
+  if(!id) return;
+  const data = {
+    id: id,
+    nombre: document.getElementById('edNombre').value.trim(),
+    institucion: document.getElementById('edInstitucion').value.trim(),
+    cargo: document.getElementById('edCargo').value.trim(),
+    email: document.getElementById('edEmail').value.trim(),
+    telefono: document.getElementById('edTelefono').value.trim(),
+    ciudad: document.getElementById('edCiudad').value.trim(),
+    region: document.getElementById('edRegion').value.trim(),
+    ejecutivo_asignado: document.getElementById('edEjecutivoAsignado').value,
+    tipo_categoria: document.getElementById('edTipoCategoria').value,
+    sub_categoria: document.getElementById('edSubCategoria').value,
+    pipeline_estado: document.getElementById('edPipeline').value,
+    notas_publicas: document.getElementById('edNotas').value.trim(),
+    editado_por: USUARIO,
+    solicitante: USUARIO
+  };
+  if(!data.nombre && !data.institucion){
+    alert('El contacto necesita al menos un nombre o una institución');
+    return;
+  }
+  const r = await fetchAPI('crm_editar_contacto', null, data);
+  if(!r.ok){ alert('Error guardando: ' + (r.error || '')); return; }
+  cerrarModalEditarContacto();
+  // Recargar lista y ficha
+  CACHE.vMis = null;
+  CACHE.vTodos = null;
+  const view = document.getElementById('vMis').classList.contains('act') ? 'vMis' : 'vTodos';
+  if(view === 'vMis') await cargarContactos('vMis');
+  else await cargarContactos('vTodos');
+  abrirFicha(id, view);
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1475,6 +1759,32 @@ async function cargarAuditoria(){
         '</tr>'
       ).join('') + '</tbody>' +
     '</table>';
+}
+
+async function normalizarNombres(){
+  const reporteEl = document.getElementById('migReporte');
+  if(!confirm('Esto va a reemplazar "Germán Alvarado" → "Germán", "Maximiliano Astudillo" → "Maximiliano", "Roberto Cáceres" → "Roberto", "William Marín" → "William" en todos los contactos, interacciones y tareas. ¿Continuar?')) return;
+  reporteEl.innerHTML = '<div class="loading-state"><div class="spinner"></div>Normalizando nombres…</div>';
+  const r = await fetchAPI('crm_normalizar_nombres', null, { solicitante: USUARIO });
+  if(!r.ok){
+    reporteEl.innerHTML = '<div class="error-state"><b>Error:</b> ' + esc(r.error || 'desconocido') + '</div>';
+    return;
+  }
+  const rep = r.reporte || {};
+  reporteEl.innerHTML =
+    '<div class="card"><div class="card-hd"><h3>Normalización de nombres ejecutivos</h3></div>' +
+    '<div class="card-body" style="font-family:Open Sans,sans-serif;">' +
+      '<ul>' +
+        '<li>Contactos con ejecutivo_creador actualizado: <b>' + (rep.contactos_creador_actualizados || 0) + '</b></li>' +
+        '<li>Contactos con ejecutivo_asignado actualizado: <b>' + (rep.contactos_asignado_actualizados || 0) + '</b></li>' +
+        '<li>Interacciones actualizadas: <b>' + (rep.interacciones_actualizadas || 0) + '</b></li>' +
+        '<li>Tareas actualizadas: <b>' + (rep.tareas_actualizadas || 0) + '</b></li>' +
+      '</ul>' +
+      '<p><b>' + esc(rep.mensaje || '') + '</b></p>' +
+    '</div></div>';
+  // Refrescar caches
+  CACHE.vMis = null;
+  CACHE.vTodos = null;
 }
 
 async function inferirCategorias(){

@@ -2518,6 +2518,18 @@ function distribuirEdSpecs(){
   const cont2 = document.getElementById('ed_specs_pag2_wrap');
   if(!tbl1 || !tbl2 || !cont2) return;
 
+  // Si la casilla "Mostrar Especificaciones técnicas" está desactivada, ocultar TODO
+  // (wrap pág 1 + wrap pág 2) y salir sin tocar la distribución. Importante: si no
+  // hiciéramos esto, el código de abajo siempre restaura display:'' del wrap pág 1
+  // y deja el título "Especificaciones técnicas" visible aunque no haya filas.
+  const specsShow = document.getElementById('f_specs_show') ? document.getElementById('f_specs_show').checked : true;
+  if(!specsShow){
+    const wrapP1Hide = tbl1.closest('.ed-specs-wrap');
+    if(wrapP1Hide) wrapP1Hide.style.display = 'none';
+    cont2.style.display = 'none';
+    return;
+  }
+
   // ANTES borrábamos tbl2.innerHTML, lo cual descartaba las filas que estaban allí
   // cuando esta función se llama desde aplicarDiseno() (sin renderEditorial previo
   // que repueble tbl1). Resultado: specs desaparecen de ambas páginas. Ahora movemos

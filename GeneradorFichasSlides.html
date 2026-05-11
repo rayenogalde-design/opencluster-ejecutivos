@@ -349,6 +349,15 @@ body:not([data-tpl="editorial"]) .tpl-editorial-only{display:none !important}
 .ed-cont-img4-block[data-pos="top-left"]{float:left;clear:none;margin:0 0.22in 0.12in 0}
 .ed-cont-img4-block[data-pos="bottom-left"]{float:left;clear:both;margin:0.18in 0.22in 0.12in 0}
 .ed-cont-img4-block[data-pos="right"]{float:right;clear:none;margin:0 0 0.12in 0.22in}
+/* Preset "Al lado de specs": img 4 se mueve al mismo padre que ed-specs-pag2 y flota en el lado libre */
+.ed-cont-img4-block[data-pos="next-to-specs"]{clear:both;margin:var(--ed-specs-pag2-gap, 0.20in) 0 0.12in 0;width:48%;max-width:48%;float:left}
+.ed-cont-img4-block[data-pos="next-to-specs"][data-specs-side="left"]{float:right;margin:var(--ed-specs-pag2-gap, 0.20in) 0 0.12in 0.22in}
+.ed-cont-img4-block[data-pos="next-to-specs"][data-specs-side="right"]{float:left;margin:var(--ed-specs-pag2-gap, 0.20in) 0.22in 0.12in 0}
+
+/* SPECS en pág 2 — anchos configurables (data-ancho en .ed-specs-pag2) */
+.ed-specs-pag2[data-ancho="mitad-izq"]{float:left;clear:left;width:48%;margin-right:0.22in}
+.ed-specs-pag2[data-ancho="mitad-der"]{float:right;clear:right;width:48%;margin-left:0.22in}
+.ed-specs-pag2[data-ancho="completo"]{float:none;clear:both;width:auto}
 
 /* IMG 3 — lado configurable */
 .ed-cont-img3-float[data-pos="left"]{float:left;margin:0 0.22in 0.12in 0}
@@ -1264,6 +1273,16 @@ body[data-active-mode="1page"] .modo2-only::after{content:'Activá "2 páginas" 
         </div>
         <div class="hint" style="margin-top:6px"><b>1 columna:</b> cada fila ocupa el ancho completo (default). <b>2 columnas:</b> las filas se dividen en dos columnas con línea divisoria (estilo más compacto).</div>
       </div>
+      <div class="field tpl-editorial-only modo2-only" id="f_specs_ancho_field" style="margin-top:10px">
+        <label>Ancho en pág 2</label>
+        <div class="ed-hdr-pills" id="specsAnchoPills" style="grid-template-columns:repeat(4,1fr)">
+          <button type="button" class="ed-hdr-pill active" data-ancho="auto" onclick="setSpecsAncho('auto')"><div class="ed-hdr-pill-name">Auto</div></button>
+          <button type="button" class="ed-hdr-pill" data-ancho="completo" onclick="setSpecsAncho('completo')"><div class="ed-hdr-pill-name">Completo</div></button>
+          <button type="button" class="ed-hdr-pill" data-ancho="mitad-izq" onclick="setSpecsAncho('mitad-izq')"><div class="ed-hdr-pill-name">Mitad izq</div></button>
+          <button type="button" class="ed-hdr-pill" data-ancho="mitad-der" onclick="setSpecsAncho('mitad-der')"><div class="ed-hdr-pill-name">Mitad der</div></button>
+        </div>
+        <div class="hint" style="margin-top:6px"><b>Auto:</b> mira dónde está img 4 y se va al lado opuesto. <b>Mitad izq / Mitad der:</b> specs ocupa solo la mitad de la página, dejando la otra libre para una imagen. <b>Tip:</b> combínalo con el preset "Al lado de specs" en img 4 para armar el layout con un clic.</div>
+      </div>
       <div class="field tpl-editorial-only" id="f_specs_style_field" style="margin-top:10px">
         <label>Estilo visual</label>
         <div class="ed-hdr-pills" id="specsStylePills" style="grid-template-columns:repeat(2,1fr)">
@@ -1359,6 +1378,7 @@ body[data-active-mode="1page"] .modo2-only::after{content:'Activá "2 páginas" 
               <button type="button" class="ed-hdr-pill" data-img4pos="right" onclick="setImg4Pos('right')"><div class="ed-hdr-pill-name">Lado derecho</div></button>
               <button type="button" class="ed-hdr-pill" data-img4pos="top-left" onclick="setImg4Pos('top-left')"><div class="ed-hdr-pill-name">Arriba izq</div></button>
               <button type="button" class="ed-hdr-pill" data-img4pos="bottom-left" onclick="setImg4Pos('bottom-left')"><div class="ed-hdr-pill-name">Abajo izq</div></button>
+              <button type="button" class="ed-hdr-pill" data-img4pos="next-to-specs" onclick="setImg4Pos('next-to-specs')" style="grid-column:span 2"><div class="ed-hdr-pill-name">Al lado de specs (auto)</div></button>
             </div>
           </div>
 
@@ -2627,10 +2647,53 @@ function setImg3Wrap(wrap){
   aplicarImgPosiciones();
 }
 function setImg4Pos(pos){
-  if(!['below-img3','right','top-left','bottom-left'].includes(pos)) pos = 'below-img3';
+  if(!['below-img3','right','top-left','bottom-left','next-to-specs'].includes(pos)) pos = 'below-img3';
   _setActivePill('img4PosPills','data-img4pos',pos);
   try{ localStorage.setItem('oc_fichas_img4_pos', pos); }catch(e){}
   aplicarImgPosiciones();
+}
+function setSpecsAncho(ancho){
+  if(!['auto','completo','mitad-izq','mitad-der'].includes(ancho)) ancho = 'auto';
+  _setActivePill('specsAnchoPills','data-ancho',ancho);
+  try{ localStorage.setItem('oc_fichas_specs_ancho', ancho); }catch(e){}
+  aplicarSpecsAncho();
+  // Recalcular posición de img 4 (puede afectar el lado del preset "next-to-specs")
+  aplicarImgPosiciones();
+}
+
+/* Calcula a qué lado (izq/der/null) está img 4 visualmente. null si no aplica. */
+function _img4Side(){
+  const cb = document.getElementById('f_p2_imagen4_on');
+  if(!cb || !cb.checked) return null;
+  let pos = 'below-img3', img3lado = 'left';
+  try{
+    pos = localStorage.getItem('oc_fichas_img4_pos') || 'below-img3';
+    img3lado = localStorage.getItem('oc_fichas_img3_lado') || 'left';
+  }catch(e){}
+  if(pos === 'right') return 'right';
+  if(pos === 'top-left' || pos === 'bottom-left') return 'left';
+  if(pos === 'below-img3') return img3lado;
+  return null; // 'next-to-specs' o 'free' — depende de specs (no de img 4)
+}
+
+/* Resuelve el ancho efectivo de specs (resuelve 'auto' a 'completo' / 'mitad-izq' / 'mitad-der'). */
+function _effectiveSpecsAncho(){
+  let setting = 'auto';
+  try{ setting = localStorage.getItem('oc_fichas_specs_ancho') || 'auto'; }catch(e){}
+  if(setting !== 'auto') return setting;
+  const side = _img4Side();
+  if(!side) return 'completo';
+  return side === 'left' ? 'mitad-der' : 'mitad-izq';
+}
+
+/* Aplica el data-ancho al wrap de specs pág 2 y actualiza las pills */
+function aplicarSpecsAncho(){
+  const efectivo = _effectiveSpecsAncho();
+  const wrap = document.getElementById('ed_specs_pag2_wrap');
+  if(wrap) wrap.setAttribute('data-ancho', efectivo);
+  let setting = 'auto';
+  try{ setting = localStorage.getItem('oc_fichas_specs_ancho') || 'auto'; }catch(e){}
+  _setActivePill('specsAnchoPills','data-ancho', setting);
 }
 function setImg4Wrap(wrap){
   if(!['float','block'].includes(wrap)) wrap = 'float';
@@ -2680,6 +2743,36 @@ function aplicarImgPosiciones(){
     if(img4X != null) el.style.setProperty('--ed-img4-x', img4X);
     if(img4Y != null) el.style.setProperty('--ed-img4-y', img4Y);
   });
+  // PRESET "Al lado de specs": mover img 4 DOM al mismo padre que ed-specs-pag2 (ed-cont-pag2)
+  // y marcar data-specs-side para que CSS la flote en el lado opuesto.
+  const img4El = document.getElementById('ed_cont_img4_wrap2');
+  const specsWrap = document.getElementById('ed_specs_pag2_wrap');
+  const specsShowCb = document.getElementById('f_specs_show');
+  const specsActive = !specsShowCb || specsShowCb.checked;
+  if(img4El && specsWrap){
+    if(img4Pos === 'next-to-specs' && !img4Free && specsActive){
+      // Resolver lado de specs (después de aplicar, el ancho efectivo puede haber cambiado)
+      const ancho = _effectiveSpecsAncho();
+      const specsSide = ancho === 'mitad-izq' ? 'left' : (ancho === 'mitad-der' ? 'right' : 'right');
+      img4El.setAttribute('data-specs-side', specsSide);
+      // Mover img 4 a ser hermano de specs (justo antes de specs, mismo padre = .ed-cont-pag2)
+      if(img4El.parentElement !== specsWrap.parentElement){
+        if(!img4El.dataset.originalParent) img4El.dataset.originalParent = img4El.parentElement.className;
+        specsWrap.parentElement.insertBefore(img4El, specsWrap);
+      }
+    } else {
+      // Restaurar img 4 al .ed-cont-flow si fue movida
+      img4El.removeAttribute('data-specs-side');
+      const flow = document.querySelector('.ed-cont-flow');
+      if(flow && img4El.parentElement !== flow && img4El.dataset.originalParent){
+        // Re-insertar después del img 3 wrap
+        const img3wrap = flow.querySelector('.ed-cont-img3-float');
+        if(img3wrap && img3wrap.nextSibling) flow.insertBefore(img4El, img3wrap.nextSibling);
+        else flow.appendChild(img4El);
+        delete img4El.dataset.originalParent;
+      }
+    }
+  }
   // Reflejar el estado en las pills (por si esto se llama después de cargar ficha)
   _setActivePill('img3LadoPills','data-img3lado', img3Lado);
   _setActivePill('img3WrapPills','data-img3wrap', img3Wrap);
@@ -2687,6 +2780,8 @@ function aplicarImgPosiciones(){
   _setActivePill('img4WrapPills','data-img4wrap', img4Wrap);
   const cb3 = document.getElementById('f_p2_img3_free'); if(cb3) cb3.checked = img3Free;
   const cb4 = document.getElementById('f_p2_img4_free'); if(cb4) cb4.checked = img4Free;
+  // Aplicar ancho de specs (resuelve auto en función del lado de img 4)
+  if(typeof aplicarSpecsAncho === 'function') aplicarSpecsAncho();
   // Re-conectar drag listeners (idempotente)
   _setupDraggable('.ed-cont-img3-float', 'img3');
   _setupDraggable('.ed-cont-img4-block', 'img4');
@@ -4412,7 +4507,8 @@ function serializarFichaCompleta(){
     img3_x: (function(){ try{ return localStorage.getItem('oc_fichas_img3_x') || ''; }catch(e){ return ''; } })(),
     img3_y: (function(){ try{ return localStorage.getItem('oc_fichas_img3_y') || ''; }catch(e){ return ''; } })(),
     img4_x: (function(){ try{ return localStorage.getItem('oc_fichas_img4_x') || ''; }catch(e){ return ''; } })(),
-    img4_y: (function(){ try{ return localStorage.getItem('oc_fichas_img4_y') || ''; }catch(e){ return ''; } })()
+    img4_y: (function(){ try{ return localStorage.getItem('oc_fichas_img4_y') || ''; }catch(e){ return ''; } })(),
+    specs_ancho: (function(){ try{ return localStorage.getItem('oc_fichas_specs_ancho') || 'auto'; }catch(e){ return 'auto'; } })()
   };
   // Capturar todos los sliders ds_*
   document.querySelectorAll('input[id^="ds_"]').forEach(s => { ficha.sliders[s.id] = s.value; });
@@ -4495,6 +4591,7 @@ function aplicarFichaCompleta(ficha){
       if(ficha.img3_y) localStorage.setItem('oc_fichas_img3_y', ficha.img3_y); else localStorage.removeItem('oc_fichas_img3_y');
       if(ficha.img4_x) localStorage.setItem('oc_fichas_img4_x', ficha.img4_x); else localStorage.removeItem('oc_fichas_img4_x');
       if(ficha.img4_y) localStorage.setItem('oc_fichas_img4_y', ficha.img4_y); else localStorage.removeItem('oc_fichas_img4_y');
+      if(ficha.specs_ancho) localStorage.setItem('oc_fichas_specs_ancho', ficha.specs_ancho);
     }catch(e){}
     if(typeof aplicarImgPosiciones === 'function') aplicarImgPosiciones();
     // setDispoPreset sobrescribe f_dispo_text — restaurar el texto guardado después

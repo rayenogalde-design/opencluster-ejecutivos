@@ -350,32 +350,32 @@ body:not([data-tpl="editorial"]) .tpl-editorial-only{display:none !important}
 .ed-cont-img4-block[data-pos="bottom-left"]{float:left;clear:both;margin:0.18in 0.22in 0.12in 0}
 .ed-cont-img4-block[data-pos="right"]{float:right;clear:none;margin:0 0 0.12in 0.22in}
 
-/* === SPECS HALF-WIDTH + IMG 4 "Al lado de specs" — flex-row wrapper approach ===
-   En lugar de pelear con floats dentro del flex column de .ed-cont-pag2, creamos un
-   wrapper .ed-specs-row dedicado (display:flex;flex-direction:row) que aloja specs
-   y, opcionalmente, img 4 en preset "next-to-specs". El JS crea/destruye este wrapper.
-   El ancho de specs es controlado por --specs-width (default 48%) y la imagen ocupa
-   automáticamente lo que sobra. */
-.ed-specs-row{
-  display:flex;flex-direction:row;gap:0.22in;align-items:flex-start;
-  margin-top:var(--ed-specs-pag2-gap, 0.20in);width:100%;flex-shrink:0
+/* === SPECS HALF-WIDTH + IMG 4 "Al lado de specs" — floats DENTRO de .ed-cont-flow ===
+   Movemos specs e img 4 al MISMO contenedor que el texto de caracts (.ed-cont-flow).
+   Como floats, el texto se distribuye alrededor — incluyendo por arriba, costado y
+   debajo. Así "Más características" puede continuar a un costado de specs y no se
+   corta. El ancho de specs viene de --specs-width; img 4 toma el espacio restante. */
+.ed-cont-flow > .ed-specs-pag2[data-ancho="mitad-izq"]{
+  float:left;clear:left;width:var(--specs-width, 48%);
+  margin:0.10in 0.22in 0.12in 0;max-width:none
 }
-.ed-specs-row > .ed-specs-pag2{
-  margin:0 !important;clear:none !important;float:none !important;
-  flex:0 0 var(--specs-width, 48%);min-width:0;max-width:none
+.ed-cont-flow > .ed-specs-pag2[data-ancho="mitad-der"]{
+  float:right;clear:right;width:var(--specs-width, 48%);
+  margin:0.10in 0 0.12in 0.22in;max-width:none
 }
-.ed-specs-row > .ed-cont-img4-block{
-  margin:0 !important;clear:none !important;float:none !important;
-  flex:1 1 auto;width:auto !important;max-width:none !important
+/* Img 4 como float dentro de .ed-cont-flow en preset "next-to-specs" */
+.ed-cont-flow > .ed-cont-img4-block[data-pos="next-to-specs"]{
+  width:calc(96% - var(--specs-width, 48%) - 0.45in);max-width:none
 }
-/* Orden: mitad-izq → specs primero / mitad-der → specs después */
-.ed-specs-row > .ed-specs-pag2[data-ancho="mitad-izq"]{order:1}
-.ed-specs-row > .ed-specs-pag2[data-ancho="mitad-der"]{order:2}
-.ed-specs-row > .ed-cont-img4-block[data-pos="next-to-specs"][data-specs-side="left"]{order:2}
-.ed-specs-row > .ed-cont-img4-block[data-pos="next-to-specs"][data-specs-side="right"]{order:1}
-/* La imagen dentro de img4-box debe llenar el contenedor disponible cuando está en next-to-specs */
-.ed-specs-row > .ed-cont-img4-block[data-pos="next-to-specs"] .ed-img4-box{width:100%;display:block}
-.ed-specs-row > .ed-cont-img4-block[data-pos="next-to-specs"] .ed-img4-box img{width:100%;height:auto;max-height:var(--ed-img4-h, 2in)}
+.ed-cont-flow > .ed-cont-img4-block[data-pos="next-to-specs"][data-specs-side="left"]{
+  float:right;clear:right;margin:0.10in 0 0.12in 0.22in
+}
+.ed-cont-flow > .ed-cont-img4-block[data-pos="next-to-specs"][data-specs-side="right"]{
+  float:left;clear:left;margin:0.10in 0.22in 0.12in 0
+}
+/* Para que la imagen interna de img4 llene su contenedor cuando va al lado de specs */
+.ed-cont-flow > .ed-cont-img4-block[data-pos="next-to-specs"] .ed-img4-box{width:100%;display:block}
+.ed-cont-flow > .ed-cont-img4-block[data-pos="next-to-specs"] .ed-img4-box img{width:100%;height:auto;max-height:var(--ed-img4-h, 2in)}
 
 /* IMG 3 — lado configurable */
 .ed-cont-img3-float[data-pos="left"]{float:left;margin:0 0.22in 0.12in 0}
@@ -2556,9 +2556,11 @@ function distribuirEdCaracts(){
   // Devolver cualquier li que estuviera en ul2 a ul1 para empezar limpio
   while(ul2.firstChild) ul1.appendChild(ul2.firstChild);
 
-  // Helpers para el título "Más características" / "Características" de pág 2
+  // Helpers para el título "Más características" / "Características" de pág 2.
+  // Importante: usar :scope > para NO agarrar el h3 de specs cuando este vive dentro
+  // de .ed-cont-flow (en modo specs "Mitad izq/der").
   const cont2 = ul2.closest('.ed-cont-flow');
-  const title2 = cont2 ? cont2.querySelector('.ed-section-title') : null;
+  const title2 = cont2 ? cont2.querySelector(':scope > .ed-section-title') : null;
   const setTitle2 = (txt, show) => {
     if(!title2) return;
     if(typeof txt === 'string') title2.textContent = txt;
@@ -2786,48 +2788,43 @@ function _effectiveSpecsAncho(){
   return side === 'left' ? 'mitad-der' : 'mitad-izq';
 }
 
-/* Aplica el data-ancho al wrap de specs pág 2 y crea/destruye el wrapper .ed-specs-row
-   cuando se necesita poner specs e img 4 lado a lado. */
+/* Aplica el data-ancho al wrap de specs pág 2.
+   En half mode, mueve specs DENTRO de .ed-cont-flow para que el texto de caracts
+   pueda fluir por el costado libre y por debajo de specs (no se corta arriba).
+   En modo completo, lo restaura como sibling de .ed-cont-flow. */
 function aplicarSpecsAncho(){
   const efectivo = _effectiveSpecsAncho();
   const wrap = document.getElementById('ed_specs_pag2_wrap');
   if(wrap) wrap.setAttribute('data-ancho', efectivo);
   const isHalf = (efectivo === 'mitad-izq' || efectivo === 'mitad-der');
 
-  // Crear/destruir .ed-specs-row en cada .ed-cont-pag2
   document.querySelectorAll('.ed-cont-pag2').forEach(cont => {
-    let row = cont.querySelector(':scope > .ed-specs-row');
-    const specs = cont.querySelector(':scope > .ed-specs-pag2') ||
-                  (row ? row.querySelector('.ed-specs-pag2') : null);
+    const flow = cont.querySelector(':scope > .ed-cont-flow') ||
+                 cont.querySelector('.ed-cont-flow');
+    const specs = cont.querySelector('.ed-specs-pag2');
+    if(!flow || !specs) return;
+
     if(isHalf){
-      // Necesitamos el row
-      if(!row){
-        row = document.createElement('div');
-        row.className = 'ed-specs-row';
-        // Insertar después de .ed-cont-flow
-        const flow = cont.querySelector(':scope > .ed-cont-flow');
-        if(flow && flow.nextSibling) cont.insertBefore(row, flow.nextSibling);
-        else cont.appendChild(row);
-      }
-      if(specs && specs.parentElement !== row){
-        row.appendChild(specs);
+      // Mover specs DENTRO de .ed-cont-flow (después de img3, antes del h3 caracts)
+      if(specs.parentElement !== flow){
+        const img3wrap = flow.querySelector('.ed-cont-img3-float');
+        if(img3wrap && img3wrap.nextSibling){
+          flow.insertBefore(specs, img3wrap.nextSibling);
+        } else {
+          flow.insertBefore(specs, flow.firstChild);
+        }
       }
     } else {
-      // Sacar todo del row y eliminarlo
-      if(row){
-        // Mover specs de vuelta al .ed-cont-pag2 (en la posición original — después de .ed-cont-flow)
-        if(specs && specs.parentElement === row){
-          cont.insertBefore(specs, row);
-        }
-        // Si quedó img 4 dentro del row, JS de aplicarImgPosiciones la maneja después.
-        // Aquí solo eliminamos el row si quedó vacío.
-        while(row.firstChild){ cont.insertBefore(row.firstChild, row); }
-        row.remove();
+      // Restaurar specs como sibling de .ed-cont-flow (justo después de él, en .ed-cont-pag2)
+      if(specs.parentElement !== cont){
+        if(flow.nextSibling) cont.insertBefore(specs, flow.nextSibling);
+        else cont.appendChild(specs);
       }
     }
   });
 
-  // Aplicar ancho personalizado de specs (--specs-width) si hay slider
+  // Aplicar ancho personalizado de specs (--specs-width) si hay slider.
+  // Lo seteamos en el .ed-cont-flow (que es ahora el contenedor de specs+img4 en half mode).
   const slider = document.getElementById('ds_specsWidth');
   if(slider){
     // Sincronizar slider desde localStorage si difiere (importante al cargar la página)
@@ -2836,8 +2833,8 @@ function aplicarSpecsAncho(){
       if(stored && stored !== slider.value) slider.value = stored;
     }catch(e){}
     const v = parseFloat(slider.value);
-    document.querySelectorAll('.ed-specs-row').forEach(r => {
-      r.style.setProperty('--specs-width', v + '%');
+    document.querySelectorAll('.ed-cont-flow').forEach(f => {
+      f.style.setProperty('--specs-width', v + '%');
     });
     const lbl = document.getElementById('lbl_specsWidth');
     if(lbl) lbl.textContent = v.toFixed(0) + ' %';
@@ -2910,12 +2907,21 @@ function aplicarImgPosiciones(){
     if(wantNextToSpecs){
       const specsSide = ancho === 'mitad-izq' ? 'left' : 'right';
       img4El.setAttribute('data-specs-side', specsSide);
-      // Buscar el .ed-specs-row dentro de .ed-cont-pag2 (creado por aplicarSpecsAncho antes)
-      const cont = document.querySelector('.ed-cont-pag2');
-      const row = cont ? cont.querySelector(':scope > .ed-specs-row') : null;
-      if(row && img4El.parentElement !== row){
+      // Mover img 4 dentro del MISMO .ed-cont-flow donde está specs (en half mode aplicarSpecsAncho
+      // mueve specs ahí). Así specs e img 4 ambas flotan en el mismo contenedor que caracts y el
+      // texto fluye alrededor sin cortarse.
+      const flow = document.querySelector('.ficha.page-2 .ed-cont-flow') ||
+                   document.querySelector('.ed-cont-pag2 .ed-cont-flow') ||
+                   document.querySelector('.ed-cont-flow');
+      if(flow && img4El.parentElement !== flow){
         if(!img4El.dataset.originalParent) img4El.dataset.originalParent = '1';
-        row.appendChild(img4El);
+        // Insertarla justo después de specs (que aplicarSpecsAncho ya puso en flow)
+        const specsInFlow = flow.querySelector('.ed-specs-pag2');
+        if(specsInFlow && specsInFlow.nextSibling){
+          flow.insertBefore(img4El, specsInFlow.nextSibling);
+        } else {
+          flow.appendChild(img4El);
+        }
       }
     } else {
       // Restaurar img 4 a .ed-cont-flow

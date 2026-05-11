@@ -776,7 +776,7 @@ input,select,textarea{font-family:inherit; font-size:14px;}
         <div class="deploy-warning">
           <b>Importante:</b> Esta operación lee TODO el Registro de Google (Primer Contacto, Reuniones, Seguimientos, Cotizaciones, Webinars) y crea los contactos en el CRM con su pipeline inicial. Primero ejecutá en modo "simulación" para ver los números. Si te cuadran, después corré la migración real.
         </div>
-        <div style="display:flex; gap:10px; margin-bottom:18px;">
+        <div style="display:flex; gap:10px; margin-bottom:18px; flex-wrap:wrap;">
           <button class="btn" onclick="correrMigracion(true)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
             Simular migración (dry-run)
@@ -784,6 +784,10 @@ input,select,textarea{font-family:inherit; font-size:14px;}
           <button class="btn jade" id="btnMigReal" onclick="correrMigracion(false)" disabled>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
             Ejecutar migración real
+          </button>
+          <button class="btn" onclick="actualizarCategorias()" style="background:#7c3aed; color:white; border-color:#7c3aed;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6"/><path d="M2.5 22v-6h6"/><path d="M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+            Actualizar categorías (post-migración)
           </button>
         </div>
         <div id="migReporte"></div>
@@ -1467,6 +1471,30 @@ async function cargarAuditoria(){
         '</tr>'
       ).join('') + '</tbody>' +
     '</table>';
+}
+
+async function actualizarCategorias(){
+  const reporteEl = document.getElementById('migReporte');
+  if(!confirm('Esto va a recorrer los contactos ya migrados y completarles la categoría que esté vacía, leyendo de "Primer Contacto". ¿Continuar?')) return;
+  reporteEl.innerHTML = '<div class="loading-state"><div class="spinner"></div>Actualizando categorías…</div>';
+  const r = await fetchAPI('crm_actualizar_categorias', null, { solicitante: USUARIO });
+  if(!r.ok){
+    reporteEl.innerHTML = '<div class="error-state"><b>Error:</b> ' + esc(r.error || 'desconocido') + '</div>';
+    return;
+  }
+  const rep = r.reporte || {};
+  reporteEl.innerHTML =
+    '<div class="card"><div class="card-hd"><h3>Actualización de categorías</h3></div>' +
+    '<div class="card-body" style="font-family:Open Sans,sans-serif;">' +
+      '<ul>' +
+        '<li>Filas leídas de Primer Contacto: <b>' + (rep.total_filas_primer_contacto || 0) + '</b></li>' +
+        '<li>Contactos actualizados con categoría: <b style="color:var(--jade-dk);">' + (rep.contactos_actualizados || 0) + '</b></li>' +
+        '<li>No encontrados en CRM: <b>' + (rep.no_encontrados_en_crm || 0) + '</b></li>' +
+        '<li>Filas sin categoría en la fuente: <b>' + (rep.sin_categoria_en_fuente || 0) + '</b></li>' +
+      '</ul>' +
+      '<p><b>' + esc(rep.mensaje || '') + '</b></p>' +
+      '<p style="color:var(--mist);font-size:12.5px;">Volvé a "Todos los Contactos" o "Categorizar Urgente" (Ctrl+F5) y vas a ver las categorías cargadas.</p>' +
+    '</div></div>';
 }
 
 async function correrMigracion(dryRun){

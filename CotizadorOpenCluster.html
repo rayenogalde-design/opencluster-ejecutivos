@@ -3951,11 +3951,12 @@ async function actualizarEstado() {
 
   const SHEET_URL_UPDATE = "https://script.google.com/macros/s/AKfycby7WmQLWguRvIl2L2z2NhPz7d9kMhqQLTEUCh5Tm6esCJTyGE34q_2ZdfDsuZKDGj9f/exec";
 
+  // ⚡ CRÍTICO 2026-05-10: leer respuesta real del servidor (Content-Type text/plain evita preflight CORS).
+  let respEst = null;
   try {
-    await fetch(SHEET_URL_UPDATE, {
+    const resp = await fetch(SHEET_URL_UPDATE, {
       method: "POST",
-      mode: "no-cors",
-      headers: {"Content-Type":"application/json"},
+      headers: {"Content-Type": "text/plain;charset=utf-8"},
       body: JSON.stringify({
         accion: "actualizar_estado",
         equipo: getEquipo(),
@@ -3968,14 +3969,20 @@ async function actualizarEstado() {
         fecha_update: new Date().toLocaleDateString("es-CL")
       })
     });
-    // No esperamos respuesta (no-cors) — cerramos inmediatamente
-    setTimeout(() => {
-      cerrarPanelEstado();
-      alert("✅ Estado actualizado a " + estado + " correctamente.");
-    }, 600);
+    if(!resp.ok) throw new Error("HTTP " + resp.status);
+    respEst = await resp.json();
   } catch(err) {
-    alert("❌ Error al actualizar. Revisa tu conexión.");
+    alert("❌ Error al actualizar el estado de " + num + ".\n\nMotivo: " + (err && err.message ? err.message : "fallo de red") + "\n\nEl estado NO se cambió en el registro.");
+    return;
   }
+
+  if(!respEst || respEst.ok !== true) {
+    alert("❌ El servidor rechazó la actualización de estado.\n\nMotivo: " + (respEst?.error || "respuesta inválida"));
+    return;
+  }
+
+  cerrarPanelEstado();
+  alert("✅ Estado actualizado a " + estado + " correctamente.");
 }
 
 // ── Registrar cotización en Google Sheets ─────────────────────────────────
@@ -4091,51 +4098,104 @@ async function registrarCotizacion() {
 
   btn.textContent = "Enviando...";
 
-  try {
-    // Determinar si es reemplazo o nuevo registro
-    const esReemplazo=_modoReemplazo;
-    const datosEnvio={
-      num, fecha, ejecutivo, cliente,
-      equipo: getEquipo(),
-      institucion: inst, ciudad, email,
-      telefono: document.getElementById("eCTel")?.value.trim() || "",
-      neto_productos: "$" + netoProductos.toLocaleString("es-CL"),
-      iva_productos:  "$" + ivaProductos.toLocaleString("es-CL"),
-      transporte: document.getElementById("chkEnvioGratuito")?.checked
-        ? "Envío gratuito"
-        : costoTransporte > 0
-          ? "$" + Math.round(costoTransporte).toLocaleString("es-CL") + " (" + transporteDesc + ")"
-          : "No incluido",
-      productos: prods, sala: salaDesc, estado: "Enviada",
-      fndr: getFndrData().esFndr ? "Sí" : "No",
-      fndr_region: getFndrData().region
-    };
-    if(esReemplazo) datosEnvio.accion='reemplazar_cotizacion';
-    fetch(SHEET_URL, {
-      method: "POST",
-      mode:   "no-cors",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify(datosEnvio)
-    });
-    // Guardar número en localStorage para bloquear futuros duplicados
-    localStorage.setItem("oc_reg_" + num, new Date().toISOString());
-    // Marcar timestamp para el debounce global anti-duplicado
-    localStorage.setItem("oc_ultimo_registro_ms", String(Date.now()));
-    _modoReemplazo=false;
-    btn.style.background="";
-    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> <span>${esReemplazo?'Cotización reemplazada ✓ — bloqueada':'Cotización registrada ✓ — bloqueada'}</span>`;
-    btn.classList.add("enviado");
-    // Bloqueo permanente: el botón queda deshabilitado hasta que el usuario cree una nueva cotización
-    // (vía "Duplicar", "Nueva cotización", "Reemplazar") — esas rutinas re-habilitan explícitamente.
-    btn.disabled = true;
-    // Cargar siguiente número SOLO si NO es reemplazo (en reemplazo el número debe quedarse igual para el PDF)
-    if(!esReemplazo) fetchSiguienteNumero();
-  } catch(err) {
-    alert("❌ Error al registrar. Revisa tu conexión a internet.");
-    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg> <span>Registrar cotización</span>`;
+  // Determinar si es reemplazo o nuevo registro
+  const esReemplazo=_modoReemplazo;
+  const datosEnvio={
+    num, fecha, ejecutivo, cliente,
+    equipo: getEquipo(),
+    institucion: inst, ciudad, email,
+    telefono: document.getElementById("eCTel")?.value.trim() || "",
+    neto_productos: "$" + netoProductos.toLocaleString("es-CL"),
+    iva_productos:  "$" + ivaProductos.toLocaleString("es-CL"),
+    transporte: document.getElementById("chkEnvioGratuito")?.checked
+      ? "Envío gratuito"
+      : costoTransporte > 0
+        ? "$" + Math.round(costoTransporte).toLocaleString("es-CL") + " (" + transporteDesc + ")"
+        : "No incluido",
+    productos: prods, sala: salaDesc, estado: "Enviada",
+    fndr: getFndrData().esFndr ? "Sí" : "No",
+    fndr_region: getFndrData().region
+  };
+  if(esReemplazo) datosEnvio.accion='reemplazar_cotizacion';
+
+  // Helper para restablecer el botón al estado inicial cuando hay error.
+  // ⚡ CRÍTICO: NO marcamos localStorage ni mostramos "registrada ✓" hasta que el servidor confirme.
+  // Bug histórico (2026-05-10): el cliente usaba mode:"no-cors" + sin await → mostraba éxito siempre,
+  // incluso cuando el POST fallaba en el servidor. Resultado: PDFs con números fantasma (caso OC26-3583-AT).
+  const restaurarBotonError = () => {
+    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg> <span>Reintentar registro</span>`;
     btn.disabled = false;
     window._registrandoCotizacion = false;
+  };
+
+  let respData = null;
+  try {
+    // Content-Type:text/plain evita el preflight CORS que Apps Script no soporta.
+    // Apps Script lee igual el body con e.postData.contents y hace JSON.parse(). Es el patrón estándar.
+    const resp = await fetch(SHEET_URL, {
+      method: "POST",
+      headers: {"Content-Type": "text/plain;charset=utf-8"},
+      body: JSON.stringify(datosEnvio)
+    });
+    if(!resp.ok) throw new Error("Servidor respondió HTTP " + resp.status);
+    respData = await resp.json();
+  } catch(netErr) {
+    alert("❌ NO se pudo registrar la cotización " + num + ".\n\nMotivo: " + (netErr && netErr.message ? netErr.message : "fallo de red") + "\n\nLa cotización NO quedó en el registro. Reintentá cuando tengas conexión.\n\nIMPORTANTE: no descargues el PDF hasta que el registro se confirme.");
+    restaurarBotonError();
+    return;
   }
+
+  if(!respData || respData.ok !== true) {
+    const motivo = (respData && respData.error) ? respData.error : "respuesta inválida del servidor";
+    alert("❌ El servidor RECHAZÓ el registro de " + num + ".\n\nMotivo: " + motivo + "\n\nLa cotización NO quedó en el registro.\n\nIMPORTANTE: no descargues el PDF hasta que el registro se confirme.");
+    restaurarBotonError();
+    return;
+  }
+
+  // Servidor confirmó éxito. Si nos avisa que ya estaba (duplicado), lo notamos pero no es error.
+  if(respData.duplicado === true) {
+    showToast("⚠️ " + num + " ya estaba en el registro — no se creó fila nueva.", "warning");
+  }
+
+  // Si el servidor reasignó el número (porque el original estaba duplicado), actualizar UI
+  if(respData.num && respData.num !== num) {
+    const numEl2 = document.getElementById("eNum");
+    if(numEl2) numEl2.value = respData.num;
+    showToast("ℹ️ Número reasignado a " + respData.num + " por colisión con otro registro. El PDF debe regenerarse.", "warning");
+  }
+
+  // Éxito real confirmado por servidor → recién ahora marcamos localStorage y mostramos "registrada ✓"
+  const numFinalConfirmado = respData.num || num;
+  localStorage.setItem("oc_reg_" + numFinalConfirmado, new Date().toISOString());
+  localStorage.setItem("oc_ultimo_registro_ms", String(Date.now()));
+  // Log defensivo: queda registro local de TODAS las cotizaciones registradas exitosamente,
+  // para auditar contra el Sheet si algún día sospechamos otra pérdida silenciosa.
+  try {
+    const logKey = "oc_log_registros";
+    const logActual = JSON.parse(localStorage.getItem(logKey) || "[]");
+    logActual.push({
+      num: numFinalConfirmado,
+      fecha: new Date().toISOString(),
+      ejecutivo,
+      cliente,
+      institucion: inst,
+      reemplazo: esReemplazo,
+      duplicado: respData.duplicado === true
+    });
+    // Conservar últimos 500 registros locales
+    if(logActual.length > 500) logActual.splice(0, logActual.length - 500);
+    localStorage.setItem(logKey, JSON.stringify(logActual));
+  } catch(e) { /* localStorage lleno o bloqueado — ignorar */ }
+
+  _modoReemplazo=false;
+  btn.style.background="";
+  btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> <span>${esReemplazo?'Cotización reemplazada ✓ — bloqueada':'Cotización registrada ✓ — bloqueada'}</span>`;
+  btn.classList.add("enviado");
+  // Bloqueo permanente: el botón queda deshabilitado hasta que el usuario cree una nueva cotización
+  // (vía "Duplicar", "Nueva cotización", "Reemplazar") — esas rutinas re-habilitan explícitamente.
+  btn.disabled = true;
+  // Cargar siguiente número SOLO si NO es reemplazo (en reemplazo el número debe quedarse igual para el PDF)
+  if(!esReemplazo) fetchSiguienteNumero();
 }
 
 // ── Guardar cotización en computadora ─────────────────────────────────────
@@ -4699,17 +4759,42 @@ async function rRegistrar() {
     resultado:rRes,
     cotizacion:rCot==="si"?(document.getElementById("rNumCot").value.trim()||"Sí"):"No",
     notas:document.getElementById("rNotas").value.trim()};
-  // Mostrar éxito inmediatamente (no-cors no permite leer respuesta de todas formas)
+
+  // ⚡ CRÍTICO 2026-05-10: NO mostramos éxito hasta confirmar respuesta del servidor.
+  // Bug histórico: mode:"no-cors" + .catch(()=>{}) silenciaba TODOS los errores y se decía
+  // "Reunión registrada" aunque el POST no hubiera llegado al Sheet. Mismo patrón que en cotizaciones.
+  const _btnHtmlOriginal = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>Registrar reunión';
+
+  let respReu = null;
+  try {
+    const resp = await fetch(URL_SCRIPT, {
+      method: "POST",
+      headers: {"Content-Type": "text/plain;charset=utf-8"},
+      body: JSON.stringify(data)
+    });
+    if(!resp.ok) throw new Error("HTTP " + resp.status);
+    respReu = await resp.json();
+  } catch(netErr) {
+    btn.disabled = false;
+    btn.innerHTML = _btnHtmlOriginal;
+    showToast("❌ NO se registró la reunión: " + (netErr.message || "fallo de red") + ". Reintentá.", "error");
+    return;
+  }
+
+  if(!respReu || respReu.ok !== true) {
+    btn.disabled = false;
+    btn.innerHTML = _btnHtmlOriginal;
+    showToast("❌ Servidor rechazó la reunión: " + (respReu?.error || "respuesta inválida"), "error");
+    return;
+  }
+
+  // Éxito confirmado por el servidor
   btn.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> ¡Reunión registrada!';
   btn.classList.add("ok");
   showToast("✓ Reunión registrada correctamente", "ok");
-  // Enviar al Sheet en segundo plano
-  fetch(URL_SCRIPT,{method:"POST",mode:"no-cors",
-    headers:{"Content-Type":"application/json"},body:JSON.stringify(data)
-  }).catch(()=>{}); // silencioso si falla red
   setTimeout(()=>{
     btn.disabled=false; btn.classList.remove("ok");
-    btn.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>Registrar reunión';
+    btn.innerHTML = _btnHtmlOriginal;
     rLimpiar();
   },2000);
 }
@@ -4851,16 +4936,40 @@ async function r2Registrar(){
     resultado:r2Res_v,
     cotizacion:r2Cot_v==="si"?(document.getElementById("r2NumCot").value.trim()||"Sí"):"No",
     notas:document.getElementById("r2Notas").value.trim()};
-  // Respuesta inmediata — envío en segundo plano
+
+  // ⚡ CRÍTICO 2026-05-10: esperar respuesta REAL del servidor antes de mostrar éxito.
+  const _btnHtmlOriginal2 = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg> Registrar reunión';
+
+  let respReu2 = null;
+  try {
+    const resp = await fetch(URL_SCRIPT, {
+      method: "POST",
+      headers: {"Content-Type": "text/plain;charset=utf-8"},
+      body: JSON.stringify(data)
+    });
+    if(!resp.ok) throw new Error("HTTP " + resp.status);
+    respReu2 = await resp.json();
+  } catch(netErr) {
+    btn.disabled = false;
+    btn.innerHTML = _btnHtmlOriginal2;
+    showToast("❌ NO se registró la reunión: " + (netErr.message || "fallo de red") + ". Reintentá.", "error");
+    return;
+  }
+
+  if(!respReu2 || respReu2.ok !== true) {
+    btn.disabled = false;
+    btn.innerHTML = _btnHtmlOriginal2;
+    showToast("❌ Servidor rechazó la reunión: " + (respReu2?.error || "respuesta inválida"), "error");
+    return;
+  }
+
+  // Éxito confirmado por el servidor
   btn.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> ¡Reunión registrada!';
   btn.classList.add("ok");
   showToast("✓ Reunión registrada correctamente", "ok");
-  fetch(URL_SCRIPT,{method:"POST",mode:"no-cors",
-    headers:{"Content-Type":"application/json"},body:JSON.stringify(data)
-  }).catch(()=>{});
   setTimeout(()=>{
     btn.disabled=false;btn.classList.remove("ok");
-    btn.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg> Registrar reunión';
+    btn.innerHTML = _btnHtmlOriginal2;
     r2Limpiar();
   },2000);
 }

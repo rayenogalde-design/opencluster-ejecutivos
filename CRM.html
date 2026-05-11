@@ -1772,29 +1772,148 @@ async function cargarEquipoPerf(){
 // ════════════════════════════════════════════════════════════════════════════
 // ADMIN — Territorios / Auditoría / Migración
 // ════════════════════════════════════════════════════════════════════════════
+// Match Score: % de match entre catálogo OpenCluster y cada subcategoría
+// Formato: [score_completo, score_zen, nivel, productos_clave]
+const MATCH_SCORES = {
+  // Privados — Salud (prioritarias)
+  "Hogar de Ancianos / ELEAM Privado": [95, 95, "prioritario", "Catres clínicos, colchones antiescaras, grúa, silla ducha, andadores"],
+  "Casa de Reposo / Residencia Asistida": [95, 95, "prioritario", "Catres clínicos, colchones antiescaras, grúa, silla ducha"],
+  "Centro de Memoria / Alzheimer Privado": [92, 78, "prioritario", "Salas multisensoriales, comunicadores, productos sensoriales"],
+  "Centro de Rehabilitación Neurológica": [92, 98, "prioritario", "Eye-tracking Tobii, switches, comunicadores ComuniQa, bipedestadoras, Dragon"],
+  "Hospital Privado": [90, 92, "prioritario", "Catres, grúa, colchones antiescaras, silla ducha, comunicadores UCI"],
+  "Teletón / Instituto Teletón / CRIT": [90, 90, "prioritario", "Bipedestadoras, comunicadores, switches, eye-tracking, todo el catálogo de rehab"],
+  "Centro de Rehabilitación Infantil Privado": [90, 90, "prioritario", "Switches, comunicadores, bipedestadores, eye-tracking infantil"],
+  "Clínica Privada": [88, 88, "prioritario", "Catres, colchones, ayudas técnicas, comunicadores"],
+  "Centro de Cuidados Paliativos / Hospicio Privado": [85, 90, "prioritario", "Catres eléctricos, antiescaras Systam, grúa, silla ducha"],
+  // Privados — Salud (altas)
+  "Hospital Psiquiátrico Privado": [82, 72, "alto", "Salas de calma, contención sensorial, manejo crisis"],
+  "Servicio de Cuidados Domiciliarios": [85, 85, "alto", "Catre Med Home, grúa portátil, andador, silla ducha"],
+  "Centro de Día para Adulto Mayor Privado": [80, 80, "alto", "Silla posicionamiento, andador, productos ergonómicos"],
+  "Centro de Estimulación Temprana Privado": [80, 65, "alto", "Sensoriales, pedagógicos, salas calma TEA"],
+  "Centro de Rehabilitación Físico / Kinesiológico Privado": [75, 72, "alto", "Bipedestadores, sillas posicionamiento, andador, rampas"],
+  "Centro Pediátrico Privado": [75, 65, "alto", "Estimulación, sensoriales, productos infantiles"],
+  "Colegio Particular Subvencionado": [75, 75, "alto", "Switches, comunicadores, eye-tracking, software baja visión"],
+  "Colegio Particular Pagado": [78, 78, "alto", "Switches, comunicadores, eye-tracking, mouses adaptados"],
+  // Privados — RRHH / Empresas
+  "Oficinas de Recursos Humanos de Gran Empresa": [75, 62, "alto", "Eye-tracking, Dragon, software JAWS/OpenBook, mouses adaptados"],
+  // Privados — Otros
+  "Centro Kinesiología / TO / Fonoaudiología Multi-Profesional": [72, 72, "alto", "Productos sensoriales, ayudas técnicas, comunicadores"],
+  "Centro Médico Privado": [70, 65, "alto", "Catres, sillas adaptadas, ergonomía"],
+  // Medias
+  "Inmobiliaria / Constructora": [62, 55, "medio", "Rampas, sillas ducha, catres bulk para proyectos"],
+  "Jardín Infantil Privado": [60, 55, "medio", "Estimulación temprana, salas calma"],
+  "Centro Odontológico Privado": [52, 40, "medio", "Sillas adaptadas, ergonomía"],
+  "Centro de Rehabilitación de Adicciones": [50, 50, "medio", "Salas de calma, manejo crisis"],
+  "Banco": [50, 35, "medio", "Sala lactancia personal, accesibilidad"],
+  "Supermercado": [50, 35, "medio", "Sala lactancia, accesibilidad obligatoria"],
+  "Centro Comercial / Mall": [55, 40, "medio", "Salas lactancia, sensoriales, baños adaptados"],
+  "Tienda por Departamento": [55, 38, "medio", "Salas calma/lactancia, accesibilidad"],
+  "Hotel Internacional": [65, 52, "medio", "Sillas ducha, rampas, salas wellness"],
+  "Hotel Chileno / Cadena Nacional": [62, 50, "medio", "Sillas ducha, rampas, grúa para huéspedes"],
+  "Resort All-Inclusive": [65, 50, "medio", "Sillas ducha, rampas, salas wellness"],
+  "Universidad / Instituto Privado": [55, 50, "medio", "Software JAWS/OpenBook, mouses adaptados"],
+  "Centro de Aprendizaje / Reforzamiento Privado": [55, 45, "medio", "Productos pedagógicos adaptados"],
+  // Secundarias
+  "Termas / Spa Resort": [45, 28, "secundario", "Sillas tina, rampas, sala wellness"],
+  "Cadena de Farmacia": [42, 28, "secundario", "Distribuidor B2B"],
+  "Parroquia / Iglesia / Centro Religioso": [38, 35, "secundario", "Andadores, silla ducha para asistencia a viejitos"],
+  "Empresa de Capacitación / Formación": [38, 20, "secundario", "Ergonomía aulas, materiales pedagógicos"],
+  "Empresa de RRHH / Reclutamiento Inclusivo": [35, 25, "secundario", "Adecuación puestos en clientes finales"],
+  "Empresa Mediana con personal con discapacidad": [60, 50, "medio", "Adecuación puestos, productos ergonómicos"],
+  // Oportunistas
+  "Club Senior / Country Club": [28, 25, "oportunista", "Cojines ergonómicos, sillas, salas wellness"],
+  "Programa Universitario para Adulto Mayor": [25, 22, "oportunista", "Mouses ergonómicos, software baja visión"],
+  // Distribuidores
+  "Distribuidor — Ortopedia": [85, 75, "prioritario", "Toda la línea — canal B2B"],
+  "Distribuidor — Farmacia Especializada": [70, 60, "alto", "Ayudas técnicas, antiescaras"],
+  "Distribuidor — Importador / Mayorista Médico": [80, 70, "alto", "Toda la línea al por mayor"],
+  "Distribuidor — Tienda Online de Productos Médicos": [75, 65, "alto", "Catálogo completo online"],
+  "Distribuidor — Equipamiento Educativo": [60, 50, "medio", "Pedagógicos, comunicadores"],
+  "Distribuidor — Productos Geriátricos": [80, 75, "alto", "Catres, colchones, sillas, grúas"],
+  "Distribuidor — Empresas de Telecuidado / Botón SOS": [55, 50, "medio", "Switches, comunicadores aumentativos"],
+  // Sector Público (los más relevantes)
+  "CESFAM (Centro de Salud Familiar)": [75, 78, "alto", "Ayudas técnicas, ergonomía, sillas ruedas"],
+  "Hospital Público": [85, 88, "prioritario", "Catres, grúa, colchones antiescaras"],
+  "Escuela Especial": [85, 85, "prioritario", "Switches, comunicadores, bipedestadores, sensoriales"],
+  "Programa PIE (Integración Escolar)": [85, 85, "prioritario", "Eye-tracking, switches, comunicadores, mouses adaptados"],
+  "SENADIS": [90, 90, "prioritario", "Comprador estatal directo — todo el catálogo"]
+};
+
 async function cargarTerritorios(){
   const r = await fetchAPI('crm_subcategorias', { solicitante: USUARIO });
   if(!r.ok){ document.getElementById('terrContainer').innerHTML = '<div class="error-state">' + esc(r.error || '') + '</div>'; return; }
   const subs = r.subcategorias || [];
+
+  // Conteo de contactos por subcategoría
+  const contactos = CACHE.vTodos || [];
+  const conteoBySubcat = {};
+  contactos.forEach(c => {
+    const sc = c.sub_categoria || '';
+    if(sc) conteoBySubcat[sc] = (conteoBySubcat[sc] || 0) + 1;
+  });
+
   // Agrupar por categoría top
   const porCat = {};
   subs.forEach(s => {
     if(!porCat[s.tipo_categoria]) porCat[s.tipo_categoria] = [];
     porCat[s.tipo_categoria].push(s);
   });
-  let html = '';
+
+  // Ordenar dentro de cada cat por nivel de prioridad (prioritario primero) y por conteo
+  const nivelOrden = { prioritario:0, alto:1, medio:2, secundario:3, oportunista:4 };
   Object.keys(porCat).forEach(cat => {
+    porCat[cat].sort((a, b) => {
+      const sa = MATCH_SCORES[a.sub_categoria];
+      const sb = MATCH_SCORES[b.sub_categoria];
+      const na = sa ? nivelOrden[sa[2]] : 99;
+      const nb = sb ? nivelOrden[sb[2]] : 99;
+      if(na !== nb) return na - nb;
+      const ca = conteoBySubcat[a.sub_categoria] || 0;
+      const cb = conteoBySubcat[b.sub_categoria] || 0;
+      return cb - ca;
+    });
+  });
+
+  let html =
+    '<div style="margin-bottom:18px;padding:14px 18px;background:var(--ltblue);border-radius:10px;border:1px solid #bae6fd;color:var(--navy);font-size:13.5px;">' +
+      '<b>Match Score:</b> el % indica qué tanto encaja tu catálogo OpenCluster con ese tipo de cliente. ' +
+      'A la izquierda el % del <b>catálogo completo</b>; a la derecha el % de la <b>campaña OpenClusterZen</b>. ' +
+      'Las subcategorías priorizadas son las que más venta pueden generar.' +
+    '</div>';
+
+  Object.keys(porCat).sort().forEach(cat => {
     html += '<div class="card" style="margin-bottom:14px;">' +
       '<div class="card-hd"><h3>' + esc(cat) + '</h3><span>' + porCat[cat].length + ' sub-categorías</span></div>' +
-      '<div class="card-body">' +
+      '<div class="card-body" style="padding:0;">' +
         '<table style="width:100%;border-collapse:collapse;">' +
-        porCat[cat].map(s =>
-          '<tr style="border-bottom:1px solid var(--smoke);">' +
-            '<td style="padding:8px 10px;">' + esc(s.sub_categoria) + '</td>' +
-            '<td style="padding:8px 10px;text-align:right;color:var(--mist);">' + (s.ejecutivo_asignado || 'Sin asignar') + '</td>' +
-            '<td style="padding:8px 10px;text-align:right;"><button class="btn" style="padding:5px 10px;font-size:11.5px;" onclick="abrirAsignarTerritorio(\'' + esc(s.sub_categoria) + '\')">Asignar</button></td>' +
-          '</tr>'
-        ).join('') +
+        porCat[cat].map(s => {
+          const score = MATCH_SCORES[s.sub_categoria];
+          const nivel = score ? score[2] : '';
+          const productos = score ? score[3] : '';
+          const cnt = conteoBySubcat[s.sub_categoria] || 0;
+          const badge = nivel ?
+            ('<span class="match-badge ' + nivel + '">' + nivel.charAt(0).toUpperCase() + nivel.slice(1) + '</span>') : '';
+          const matchTxt = score ?
+            ('<span class="match-score" style="color:var(--mist);margin-left:8px;">' + score[0] + '% · Zen ' + score[1] + '%</span>') : '';
+          return '<tr style="border-bottom:1px solid var(--smoke);">' +
+            '<td style="padding:12px 14px;vertical-align:top;">' +
+              '<div style="font-weight:700;color:var(--ink);margin-bottom:3px;">' + esc(s.sub_categoria) + '</div>' +
+              '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">' +
+                badge + matchTxt +
+                (cnt > 0 ? '<span style="font-size:11.5px;color:var(--purple-dk);font-weight:700;">' + cnt + ' contacto' + (cnt !== 1 ? 's' : '') + ' en CRM</span>' : '') +
+              '</div>' +
+              (productos ? '<div style="font-size:11.5px;color:var(--subtle);margin-top:6px;"><b>Productos clave:</b> ' + esc(productos) + '</div>' : '') +
+            '</td>' +
+            '<td style="padding:12px 14px;text-align:right;vertical-align:top;white-space:nowrap;">' +
+              (s.ejecutivo_asignado ?
+                '<span style="display:inline-block;padding:5px 11px;background:var(--purple-lt);color:var(--purple-dk);border-radius:14px;font-size:12px;font-weight:700;">' + esc(s.ejecutivo_asignado) + '</span>' :
+                '<span style="color:var(--mist);font-size:12.5px;">Sin asignar</span>') +
+              '<br><button class="btn" style="padding:5px 12px;font-size:11.5px;margin-top:8px;" onclick="abrirAsignarTerritorio(\'' + esc(s.sub_categoria) + '\')">' +
+                (s.ejecutivo_asignado ? 'Cambiar' : 'Asignar') +
+              '</button>' +
+            '</td>' +
+          '</tr>';
+        }).join('') +
         '</table>' +
       '</div></div>';
   });
@@ -1802,11 +1921,28 @@ async function cargarTerritorios(){
 }
 
 function abrirAsignarTerritorio(subcat){
-  const ejec = prompt('¿A qué ejecutivo asignás "' + subcat + '"?\n\nOpciones:\nRayen Ogalde\nMaximiliano Astudillo\nRoberto Cáceres\nGermán Alvarado\nWilliam');
-  if(!ejec) return;
-  fetchAPI('crm_asignar_territorio', null, { sub_categoria: subcat, ejecutivo: ejec, solicitante: USUARIO }).then(r => {
-    if(r.ok){ alert('Asignado'); cargarTerritorios(); }
-    else alert('Error: ' + (r.error || ''));
+  const ejec = prompt(
+    '¿A qué ejecutivo asignás "' + subcat + '"?\n\n' +
+    'Escribí UNO de los siguientes nombres (exactamente):\n\n' +
+    '  Rayen Ogalde\n' +
+    '  Maximiliano\n' +
+    '  Roberto\n' +
+    '  Germán\n' +
+    '  William\n' +
+    '  Mario\n\n' +
+    '(dejá vacío para quitar la asignación)'
+  );
+  if(ejec === null) return;  // canceló con Esc
+  const valor = ejec.trim();
+  fetchAPI('crm_asignar_territorio', null, { sub_categoria: subcat, ejecutivo: valor, solicitante: USUARIO }).then(r => {
+    if(r.ok){
+      // Refrescar territorios y limpiar cache de contactos (porque la asignación los reasigna)
+      CACHE.vMis = null;
+      CACHE.vTodos = null;
+      cargarTerritorios();
+    } else {
+      alert('Error: ' + (r.error || ''));
+    }
   });
 }
 

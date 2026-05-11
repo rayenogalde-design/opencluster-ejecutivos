@@ -440,6 +440,30 @@ body:not([data-tpl="editorial"]) .tpl-editorial-only{display:none !important}
 .ed-caja li:last-child{margin-bottom:0}
 .ed-caja li::before{content:'';position:absolute;left:0;top:7px;width:5px;height:5px;background:var(--coral);border-radius:50%}
 
+/* === MODO LIBRE de la caja "¿Qué hay en la caja?" === */
+/* Cuando data-mode="free", la caja vive como sibling dentro de .ed-cont-flow (pág 2).
+   El usuario la arrastra con el mouse y el texto fluye alrededor. */
+.ed-caja[data-mode="free"]{cursor:move;user-select:none;-webkit-user-select:none;clear:none}
+.ed-caja[data-mode="free"][data-wrap="float"]{
+  float:var(--caja-side, left);max-width:var(--caja-max-w, 3.2in);
+  margin:var(--caja-y, 0in) 0.18in 0.12in 0
+}
+.ed-caja[data-mode="free"][data-wrap="float"][data-side="right"]{
+  margin:var(--caja-y, 0in) 0 0.12in 0.18in
+}
+.ed-caja[data-mode="free"][data-wrap="block"]{
+  float:none;display:block;clear:both;
+  margin:var(--caja-y, 0in) 0 0.18in 0;max-width:100%
+}
+@media screen{
+  .ed-caja[data-mode="free"]{outline:1px dashed transparent;transition:outline-color .15s}
+  .ed-caja[data-mode="free"]:hover{outline:2px dashed var(--coral);outline-offset:3px}
+  .ed-caja[data-mode="free"].is-dragging{outline:2px solid var(--orange);outline-offset:3px;opacity:.88}
+}
+@media print{
+  .ed-caja[data-mode="free"]{outline:none !important;cursor:auto !important}
+}
+
 /* Pág 2 Editorial: bloque "Más detalles" abajo con diseño cálido */
 .ed-cont-pag2{display:flex;flex-direction:column}
 .ed-detalles-bottom{flex:0 0 auto;align-self:flex-start;width:fit-content;min-width:35%;max-width:100%;margin-top:0.2in;background:linear-gradient(135deg,var(--cream) 0%,#fff7eb 100%);border:1px solid var(--cream-border);border-left:4px solid var(--coral);border-radius:8px;padding:0.18in 0.25in;position:relative;box-shadow:0 2px 6px rgba(197,74,53,.08);overflow:hidden;min-height:0}
@@ -1173,7 +1197,7 @@ body[data-active-mode="1page"] .modo2-only::after{content:'Activá "2 páginas" 
           <textarea id="f_caja_text" oninput="if(this.value.trim()){document.getElementById('f_caja_on').checked=true;}actualizarPreview()" rows="5" placeholder="Un item por línea, por ejemplo:&#10;Rastreador ocular PCEye&#10;Estuche de transporte&#10;Placas de montaje magnéticas&#10;Adaptador USB-A a USB-C&#10;Software de control TD&#10;Guía de inicio rápido"></textarea>
           <div class="hint" style="margin-top:4px">Lista de items que vienen incluidos con el producto. Aparece como tarjeta tipo "Más detalles" con bullets coral.</div>
           <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--grey);margin-top:12px;margin-bottom:6px">Ubicación de la tarjeta</label>
-          <div class="ed-hdr-pills" id="cajaLocPills" style="grid-template-columns:repeat(5,1fr)">
+          <div class="ed-hdr-pills" id="cajaLocPills" style="grid-template-columns:repeat(3,1fr)">
             <button type="button" class="ed-hdr-pill active" data-loc="p1-left" onclick="setCajaLoc('p1-left')">
               <div class="ed-hdr-pill-name">Pág 1<br>cuadro crema</div>
             </button>
@@ -1189,6 +1213,17 @@ body[data-active-mode="1page"] .modo2-only::after{content:'Activá "2 páginas" 
             <button type="button" class="ed-hdr-pill" data-loc="p2-detalles" onclick="setCajaLoc('p2-detalles')">
               <div class="ed-hdr-pill-name">Pág 2<br>junto a Más detalles</div>
             </button>
+            <button type="button" class="ed-hdr-pill" data-loc="libre" onclick="setCajaLoc('libre')" style="background:#fffaf0;border-color:var(--orange)">
+              <div class="ed-hdr-pill-name" style="color:var(--coral)">🖱️ Libre<br>(arrastrar)</div>
+            </button>
+          </div>
+          <div id="cajaWrapBox" style="margin-top:10px;display:none">
+            <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--grey);margin-bottom:6px">Flujo del texto alrededor (modo libre)</label>
+            <div class="ed-hdr-pills" id="cajaWrapPills" style="grid-template-columns:repeat(2,1fr)">
+              <button type="button" class="ed-hdr-pill active" data-cajawrap="float" onclick="setCajaWrap('float')"><div class="ed-hdr-pill-name">Texto rodea</div></button>
+              <button type="button" class="ed-hdr-pill" data-cajawrap="block" onclick="setCajaWrap('block')"><div class="ed-hdr-pill-name">Solo arriba y abajo</div></button>
+            </div>
+            <div class="hint" style="margin-top:4px">En modo libre la caja se vive en pág 2. <b>Arrástrala con el mouse</b> a donde la quieras. Con "Texto rodea" el contenido fluye al costado opuesto y por abajo (ocupa solo el ancho de la caja). Con "Solo arriba y abajo" la caja toma el ancho completo y el texto va arriba/abajo.</div>
           </div>
         </div>
       </div>
@@ -2976,13 +3011,83 @@ function setDispoPreset(preset){
 
 /* "¿Qué hay en la caja?" — pill de ubicación + render */
 function setCajaLoc(loc){
-  const valid = ['p1-left','p2-img3','p2-img4','p2-after-specs','p2-detalles'];
+  const valid = ['p1-left','p2-img3','p2-img4','p2-after-specs','p2-detalles','libre'];
   if(!valid.includes(loc)) loc = 'p1-left';
   document.querySelectorAll('#cajaLocPills .ed-hdr-pill').forEach(p => {
     p.classList.toggle('active', p.getAttribute('data-loc') === loc);
   });
+  // Mostrar/ocultar el bloque de "Flujo del texto" (sólo aplica en modo libre)
+  const wrapBox = document.getElementById('cajaWrapBox');
+  if(wrapBox) wrapBox.style.display = (loc === 'libre') ? '' : 'none';
   try{ localStorage.setItem('oc_fichas_caja_loc', loc); }catch(e){}
   actualizarPreview();
+}
+
+function setCajaWrap(wrap){
+  if(!['float','block'].includes(wrap)) wrap = 'float';
+  document.querySelectorAll('#cajaWrapPills .ed-hdr-pill').forEach(p => {
+    p.classList.toggle('active', p.getAttribute('data-cajawrap') === wrap);
+  });
+  try{ localStorage.setItem('oc_fichas_caja_wrap', wrap); }catch(e){}
+  const caja = document.getElementById('ed_caja');
+  if(caja) caja.setAttribute('data-wrap', wrap);
+  // Si cambia el wrap, re-renderizar para que la caja se acomode
+  if(typeof actualizarPreview === 'function') actualizarPreview();
+}
+
+/* Drag handler de la caja en modo libre.
+   Actualiza --caja-y (margin-top en pulgadas) y data-side (left/right) en tiempo real.
+   El texto fluye alrededor porque la caja sigue siendo float, NO position:absolute. */
+function _setupCajaDrag(caja){
+  if(caja.dataset.cajaDragWired === '1') return;
+  caja.dataset.cajaDragWired = '1';
+  let dragging=false, startCursorY=0, startMarginYPx=0, parent=null, parentRect=null, scale=1;
+  const onDown = (ev) => {
+    if(caja.getAttribute('data-mode') !== 'free') return;
+    if(ev.type === 'mousedown' && ev.button !== 0) return;
+    const point = ev.touches ? ev.touches[0] : ev;
+    dragging = true;
+    caja.classList.add('is-dragging');
+    parent = caja.parentElement;
+    parentRect = parent.getBoundingClientRect();
+    // Escala del preview (transform:scale en .ficha)
+    scale = parentRect.width / parent.offsetWidth || 1;
+    startCursorY = point.clientY;
+    // Margin-top actual en px (convirtiendo --caja-y desde 'in' si está seteado)
+    const currentMy = parseFloat(getComputedStyle(caja).marginTop);
+    startMarginYPx = isNaN(currentMy) ? 0 : currentMy;
+    ev.preventDefault();
+  };
+  const onMove = (ev) => {
+    if(!dragging) return;
+    const point = ev.touches ? ev.touches[0] : ev;
+    const dy = (point.clientY - startCursorY) / scale;
+    const newMyPx = Math.max(0, startMarginYPx + dy);
+    const newMyIn = (newMyPx / 96).toFixed(2) + 'in';
+    caja.style.setProperty('--caja-y', newMyIn);
+    // Determinar lado por X relativo al ancho del padre
+    const cursorXInParent = (point.clientX - parentRect.left) / scale;
+    const newSide = cursorXInParent < (parent.offsetWidth / 2) ? 'left' : 'right';
+    if(caja.getAttribute('data-side') !== newSide){
+      caja.setAttribute('data-side', newSide);
+    }
+    ev.preventDefault();
+  };
+  const onUp = () => {
+    if(!dragging) return;
+    dragging = false;
+    caja.classList.remove('is-dragging');
+    try{
+      localStorage.setItem('oc_fichas_caja_y', caja.style.getPropertyValue('--caja-y') || '0in');
+      localStorage.setItem('oc_fichas_caja_side', caja.getAttribute('data-side') || 'left');
+    }catch(e){}
+  };
+  caja.addEventListener('mousedown', onDown);
+  caja.addEventListener('touchstart', onDown, {passive:false});
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('touchmove', onMove, {passive:false});
+  document.addEventListener('mouseup', onUp);
+  document.addEventListener('touchend', onUp);
 }
 
 function renderCaja(){
@@ -3000,13 +3105,43 @@ function renderCaja(){
     const t = line.trim();
     return t ? '<li>' + escapeHtml(t) + '</li>' : '';
   }).filter(Boolean).join('');
-  // Si hay items, mostrar y mover al slot activo
+  // Si hay items, mostrar y mover al slot activo (o aplicar modo libre)
   if(list.children.length){
     caja.style.display = '';
     const loc = (function(){ try{ return localStorage.getItem('oc_fichas_caja_loc') || 'p1-left'; }catch(e){ return 'p1-left'; } })();
-    const slot = document.getElementById('slot_caja_' + loc);
-    if(slot && caja.parentElement !== slot){
-      slot.appendChild(caja);
+    if(loc === 'libre'){
+      // Modo libre: la caja vive en .ed-cont-flow de pág 2 como primer hijo, con float
+      const flow = document.querySelector('.ficha.page-2 .ed-cont-flow') ||
+                   document.querySelector('.ed-cont-pag2 .ed-cont-flow') ||
+                   document.querySelector('.ed-cont-flow');
+      if(flow && caja.parentElement !== flow){
+        flow.insertBefore(caja, flow.firstChild);
+      }
+      caja.setAttribute('data-mode', 'free');
+      // Wrap (float o block)
+      const wrap = (function(){ try{ return localStorage.getItem('oc_fichas_caja_wrap') || 'float'; }catch(e){ return 'float'; } })();
+      caja.setAttribute('data-wrap', wrap);
+      // Lado (left / right)
+      const side = (function(){ try{ return localStorage.getItem('oc_fichas_caja_side') || 'left'; }catch(e){ return 'left'; } })();
+      caja.setAttribute('data-side', side);
+      // Margin-top guardado
+      const y = (function(){ try{ return localStorage.getItem('oc_fichas_caja_y') || '0in'; }catch(e){ return '0in'; } })();
+      caja.style.setProperty('--caja-y', y);
+      // Reflejar pills del wrap
+      document.querySelectorAll('#cajaWrapPills .ed-hdr-pill').forEach(p => {
+        p.classList.toggle('active', p.getAttribute('data-cajawrap') === wrap);
+      });
+      _setupCajaDrag(caja);
+    } else {
+      // Modo slot tradicional
+      caja.removeAttribute('data-mode');
+      caja.removeAttribute('data-wrap');
+      caja.removeAttribute('data-side');
+      caja.style.removeProperty('--caja-y');
+      const slot = document.getElementById('slot_caja_' + loc);
+      if(slot && caja.parentElement !== slot){
+        slot.appendChild(caja);
+      }
     }
   } else {
     caja.style.display = 'none';
@@ -3355,6 +3490,15 @@ function resetLogo(){
     document.querySelectorAll('#cajaLocPills .ed-hdr-pill').forEach(p => {
       p.classList.toggle('active', p.getAttribute('data-loc') === savedCajaLoc);
     });
+    // Si está en modo libre, mostrar el bloque de wrap y restaurar la pill activa
+    if(savedCajaLoc === 'libre'){
+      const wrapBox = document.getElementById('cajaWrapBox');
+      if(wrapBox) wrapBox.style.display = '';
+      const savedWrap = localStorage.getItem('oc_fichas_caja_wrap') || 'float';
+      document.querySelectorAll('#cajaWrapPills .ed-hdr-pill').forEach(p => {
+        p.classList.toggle('active', p.getAttribute('data-cajawrap') === savedWrap);
+      });
+    }
   }
   const savedMode = localStorage.getItem('oc_fichas_mode');
   setMode(savedMode === '2page' ? '2page' : '1page');
@@ -4595,6 +4739,9 @@ function serializarFichaCompleta(){
     detalles_loc: (function(){ try{ return localStorage.getItem('oc_fichas_ed_detalles_loc') || 'pag1'; }catch(e){ return 'pag1'; } })(),
     dispo_preset: (function(){ try{ return localStorage.getItem('oc_fichas_dispo_preset') || 'pedido'; }catch(e){ return 'pedido'; } })(),
     caja_loc: (function(){ try{ return localStorage.getItem('oc_fichas_caja_loc') || 'p1-left'; }catch(e){ return 'p1-left'; } })(),
+    caja_wrap: (function(){ try{ return localStorage.getItem('oc_fichas_caja_wrap') || 'float'; }catch(e){ return 'float'; } })(),
+    caja_side: (function(){ try{ return localStorage.getItem('oc_fichas_caja_side') || 'left'; }catch(e){ return 'left'; } })(),
+    caja_y: (function(){ try{ return localStorage.getItem('oc_fichas_caja_y') || '0in'; }catch(e){ return '0in'; } })(),
     img3_lado: (function(){ try{ return localStorage.getItem('oc_fichas_img3_lado') || 'left'; }catch(e){ return 'left'; } })(),
     img3_wrap: (function(){ try{ return localStorage.getItem('oc_fichas_img3_wrap') || 'float'; }catch(e){ return 'float'; } })(),
     img4_pos:  (function(){ try{ return localStorage.getItem('oc_fichas_img4_pos')  || 'below-img3'; }catch(e){ return 'below-img3'; } })(),
@@ -4676,6 +4823,12 @@ function aplicarFichaCompleta(ficha){
     if(ficha.specs_cols && typeof setSpecsCols === 'function') setSpecsCols(ficha.specs_cols);
     if(ficha.specs_style && typeof setSpecsStyle === 'function') setSpecsStyle(ficha.specs_style);
     if(ficha.detalles_loc && typeof setDetallesLoc === 'function') setDetallesLoc(ficha.detalles_loc);
+    // Caja: persistir wrap, side, y antes de llamar setCajaLoc (que dispara actualizarPreview→renderCaja)
+    try{
+      if(ficha.caja_wrap) localStorage.setItem('oc_fichas_caja_wrap', ficha.caja_wrap);
+      if(ficha.caja_side) localStorage.setItem('oc_fichas_caja_side', ficha.caja_side);
+      if(ficha.caja_y)    localStorage.setItem('oc_fichas_caja_y',    ficha.caja_y);
+    }catch(e){}
     if(ficha.caja_loc && typeof setCajaLoc === 'function') setCajaLoc(ficha.caja_loc);
     // Posiciones / wrap / free de img 3 y 4 (escribimos en localStorage y luego un solo aplicarImgPosiciones)
     try{

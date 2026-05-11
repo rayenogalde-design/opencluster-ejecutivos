@@ -342,6 +342,49 @@ body:not([data-tpl="editorial"]) .tpl-editorial-only{display:none !important}
 .ed-img4-box.placeholder{width:var(--ed-img4-w, 3in);height:var(--ed-img4-h, 2in);display:flex;align-items:center;justify-content:center}
 .ed-img4-box.placeholder::before{content:'';display:block;width:32px;height:32px;border:2px dashed var(--coral);border-radius:6px;opacity:.4}
 .ed-img4-box img{display:block;width:var(--ed-img4-w, 3in);height:var(--ed-img4-h, 2in);object-fit:contain}
+
+/* ── IMG 3 / IMG 4 — modos de posición y wrap (modo preset) ── */
+/* Posiciones predefinidas de IMG 4 (data-pos en .ed-cont-img4-block) */
+.ed-cont-img4-block[data-pos="below-img3"]{float:left;clear:left;margin:0 0.22in 0.12in 0}
+.ed-cont-img4-block[data-pos="top-left"]{float:left;clear:none;margin:0 0.22in 0.12in 0}
+.ed-cont-img4-block[data-pos="bottom-left"]{float:left;clear:both;margin:0.18in 0.22in 0.12in 0}
+.ed-cont-img4-block[data-pos="right"]{float:right;clear:none;margin:0 0 0.12in 0.22in}
+
+/* IMG 3 — lado configurable */
+.ed-cont-img3-float[data-pos="left"]{float:left;margin:0 0.22in 0.12in 0}
+.ed-cont-img3-float[data-pos="right"]{float:right;margin:0 0 0.12in 0.22in}
+
+/* WRAP = "block" (sin wrap lateral): la imagen ocupa todo el ancho disponible, el texto va solo arriba/abajo */
+.ed-cont-img3-float[data-wrap="block"],
+.ed-cont-img4-block[data-wrap="block"]{
+  float:none !important;clear:both;width:auto;max-width:100%;margin:0.14in 0;display:block
+}
+.ed-cont-img3-float[data-wrap="block"] .ed-img3-box{width:100%;height:var(--ed-img3-h, 2in)}
+.ed-cont-img4-block[data-wrap="block"] .ed-img4-box,
+.ed-cont-img4-block[data-wrap="block"] .ed-img4-box.placeholder{display:block;width:100%}
+.ed-cont-img4-block[data-wrap="block"] .ed-img4-box img{width:100%}
+
+/* MODO LIBRE — la imagen sale del flujo y se puede arrastrar con el mouse.
+   El offset parent es .ed-cont (que ya tiene position:relative). El texto NO la rodea. */
+.ed-cont-img3-float[data-mode="free"],
+.ed-cont-img4-block[data-mode="free"]{
+  position:absolute !important;float:none !important;clear:none !important;
+  margin:0 !important;z-index:6;cursor:move;user-select:none;-webkit-user-select:none
+}
+.ed-cont-img3-float[data-mode="free"]{left:var(--ed-img3-x, 0.4in);top:var(--ed-img3-y, 0.3in)}
+.ed-cont-img4-block[data-mode="free"]{left:var(--ed-img4-x, 0.4in);top:var(--ed-img4-y, 2.5in)}
+
+/* Indicador visual de "se puede arrastrar" (solo en pantalla, no impresión) */
+@media screen{
+  .ed-cont-img3-float[data-mode="free"]:hover .ed-img3-box,
+  .ed-cont-img4-block[data-mode="free"]:hover .ed-img4-box{outline:2px dashed var(--coral);outline-offset:3px}
+  .ed-cont-img3-float[data-mode="free"].is-dragging .ed-img3-box,
+  .ed-cont-img4-block[data-mode="free"].is-dragging .ed-img4-box{outline:2px solid var(--orange);outline-offset:3px}
+}
+@media print{
+  .ed-cont-img3-float[data-mode="free"] .ed-img3-box,
+  .ed-cont-img4-block[data-mode="free"] .ed-img4-box{outline:none !important}
+}
 /* Las caracts fluyen al lado y debajo de la imagen */
 .ed-cont-flow .ed-section-title{margin-bottom:8px}
 .ed-cont-flow .ed-caracts-list{list-style:none;padding:0;margin:0;max-width:var(--caracts-content-w, 100%)}
@@ -1256,13 +1299,35 @@ body[data-active-mode="1page"] .modo2-only::after{content:'Activá "2 páginas" 
       <div class="field">
         <label style="display:flex;align-items:center;gap:8px;text-transform:none;color:var(--navy);font-size:13px">
           <input type="checkbox" id="f_p2_imagen3_on" onchange="actualizarPreview()" style="width:16px;height:16px">
-          Mostrar Imagen 3 <span style="color:var(--coral);font-weight:700">(lado izquierdo)</span>
+          Mostrar Imagen 3
         </label>
         <div id="p2_img3_box" style="margin-top:8px;display:none">
           <div class="hint" style="margin-bottom:6px">Selecciona del listado de Shopify (clic para elegir/desmarcar):</div>
           <div id="p2_img3_grid" class="img-grid"></div>
           <button type="button" onclick="document.getElementById('f_img3_file').click()" style="display:none;margin-top:10px;width:100%;padding:8px;background:#fff;border:1.5px dashed var(--border);border-radius:8px;font-family:'Montserrat',sans-serif;font-weight:600;font-size:11px;color:var(--grey);cursor:pointer">o subir desde tu PC ↑</button>
           <input type="file" id="f_img3_file" accept="image/*" style="display:none" onchange="cargarImg3(this)">
+
+          <div style="margin-top:10px">
+            <label style="font-size:11px">Lado:</label>
+            <div class="ed-hdr-pills" id="img3LadoPills" style="grid-template-columns:repeat(2,1fr);margin-top:4px">
+              <button type="button" class="ed-hdr-pill active" data-img3lado="left" onclick="setImg3Lado('left')"><div class="ed-hdr-pill-name">Izquierda</div></button>
+              <button type="button" class="ed-hdr-pill" data-img3lado="right" onclick="setImg3Lado('right')"><div class="ed-hdr-pill-name">Derecha</div></button>
+            </div>
+          </div>
+
+          <div style="margin-top:10px">
+            <label style="font-size:11px">Flujo del texto:</label>
+            <div class="ed-hdr-pills" id="img3WrapPills" style="grid-template-columns:repeat(2,1fr);margin-top:4px">
+              <button type="button" class="ed-hdr-pill active" data-img3wrap="float" onclick="setImg3Wrap('float')"><div class="ed-hdr-pill-name">Texto rodea</div></button>
+              <button type="button" class="ed-hdr-pill" data-img3wrap="block" onclick="setImg3Wrap('block')"><div class="ed-hdr-pill-name">Solo arriba/abajo</div></button>
+            </div>
+          </div>
+
+          <label style="display:flex;align-items:center;gap:8px;margin-top:10px;text-transform:none;font-size:12px;cursor:pointer">
+            <input type="checkbox" id="f_p2_img3_free" onchange="toggleImg3Free()" style="width:14px;height:14px">
+            <span>Modo libre (arrastrar con mouse)</span>
+          </label>
+          <div class="hint" style="margin-top:2px">Al activar, la imagen sale del flujo y la puedes arrastrar a cualquier punto de la página. El texto no la rodea.</div>
         </div>
         <div class="row2" style="margin-top:10px">
           <div class="field">
@@ -1279,13 +1344,37 @@ body[data-active-mode="1page"] .modo2-only::after{content:'Activá "2 páginas" 
       <div class="field" style="margin-top:10px">
         <label style="display:flex;align-items:center;gap:8px;text-transform:none;color:var(--navy);font-size:13px">
           <input type="checkbox" id="f_p2_imagen4_on" onchange="actualizarPreview()" style="width:16px;height:16px">
-          Mostrar Imagen 4 <span style="color:var(--coral);font-weight:700">(lado derecho)</span>
+          Mostrar Imagen 4
         </label>
         <div id="p2_img4_box" style="margin-top:8px;display:none">
           <div class="hint" style="margin-bottom:6px">Selecciona del listado de Shopify (clic para elegir/desmarcar):</div>
           <div id="p2_img4_grid" class="img-grid"></div>
           <button type="button" onclick="document.getElementById('f_img4_file').click()" style="display:none;margin-top:10px;width:100%;padding:8px;background:#fff;border:1.5px dashed var(--border);border-radius:8px;font-family:'Montserrat',sans-serif;font-weight:600;font-size:11px;color:var(--grey);cursor:pointer">o subir desde tu PC ↑</button>
           <input type="file" id="f_img4_file" accept="image/*" style="display:none" onchange="cargarImg4(this)">
+
+          <div style="margin-top:10px">
+            <label style="font-size:11px">Posición:</label>
+            <div class="ed-hdr-pills" id="img4PosPills" style="grid-template-columns:repeat(2,1fr);margin-top:4px">
+              <button type="button" class="ed-hdr-pill active" data-img4pos="below-img3" onclick="setImg4Pos('below-img3')"><div class="ed-hdr-pill-name">Debajo de img 3</div></button>
+              <button type="button" class="ed-hdr-pill" data-img4pos="right" onclick="setImg4Pos('right')"><div class="ed-hdr-pill-name">Lado derecho</div></button>
+              <button type="button" class="ed-hdr-pill" data-img4pos="top-left" onclick="setImg4Pos('top-left')"><div class="ed-hdr-pill-name">Arriba izq</div></button>
+              <button type="button" class="ed-hdr-pill" data-img4pos="bottom-left" onclick="setImg4Pos('bottom-left')"><div class="ed-hdr-pill-name">Abajo izq</div></button>
+            </div>
+          </div>
+
+          <div style="margin-top:10px">
+            <label style="font-size:11px">Flujo del texto:</label>
+            <div class="ed-hdr-pills" id="img4WrapPills" style="grid-template-columns:repeat(2,1fr);margin-top:4px">
+              <button type="button" class="ed-hdr-pill active" data-img4wrap="float" onclick="setImg4Wrap('float')"><div class="ed-hdr-pill-name">Texto rodea</div></button>
+              <button type="button" class="ed-hdr-pill" data-img4wrap="block" onclick="setImg4Wrap('block')"><div class="ed-hdr-pill-name">Solo arriba/abajo</div></button>
+            </div>
+          </div>
+
+          <label style="display:flex;align-items:center;gap:8px;margin-top:10px;text-transform:none;font-size:12px;cursor:pointer">
+            <input type="checkbox" id="f_p2_img4_free" onchange="toggleImg4Free()" style="width:14px;height:14px">
+            <span>Modo libre (arrastrar con mouse)</span>
+          </label>
+          <div class="hint" style="margin-top:2px">Al activar, la imagen sale del flujo y la arrastras donde la necesites. El texto no la rodea.</div>
         </div>
         <div class="row2" style="margin-top:10px">
           <div class="field">
@@ -1297,7 +1386,7 @@ body[data-active-mode="1page"] .modo2-only::after{content:'Activá "2 páginas" 
             <input type="range" id="ds_edImg4H" min="1.2" max="4" step="0.1" value="2" oninput="aplicarDiseno()">
           </div>
         </div>
-        <div class="hint" style="margin-top:6px">Editorial pág 2: imagen 3 flota a la izquierda, imagen 4 a la derecha. El texto de "Más características" y "Más detalles" fluye entre ambas.</div>
+        <div class="hint" style="margin-top:6px">Tip: con "Debajo de img 3" las dos imágenes se apilan a la izquierda y el texto fluye limpio por la derecha.</div>
       </div>
 
       <div class="field" style="margin-top:10px">
@@ -2173,6 +2262,8 @@ function aplicarDiseno(){
   set('--ed-img3-h','ds_edImg3H','in','lbl_edImg3H',1);
   set('--ed-img4-w','ds_edImg4W','in','lbl_edImg4W',1);
   set('--ed-img4-h','ds_edImg4H','in','lbl_edImg4H',1);
+  // Aplicar también posiciones / wrap / free de img 3 y 4 (idempotente)
+  if(typeof aplicarImgPosiciones === 'function') aplicarImgPosiciones();
   set('--ed-specs-pag2-gap','ds_p2SpecsGap','in','lbl_p2_specsGap',2);
   set('--ed-title-shift','ds_edTitleShift','in','lbl_edTitleShift',2);
   set('--ed-info-shift','ds_edInfoShift','in','lbl_edInfoShift',2);
@@ -2503,6 +2594,155 @@ function setDetallesLoc(loc){
   });
   try{ localStorage.setItem('oc_fichas_ed_detalles_loc', loc); }catch(e){}
   actualizarPreview();
+}
+
+/* ── IMG 3 / IMG 4 — posiciones, wrap y modo libre ── */
+function _setActivePill(containerId, attr, val){
+  document.querySelectorAll('#'+containerId+' .ed-hdr-pill').forEach(p => {
+    p.classList.toggle('active', p.getAttribute(attr) === val);
+  });
+}
+function setImg3Lado(lado){
+  if(!['left','right'].includes(lado)) lado = 'left';
+  _setActivePill('img3LadoPills','data-img3lado',lado);
+  try{ localStorage.setItem('oc_fichas_img3_lado', lado); }catch(e){}
+  aplicarImgPosiciones();
+}
+function setImg3Wrap(wrap){
+  if(!['float','block'].includes(wrap)) wrap = 'float';
+  _setActivePill('img3WrapPills','data-img3wrap',wrap);
+  try{ localStorage.setItem('oc_fichas_img3_wrap', wrap); }catch(e){}
+  aplicarImgPosiciones();
+}
+function setImg4Pos(pos){
+  if(!['below-img3','right','top-left','bottom-left'].includes(pos)) pos = 'below-img3';
+  _setActivePill('img4PosPills','data-img4pos',pos);
+  try{ localStorage.setItem('oc_fichas_img4_pos', pos); }catch(e){}
+  aplicarImgPosiciones();
+}
+function setImg4Wrap(wrap){
+  if(!['float','block'].includes(wrap)) wrap = 'float';
+  _setActivePill('img4WrapPills','data-img4wrap',wrap);
+  try{ localStorage.setItem('oc_fichas_img4_wrap', wrap); }catch(e){}
+  aplicarImgPosiciones();
+}
+function toggleImg3Free(){
+  const cb = document.getElementById('f_p2_img3_free');
+  const free = !!(cb && cb.checked);
+  try{ localStorage.setItem('oc_fichas_img3_free', free ? '1':'0'); }catch(e){}
+  aplicarImgPosiciones();
+}
+function toggleImg4Free(){
+  const cb = document.getElementById('f_p2_img4_free');
+  const free = !!(cb && cb.checked);
+  try{ localStorage.setItem('oc_fichas_img4_free', free ? '1':'0'); }catch(e){}
+  aplicarImgPosiciones();
+}
+
+/* Aplica los data-attrs a TODAS las fichas (pág 2 + pág 3 si existieran).
+   Lee del estado actual de las pills + checkboxes + localStorage para x/y. */
+function aplicarImgPosiciones(){
+  const img3Lado = (function(){ try{ return localStorage.getItem('oc_fichas_img3_lado') || 'left'; }catch(e){ return 'left'; } })();
+  const img3Wrap = (function(){ try{ return localStorage.getItem('oc_fichas_img3_wrap') || 'float'; }catch(e){ return 'float'; } })();
+  const img4Pos  = (function(){ try{ return localStorage.getItem('oc_fichas_img4_pos')  || 'below-img3'; }catch(e){ return 'below-img3'; } })();
+  const img4Wrap = (function(){ try{ return localStorage.getItem('oc_fichas_img4_wrap') || 'float'; }catch(e){ return 'float'; } })();
+  const img3Free = (function(){ try{ return localStorage.getItem('oc_fichas_img3_free') === '1'; }catch(e){ return false; } })();
+  const img4Free = (function(){ try{ return localStorage.getItem('oc_fichas_img4_free') === '1'; }catch(e){ return false; } })();
+  const img3X = (function(){ try{ return localStorage.getItem('oc_fichas_img3_x'); }catch(e){ return null; } })();
+  const img3Y = (function(){ try{ return localStorage.getItem('oc_fichas_img3_y'); }catch(e){ return null; } })();
+  const img4X = (function(){ try{ return localStorage.getItem('oc_fichas_img4_x'); }catch(e){ return null; } })();
+  const img4Y = (function(){ try{ return localStorage.getItem('oc_fichas_img4_y'); }catch(e){ return null; } })();
+  // Aplicar a img3 wrappers
+  document.querySelectorAll('.ed-cont-img3-float').forEach(el => {
+    el.setAttribute('data-pos', img3Lado);
+    el.setAttribute('data-wrap', img3Wrap);
+    el.setAttribute('data-mode', img3Free ? 'free' : 'preset');
+    if(img3X != null) el.style.setProperty('--ed-img3-x', img3X);
+    if(img3Y != null) el.style.setProperty('--ed-img3-y', img3Y);
+  });
+  // Aplicar a img4 wrappers
+  document.querySelectorAll('.ed-cont-img4-block').forEach(el => {
+    el.setAttribute('data-pos', img4Pos);
+    el.setAttribute('data-wrap', img4Wrap);
+    el.setAttribute('data-mode', img4Free ? 'free' : 'preset');
+    if(img4X != null) el.style.setProperty('--ed-img4-x', img4X);
+    if(img4Y != null) el.style.setProperty('--ed-img4-y', img4Y);
+  });
+  // Reflejar el estado en las pills (por si esto se llama después de cargar ficha)
+  _setActivePill('img3LadoPills','data-img3lado', img3Lado);
+  _setActivePill('img3WrapPills','data-img3wrap', img3Wrap);
+  _setActivePill('img4PosPills','data-img4pos', img4Pos);
+  _setActivePill('img4WrapPills','data-img4wrap', img4Wrap);
+  const cb3 = document.getElementById('f_p2_img3_free'); if(cb3) cb3.checked = img3Free;
+  const cb4 = document.getElementById('f_p2_img4_free'); if(cb4) cb4.checked = img4Free;
+  // Re-conectar drag listeners (idempotente)
+  _setupDraggable('.ed-cont-img3-float', 'img3');
+  _setupDraggable('.ed-cont-img4-block', 'img4');
+}
+
+/* Drag-and-drop: cuando el wrapper tiene data-mode="free", se puede arrastrar.
+   Guarda x/y en localStorage como pulgadas (in) — coords relativas al contenedor .ed-cont. */
+function _setupDraggable(selector, keyPrefix){
+  document.querySelectorAll(selector).forEach(el => {
+    if(el.dataset.dragWired === '1') return;
+    el.dataset.dragWired = '1';
+    let dragging = false, startX=0, startY=0, originX=0, originY=0, parent=null, parentRect=null;
+    const onDown = (ev) => {
+      if(el.getAttribute('data-mode') !== 'free') return;
+      // Solo botón izquierdo en mouse
+      if(ev.type === 'mousedown' && ev.button !== 0) return;
+      const point = ev.touches ? ev.touches[0] : ev;
+      dragging = true;
+      el.classList.add('is-dragging');
+      parent = el.offsetParent || el.parentElement;
+      parentRect = parent.getBoundingClientRect();
+      const rect = el.getBoundingClientRect();
+      originX = rect.left - parentRect.left;
+      originY = rect.top - parentRect.top;
+      startX = point.clientX;
+      startY = point.clientY;
+      ev.preventDefault();
+    };
+    const onMove = (ev) => {
+      if(!dragging) return;
+      const point = ev.touches ? ev.touches[0] : ev;
+      const dx = point.clientX - startX;
+      const dy = point.clientY - startY;
+      // Convertir px → in usando el ancho real del padre vs su ancho en CSS (escalado del preview)
+      // El padre .ed-cont está dentro de .ficha con transform:scale(...). Usamos el ratio de tamaño.
+      const scale = parentRect.width / parent.offsetWidth || 1;
+      const newPxX = originX/scale + dx/scale;
+      const newPxY = originY/scale + dy/scale;
+      // 1 in = 96 px en CSS estándar
+      const inX = (newPxX/96).toFixed(2) + 'in';
+      const inY = (newPxY/96).toFixed(2) + 'in';
+      el.style.setProperty('--ed-'+keyPrefix+'-x', inX);
+      el.style.setProperty('--ed-'+keyPrefix+'-y', inY);
+      try{
+        localStorage.setItem('oc_fichas_'+keyPrefix+'_x', inX);
+        localStorage.setItem('oc_fichas_'+keyPrefix+'_y', inY);
+      }catch(e){}
+      ev.preventDefault();
+    };
+    const onUp = () => {
+      if(!dragging) return;
+      dragging = false;
+      el.classList.remove('is-dragging');
+      // Propagar al resto de wrappers (pág 3) para sincronizarlos
+      const sameSelector = selector;
+      document.querySelectorAll(sameSelector).forEach(other => {
+        if(other === el) return;
+        other.style.setProperty('--ed-'+keyPrefix+'-x', el.style.getPropertyValue('--ed-'+keyPrefix+'-x'));
+        other.style.setProperty('--ed-'+keyPrefix+'-y', el.style.getPropertyValue('--ed-'+keyPrefix+'-y'));
+      });
+    };
+    el.addEventListener('mousedown', onDown);
+    el.addEventListener('touchstart', onDown, {passive:false});
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('touchmove', onMove, {passive:false});
+    document.addEventListener('mouseup', onUp);
+    document.addEventListener('touchend', onUp);
+  });
 }
 
 /* Normalización forzada: la garantía SIEMPRE es "12 meses" en la ficha, sin importar lo que diga Qinera/Shopify */
@@ -4150,7 +4390,17 @@ function serializarFichaCompleta(){
     specs_style: (function(){ try{ return localStorage.getItem('oc_fichas_ed_specs_style') || 'color'; }catch(e){ return 'color'; } })(),
     detalles_loc: (function(){ try{ return localStorage.getItem('oc_fichas_ed_detalles_loc') || 'pag1'; }catch(e){ return 'pag1'; } })(),
     dispo_preset: (function(){ try{ return localStorage.getItem('oc_fichas_dispo_preset') || 'pedido'; }catch(e){ return 'pedido'; } })(),
-    caja_loc: (function(){ try{ return localStorage.getItem('oc_fichas_caja_loc') || 'p1-left'; }catch(e){ return 'p1-left'; } })()
+    caja_loc: (function(){ try{ return localStorage.getItem('oc_fichas_caja_loc') || 'p1-left'; }catch(e){ return 'p1-left'; } })(),
+    img3_lado: (function(){ try{ return localStorage.getItem('oc_fichas_img3_lado') || 'left'; }catch(e){ return 'left'; } })(),
+    img3_wrap: (function(){ try{ return localStorage.getItem('oc_fichas_img3_wrap') || 'float'; }catch(e){ return 'float'; } })(),
+    img4_pos:  (function(){ try{ return localStorage.getItem('oc_fichas_img4_pos')  || 'below-img3'; }catch(e){ return 'below-img3'; } })(),
+    img4_wrap: (function(){ try{ return localStorage.getItem('oc_fichas_img4_wrap') || 'float'; }catch(e){ return 'float'; } })(),
+    img3_free: (function(){ try{ return localStorage.getItem('oc_fichas_img3_free') === '1'; }catch(e){ return false; } })(),
+    img4_free: (function(){ try{ return localStorage.getItem('oc_fichas_img4_free') === '1'; }catch(e){ return false; } })(),
+    img3_x: (function(){ try{ return localStorage.getItem('oc_fichas_img3_x') || ''; }catch(e){ return ''; } })(),
+    img3_y: (function(){ try{ return localStorage.getItem('oc_fichas_img3_y') || ''; }catch(e){ return ''; } })(),
+    img4_x: (function(){ try{ return localStorage.getItem('oc_fichas_img4_x') || ''; }catch(e){ return ''; } })(),
+    img4_y: (function(){ try{ return localStorage.getItem('oc_fichas_img4_y') || ''; }catch(e){ return ''; } })()
   };
   // Capturar todos los sliders ds_*
   document.querySelectorAll('input[id^="ds_"]').forEach(s => { ficha.sliders[s.id] = s.value; });
@@ -4221,6 +4471,20 @@ function aplicarFichaCompleta(ficha){
     if(ficha.specs_style && typeof setSpecsStyle === 'function') setSpecsStyle(ficha.specs_style);
     if(ficha.detalles_loc && typeof setDetallesLoc === 'function') setDetallesLoc(ficha.detalles_loc);
     if(ficha.caja_loc && typeof setCajaLoc === 'function') setCajaLoc(ficha.caja_loc);
+    // Posiciones / wrap / free de img 3 y 4 (escribimos en localStorage y luego un solo aplicarImgPosiciones)
+    try{
+      if(ficha.img3_lado) localStorage.setItem('oc_fichas_img3_lado', ficha.img3_lado);
+      if(ficha.img3_wrap) localStorage.setItem('oc_fichas_img3_wrap', ficha.img3_wrap);
+      if(ficha.img4_pos)  localStorage.setItem('oc_fichas_img4_pos',  ficha.img4_pos);
+      if(ficha.img4_wrap) localStorage.setItem('oc_fichas_img4_wrap', ficha.img4_wrap);
+      localStorage.setItem('oc_fichas_img3_free', ficha.img3_free ? '1' : '0');
+      localStorage.setItem('oc_fichas_img4_free', ficha.img4_free ? '1' : '0');
+      if(ficha.img3_x) localStorage.setItem('oc_fichas_img3_x', ficha.img3_x); else localStorage.removeItem('oc_fichas_img3_x');
+      if(ficha.img3_y) localStorage.setItem('oc_fichas_img3_y', ficha.img3_y); else localStorage.removeItem('oc_fichas_img3_y');
+      if(ficha.img4_x) localStorage.setItem('oc_fichas_img4_x', ficha.img4_x); else localStorage.removeItem('oc_fichas_img4_x');
+      if(ficha.img4_y) localStorage.setItem('oc_fichas_img4_y', ficha.img4_y); else localStorage.removeItem('oc_fichas_img4_y');
+    }catch(e){}
+    if(typeof aplicarImgPosiciones === 'function') aplicarImgPosiciones();
     // setDispoPreset sobrescribe f_dispo_text — restaurar el texto guardado después
     if(ficha.dispo_preset && typeof setDispoPreset === 'function'){
       setDispoPreset(ficha.dispo_preset);

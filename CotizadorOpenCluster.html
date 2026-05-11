@@ -577,6 +577,27 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
 }
 .pconditions .cond-line { font-size:7.8pt; color:#444; line-height:1.5; }
 
+/* Wrapper de la columna derecha del footer (banner "Para concretar la compra" + Datos de transferencia) */
+.transfer-col {
+  flex:1; display:flex; flex-direction:column; gap:6px;
+}
+.transfer-col .transfer-card { flex:0 0 auto; }
+/* Banner formal "Para concretar la compra" — replica el estilo de .pconditions con franja coral */
+.purchase-note {
+  background:linear-gradient(135deg, #fff4ea 0%, #ffe9d4 100%);
+  border-left:3px solid var(--orange);
+  border-top:1px solid #f0d9bd; border-bottom:1px solid #f0d9bd; border-right:1px solid #f0d9bd;
+  border-radius:0 6px 6px 0;
+  padding:5px 10px;
+}
+.purchase-note .pn-title {
+  font-family:'Open Sans',sans-serif; font-size:7.5pt; font-weight:700;
+  color:var(--orange); text-transform:uppercase; letter-spacing:0.4px; margin-bottom:2px;
+}
+.purchase-note .pn-text {
+  font-size:7.6pt; color:#333; line-height:1.4;
+}
+
 .transfer-card {
   flex:1; background:var(--pale); border:1.5px solid var(--ltblue);
   border-radius:8px; padding:5px 10px;
@@ -3120,8 +3141,9 @@ function upd() {
   const eEmailV= document.getElementById("eExecEmail")?.value.trim()||"rayen.ogalde@opencluster-tech.cl";
   const avatarTxt = (eNom.split(" ").map(w=>w[0]).join("").toUpperCase()).slice(0,2)||"RO";
 
-  // ── Email transferencia ────────────────────────────────────────────────
-  const e1="v.tabilo"+"@"+"opencluster-tech.cl";
+  // ── Email transferencia: ahora es el del ejecutivo que emite la cotización,
+  //    no el del Departamento de Pagos. El cliente le envía el comprobante a su ejecutivo.
+  const e1 = eEmailV;
 
   // ── Productos y totales ────────────────────────────────────────────────
   let sub=0;
@@ -3323,13 +3345,19 @@ function upd() {
       <div class="cond-title">Condiciones</div>
       <div class="cond-line">${condHTML}</div>
     </div>
-    <div class="transfer-card">
-      <div class="tr-title">🏦 Datos de Transferencia</div>
-      <div class="tr-row"><span class="tr-lbl">Empresa</span><span>OpenCluster Tech SpA</span></div>
-      <div class="tr-row"><span class="tr-lbl">RUT</span><span>76.868.961-K</span></div>
-      <div class="tr-row"><span class="tr-lbl">Banco</span><span>Banco Estado</span></div>
-      <div class="tr-row"><span class="tr-lbl">Cta. Corriente</span><span>23700080943</span></div>
-      <div class="tr-row"><span class="tr-lbl">Email</span><span>${e1}</span></div>
+    <div class="transfer-col">
+      <div class="purchase-note">
+        <div class="pn-title">Para concretar la compra</div>
+        <div class="pn-text">Por favor enviar el comprobante de transferencia y/o Orden de Compra, junto con la cotización correspondiente, al email indicado a continuación.</div>
+      </div>
+      <div class="transfer-card">
+        <div class="tr-title">🏦 Datos de Transferencia</div>
+        <div class="tr-row"><span class="tr-lbl">Empresa</span><span>OpenCluster Tech SpA</span></div>
+        <div class="tr-row"><span class="tr-lbl">RUT</span><span>76.868.961-K</span></div>
+        <div class="tr-row"><span class="tr-lbl">Banco</span><span>Banco Estado</span></div>
+        <div class="tr-row"><span class="tr-lbl">Cta. Corriente</span><span>23700080943</span></div>
+        <div class="tr-row"><span class="tr-lbl">Email</span><span>${e1}</span></div>
+      </div>
     </div>
   </div>`;
 
@@ -4657,11 +4685,10 @@ function cargarPerfilEjecutivo() {
 }
 
 window.addEventListener("DOMContentLoaded", () => {
-  // Emails escritos en partes para evitar filtros externos
-  const e1 = "v.tabilo" + "@" + "opencluster-tech.cl";
+  // Email por defecto del ejecutivo (fallback si no hay perfil cargado).
+  // Se escribe en partes para evitar filtros externos de bots scrapers.
   const e2 = "rayen.ogalde" + "@" + "opencluster-tech.cl";
-  // trEmail se genera dinámicamente en upd()
-  // pvExecEmail ahora se genera dinámicamente en upd()
+  // trEmail (Datos de Transferencia) y pvExecEmail se generan dinámicamente en upd() con el email del ejecutivo activo.
 
   // Cargar perfil guardado — si no hay ninguno, usar email por defecto
   const tienePerfil = cargarPerfilEjecutivo();

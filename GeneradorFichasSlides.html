@@ -3165,8 +3165,22 @@ function renderCaja(){
                  document.querySelector('.ed-cont-pag2 .ed-cont-flow') ||
                  document.querySelector('.ed-cont-flow');
       }
-      if(target && caja.parentElement !== target){
-        target.insertBefore(caja, target.firstChild);
+      if(target){
+        // Insertar la caja DESPUÉS de los floats (img3, img4, specs) y ANTES del h3 de caracts.
+        // Si la pongo al principio, las imágenes/specs (que también son floats) se ven empujadas al
+        // mover la caja porque hacen stack con ella. Ponerla después de las imágenes mantiene fijas
+        // las imágenes y deja que solo se mueva la caja + reflow del texto a su alrededor.
+        const refSibling =
+          target.querySelector(':scope > h3.ed-section-title') ||
+          target.querySelector(':scope > .ed-section-title') ||
+          target.querySelector(':scope > ul');
+        if(refSibling){
+          if(caja.parentElement !== target || caja.nextElementSibling !== refSibling){
+            target.insertBefore(caja, refSibling);
+          }
+        } else if(caja.parentElement !== target){
+          target.appendChild(caja);
+        }
       }
       // Si la caja vive en .ed-caracts, marcarlo como block para que float funcione
       document.querySelectorAll('.ed-caracts').forEach(c => {

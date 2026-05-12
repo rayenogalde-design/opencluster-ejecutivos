@@ -2989,6 +2989,19 @@ function setIndicadoPag(pag){
     }
   }
   aplicarIndicadoFree();
+  // Forzar un re-render completo después del move (renderEditorial regenera contenido
+  // pero el move del indicado lo hicimos antes; con actualizarPreview se vuelven a aplicar
+  // todas las posiciones de specs/img/caja y el indicado queda donde corresponde).
+  if(typeof actualizarPreview === 'function') actualizarPreview();
+  // Scroll del preview a la página elegida (para que el usuario vea que el cuadro se movió)
+  setTimeout(() => {
+    const targetEl = pag === '2'
+      ? document.querySelector('.ficha.page-2')
+      : document.querySelector('.ficha.page-1');
+    if(targetEl && typeof targetEl.scrollIntoView === 'function'){
+      targetEl.scrollIntoView({behavior:'smooth', block:'start'});
+    }
+  }, 80);
 }
 
 function setIndicadoWrap(wrap){

@@ -2641,7 +2641,9 @@ function distribuirEdCaracts(){
   if(!wrap) return;
   const mode = wrap.getAttribute('data-mode') || '1page';
   const tpl = wrap.getAttribute('data-template') || document.body.getAttribute('data-tpl');
-  const ul1 = document.querySelector('.ficha[data-template="editorial"] .ed-caracts ul');
+  // IMPORTANTE: ul DIRECTO de .ed-caracts (sin `> ul` puede engancharse a la ul interna
+  // del bloque .ed-indicado cuando éste está en modo libre dentro de .ed-caracts).
+  const ul1 = document.querySelector('.ficha[data-template="editorial"] .ed-caracts > ul');
   const ul2 = document.getElementById('ed_caracts2');
   if(!ul1 || !ul2) return;
 
@@ -3153,6 +3155,10 @@ function _setupIndicadoDrag(el){
       localStorage.setItem('oc_fichas_indicado_fy',   el.style.getPropertyValue('--ed-indicado-fy') || '0in');
       localStorage.setItem('oc_fichas_indicado_side', el.getAttribute('data-side') || 'left');
     }catch(e){}
+    // Re-distribuir características: si el cuadro ahora tapa más bullets, distribuirEdCaracts
+    // las pasa a pág 2; si quedan huecos, las trae de vuelta.
+    if(typeof distribuirEdCaracts === 'function') distribuirEdCaracts();
+    if(typeof aplicarAutoShrink === 'function') aplicarAutoShrink();
   };
   el.addEventListener('mousedown', onDown);
   el.addEventListener('touchstart', onDown, {passive:false});
@@ -4842,7 +4848,7 @@ function aplicarAutoShrink(){
   if(edDescP) edDescP.style.fontSize = '';
   // Características (lista) — el slider manda; si no caben en pág 1, distribuirEdCaracts las pasa a pág 2.
   // (Sin fitTextsInside para que el slider de "Tamaño bullets" sea autoritativo.)
-  document.querySelectorAll('.ed-caracts ul li, .ed-cont-flow .ed-caracts-list li').forEach(li => li.style.fontSize = '');
+  document.querySelectorAll('.ed-caracts > ul > li, .ed-cont-flow .ed-caracts-list > li').forEach(li => li.style.fontSize = '');
   // Specs editorial
   fitTextsInside('.ed-specs-wrap', {min:7, max:maxSpec});
   // Datos rápidos editorial — tamaño fijo 9.5pt (no responde al slider de bullets)

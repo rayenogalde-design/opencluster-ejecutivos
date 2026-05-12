@@ -250,25 +250,17 @@ body:not([data-tpl="editorial"]) .tpl-editorial-only{display:none !important}
 .ed-indicado li::before{content:'';position:absolute;left:0;top:5px;width:5px;height:5px;background:#7a3416;border-radius:50%}
 
 /* === MODO LIBRE del bloque "Indicado para" ===
-   Mismo modelo que la caja "¿Qué hay en la caja?": el cuadro vive como sibling dentro de un flow
-   container (pág 1: .ed-caracts / pág 2: .ed-cont-flow) y SIGUE SIENDO float — así el texto fluye
-   a su alrededor. El usuario lo arrastra con el mouse: el drag actualiza margin-top (--ed-indicado-fy)
-   y lado (data-side=left/right). Selector de página (1/2) mueve el elemento al .ed-page elegido. */
+   Position:absolute relativo a .ed-page (la hoja entera 8.5x11in), igual que las imágenes 3 y 4.
+   El usuario lo arrastra a CUALQUIER punto de la página con drag XY libre.
+   NOTA: el texto NO rodea el cuadro — para wrap-text usar la caja en modo flotante o el bloque
+   directo (no libre). En modo libre, el cuadro es totalmente independiente del flujo. */
 .ed-indicado[data-mode="free"]{
-  position:relative;clear:none;cursor:move;user-select:none;-webkit-user-select:none;
-  width:auto !important;transform:none !important
-}
-.ed-indicado[data-mode="free"][data-wrap="float"]{
-  float:left;max-width:var(--ed-indicado-fw, 3.4in);
-  margin:var(--ed-indicado-fy, 0in) 0.18in 0.14in 0
-}
-.ed-indicado[data-mode="free"][data-wrap="float"][data-side="right"]{
-  float:right;
-  margin:var(--ed-indicado-fy, 0in) 0 0.14in 0.18in
-}
-.ed-indicado[data-mode="free"][data-wrap="block"]{
-  float:none;display:block;clear:both;
-  margin:var(--ed-indicado-fy, 0in) auto 0.18in auto;max-width:var(--ed-indicado-fw, 5in)
+  position:absolute !important;
+  left:var(--ed-indicado-fx, 4in);
+  top:var(--ed-indicado-fy, 5in);
+  margin:0 !important;float:none !important;clear:none !important;
+  width:var(--ed-indicado-fw, 3.4in) !important;max-width:none !important;
+  z-index:6;cursor:move;user-select:none;-webkit-user-select:none;transform:none !important
 }
 /* Indicador visual: badge + outline SOLO al pasar el mouse encima (no permanente) — y nunca en impresión */
 @media screen{
@@ -1268,24 +1260,20 @@ body[data-active-mode="1page"] .modo2-only::after{content:'Activá "2 páginas" 
             <input type="checkbox" id="f_indicado_free" onchange="toggleIndicadoFree()" style="width:14px;height:14px">
             <span><b>Modo libre</b> — arrastrar el cuadro con el mouse</span>
           </label>
-          <div class="hint" style="margin-top:2px">Al activar, el bloque "Indicado para" sale de su ubicación fija y el texto fluye a su alrededor. Lo puedes <b>arrastrar</b> con el mouse para mover su posición vertical y cambiarlo de lado (izq/der).</div>
+          <div class="hint" style="margin-top:2px">Al activar, el bloque "Indicado para" sale de su ubicación fija y queda <b>flotando libre como las imágenes</b>. Lo arrastras con el mouse a CUALQUIER punto de la página. Las características de abajo NO se mueven con él.</div>
           <div id="f_indicado_free_extra" style="display:none;margin-top:10px">
             <label style="font-size:11px">Página:</label>
             <div class="ed-hdr-pills" id="indicadoPagPills" style="grid-template-columns:repeat(2,1fr);margin-top:4px">
               <button type="button" class="ed-hdr-pill active" data-indicadopag="1" onclick="setIndicadoPag('1')"><div class="ed-hdr-pill-name">Pág 1</div></button>
               <button type="button" class="ed-hdr-pill" data-indicadopag="2" onclick="setIndicadoPag('2')"><div class="ed-hdr-pill-name">Pág 2</div></button>
             </div>
-            <label style="font-size:11px;margin-top:10px;display:block">Flujo del texto:</label>
-            <div class="ed-hdr-pills" id="indicadoWrapPills" style="grid-template-columns:repeat(2,1fr);margin-top:4px">
-              <button type="button" class="ed-hdr-pill active" data-indicadowrap="float" onclick="setIndicadoWrap('float')"><div class="ed-hdr-pill-name">Texto rodea</div></button>
-              <button type="button" class="ed-hdr-pill" data-indicadowrap="block" onclick="setIndicadoWrap('block')"><div class="ed-hdr-pill-name">Solo arriba/abajo</div></button>
-            </div>
+            <div id="indicadoWrapPills" style="display:none"></div>
             <div class="field" style="margin-top:10px">
               <label>Ancho del cuadro (modo libre) <span class="vlbl" id="lbl_indicadoFw">3.4 in</span></label>
               <input type="range" id="ds_indicadoFw" min="2" max="7" step="0.1" value="3.4" oninput="aplicarDiseno()">
             </div>
             <button type="button" onclick="resetIndicadoFreePos()" style="margin-top:8px;padding:6px 10px;background:#fff;border:1px solid var(--coral);color:var(--coral);border-radius:6px;font-family:'Montserrat',sans-serif;font-weight:600;font-size:11px;cursor:pointer">Restablecer posición</button>
-            <div class="hint" style="margin-top:6px;font-size:10.5px">Cambia <b>Página</b> para mover el cuadro entre pág 1 y pág 2. <b>Texto rodea</b> deja que las características/specs fluyan alrededor. <b>Solo arriba/abajo</b> ocupa todo el ancho disponible.</div>
+            <div class="hint" style="margin-top:6px;font-size:10.5px">Cambia <b>Página</b> para mover el cuadro entre pág 1 y pág 2. El cuadro queda en posición absoluta libre — arrastralo con el mouse a cualquier punto.</div>
           </div>
         </div>
       </div>
@@ -3081,64 +3069,40 @@ function resetIndicadoFreePos(){
 function aplicarIndicadoFree(){
   const free = (function(){ try{ return localStorage.getItem('oc_fichas_indicado_free') === '1'; }catch(e){ return false; } })();
   const pag  = (function(){ try{ return localStorage.getItem('oc_fichas_indicado_pag')  || '1'; }catch(e){ return '1'; } })();
-  const wrap = (function(){ try{ return localStorage.getItem('oc_fichas_indicado_wrap') || 'float'; }catch(e){ return 'float'; } })();
-  const side = (function(){ try{ return localStorage.getItem('oc_fichas_indicado_side') || 'left'; }catch(e){ return 'left'; } })();
-  const fy   = (function(){ try{ return localStorage.getItem('oc_fichas_indicado_fy')   || '0in'; }catch(e){ return '0in'; } })();
+  const fx   = (function(){ try{ return localStorage.getItem('oc_fichas_indicado_fx')   || '4in'; }catch(e){ return '4in'; } })();
+  const fy   = (function(){ try{ return localStorage.getItem('oc_fichas_indicado_fy')   || '5in'; }catch(e){ return '5in'; } })();
   const cb = document.getElementById('f_indicado_free');
   if(cb) cb.checked = free;
   const extra = document.getElementById('f_indicado_free_extra');
   if(extra) extra.style.display = free ? '' : 'none';
-  // Reflejar pills aunque el modo libre no esté activo (para que cuando se active estén en su estado)
+  // Reflejar pills
   document.querySelectorAll('#indicadoPagPills .ed-hdr-pill').forEach(p => {
     p.classList.toggle('active', p.getAttribute('data-indicadopag') === pag);
   });
-  document.querySelectorAll('#indicadoWrapPills .ed-hdr-pill').forEach(p => {
-    p.classList.toggle('active', p.getAttribute('data-indicadowrap') === wrap);
-  });
 
-  // Limpiar la clase has-indicado-libre de cualquier .ed-caracts antes de aplicar
+  // Limpiar la clase has-indicado-libre de cualquier .ed-caracts (legacy del modo float anterior)
   document.querySelectorAll('.ed-caracts.has-indicado-libre').forEach(c => c.classList.remove('has-indicado-libre'));
 
   document.querySelectorAll('.ed-indicado').forEach(el => {
     if(free){
-      // Elegir contenedor destino según página
-      let target = null;
-      if(pag === '1'){
-        // Pág 1 editorial: el contenedor con texto que puede rodear es .ed-caracts (col der)
-        target = document.querySelector('.ficha.page-1 .ed-caracts') ||
-                 document.querySelector('#ed_page1 .ed-caracts') ||
-                 document.querySelector('.ed-caracts');
-      } else {
-        target = document.querySelector('.ficha.page-2 .ed-cont-flow') ||
-                 document.querySelector('.ed-cont-pag2 .ed-cont-flow') ||
-                 document.querySelector('.ed-cont-flow');
-      }
-      if(target){
-        // Insertar justo después del título de sección (y antes de la lista de items)
-        // así el float queda al inicio del flujo y el texto fluye a su alrededor.
-        const refSibling =
-          target.querySelector(':scope > h3.ed-section-title') ||
-          target.querySelector(':scope > .ed-section-title') ||
-          target.querySelector(':scope > ul');
-        if(refSibling && refSibling.nextSibling){
-          if(el.parentElement !== target || el.previousElementSibling !== refSibling){
-            target.insertBefore(el, refSibling.nextSibling);
-          }
-        } else if(el.parentElement !== target){
-          target.appendChild(el);
-        }
-        // Si target es .ed-caracts, forzar display:block para que el float funcione
-        if(target.classList.contains('ed-caracts')) target.classList.add('has-indicado-libre');
+      // En libre, el cuadro vive en .ed-page (la hoja completa) con position:absolute,
+      // igual que las imágenes 3 y 4. Moverlo NO mueve el flujo de las características.
+      const ficha = pag === '1' ? document.querySelector('.ficha.page-1') : document.querySelector('.ficha.page-2');
+      const target = ficha ? ficha.querySelector('.ed-page') : null;
+      if(target && el.parentElement !== target){
+        target.appendChild(el);
       }
       el.setAttribute('data-mode', 'free');
-      el.setAttribute('data-wrap', wrap);
-      el.setAttribute('data-side', side);
+      el.removeAttribute('data-wrap');
+      el.removeAttribute('data-side');
+      el.style.setProperty('--ed-indicado-fx', fx);
       el.style.setProperty('--ed-indicado-fy', fy);
       _setupIndicadoDrag(el);
     } else {
       el.removeAttribute('data-mode');
       el.removeAttribute('data-wrap');
       el.removeAttribute('data-side');
+      el.style.removeProperty('--ed-indicado-fx');
       el.style.removeProperty('--ed-indicado-fy');
       // Devolver a .ed-right de pág 1 (su sitio fijo)
       const right = document.querySelector('.ficha.page-1 .ed-body .ed-right') ||
@@ -3152,41 +3116,38 @@ function aplicarIndicadoFree(){
 }
 
 /* Drag handler del bloque "Indicado para" en modo libre.
-   Actualiza --ed-indicado-fy (margin-top en pulgadas) y data-side (left/right) en tiempo real.
-   El texto fluye alrededor porque el cuadro sigue siendo float (NO position:absolute). */
+   Position:absolute con XY libre (igual que imágenes 3/4 y la caja). */
 function _setupIndicadoDrag(el){
   if(el.dataset.indicadoDragWired === '1') return;
   el.dataset.indicadoDragWired = '1';
-  let dragging=false, startCursorY=0, startMarginYPx=0, parent=null, parentRect=null, scale=1;
+  let dragging=false, startX=0, startY=0, originX=0, originY=0, parent=null, parentRect=null;
   const onDown = (ev) => {
     if(el.getAttribute('data-mode') !== 'free') return;
     if(ev.type === 'mousedown' && ev.button !== 0) return;
     const point = ev.touches ? ev.touches[0] : ev;
     dragging = true;
     el.classList.add('is-dragging');
-    parent = el.parentElement;
+    parent = el.offsetParent || el.parentElement;
     parentRect = parent.getBoundingClientRect();
-    scale = parentRect.width / parent.offsetWidth || 1;
-    startCursorY = point.clientY;
-    const currentMy = parseFloat(getComputedStyle(el).marginTop);
-    startMarginYPx = isNaN(currentMy) ? 0 : currentMy;
+    const rect = el.getBoundingClientRect();
+    originX = rect.left - parentRect.left;
+    originY = rect.top - parentRect.top;
+    startX = point.clientX;
+    startY = point.clientY;
     ev.preventDefault();
   };
   const onMove = (ev) => {
     if(!dragging) return;
     const point = ev.touches ? ev.touches[0] : ev;
-    const dy = (point.clientY - startCursorY) / scale;
-    // Permitir margin-top NEGATIVO para que el usuario pueda subir el cuadro por encima
-    // de su posición DOM (por ejemplo, taparle el título "Más características" si lo desea).
-    const newMyPx = startMarginYPx + dy;
-    const newMyIn = (newMyPx / 96).toFixed(2) + 'in';
-    el.style.setProperty('--ed-indicado-fy', newMyIn);
-    // Determinar lado por X relativo al ancho del padre
-    const cursorXInParent = (point.clientX - parentRect.left) / scale;
-    const newSide = cursorXInParent < (parent.offsetWidth / 2) ? 'left' : 'right';
-    if(el.getAttribute('data-side') !== newSide){
-      el.setAttribute('data-side', newSide);
-    }
+    const dx = point.clientX - startX;
+    const dy = point.clientY - startY;
+    const scale = parentRect.width / parent.offsetWidth || 1;
+    const newPxX = originX/scale + dx/scale;
+    const newPxY = originY/scale + dy/scale;
+    const inX = (newPxX/96).toFixed(2) + 'in';
+    const inY = (newPxY/96).toFixed(2) + 'in';
+    el.style.setProperty('--ed-indicado-fx', inX);
+    el.style.setProperty('--ed-indicado-fy', inY);
     ev.preventDefault();
   };
   const onUp = () => {
@@ -3194,13 +3155,9 @@ function _setupIndicadoDrag(el){
     dragging = false;
     el.classList.remove('is-dragging');
     try{
-      localStorage.setItem('oc_fichas_indicado_fy',   el.style.getPropertyValue('--ed-indicado-fy') || '0in');
-      localStorage.setItem('oc_fichas_indicado_side', el.getAttribute('data-side') || 'left');
+      localStorage.setItem('oc_fichas_indicado_fx', el.style.getPropertyValue('--ed-indicado-fx') || '4in');
+      localStorage.setItem('oc_fichas_indicado_fy', el.style.getPropertyValue('--ed-indicado-fy') || '5in');
     }catch(e){}
-    // Re-distribuir características: si el cuadro ahora tapa más bullets, distribuirEdCaracts
-    // las pasa a pág 2; si quedan huecos, las trae de vuelta.
-    if(typeof distribuirEdCaracts === 'function') distribuirEdCaracts();
-    if(typeof aplicarAutoShrink === 'function') aplicarAutoShrink();
   };
   el.addEventListener('mousedown', onDown);
   el.addEventListener('touchstart', onDown, {passive:false});
@@ -5159,9 +5116,8 @@ function serializarFichaCompleta(){
     img4_y: (function(){ try{ return localStorage.getItem('oc_fichas_img4_y') || ''; }catch(e){ return ''; } })(),
     indicado_free: (function(){ try{ return localStorage.getItem('oc_fichas_indicado_free') === '1'; }catch(e){ return false; } })(),
     indicado_pag:  (function(){ try{ return localStorage.getItem('oc_fichas_indicado_pag')  || '1'; }catch(e){ return '1'; } })(),
-    indicado_wrap: (function(){ try{ return localStorage.getItem('oc_fichas_indicado_wrap') || 'float'; }catch(e){ return 'float'; } })(),
-    indicado_side: (function(){ try{ return localStorage.getItem('oc_fichas_indicado_side') || 'left'; }catch(e){ return 'left'; } })(),
-    indicado_fy:   (function(){ try{ return localStorage.getItem('oc_fichas_indicado_fy')   || '0in'; }catch(e){ return '0in'; } })(),
+    indicado_fx:   (function(){ try{ return localStorage.getItem('oc_fichas_indicado_fx')   || '4in'; }catch(e){ return '4in'; } })(),
+    indicado_fy:   (function(){ try{ return localStorage.getItem('oc_fichas_indicado_fy')   || '5in'; }catch(e){ return '5in'; } })(),
     specs_ancho: (function(){ try{ return localStorage.getItem('oc_fichas_specs_ancho') || 'auto'; }catch(e){ return 'auto'; } })(),
     specs_width: (function(){ try{ return localStorage.getItem('oc_fichas_specs_width') || '48'; }catch(e){ return '48'; } })()
   };
@@ -5259,10 +5215,9 @@ function aplicarFichaCompleta(ficha){
       if(ficha.img4_x) localStorage.setItem('oc_fichas_img4_x', ficha.img4_x); else localStorage.removeItem('oc_fichas_img4_x');
       if(ficha.img4_y) localStorage.setItem('oc_fichas_img4_y', ficha.img4_y); else localStorage.removeItem('oc_fichas_img4_y');
       localStorage.setItem('oc_fichas_indicado_free', ficha.indicado_free ? '1' : '0');
-      if(ficha.indicado_pag)  localStorage.setItem('oc_fichas_indicado_pag',  ficha.indicado_pag);
-      if(ficha.indicado_wrap) localStorage.setItem('oc_fichas_indicado_wrap', ficha.indicado_wrap);
-      if(ficha.indicado_side) localStorage.setItem('oc_fichas_indicado_side', ficha.indicado_side);
-      if(ficha.indicado_fy)   localStorage.setItem('oc_fichas_indicado_fy',   ficha.indicado_fy); else localStorage.removeItem('oc_fichas_indicado_fy');
+      if(ficha.indicado_pag) localStorage.setItem('oc_fichas_indicado_pag', ficha.indicado_pag);
+      if(ficha.indicado_fx)  localStorage.setItem('oc_fichas_indicado_fx',  ficha.indicado_fx);
+      if(ficha.indicado_fy)  localStorage.setItem('oc_fichas_indicado_fy',  ficha.indicado_fy);
       if(ficha.specs_ancho) localStorage.setItem('oc_fichas_specs_ancho', ficha.specs_ancho);
       if(ficha.specs_width) localStorage.setItem('oc_fichas_specs_width', ficha.specs_width);
     }catch(e){}

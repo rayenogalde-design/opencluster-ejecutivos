@@ -249,33 +249,46 @@ body:not([data-tpl="editorial"]) .tpl-editorial-only{display:none !important}
 .ed-indicado li:last-child{margin-bottom:0}
 .ed-indicado li::before{content:'';position:absolute;left:0;top:5px;width:5px;height:5px;background:#7a3416;border-radius:50%}
 
-/* Indicado para — MODO LIBRE (arrastrable a cualquier parte de la página) */
+/* === MODO LIBRE del bloque "Indicado para" ===
+   Mismo modelo que la caja "¿Qué hay en la caja?": el cuadro vive como sibling dentro de un flow
+   container (pág 1: .ed-caracts / pág 2: .ed-cont-flow) y SIGUE SIENDO float — así el texto fluye
+   a su alrededor. El usuario lo arrastra con el mouse: el drag actualiza margin-top (--ed-indicado-fy)
+   y lado (data-side=left/right). Selector de página (1/2) mueve el elemento al .ed-page elegido. */
 .ed-indicado[data-mode="free"]{
-  position:absolute !important;
-  left:var(--ed-indicado-f-x, 1in);
-  top:var(--ed-indicado-f-y, 5in);
-  margin:0 !important;
-  width:var(--ed-indicado-fw, 3.6in) !important;
-  max-width:none !important;
-  z-index:6;
-  cursor:move;
-  user-select:none;
-  -webkit-user-select:none;
-  transform-origin:top left
+  position:relative;clear:none;cursor:move;user-select:none;-webkit-user-select:none;
+  width:auto !important;transform:none !important
 }
+.ed-indicado[data-mode="free"][data-wrap="float"]{
+  float:left;max-width:var(--ed-indicado-fw, 3.4in);
+  margin:var(--ed-indicado-fy, 0in) 0.18in 0.14in 0
+}
+.ed-indicado[data-mode="free"][data-wrap="float"][data-side="right"]{
+  float:right;
+  margin:var(--ed-indicado-fy, 0in) 0 0.14in 0.18in
+}
+.ed-indicado[data-mode="free"][data-wrap="block"]{
+  float:none;display:block;clear:both;
+  margin:var(--ed-indicado-fy, 0in) auto 0.18in auto;max-width:var(--ed-indicado-fw, 5in)
+}
+/* Indicador visual: badge + outline al pasar el mouse (solo en pantalla) */
 @media screen{
-  .ed-indicado[data-mode="free"]{outline:1px dashed transparent;transition:outline-color .15s}
-  .ed-indicado[data-mode="free"]:hover{outline:2px dashed var(--coral);outline-offset:4px}
-  .ed-indicado[data-mode="free"].is-dragging{outline:2px solid var(--orange);outline-offset:4px;opacity:.9}
   .ed-indicado[data-mode="free"]::after{
-    content:'⤧ arrastrar';position:absolute;top:-18px;left:0;font-size:9px;font-family:'Montserrat',sans-serif;font-weight:700;color:var(--coral);letter-spacing:.5px;text-transform:uppercase;opacity:0;transition:opacity .15s;pointer-events:none
+    content:'⤧ arrastrar';position:absolute;top:-9px;right:8px;
+    background:var(--orange);color:#fff;font-family:'Montserrat',sans-serif;
+    font-size:7.5pt;font-weight:700;padding:1px 6px;border-radius:6px;
+    letter-spacing:.3px;text-transform:uppercase;pointer-events:none;
+    box-shadow:0 1px 3px rgba(0,0,0,.15);z-index:5
   }
-  .ed-indicado[data-mode="free"]:hover::after{opacity:1}
+  .ed-indicado[data-mode="free"]{outline:1px dashed transparent;transition:outline-color .15s}
+  .ed-indicado[data-mode="free"]:hover{outline:2px dashed var(--coral);outline-offset:3px}
+  .ed-indicado[data-mode="free"].is-dragging{outline:2px solid var(--orange);outline-offset:3px;opacity:.88}
 }
 @media print{
   .ed-indicado[data-mode="free"]{outline:none !important;cursor:auto !important}
   .ed-indicado[data-mode="free"]::after{display:none !important}
 }
+/* Para que el bloque flote dentro de .ed-caracts (pág 1), forzar display:block igual que la caja */
+.ed-caracts.has-indicado-libre{display:block !important}
 
 /* Sección titles (lado derecho) */
 .ed-section-title{font-family:'Montserrat',sans-serif;font-weight:800;font-size:15pt;color:var(--navy);margin:0 0 8px 0;line-height:1;letter-spacing:.3px;text-transform:uppercase}
@@ -1242,13 +1255,24 @@ body[data-active-mode="1page"] .modo2-only::after{content:'Activá "2 páginas" 
             <input type="checkbox" id="f_indicado_free" onchange="toggleIndicadoFree()" style="width:14px;height:14px">
             <span><b>Modo libre</b> — arrastrar el cuadro con el mouse</span>
           </label>
-          <div class="hint" style="margin-top:2px">Al activar, el bloque "Indicado para" sale de su ubicación fija y lo puedes <b>arrastrar a cualquier punto de la página</b>. La posición se recuerda al guardar/recargar.</div>
-          <div id="f_indicado_free_extra" style="display:none;margin-top:8px">
-            <div class="field">
-              <label>Ancho del cuadro (modo libre) <span class="vlbl" id="lbl_indicadoFw">3.6 in</span></label>
-              <input type="range" id="ds_indicadoFw" min="2" max="7" step="0.1" value="3.6" oninput="aplicarDiseno()">
+          <div class="hint" style="margin-top:2px">Al activar, el bloque "Indicado para" sale de su ubicación fija y el texto fluye a su alrededor. Lo puedes <b>arrastrar</b> con el mouse para mover su posición vertical y cambiarlo de lado (izq/der).</div>
+          <div id="f_indicado_free_extra" style="display:none;margin-top:10px">
+            <label style="font-size:11px">Página:</label>
+            <div class="ed-hdr-pills" id="indicadoPagPills" style="grid-template-columns:repeat(2,1fr);margin-top:4px">
+              <button type="button" class="ed-hdr-pill active" data-indicadopag="1" onclick="setIndicadoPag('1')"><div class="ed-hdr-pill-name">Pág 1</div></button>
+              <button type="button" class="ed-hdr-pill" data-indicadopag="2" onclick="setIndicadoPag('2')"><div class="ed-hdr-pill-name">Pág 2</div></button>
             </div>
-            <button type="button" onclick="resetIndicadoFreePos()" style="margin-top:6px;padding:6px 10px;background:#fff;border:1px solid var(--coral);color:var(--coral);border-radius:6px;font-family:'Montserrat',sans-serif;font-weight:600;font-size:11px;cursor:pointer">Restablecer posición</button>
+            <label style="font-size:11px;margin-top:10px;display:block">Flujo del texto:</label>
+            <div class="ed-hdr-pills" id="indicadoWrapPills" style="grid-template-columns:repeat(2,1fr);margin-top:4px">
+              <button type="button" class="ed-hdr-pill active" data-indicadowrap="float" onclick="setIndicadoWrap('float')"><div class="ed-hdr-pill-name">Texto rodea</div></button>
+              <button type="button" class="ed-hdr-pill" data-indicadowrap="block" onclick="setIndicadoWrap('block')"><div class="ed-hdr-pill-name">Solo arriba/abajo</div></button>
+            </div>
+            <div class="field" style="margin-top:10px">
+              <label>Ancho del cuadro (modo libre) <span class="vlbl" id="lbl_indicadoFw">3.4 in</span></label>
+              <input type="range" id="ds_indicadoFw" min="2" max="7" step="0.1" value="3.4" oninput="aplicarDiseno()">
+            </div>
+            <button type="button" onclick="resetIndicadoFreePos()" style="margin-top:8px;padding:6px 10px;background:#fff;border:1px solid var(--coral);color:var(--coral);border-radius:6px;font-family:'Montserrat',sans-serif;font-weight:600;font-size:11px;cursor:pointer">Restablecer posición</button>
+            <div class="hint" style="margin-top:6px;font-size:10.5px">Cambia <b>Página</b> para mover el cuadro entre pág 1 y pág 2. <b>Texto rodea</b> deja que las características/specs fluyan alrededor. <b>Solo arriba/abajo</b> ocupa todo el ancho disponible.</div>
           </div>
         </div>
       </div>
@@ -2938,8 +2962,9 @@ function _reflejarFreeMode(which, free){
   if(box) box.setAttribute('data-free-mode', free ? '1' : '0');
 }
 
-/* "Indicado para" — modo libre: saca el cuadro de .ed-right y lo cuelga de .ed-page
-   para poder arrastrarlo a cualquier punto de la página. */
+/* "Indicado para" — modo libre: el bloque sale de .ed-right y se mueve a un flow container
+   (pág 1: .ed-caracts / pág 2: .ed-cont-flow) como float, para que el texto fluya a su alrededor.
+   El drag actualiza margin-top (--ed-indicado-fy) y data-side (left/right). */
 function toggleIndicadoFree(){
   const cb = document.getElementById('f_indicado_free');
   const free = !!(cb && cb.checked);
@@ -2948,52 +2973,159 @@ function toggleIndicadoFree(){
   if(typeof actualizarPreview === 'function') actualizarPreview();
 }
 
+function setIndicadoPag(pag){
+  if(!['1','2'].includes(pag)) pag = '1';
+  document.querySelectorAll('#indicadoPagPills .ed-hdr-pill').forEach(p => {
+    p.classList.toggle('active', p.getAttribute('data-indicadopag') === pag);
+  });
+  try{ localStorage.setItem('oc_fichas_indicado_pag', pag); }catch(e){}
+  aplicarIndicadoFree();
+}
+
+function setIndicadoWrap(wrap){
+  if(!['float','block'].includes(wrap)) wrap = 'float';
+  document.querySelectorAll('#indicadoWrapPills .ed-hdr-pill').forEach(p => {
+    p.classList.toggle('active', p.getAttribute('data-indicadowrap') === wrap);
+  });
+  try{ localStorage.setItem('oc_fichas_indicado_wrap', wrap); }catch(e){}
+  aplicarIndicadoFree();
+}
+
 function resetIndicadoFreePos(){
   try{
-    localStorage.removeItem('oc_fichas_indicado-f_x');
-    localStorage.removeItem('oc_fichas_indicado-f_y');
+    localStorage.removeItem('oc_fichas_indicado_fy');
+    localStorage.removeItem('oc_fichas_indicado_side');
   }catch(e){}
   document.querySelectorAll('.ed-indicado').forEach(el => {
-    el.style.removeProperty('--ed-indicado-f-x');
-    el.style.removeProperty('--ed-indicado-f-y');
+    el.style.removeProperty('--ed-indicado-fy');
+    el.setAttribute('data-side','left');
   });
 }
 
 function aplicarIndicadoFree(){
   const free = (function(){ try{ return localStorage.getItem('oc_fichas_indicado_free') === '1'; }catch(e){ return false; } })();
-  const fx = (function(){ try{ return localStorage.getItem('oc_fichas_indicado-f_x'); }catch(e){ return null; } })();
-  const fy = (function(){ try{ return localStorage.getItem('oc_fichas_indicado-f_y'); }catch(e){ return null; } })();
+  const pag  = (function(){ try{ return localStorage.getItem('oc_fichas_indicado_pag')  || '1'; }catch(e){ return '1'; } })();
+  const wrap = (function(){ try{ return localStorage.getItem('oc_fichas_indicado_wrap') || 'float'; }catch(e){ return 'float'; } })();
+  const side = (function(){ try{ return localStorage.getItem('oc_fichas_indicado_side') || 'left'; }catch(e){ return 'left'; } })();
+  const fy   = (function(){ try{ return localStorage.getItem('oc_fichas_indicado_fy')   || '0in'; }catch(e){ return '0in'; } })();
   const cb = document.getElementById('f_indicado_free');
   if(cb) cb.checked = free;
   const extra = document.getElementById('f_indicado_free_extra');
   if(extra) extra.style.display = free ? '' : 'none';
+  // Reflejar pills aunque el modo libre no esté activo (para que cuando se active estén en su estado)
+  document.querySelectorAll('#indicadoPagPills .ed-hdr-pill').forEach(p => {
+    p.classList.toggle('active', p.getAttribute('data-indicadopag') === pag);
+  });
+  document.querySelectorAll('#indicadoWrapPills .ed-hdr-pill').forEach(p => {
+    p.classList.toggle('active', p.getAttribute('data-indicadowrap') === wrap);
+  });
+
+  // Limpiar la clase has-indicado-libre de cualquier .ed-caracts antes de aplicar
+  document.querySelectorAll('.ed-caracts.has-indicado-libre').forEach(c => c.classList.remove('has-indicado-libre'));
 
   document.querySelectorAll('.ed-indicado').forEach(el => {
     if(free){
-      // Guardar parent original una sola vez
-      if(!el.dataset.origAnchorMarker){
-        el.dataset.origAnchorMarker = '1';
+      // Elegir contenedor destino según página
+      let target = null;
+      if(pag === '1'){
+        // Pág 1 editorial: el contenedor con texto que puede rodear es .ed-caracts (col der)
+        target = document.querySelector('.ficha.page-1 .ed-caracts') ||
+                 document.querySelector('#ed_page1 .ed-caracts') ||
+                 document.querySelector('.ed-caracts');
+      } else {
+        target = document.querySelector('.ficha.page-2 .ed-cont-flow') ||
+                 document.querySelector('.ed-cont-pag2 .ed-cont-flow') ||
+                 document.querySelector('.ed-cont-flow');
       }
-      // Mover a .ed-page (cubre toda la hoja: header, body y footer)
-      const page = el.closest('.ed-page') || (el.closest('.ficha') && el.closest('.ficha').querySelector('.ed-page'));
-      if(page && el.parentElement !== page){
-        page.appendChild(el);
+      if(target){
+        // Insertar justo después del título de sección (y antes de la lista de items)
+        // así el float queda al inicio del flujo y el texto fluye a su alrededor.
+        const refSibling =
+          target.querySelector(':scope > h3.ed-section-title') ||
+          target.querySelector(':scope > .ed-section-title') ||
+          target.querySelector(':scope > ul');
+        if(refSibling && refSibling.nextSibling){
+          if(el.parentElement !== target || el.previousElementSibling !== refSibling){
+            target.insertBefore(el, refSibling.nextSibling);
+          }
+        } else if(el.parentElement !== target){
+          target.appendChild(el);
+        }
+        // Si target es .ed-caracts, forzar display:block para que el float funcione
+        if(target.classList.contains('ed-caracts')) target.classList.add('has-indicado-libre');
       }
       el.setAttribute('data-mode', 'free');
-      if(fx != null) el.style.setProperty('--ed-indicado-f-x', fx);
-      if(fy != null) el.style.setProperty('--ed-indicado-f-y', fy);
+      el.setAttribute('data-wrap', wrap);
+      el.setAttribute('data-side', side);
+      el.style.setProperty('--ed-indicado-fy', fy);
+      _setupIndicadoDrag(el);
     } else {
       el.removeAttribute('data-mode');
-      // Devolver al .ed-right de su misma .ed-page (si existe y todavía no está ahí)
-      const page = el.closest('.ed-page') || (el.closest('.ficha') && el.closest('.ficha').querySelector('.ed-page'));
-      const right = page ? page.querySelector('.ed-body .ed-right') : null;
+      el.removeAttribute('data-wrap');
+      el.removeAttribute('data-side');
+      el.style.removeProperty('--ed-indicado-fy');
+      // Devolver a .ed-right de pág 1 (su sitio fijo)
+      const right = document.querySelector('.ficha.page-1 .ed-body .ed-right') ||
+                    document.querySelector('#ed_page1 .ed-body .ed-right') ||
+                    document.querySelector('.ed-right');
       if(right && el.parentElement !== right){
         right.appendChild(el);
       }
     }
   });
-  // Conectar drag listeners (idempotente)
-  if(typeof _setupDraggable === 'function') _setupDraggable('.ed-indicado', 'indicado-f');
+}
+
+/* Drag handler del bloque "Indicado para" en modo libre.
+   Actualiza --ed-indicado-fy (margin-top en pulgadas) y data-side (left/right) en tiempo real.
+   El texto fluye alrededor porque el cuadro sigue siendo float (NO position:absolute). */
+function _setupIndicadoDrag(el){
+  if(el.dataset.indicadoDragWired === '1') return;
+  el.dataset.indicadoDragWired = '1';
+  let dragging=false, startCursorY=0, startMarginYPx=0, parent=null, parentRect=null, scale=1;
+  const onDown = (ev) => {
+    if(el.getAttribute('data-mode') !== 'free') return;
+    if(ev.type === 'mousedown' && ev.button !== 0) return;
+    const point = ev.touches ? ev.touches[0] : ev;
+    dragging = true;
+    el.classList.add('is-dragging');
+    parent = el.parentElement;
+    parentRect = parent.getBoundingClientRect();
+    scale = parentRect.width / parent.offsetWidth || 1;
+    startCursorY = point.clientY;
+    const currentMy = parseFloat(getComputedStyle(el).marginTop);
+    startMarginYPx = isNaN(currentMy) ? 0 : currentMy;
+    ev.preventDefault();
+  };
+  const onMove = (ev) => {
+    if(!dragging) return;
+    const point = ev.touches ? ev.touches[0] : ev;
+    const dy = (point.clientY - startCursorY) / scale;
+    const newMyPx = Math.max(0, startMarginYPx + dy);
+    const newMyIn = (newMyPx / 96).toFixed(2) + 'in';
+    el.style.setProperty('--ed-indicado-fy', newMyIn);
+    // Determinar lado por X relativo al ancho del padre
+    const cursorXInParent = (point.clientX - parentRect.left) / scale;
+    const newSide = cursorXInParent < (parent.offsetWidth / 2) ? 'left' : 'right';
+    if(el.getAttribute('data-side') !== newSide){
+      el.setAttribute('data-side', newSide);
+    }
+    ev.preventDefault();
+  };
+  const onUp = () => {
+    if(!dragging) return;
+    dragging = false;
+    el.classList.remove('is-dragging');
+    try{
+      localStorage.setItem('oc_fichas_indicado_fy',   el.style.getPropertyValue('--ed-indicado-fy') || '0in');
+      localStorage.setItem('oc_fichas_indicado_side', el.getAttribute('data-side') || 'left');
+    }catch(e){}
+  };
+  el.addEventListener('mousedown', onDown);
+  el.addEventListener('touchstart', onDown, {passive:false});
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('touchmove', onMove, {passive:false});
+  document.addEventListener('mouseup', onUp);
+  document.addEventListener('touchend', onUp);
 }
 
 /* Aplica los data-attrs a TODAS las fichas (pág 2 + pág 3 si existieran).
@@ -4382,6 +4514,7 @@ function actualizarPreview(){
     distribuirEdSpecs();
     aplicarColumnasEdSpecs();
     renderCaja();
+    if(typeof aplicarIndicadoFree === 'function') aplicarIndicadoFree();
   }, 10);
 }
 
@@ -4966,8 +5099,10 @@ function serializarFichaCompleta(){
     img4_x: (function(){ try{ return localStorage.getItem('oc_fichas_img4_x') || ''; }catch(e){ return ''; } })(),
     img4_y: (function(){ try{ return localStorage.getItem('oc_fichas_img4_y') || ''; }catch(e){ return ''; } })(),
     indicado_free: (function(){ try{ return localStorage.getItem('oc_fichas_indicado_free') === '1'; }catch(e){ return false; } })(),
-    indicado_fx: (function(){ try{ return localStorage.getItem('oc_fichas_indicado-f_x') || ''; }catch(e){ return ''; } })(),
-    indicado_fy: (function(){ try{ return localStorage.getItem('oc_fichas_indicado-f_y') || ''; }catch(e){ return ''; } })(),
+    indicado_pag:  (function(){ try{ return localStorage.getItem('oc_fichas_indicado_pag')  || '1'; }catch(e){ return '1'; } })(),
+    indicado_wrap: (function(){ try{ return localStorage.getItem('oc_fichas_indicado_wrap') || 'float'; }catch(e){ return 'float'; } })(),
+    indicado_side: (function(){ try{ return localStorage.getItem('oc_fichas_indicado_side') || 'left'; }catch(e){ return 'left'; } })(),
+    indicado_fy:   (function(){ try{ return localStorage.getItem('oc_fichas_indicado_fy')   || '0in'; }catch(e){ return '0in'; } })(),
     specs_ancho: (function(){ try{ return localStorage.getItem('oc_fichas_specs_ancho') || 'auto'; }catch(e){ return 'auto'; } })(),
     specs_width: (function(){ try{ return localStorage.getItem('oc_fichas_specs_width') || '48'; }catch(e){ return '48'; } })()
   };
@@ -5064,8 +5199,10 @@ function aplicarFichaCompleta(ficha){
       if(ficha.img4_x) localStorage.setItem('oc_fichas_img4_x', ficha.img4_x); else localStorage.removeItem('oc_fichas_img4_x');
       if(ficha.img4_y) localStorage.setItem('oc_fichas_img4_y', ficha.img4_y); else localStorage.removeItem('oc_fichas_img4_y');
       localStorage.setItem('oc_fichas_indicado_free', ficha.indicado_free ? '1' : '0');
-      if(ficha.indicado_fx) localStorage.setItem('oc_fichas_indicado-f_x', ficha.indicado_fx); else localStorage.removeItem('oc_fichas_indicado-f_x');
-      if(ficha.indicado_fy) localStorage.setItem('oc_fichas_indicado-f_y', ficha.indicado_fy); else localStorage.removeItem('oc_fichas_indicado-f_y');
+      if(ficha.indicado_pag)  localStorage.setItem('oc_fichas_indicado_pag',  ficha.indicado_pag);
+      if(ficha.indicado_wrap) localStorage.setItem('oc_fichas_indicado_wrap', ficha.indicado_wrap);
+      if(ficha.indicado_side) localStorage.setItem('oc_fichas_indicado_side', ficha.indicado_side);
+      if(ficha.indicado_fy)   localStorage.setItem('oc_fichas_indicado_fy',   ficha.indicado_fy); else localStorage.removeItem('oc_fichas_indicado_fy');
       if(ficha.specs_ancho) localStorage.setItem('oc_fichas_specs_ancho', ficha.specs_ancho);
       if(ficha.specs_width) localStorage.setItem('oc_fichas_specs_width', ficha.specs_width);
     }catch(e){}

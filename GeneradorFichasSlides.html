@@ -249,6 +249,34 @@ body:not([data-tpl="editorial"]) .tpl-editorial-only{display:none !important}
 .ed-indicado li:last-child{margin-bottom:0}
 .ed-indicado li::before{content:'';position:absolute;left:0;top:5px;width:5px;height:5px;background:#7a3416;border-radius:50%}
 
+/* Indicado para — MODO LIBRE (arrastrable a cualquier parte de la página) */
+.ed-indicado[data-mode="free"]{
+  position:absolute !important;
+  left:var(--ed-indicado-f-x, 1in);
+  top:var(--ed-indicado-f-y, 5in);
+  margin:0 !important;
+  width:var(--ed-indicado-fw, 3.6in) !important;
+  max-width:none !important;
+  z-index:6;
+  cursor:move;
+  user-select:none;
+  -webkit-user-select:none;
+  transform-origin:top left
+}
+@media screen{
+  .ed-indicado[data-mode="free"]{outline:1px dashed transparent;transition:outline-color .15s}
+  .ed-indicado[data-mode="free"]:hover{outline:2px dashed var(--coral);outline-offset:4px}
+  .ed-indicado[data-mode="free"].is-dragging{outline:2px solid var(--orange);outline-offset:4px;opacity:.9}
+  .ed-indicado[data-mode="free"]::after{
+    content:'⤧ arrastrar';position:absolute;top:-18px;left:0;font-size:9px;font-family:'Montserrat',sans-serif;font-weight:700;color:var(--coral);letter-spacing:.5px;text-transform:uppercase;opacity:0;transition:opacity .15s;pointer-events:none
+  }
+  .ed-indicado[data-mode="free"]:hover::after{opacity:1}
+}
+@media print{
+  .ed-indicado[data-mode="free"]{outline:none !important;cursor:auto !important}
+  .ed-indicado[data-mode="free"]::after{display:none !important}
+}
+
 /* Sección titles (lado derecho) */
 .ed-section-title{font-family:'Montserrat',sans-serif;font-weight:800;font-size:15pt;color:var(--navy);margin:0 0 8px 0;line-height:1;letter-spacing:.3px;text-transform:uppercase}
 .ed-section-title-sub{font-family:'Montserrat',sans-serif;font-weight:700;font-size:11.5pt;color:var(--navy);margin:0.08in 0 6px;line-height:1;letter-spacing:.3px;text-transform:uppercase}
@@ -1199,6 +1227,19 @@ body[data-active-mode="1page"] .modo2-only::after{content:'Activá "2 páginas" 
             <input type="range" id="ds_indicadoY" min="-1.5" max="1.5" step="0.05" value="0" oninput="aplicarDiseno()">
           </div>
           <div class="hint" style="margin-top:4px;font-size:10.5px"><b>Tamaño del texto:</b> sólo el texto interno. <b>Tamaño general:</b> agranda o achica todo el cuadro proporcional. <b>Posición vertical:</b> mueve el cuadro arriba/abajo. Si lo subes, las características que tape se pasan automáticamente a la página 2; si lo bajas, las características crecen hacia abajo.</div>
+
+          <label style="display:flex;align-items:center;gap:8px;margin-top:12px;padding-top:10px;border-top:1px dashed #e0c8a8;text-transform:none;font-size:12px;cursor:pointer;color:var(--navy)">
+            <input type="checkbox" id="f_indicado_free" onchange="toggleIndicadoFree()" style="width:14px;height:14px">
+            <span><b>Modo libre</b> — arrastrar el cuadro con el mouse</span>
+          </label>
+          <div class="hint" style="margin-top:2px">Al activar, el bloque "Indicado para" sale de su ubicación fija y lo puedes <b>arrastrar a cualquier punto de la página</b>. La posición se recuerda al guardar/recargar.</div>
+          <div id="f_indicado_free_extra" style="display:none;margin-top:8px">
+            <div class="field">
+              <label>Ancho del cuadro (modo libre) <span class="vlbl" id="lbl_indicadoFw">3.6 in</span></label>
+              <input type="range" id="ds_indicadoFw" min="2" max="7" step="0.1" value="3.6" oninput="aplicarDiseno()">
+            </div>
+            <button type="button" onclick="resetIndicadoFreePos()" style="margin-top:6px;padding:6px 10px;background:#fff;border:1px solid var(--coral);color:var(--coral);border-radius:6px;font-family:'Montserrat',sans-serif;font-weight:600;font-size:11px;cursor:pointer">Restablecer posición</button>
+          </div>
         </div>
       </div>
 
@@ -2379,6 +2420,11 @@ function aplicarDiseno(){
     fichas.forEach(f => f.style.setProperty('--ed-indicado-fs', indFs.value + 'pt'));
     const lbl = document.getElementById('lbl_indicadoFs'); if(lbl) lbl.textContent = indFs.value + ' pt';
   }
+  const indFw = document.getElementById('ds_indicadoFw');
+  if(indFw){
+    fichas.forEach(f => f.style.setProperty('--ed-indicado-fw', indFw.value + 'in'));
+    const lbl = document.getElementById('lbl_indicadoFw'); if(lbl) lbl.textContent = parseFloat(indFw.value).toFixed(1) + ' in';
+  }
   // Posición vertical: si Y > 0 baja el cuadro (margin-top crece) Y caracts se ensancha igual.
   // Si Y < 0 sube el cuadro: caracts max-height se reduce → distribuirEdCaracts pasa overflow a pág 2.
   const indY = document.getElementById('ds_indicadoY');
@@ -2863,6 +2909,64 @@ function toggleImg4Free(){
   aplicarImgPosiciones();
 }
 
+/* "Indicado para" — modo libre: saca el cuadro de .ed-right y lo cuelga de .ed-page
+   para poder arrastrarlo a cualquier punto de la página. */
+function toggleIndicadoFree(){
+  const cb = document.getElementById('f_indicado_free');
+  const free = !!(cb && cb.checked);
+  try{ localStorage.setItem('oc_fichas_indicado_free', free ? '1':'0'); }catch(e){}
+  aplicarIndicadoFree();
+  if(typeof actualizarPreview === 'function') actualizarPreview();
+}
+
+function resetIndicadoFreePos(){
+  try{
+    localStorage.removeItem('oc_fichas_indicado-f_x');
+    localStorage.removeItem('oc_fichas_indicado-f_y');
+  }catch(e){}
+  document.querySelectorAll('.ed-indicado').forEach(el => {
+    el.style.removeProperty('--ed-indicado-f-x');
+    el.style.removeProperty('--ed-indicado-f-y');
+  });
+}
+
+function aplicarIndicadoFree(){
+  const free = (function(){ try{ return localStorage.getItem('oc_fichas_indicado_free') === '1'; }catch(e){ return false; } })();
+  const fx = (function(){ try{ return localStorage.getItem('oc_fichas_indicado-f_x'); }catch(e){ return null; } })();
+  const fy = (function(){ try{ return localStorage.getItem('oc_fichas_indicado-f_y'); }catch(e){ return null; } })();
+  const cb = document.getElementById('f_indicado_free');
+  if(cb) cb.checked = free;
+  const extra = document.getElementById('f_indicado_free_extra');
+  if(extra) extra.style.display = free ? '' : 'none';
+
+  document.querySelectorAll('.ed-indicado').forEach(el => {
+    if(free){
+      // Guardar parent original una sola vez
+      if(!el.dataset.origAnchorMarker){
+        el.dataset.origAnchorMarker = '1';
+      }
+      // Mover a .ed-page (cubre toda la hoja: header, body y footer)
+      const page = el.closest('.ed-page') || (el.closest('.ficha') && el.closest('.ficha').querySelector('.ed-page'));
+      if(page && el.parentElement !== page){
+        page.appendChild(el);
+      }
+      el.setAttribute('data-mode', 'free');
+      if(fx != null) el.style.setProperty('--ed-indicado-f-x', fx);
+      if(fy != null) el.style.setProperty('--ed-indicado-f-y', fy);
+    } else {
+      el.removeAttribute('data-mode');
+      // Devolver al .ed-right de su misma .ed-page (si existe y todavía no está ahí)
+      const page = el.closest('.ed-page') || (el.closest('.ficha') && el.closest('.ficha').querySelector('.ed-page'));
+      const right = page ? page.querySelector('.ed-body .ed-right') : null;
+      if(right && el.parentElement !== right){
+        right.appendChild(el);
+      }
+    }
+  });
+  // Conectar drag listeners (idempotente)
+  if(typeof _setupDraggable === 'function') _setupDraggable('.ed-indicado', 'indicado-f');
+}
+
 /* Aplica los data-attrs a TODAS las fichas (pág 2 + pág 3 si existieran).
    Lee del estado actual de las pills + checkboxes + localStorage para x/y. */
 function aplicarImgPosiciones(){
@@ -2945,6 +3049,8 @@ function aplicarImgPosiciones(){
   // Re-conectar drag listeners (idempotente)
   _setupDraggable('.ed-cont-img3-float', 'img3');
   _setupDraggable('.ed-cont-img4-block', 'img4');
+  // Aplicar modo libre del bloque "Indicado para"
+  if(typeof aplicarIndicadoFree === 'function') aplicarIndicadoFree();
 }
 
 /* Drag-and-drop: cuando el wrapper tiene data-mode="free", se puede arrastrar.
@@ -4828,6 +4934,9 @@ function serializarFichaCompleta(){
     img3_y: (function(){ try{ return localStorage.getItem('oc_fichas_img3_y') || ''; }catch(e){ return ''; } })(),
     img4_x: (function(){ try{ return localStorage.getItem('oc_fichas_img4_x') || ''; }catch(e){ return ''; } })(),
     img4_y: (function(){ try{ return localStorage.getItem('oc_fichas_img4_y') || ''; }catch(e){ return ''; } })(),
+    indicado_free: (function(){ try{ return localStorage.getItem('oc_fichas_indicado_free') === '1'; }catch(e){ return false; } })(),
+    indicado_fx: (function(){ try{ return localStorage.getItem('oc_fichas_indicado-f_x') || ''; }catch(e){ return ''; } })(),
+    indicado_fy: (function(){ try{ return localStorage.getItem('oc_fichas_indicado-f_y') || ''; }catch(e){ return ''; } })(),
     specs_ancho: (function(){ try{ return localStorage.getItem('oc_fichas_specs_ancho') || 'auto'; }catch(e){ return 'auto'; } })(),
     specs_width: (function(){ try{ return localStorage.getItem('oc_fichas_specs_width') || '48'; }catch(e){ return '48'; } })()
   };
@@ -4923,6 +5032,9 @@ function aplicarFichaCompleta(ficha){
       if(ficha.img3_y) localStorage.setItem('oc_fichas_img3_y', ficha.img3_y); else localStorage.removeItem('oc_fichas_img3_y');
       if(ficha.img4_x) localStorage.setItem('oc_fichas_img4_x', ficha.img4_x); else localStorage.removeItem('oc_fichas_img4_x');
       if(ficha.img4_y) localStorage.setItem('oc_fichas_img4_y', ficha.img4_y); else localStorage.removeItem('oc_fichas_img4_y');
+      localStorage.setItem('oc_fichas_indicado_free', ficha.indicado_free ? '1' : '0');
+      if(ficha.indicado_fx) localStorage.setItem('oc_fichas_indicado-f_x', ficha.indicado_fx); else localStorage.removeItem('oc_fichas_indicado-f_x');
+      if(ficha.indicado_fy) localStorage.setItem('oc_fichas_indicado-f_y', ficha.indicado_fy); else localStorage.removeItem('oc_fichas_indicado-f_y');
       if(ficha.specs_ancho) localStorage.setItem('oc_fichas_specs_ancho', ficha.specs_ancho);
       if(ficha.specs_width) localStorage.setItem('oc_fichas_specs_width', ficha.specs_width);
     }catch(e){}

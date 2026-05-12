@@ -1196,7 +1196,14 @@ body[data-active-mode="1page"] .modo2-only::after{content:'Activá "2 páginas" 
             <input type="range" data-syncs="ds_caractsW" min="40" max="100" step="5" value="100">
           </div>
         </div>
-        <div class="hint" style="margin-top:4px;font-style:italic">Reduce el ancho cuando hay poca info — el contenido se centra automáticamente.</div>
+        <div style="margin-top:6px">
+          <label style="font-size:11px">Ancho preset:</label>
+          <div class="ed-hdr-pills" style="grid-template-columns:repeat(2,1fr);margin-top:4px">
+            <button type="button" class="ed-hdr-pill" onclick="setCaractsPreset('mitad')"><div class="ed-hdr-pill-name">Mitad de hoja</div></button>
+            <button type="button" class="ed-hdr-pill" onclick="setCaractsPreset('completo')"><div class="ed-hdr-pill-name">Ancho completo</div></button>
+          </div>
+        </div>
+        <div class="hint" style="margin-top:4px;font-style:italic">Reduce el ancho cuando hay poca info — el contenido se centra automáticamente. <b>Mitad</b> = 50%, <b>Completo</b> = 100%, o usa el slider para valores intermedios.</div>
       </div>
 
       <div class="field" style="margin-top:14px;padding-top:14px;border-top:1px dashed var(--border)">
@@ -2987,6 +2994,18 @@ function setImg4Wrap(wrap){
   try{ localStorage.setItem('oc_fichas_img4_wrap', wrap); }catch(e){}
   aplicarImgPosiciones();
 }
+/* Preset rápido del ancho de la sección "Características": mitad de hoja vs ancho completo.
+   Actualiza el slider ds_caractsW (50 o 100) y re-aplica el diseño. */
+function setCaractsPreset(preset){
+  const slider = document.getElementById('ds_caractsW');
+  if(!slider) return;
+  const val = preset === 'mitad' ? '50' : '100';
+  slider.value = val;
+  // Sincronizar el slider inline (data-syncs en sección 2) si existe
+  document.querySelectorAll('[data-syncs="ds_caractsW"]').forEach(s => { s.value = val; });
+  if(typeof aplicarDiseno === 'function') aplicarDiseno();
+}
+
 function toggleImg3Free(){
   const cb = document.getElementById('f_p2_img3_free');
   const free = !!(cb && cb.checked);

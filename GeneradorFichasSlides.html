@@ -436,6 +436,16 @@ body:not([data-tpl="editorial"]) .tpl-editorial-only{display:none !important}
   .ed-cont-img3-float[data-mode="free"].is-dragging .ed-img3-box,
   .ed-cont-img4-block[data-mode="free"].is-dragging .ed-img4-box{outline:2px solid var(--orange);outline-offset:3px}
 }
+
+/* Cuando "Modo libre" está activo, atenuar las pills de posición/flujo (no aplican).
+   El usuario debe entender que esos controles están desactivados — un solo clic en cualquier pill
+   automáticamente desactiva el modo libre (ver _ensurePresetMode en JS). */
+[data-free-mode="1"] .ed-hdr-pills{opacity:.42;filter:grayscale(.4)}
+[data-free-mode="1"] .ed-hdr-pills::after{
+  content:'En modo libre las posiciones automáticas no aplican — desmarca "Modo libre" o haz clic aquí para volver a posición fija';
+  display:block;grid-column:1/-1;margin-top:6px;padding:6px 8px;background:#fff8e6;border:1px dashed #d4a857;border-radius:6px;
+  font-size:10px;color:#7a4a10;font-style:italic;text-transform:none;letter-spacing:0;line-height:1.35;opacity:.95
+}
 @media print{
   .ed-cont-img3-float[data-mode="free"] .ed-img3-box,
   .ed-cont-img4-block[data-mode="free"] .ed-img4-box{outline:none !important}
@@ -2762,20 +2772,30 @@ function _setActivePill(containerId, attr, val){
     p.classList.toggle('active', p.getAttribute(attr) === val);
   });
 }
+/* Si el usuario elige una posición/flujo preset, salimos de modo libre automáticamente.
+   El modo libre y las posiciones preset son mutuamente excluyentes. */
+function _ensurePresetMode(which){
+  try{ localStorage.setItem('oc_fichas_'+which+'_free', '0'); }catch(e){}
+  const cb = document.getElementById(which === 'img3' ? 'f_p2_img3_free' : (which === 'img4' ? 'f_p2_img4_free' : 'f_indicado_free'));
+  if(cb) cb.checked = false;
+}
 function setImg3Lado(lado){
   if(!['left','right'].includes(lado)) lado = 'left';
+  _ensurePresetMode('img3');
   _setActivePill('img3LadoPills','data-img3lado',lado);
   try{ localStorage.setItem('oc_fichas_img3_lado', lado); }catch(e){}
   aplicarImgPosiciones();
 }
 function setImg3Wrap(wrap){
   if(!['float','block'].includes(wrap)) wrap = 'float';
+  _ensurePresetMode('img3');
   _setActivePill('img3WrapPills','data-img3wrap',wrap);
   try{ localStorage.setItem('oc_fichas_img3_wrap', wrap); }catch(e){}
   aplicarImgPosiciones();
 }
 function setImg4Pos(pos){
   if(!['below-img3','right','top-left','bottom-left','next-to-specs'].includes(pos)) pos = 'below-img3';
+  _ensurePresetMode('img4');
   _setActivePill('img4PosPills','data-img4pos',pos);
   try{ localStorage.setItem('oc_fichas_img4_pos', pos); }catch(e){}
   // Si el preset es "next-to-specs" y specs está en auto/completo, lo seteamos a "Mitad der"
@@ -2892,6 +2912,7 @@ function aplicarSpecsAncho(){
 }
 function setImg4Wrap(wrap){
   if(!['float','block'].includes(wrap)) wrap = 'float';
+  _ensurePresetMode('img4');
   _setActivePill('img4WrapPills','data-img4wrap',wrap);
   try{ localStorage.setItem('oc_fichas_img4_wrap', wrap); }catch(e){}
   aplicarImgPosiciones();
@@ -2900,13 +2921,21 @@ function toggleImg3Free(){
   const cb = document.getElementById('f_p2_img3_free');
   const free = !!(cb && cb.checked);
   try{ localStorage.setItem('oc_fichas_img3_free', free ? '1':'0'); }catch(e){}
+  _reflejarFreeMode('img3', free);
   aplicarImgPosiciones();
 }
 function toggleImg4Free(){
   const cb = document.getElementById('f_p2_img4_free');
   const free = !!(cb && cb.checked);
   try{ localStorage.setItem('oc_fichas_img4_free', free ? '1':'0'); }catch(e){}
+  _reflejarFreeMode('img4', free);
   aplicarImgPosiciones();
+}
+/* Atenúa las pills de posición/flujo cuando el modo libre está activo,
+   y muestra un hint indicando que esos controles no aplican en modo libre. */
+function _reflejarFreeMode(which, free){
+  const box = document.getElementById(which === 'img3' ? 'p2_img3_box' : 'p2_img4_box');
+  if(box) box.setAttribute('data-free-mode', free ? '1' : '0');
 }
 
 /* "Indicado para" — modo libre: saca el cuadro de .ed-right y lo cuelga de .ed-page
@@ -3046,6 +3075,8 @@ function aplicarImgPosiciones(){
   _setActivePill('img4WrapPills','data-img4wrap', img4Wrap);
   const cb3 = document.getElementById('f_p2_img3_free'); if(cb3) cb3.checked = img3Free;
   const cb4 = document.getElementById('f_p2_img4_free'); if(cb4) cb4.checked = img4Free;
+  _reflejarFreeMode('img3', img3Free);
+  _reflejarFreeMode('img4', img4Free);
   // Re-conectar drag listeners (idempotente)
   _setupDraggable('.ed-cont-img3-float', 'img3');
   _setupDraggable('.ed-cont-img4-block', 'img4');

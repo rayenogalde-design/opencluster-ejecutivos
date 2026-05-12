@@ -2975,10 +2975,19 @@ function toggleIndicadoFree(){
 
 function setIndicadoPag(pag){
   if(!['1','2'].includes(pag)) pag = '1';
+  // Guardar primero la página deseada (aplicarIndicadoFree y posibles re-renders la van a leer)
+  try{ localStorage.setItem('oc_fichas_indicado_pag', pag); }catch(e){}
   document.querySelectorAll('#indicadoPagPills .ed-hdr-pill').forEach(p => {
     p.classList.toggle('active', p.getAttribute('data-indicadopag') === pag);
   });
-  try{ localStorage.setItem('oc_fichas_indicado_pag', pag); }catch(e){}
+  // Si pide Pág 2 pero el modo está en 1 página, cambiar a 2 páginas — si no, página 2
+  // está display:none y el cuadro queda invisible.
+  if(pag === '2'){
+    const wrap = document.getElementById('fichaPages');
+    if(wrap && wrap.getAttribute('data-mode') !== '2page' && typeof setMode === 'function'){
+      setMode('2page');
+    }
+  }
   aplicarIndicadoFree();
 }
 

@@ -1772,79 +1772,185 @@ async function cargarEquipoPerf(){
 // ════════════════════════════════════════════════════════════════════════════
 // ADMIN — Territorios / Auditoría / Migración
 // ════════════════════════════════════════════════════════════════════════════
-// Match Score: % de match entre catálogo OpenCluster y cada subcategoría
-// Formato: [score_completo, score_zen, nivel, productos_clave]
+// Match Score: encaje entre catálogo OpenCluster y cada subcategoría.
+// Formato: [score_completo, score_campania, nivel_completo, nivel_campania,
+//           productos_completo (catálogo entero), productos_campania (subset OpenClusterZen)]
+// La campaña NO incluye: salas multisensoriales, cuidado del pie, productos sensoriales sueltos.
 const MATCH_SCORES = {
-  // Privados — Salud (prioritarias)
-  "Hogar de Ancianos / ELEAM Privado": [95, 95, "prioritario", "Catres clínicos, colchones antiescaras, grúa, silla ducha, andadores"],
-  "Casa de Reposo / Residencia Asistida": [95, 95, "prioritario", "Catres clínicos, colchones antiescaras, grúa, silla ducha"],
-  "Centro de Memoria / Alzheimer Privado": [92, 78, "prioritario", "Salas multisensoriales, comunicadores, productos sensoriales"],
-  "Centro de Rehabilitación Neurológica": [92, 98, "prioritario", "Eye-tracking Tobii, switches, comunicadores ComuniQa, bipedestadoras, Dragon"],
-  "Hospital Privado": [90, 92, "prioritario", "Catres, grúa, colchones antiescaras, silla ducha, comunicadores UCI"],
-  "Teletón / Instituto Teletón / CRIT": [90, 90, "prioritario", "Bipedestadoras, comunicadores, switches, eye-tracking, todo el catálogo de rehab"],
-  "Centro de Rehabilitación Infantil Privado": [90, 90, "prioritario", "Switches, comunicadores, bipedestadores, eye-tracking infantil"],
-  "Clínica Privada": [88, 88, "prioritario", "Catres, colchones, ayudas técnicas, comunicadores"],
-  "Centro de Cuidados Paliativos / Hospicio Privado": [85, 90, "prioritario", "Catres eléctricos, antiescaras Systam, grúa, silla ducha"],
-  // Privados — Salud (altas)
-  "Hospital Psiquiátrico Privado": [82, 72, "alto", "Salas de calma, contención sensorial, manejo crisis"],
-  "Servicio de Cuidados Domiciliarios": [85, 85, "alto", "Catre Med Home, grúa portátil, andador, silla ducha"],
-  "Centro de Día para Adulto Mayor Privado": [80, 80, "alto", "Silla posicionamiento, andador, productos ergonómicos"],
-  "Centro de Estimulación Temprana Privado": [80, 65, "alto", "Sensoriales, pedagógicos, salas calma TEA"],
-  "Centro de Rehabilitación Físico / Kinesiológico Privado": [75, 72, "alto", "Bipedestadores, sillas posicionamiento, andador, rampas"],
-  "Centro Pediátrico Privado": [75, 65, "alto", "Estimulación, sensoriales, productos infantiles"],
-  "Colegio Particular Subvencionado": [75, 75, "alto", "Switches, comunicadores, eye-tracking, software baja visión"],
-  "Colegio Particular Pagado": [78, 78, "alto", "Switches, comunicadores, eye-tracking, mouses adaptados"],
-  // Privados — RRHH / Empresas
-  "Oficinas de Recursos Humanos de Gran Empresa": [75, 62, "alto", "Eye-tracking, Dragon, software JAWS/OpenBook, mouses adaptados"],
-  // Privados — Otros
-  "Centro Kinesiología / TO / Fonoaudiología Multi-Profesional": [72, 72, "alto", "Productos sensoriales, ayudas técnicas, comunicadores"],
-  "Centro Médico Privado": [70, 65, "alto", "Catres, sillas adaptadas, ergonomía"],
-  // Medias
-  "Inmobiliaria / Constructora": [62, 55, "medio", "Rampas, sillas ducha, catres bulk para proyectos"],
-  "Jardín Infantil Privado": [60, 55, "medio", "Estimulación temprana, salas calma"],
-  "Centro Odontológico Privado": [52, 40, "medio", "Sillas adaptadas, ergonomía"],
-  "Centro de Rehabilitación de Adicciones": [50, 50, "medio", "Salas de calma, manejo crisis"],
-  "Banco": [50, 35, "medio", "Sala lactancia personal, accesibilidad"],
-  "Supermercado": [50, 35, "medio", "Sala lactancia, accesibilidad obligatoria"],
-  "Centro Comercial / Mall": [55, 40, "medio", "Salas lactancia, sensoriales, baños adaptados"],
-  "Tienda por Departamento": [55, 38, "medio", "Salas calma/lactancia, accesibilidad"],
-  "Hotel Internacional": [65, 52, "medio", "Sillas ducha, rampas, salas wellness"],
-  "Hotel Chileno / Cadena Nacional": [62, 50, "medio", "Sillas ducha, rampas, grúa para huéspedes"],
-  "Resort All-Inclusive": [65, 50, "medio", "Sillas ducha, rampas, salas wellness"],
-  "Universidad / Instituto Privado": [55, 50, "medio", "Software JAWS/OpenBook, mouses adaptados"],
-  "Centro de Aprendizaje / Reforzamiento Privado": [55, 45, "medio", "Productos pedagógicos adaptados"],
-  // Secundarias
-  "Termas / Spa Resort": [45, 28, "secundario", "Sillas tina, rampas, sala wellness"],
-  "Cadena de Farmacia": [42, 28, "secundario", "Distribuidor B2B"],
-  "Parroquia / Iglesia / Centro Religioso": [38, 35, "secundario", "Andadores, silla ducha para asistencia a viejitos"],
-  "Empresa de Capacitación / Formación": [38, 20, "secundario", "Ergonomía aulas, materiales pedagógicos"],
-  "Empresa de RRHH / Reclutamiento Inclusivo": [35, 25, "secundario", "Adecuación puestos en clientes finales"],
-  "Empresa Mediana con personal con discapacidad": [60, 50, "medio", "Adecuación puestos, productos ergonómicos"],
-  // Oportunistas
-  "Club Senior / Country Club": [28, 25, "oportunista", "Cojines ergonómicos, sillas, salas wellness"],
-  "Programa Universitario para Adulto Mayor": [25, 22, "oportunista", "Mouses ergonómicos, software baja visión"],
-  // Distribuidores
-  "Distribuidor — Ortopedia": [85, 75, "prioritario", "Toda la línea — canal B2B"],
-  "Distribuidor — Farmacia Especializada": [70, 60, "alto", "Ayudas técnicas, antiescaras"],
-  "Distribuidor — Importador / Mayorista Médico": [80, 70, "alto", "Toda la línea al por mayor"],
-  "Distribuidor — Tienda Online de Productos Médicos": [75, 65, "alto", "Catálogo completo online"],
-  "Distribuidor — Equipamiento Educativo": [60, 50, "medio", "Pedagógicos, comunicadores"],
-  "Distribuidor — Productos Geriátricos": [80, 75, "alto", "Catres, colchones, sillas, grúas"],
-  "Distribuidor — Empresas de Telecuidado / Botón SOS": [55, 50, "medio", "Switches, comunicadores aumentativos"],
-  // Sector Público (los más relevantes)
-  "CESFAM (Centro de Salud Familiar)": [75, 78, "alto", "Ayudas técnicas, ergonomía, sillas ruedas"],
-  "Hospital Público": [85, 88, "prioritario", "Catres, grúa, colchones antiescaras"],
-  "Escuela Especial": [85, 85, "prioritario", "Switches, comunicadores, bipedestadores, sensoriales"],
-  "Programa PIE (Integración Escolar)": [85, 85, "prioritario", "Eye-tracking, switches, comunicadores, mouses adaptados"],
-  "SENADIS": [90, 90, "prioritario", "Comprador estatal directo — todo el catálogo"]
+  "Hogar de Ancianos / ELEAM Privado": [95, 90, "prioritario", "prioritario",
+    "Catres clínicos, colchones antiescaras, grúa Heinsy, sillas de ducha, andadores, salas multisensoriales para terapia, cojines viscoflex",
+    "Catres clínicos, colchones antiescaras Systam, grúa Heinsy, sillas de ducha, andadores"],
+  "Casa de Reposo / Residencia Asistida": [95, 90, "prioritario", "prioritario",
+    "Catres clínicos, colchones antiescaras, grúa, sillas de ducha, salas multisensoriales",
+    "Catres clínicos, colchones antiescaras Systam, grúa Heinsy, sillas de ducha"],
+  "Centro de Memoria / Alzheimer Privado": [92, 70, "prioritario", "alto",
+    "Salas multisensoriales (producto estrella), comunicadores, productos sensoriales, ergonomía",
+    "Comunicadores ComuniQa, switches, software TD Snap"],
+  "Centro de Rehabilitación Neurológica": [92, 98, "prioritario", "prioritario",
+    "Eye-tracking Tobii, switches, comunicadores ComuniQa, bipedestadoras, Dragon, salas sensoriales",
+    "Eye-tracking Tobii, switches Jelly Bean/Big Red, comunicadores ComuniQa, bipedestadoras, Dragon, Quha Zono"],
+  "Hospital Privado": [90, 88, "prioritario", "prioritario",
+    "Catres, grúa, colchones antiescaras, sillas de ducha, comunicadores UCI, productos paliativos",
+    "Catres Boxin, grúa Heinsy, colchones Systam, sillas de ducha, comunicadores"],
+  "Teletón / Instituto Teletón / CRIT": [90, 92, "prioritario", "prioritario",
+    "Toda la línea de rehabilitación + salas multisensoriales",
+    "Bipedestadoras Kirón, comunicadores, switches, eye-tracking, handbikes"],
+  "Centro de Rehabilitación Infantil Privado": [90, 88, "prioritario", "prioritario",
+    "Switches, comunicadores, bipedestadores, eye-tracking, sensoriales, salas multisensoriales",
+    "Switches, comunicadores ComuniQa, bipedestadores, eye-tracking infantil"],
+  "Clínica Privada": [88, 85, "prioritario", "prioritario",
+    "Catres, colchones, ayudas técnicas, comunicadores, salas multisensoriales para wellness",
+    "Catres clínicos, colchones Systam, comunicadores, ayudas técnicas"],
+  "Centro de Cuidados Paliativos / Hospicio Privado": [85, 88, "prioritario", "prioritario",
+    "Catres eléctricos, antiescaras Systam, grúa, sillas de ducha, productos confort terminal",
+    "Catres eléctricos Boxin, antiescaras Systam, grúa Heinsy, sillas de ducha"],
+  "Hospital Psiquiátrico Privado": [82, 65, "alto", "alto",
+    "Salas de calma (producto estrella), contención sensorial, manejo crisis",
+    "Switches, comunicadores básicos"],
+  "Servicio de Cuidados Domiciliarios": [85, 85, "alto", "alto",
+    "Catre Med Home, grúa portátil, andador, sillas de ducha, cojines",
+    "Catre Boxin Med Home, grúa Heinsy plegable, andador, sillas de ducha"],
+  "Centro de Día para Adulto Mayor Privado": [80, 70, "alto", "alto",
+    "Sillas posicionamiento, andador, ergonomía, productos sensoriales",
+    "Sillas posicionamiento, andador, bipedestadores"],
+  "Centro de Estimulación Temprana Privado": [80, 60, "alto", "medio",
+    "Sensoriales, pedagógicos, salas calma TEA, comunicadores",
+    "Comunicadores ComuniQa, switches, software TD Snap, mouses adaptados"],
+  "Centro de Rehabilitación Físico / Kinesiológico Privado": [75, 75, "alto", "alto",
+    "Bipedestadores, sillas posicionamiento, andador, rampas",
+    "Bipedestadores Kirón, sillas posicionamiento, andador, rampas portátiles"],
+  "Centro Pediátrico Privado": [75, 55, "alto", "medio",
+    "Estimulación, sensoriales, productos infantiles",
+    "Comunicadores ComuniQa, switches, software TD Snap"],
+  "Colegio Particular Subvencionado": [75, 75, "alto", "alto",
+    "Switches, comunicadores, eye-tracking, software baja visión, mouses adaptados",
+    "Switches, comunicadores, eye-tracking Tobii, JAWS, OpenBook, mouses adaptados"],
+  "Colegio Particular Pagado": [78, 78, "alto", "alto",
+    "Switches, comunicadores, eye-tracking, mouses adaptados",
+    "Switches, comunicadores, eye-tracking Tobii, mouses adaptados, teclados Clevy"],
+  "Oficinas de Recursos Humanos de Gran Empresa": [75, 60, "alto", "medio",
+    "Eye-tracking, Dragon, software JAWS/OpenBook, mouses adaptados, salas calma para empleados",
+    "Eye-tracking Tobii, software Dragon, JAWS, OpenBook, mouses adaptados"],
+  "Centro Kinesiología / TO / Fonoaudiología Multi-Profesional": [72, 72, "alto", "alto",
+    "Productos sensoriales, ayudas técnicas, comunicadores",
+    "Comunicadores ComuniQa, switches, software TD Snap"],
+  "Centro Médico Privado": [70, 60, "alto", "medio",
+    "Catres, sillas adaptadas, ergonomía",
+    "Catres clínicos, sillas adaptadas"],
+  "Empresa Mediana con personal con discapacidad": [60, 50, "medio", "medio",
+    "Adecuación puestos, productos ergonómicos, software accesible",
+    "Mouses adaptados, teclados Clevy, software Dragon"],
+  "Inmobiliaria / Constructora": [62, 55, "medio", "medio",
+    "Rampas, sillas ducha, catres bulk para proyectos",
+    "Rampas portátiles, sillas de ducha, catres clínicos por volumen"],
+  "Jardín Infantil Privado": [60, 50, "medio", "medio",
+    "Estimulación temprana, salas calma",
+    "Comunicadores básicos, switches"],
+  "Centro Odontológico Privado": [52, 40, "medio", "secundario",
+    "Sillas adaptadas, ergonomía",
+    "Sillas adaptadas para pacientes con movilidad reducida"],
+  "Centro de Rehabilitación de Adicciones": [50, 35, "medio", "secundario",
+    "Salas de calma, manejo crisis",
+    "Comunicadores, productos sensoriales básicos"],
+  "Banco": [50, 30, "medio", "secundario",
+    "Sala lactancia personal, accesibilidad",
+    "Accesibilidad: rampas portátiles"],
+  "Supermercado": [50, 30, "medio", "secundario",
+    "Sala lactancia, accesibilidad obligatoria",
+    "Rampas portátiles, accesibilidad"],
+  "Centro Comercial / Mall": [55, 35, "medio", "secundario",
+    "Salas lactancia, sensoriales, baños adaptados",
+    "Rampas, accesibilidad"],
+  "Tienda por Departamento": [55, 30, "medio", "secundario",
+    "Salas calma/lactancia, accesibilidad",
+    "Accesibilidad básica"],
+  "Hotel Internacional": [65, 50, "medio", "medio",
+    "Sillas ducha, rampas, salas wellness",
+    "Sillas de ducha, rampas portátiles, grúa para huéspedes"],
+  "Hotel Chileno / Cadena Nacional": [62, 50, "medio", "medio",
+    "Sillas ducha, rampas, grúa para huéspedes",
+    "Sillas de ducha, rampas portátiles"],
+  "Resort All-Inclusive": [65, 45, "medio", "secundario",
+    "Sillas ducha, rampas, salas wellness",
+    "Sillas de ducha, rampas portátiles"],
+  "Universidad / Instituto Privado": [55, 50, "medio", "medio",
+    "Software JAWS/OpenBook, mouses adaptados",
+    "Software JAWS, OpenBook, Dragon, mouses adaptados"],
+  "Centro de Aprendizaje / Reforzamiento Privado": [55, 45, "medio", "secundario",
+    "Productos pedagógicos adaptados",
+    "Comunicadores básicos, mouses adaptados"],
+  "Termas / Spa Resort": [45, 25, "secundario", "oportunista",
+    "Sillas tina, rampas, sala wellness",
+    "Sillas de ducha, rampas portátiles"],
+  "Cadena de Farmacia": [42, 25, "secundario", "oportunista",
+    "Distribuidor B2B",
+    "Catálogo limitado para B2B"],
+  "Parroquia / Iglesia / Centro Religioso": [38, 35, "secundario", "secundario",
+    "Andadores, silla ducha para asistencia a viejitos",
+    "Andadores, sillas de ducha"],
+  "Empresa de Capacitación / Formación": [38, 20, "secundario", "oportunista",
+    "Ergonomía aulas, materiales pedagógicos",
+    "Mouses adaptados básicos"],
+  "Empresa de RRHH / Reclutamiento Inclusivo": [35, 25, "secundario", "oportunista",
+    "Adecuación puestos en clientes finales",
+    "Mouses adaptados, software accesible"],
+  "Club Senior / Country Club": [28, 25, "oportunista", "oportunista",
+    "Cojines ergonómicos, sillas, salas wellness",
+    "Sillas, cojines"],
+  "Programa Universitario para Adulto Mayor": [25, 22, "oportunista", "oportunista",
+    "Mouses ergonómicos, software baja visión",
+    "Mouses adaptados, JAWS, OpenBook"],
+  "Distribuidor — Ortopedia": [85, 80, "prioritario", "prioritario",
+    "Toda la línea — canal B2B",
+    "Sillas Kirón, handbikes, catres, antiescaras, ayudas técnicas, switches"],
+  "Distribuidor — Farmacia Especializada": [70, 60, "alto", "medio",
+    "Ayudas técnicas, antiescaras",
+    "Antiescaras Systam, ayudas técnicas básicas"],
+  "Distribuidor — Importador / Mayorista Médico": [80, 75, "alto", "alto",
+    "Toda la línea al por mayor",
+    "Catálogo Zen completo al por mayor"],
+  "Distribuidor — Tienda Online de Productos Médicos": [75, 65, "alto", "alto",
+    "Catálogo completo online",
+    "Catálogo Zen online"],
+  "Distribuidor — Equipamiento Educativo": [60, 55, "medio", "medio",
+    "Pedagógicos, comunicadores",
+    "Comunicadores, switches, software pedagógico"],
+  "Distribuidor — Productos Geriátricos": [80, 80, "alto", "alto",
+    "Catres, colchones, sillas, grúas",
+    "Catres Boxin, colchones Systam, sillas, grúa Heinsy"],
+  "Distribuidor — Empresas de Telecuidado / Botón SOS": [55, 55, "medio", "medio",
+    "Switches, comunicadores aumentativos",
+    "Switches Jelly Bean/Big Red, comunicadores ComuniQa"],
+  "CESFAM (Centro de Salud Familiar)": [75, 75, "alto", "alto",
+    "Ayudas técnicas, ergonomía, sillas ruedas",
+    "Bipedestadoras, sillas, ayudas técnicas básicas"],
+  "Hospital Público": [85, 85, "prioritario", "prioritario",
+    "Catres, grúa, colchones antiescaras",
+    "Catres Boxin, grúa Heinsy, colchones Systam"],
+  "Escuela Especial": [85, 85, "prioritario", "prioritario",
+    "Switches, comunicadores, bipedestadores, sensoriales",
+    "Switches, comunicadores ComuniQa, bipedestadores Kirón, software TD Snap"],
+  "Programa PIE (Integración Escolar)": [85, 85, "prioritario", "prioritario",
+    "Eye-tracking, switches, comunicadores, mouses adaptados",
+    "Eye-tracking Tobii, switches, comunicadores, mouses adaptados, teclados Clevy"],
+  "SENADIS": [90, 88, "prioritario", "prioritario",
+    "Comprador estatal directo — todo el catálogo",
+    "Catálogo Zen completo + ayudas técnicas tecnológicas"]
 };
+
+// Vista activa: "completo" (todos los productos OpenCluster) o "campania" (subset OpenClusterZen)
+let VISTA_CATALOGO = 'campania';  // default — solo Rayen puede cambiar a "completo"
+
+function cambiarVistaCatalogo(modo){
+  VISTA_CATALOGO = modo;
+  cargarTerritorios();
+}
 
 async function cargarTerritorios(){
   const r = await fetchAPI('crm_subcategorias', { solicitante: USUARIO });
   if(!r.ok){ document.getElementById('terrContainer').innerHTML = '<div class="error-state">' + esc(r.error || '') + '</div>'; return; }
   const subs = r.subcategorias || [];
 
-  // Conteo de contactos por subcategoría
   const contactos = CACHE.vTodos || [];
   const conteoBySubcat = {};
   contactos.forEach(c => {
@@ -1852,21 +1958,31 @@ async function cargarTerritorios(){
     if(sc) conteoBySubcat[sc] = (conteoBySubcat[sc] || 0) + 1;
   });
 
-  // Agrupar por categoría top
   const porCat = {};
   subs.forEach(s => {
     if(!porCat[s.tipo_categoria]) porCat[s.tipo_categoria] = [];
     porCat[s.tipo_categoria].push(s);
   });
 
-  // Ordenar dentro de cada cat por nivel de prioridad (prioritario primero) y por conteo
+  // Helper para extraer score/nivel/productos según vista actual
+  const datosDeVista = (s) => {
+    const m = MATCH_SCORES[s.sub_categoria];
+    if(!m) return null;
+    if(VISTA_CATALOGO === 'completo'){
+      return { score: m[0], nivel: m[2], productos: m[4] };
+    } else {
+      return { score: m[1], nivel: m[3], productos: m[5] };
+    }
+  };
+
+  // Ordenar dentro de cada cat por nivel actual y por conteo
   const nivelOrden = { prioritario:0, alto:1, medio:2, secundario:3, oportunista:4 };
   Object.keys(porCat).forEach(cat => {
     porCat[cat].sort((a, b) => {
-      const sa = MATCH_SCORES[a.sub_categoria];
-      const sb = MATCH_SCORES[b.sub_categoria];
-      const na = sa ? nivelOrden[sa[2]] : 99;
-      const nb = sb ? nivelOrden[sb[2]] : 99;
+      const da = datosDeVista(a);
+      const db = datosDeVista(b);
+      const na = da ? nivelOrden[da.nivel] : 99;
+      const nb = db ? nivelOrden[db.nivel] : 99;
       if(na !== nb) return na - nb;
       const ca = conteoBySubcat[a.sub_categoria] || 0;
       const cb = conteoBySubcat[b.sub_categoria] || 0;
@@ -1874,17 +1990,29 @@ async function cargarTerritorios(){
     });
   });
 
-  let html =
+  // Toggle Catálogo / Campaña (solo Rayen lo ve)
+  const esAdmin = (ROL === 'admin');
+  const toggleHtml = esAdmin ? (
+    '<div style="display:flex;gap:4px;background:var(--purple-lt);padding:5px;border-radius:10px;margin-bottom:16px;width:fit-content;">' +
+      '<button onclick="cambiarVistaCatalogo(\'completo\')" style="padding:9px 18px;border:none;border-radius:7px;font-weight:800;font-size:13px;cursor:pointer;' +
+        (VISTA_CATALOGO === 'completo' ? 'background:var(--purple-dk);color:white;' : 'background:transparent;color:var(--purple-dk);') + '">Catálogo Completo</button>' +
+      '<button onclick="cambiarVistaCatalogo(\'campania\')" style="padding:9px 18px;border:none;border-radius:7px;font-weight:800;font-size:13px;cursor:pointer;' +
+        (VISTA_CATALOGO === 'campania' ? 'background:var(--purple-dk);color:white;' : 'background:transparent;color:var(--purple-dk);') + '">Campaña OpenClusterZen</button>' +
+    '</div>'
+  ) : '';
+
+  const vistaTexto = VISTA_CATALOGO === 'completo' ? 'catálogo completo de OpenCluster' : 'campaña OpenClusterZen';
+
+  let html = toggleHtml +
     '<div style="margin-bottom:20px;padding:16px 22px;background:linear-gradient(135deg, var(--navy) 0%, var(--purple-dk) 100%);border-radius:12px;color:white;font-size:13.5px;box-shadow:var(--shadow-md);">' +
-      '<div style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold-lt);margin-bottom:8px;">Match Score</div>' +
-      'El <b>%</b> indica qué tanto encaja tu catálogo OpenCluster con ese tipo de cliente. ' +
-      'A la izquierda el % del <b>catálogo completo</b>; a la derecha el % de la <b>campaña OpenClusterZen</b>. ' +
-      '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px;">' +
-        '<span class="match-badge prioritario">Prioritario</span> 90-100% — venta más probable' +
-        '<span class="match-badge alto" style="margin-left:10px;">Alto</span> 70-89%' +
-        '<span class="match-badge medio" style="margin-left:10px;">Medio</span> 50-69%' +
-        '<span class="match-badge secundario" style="margin-left:10px;">Secundario</span> 30-49%' +
-        '<span class="match-badge oportunista" style="margin-left:10px;">Oportunista</span> &lt;30%' +
+      '<div style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold-lt);margin-bottom:8px;">Match Score · ' + esc(vistaTexto) + '</div>' +
+      'El <b>%</b> indica qué tanto encaja con ese tipo de cliente. Los <b>productos clave</b> son los que más le pueden interesar.' +
+      '<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;font-size:11px;align-items:center;">' +
+        '<span class="match-badge prioritario">Prioritario</span><span>90-100%</span>' +
+        '<span class="match-badge alto" style="margin-left:8px;">Alto</span><span>70-89%</span>' +
+        '<span class="match-badge medio" style="margin-left:8px;">Medio</span><span>50-69%</span>' +
+        '<span class="match-badge secundario" style="margin-left:8px;">Secundario</span><span>30-49%</span>' +
+        '<span class="match-badge oportunista" style="margin-left:8px;">Oportunista</span><span>&lt;30%</span>' +
       '</div>' +
     '</div>';
 
@@ -1894,28 +2022,26 @@ async function cargarTerritorios(){
       '<div class="card-body" style="padding:0;">' +
         '<table style="width:100%;border-collapse:collapse;">' +
         porCat[cat].map(s => {
-          const score = MATCH_SCORES[s.sub_categoria];
-          const nivel = score ? score[2] : '';
-          const productos = score ? score[3] : '';
+          const d = datosDeVista(s);
           const cnt = conteoBySubcat[s.sub_categoria] || 0;
-          const badge = nivel ?
-            ('<span class="match-badge ' + nivel + '">' + nivel.charAt(0).toUpperCase() + nivel.slice(1) + '</span>') : '';
-          const matchTxt = score ?
-            ('<span class="match-score" style="color:var(--purple-dk);margin-left:8px;font-weight:800;font-size:13px;">' + score[0] + '%</span><span style="color:var(--purple-dk);margin-left:4px;font-weight:800;font-size:13px;">· Zen ' + score[1] + '%</span>') :
-            ('<span style="color:var(--purple);margin-left:8px;font-size:11.5px;font-style:italic;font-weight:600;">Sin match score definido</span>');
+          const badge = d ?
+            ('<span class="match-badge ' + d.nivel + '">' + d.nivel.charAt(0).toUpperCase() + d.nivel.slice(1) + '</span>') : '';
+          const matchTxt = d ?
+            ('<span class="match-score" style="color:var(--purple-dk);margin-left:10px;font-weight:800;font-size:14px;">' + d.score + '%</span>') :
+            ('<span style="color:#94a3b8;margin-left:8px;font-size:11.5px;font-style:italic;">Sin match score definido</span>');
           return '<tr style="border-bottom:1px solid var(--smoke);">' +
             '<td style="padding:14px 14px;vertical-align:top;">' +
-              '<div style="font-weight:700;color:var(--purple-dk);margin-bottom:6px;font-size:14.5px;">' + esc(s.sub_categoria) + '</div>' +
+              '<div style="font-weight:700;color:var(--ink);margin-bottom:6px;font-size:14.5px;">' + esc(s.sub_categoria) + '</div>' +
               '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px;">' +
                 badge + matchTxt +
                 (cnt > 0 ? '<span style="font-size:12px;color:white;background:var(--purple-dk);padding:3px 9px;border-radius:10px;font-weight:700;">' + cnt + ' contacto' + (cnt !== 1 ? 's' : '') + ' en CRM</span>' : '') +
               '</div>' +
-              (productos ? '<div style="font-size:12.5px;color:var(--purple-dk);margin-top:4px;line-height:1.5;font-weight:600;"><b style="color:var(--purple-dk);">Productos clave:</b> ' + esc(productos) + '</div>' : '') +
+              (d && d.productos ? '<div style="font-size:12.5px;color:var(--ink);margin-top:4px;line-height:1.5;"><b>Productos clave:</b> ' + esc(d.productos) + '</div>' : '') +
             '</td>' +
             '<td style="padding:12px 14px;text-align:right;vertical-align:top;white-space:nowrap;">' +
               (s.ejecutivo_asignado ?
                 '<span style="display:inline-block;padding:5px 11px;background:var(--purple-lt);color:var(--purple-dk);border-radius:14px;font-size:12px;font-weight:700;">' + esc(s.ejecutivo_asignado) + '</span>' :
-                '<span style="color:var(--mist);font-size:12.5px;">Sin asignar</span>') +
+                '<span style="color:#94a3b8;font-size:12.5px;">Sin asignar</span>') +
               '<br><button class="btn" style="padding:5px 12px;font-size:11.5px;margin-top:8px;" onclick="abrirAsignarTerritorio(\'' + esc(s.sub_categoria) + '\')">' +
                 (s.ejecutivo_asignado ? 'Cambiar' : 'Asignar') +
               '</button>' +

@@ -90,7 +90,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;colo
 .btn-primary:hover{background:#002a8a;}
 .btn-secondary{background:rgba(6,179,253,.1);color:var(--sky);border:1px solid rgba(6,179,253,.2);}
 .btn-secondary:hover{background:rgba(6,179,253,.18);}
+.btn-danger{background:#fff;color:#c0392b;border:1px solid #e8b3ad;flex:0 0 auto;width:38px;padding:10px 8px}
+.btn-danger:hover{background:#fce8e6;border-color:#c0392b}
 .btn svg{width:14px;height:14px;}
+/* Sello de creada/aprobada (debajo de la categoria) */
+.card-sellos{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--subtle);
+  padding:8px 10px;background:rgba(0,26,96,.03);border-radius:6px;border-left:2px solid var(--gold)}
+.card-sellos b{font-weight:600;color:var(--navy);font-family:'Montserrat',sans-serif;
+  font-size:9px;text-transform:uppercase;letter-spacing:.6px;display:inline-block;min-width:75px}
+.card-sellos span{display:flex;align-items:baseline;gap:6px}
 
 /* States */
 .state-box{text-align:center;padding:80px 24px;grid-column:1/-1;}
@@ -245,6 +253,29 @@ const grid = document.getElementById('grid');
 const searchInput = document.getElementById('searchInput');
 const searchCount = document.getElementById('searchCount');
 
+// === Catalogo de productos → ejecutivo asignado (extraido del Catalogo_Ejecutivos.xlsx) ===
+const CATALOGO_EJECUTIVOS = [{"producto":"Bigtrack Trackball 2","ejecutivo":"Germán"},{"producto":"Teclado Clevy Junior Alto Contraste Amarillo y Negro","ejecutivo":"Germán"},{"producto":"Dispositivo De Seguimiento Ocular Tobii PC Eye 5","ejecutivo":"Germán"},{"producto":"Dispositivo De Seguimiento Ocular Tobii PC Eye 5 + Communicator 5","ejecutivo":"Germán"},{"producto":"Dispositivo De Seguimiento Ocular Tobii PC Eye 5 + TD Snap","ejecutivo":"Germán"},{"producto":"Software Dragon Professional 16 (Licencia Digital)","ejecutivo":"Germán"},{"producto":"Dispositivo De Seguimiento Cefálico Quha Zono 2","ejecutivo":"Germán"},{"producto":"Jelly Bean Switch","ejecutivo":"William"},{"producto":"Big Red Switch","ejecutivo":"Rayen"},{"producto":"Smoothie Switch 75","ejecutivo":"William"},{"producto":"Smoothie Switch 125","ejecutivo":"William"},{"producto":"Conmutador con sistema de sujeción","ejecutivo":"William"},{"producto":"BJOY Stick C - Lite","ejecutivo":"William"},{"producto":"Bjoy Stick C","ejecutivo":"William"},{"producto":"AirSwitch","ejecutivo":"William"},{"producto":"Adaptador USB para dos conmutadores","ejecutivo":"William"},{"producto":"Buddy Button","ejecutivo":"William"},{"producto":"Blue2 Bluetooth Switch","ejecutivo":"William"},{"producto":"LITTLE Candy Corn 2","ejecutivo":"William"},{"producto":"Micro Light Switch","ejecutivo":"William"},{"producto":"Receptor inalámbrico","ejecutivo":"William"},{"producto":"Transmisor Big Beamer","ejecutivo":"William"},{"producto":"Specs Switch","ejecutivo":"William"},{"producto":"Mini Cup Switch","ejecutivo":"William"},{"producto":"Pillow Switch","ejecutivo":"William"},{"producto":"Transmisor Jelly Beamer","ejecutivo":"William"},{"producto":"Grabadora De Voz Little Step By Step Con Niveles","ejecutivo":"Roberto"},{"producto":"Tobii I-series 13","ejecutivo":"Roberto"},{"producto":"Tobii I-series 16","ejecutivo":"Roberto"},{"producto":"Tablero de Comunicación Digital TD Snap","ejecutivo":"Roberto"},{"producto":"TD Pilot","ejecutivo":"Roberto"},{"producto":"Software TD Snap (Licencia Digital)","ejecutivo":"Roberto"},{"producto":"Software Communicator 5 (Licencia Digital)","ejecutivo":"Roberto"},{"producto":"Comuniqa Surface Eye + TD Snap","ejecutivo":"Roberto"},{"producto":"ComuniQa Surface Eye + Communicator 5","ejecutivo":"Roberto"},{"producto":"ComuniQa Surface L + TD Snap","ejecutivo":"Roberto"},{"producto":"ComuniQa Surface L + Communicator 5","ejecutivo":"Roberto"},{"producto":"ComuniQa Surface M + Communicator 5","ejecutivo":"Roberto"},{"producto":"ComuniQa Eye XL + Communicator 5","ejecutivo":"Roberto"},{"producto":"TD Navio","ejecutivo":"Roberto"},{"producto":"Soporte de pie para Comunicador Rehadapt","ejecutivo":"Roberto"},{"producto":"Soporte de sobremesa para comunicador o tablet","ejecutivo":"Roberto"},{"producto":"Software JAWS","ejecutivo":"Germán"},{"producto":"Software OpenBook","ejecutivo":"Germán"},{"producto":"Silla de ruedas Bipedestadora con Respaldo Alto Kirón Get Up","ejecutivo":"Maximiliano"},{"producto":"Silla de ruedas Bipedestadora con Respaldo Bajo Kirón Get Up","ejecutivo":"Maximiliano"},{"producto":"Handbike Eléctrica + Silla de Ruedas Activa","ejecutivo":"Maximiliano"},{"producto":"Handbike Manual + Silla de Ruedas Activa","ejecutivo":"Maximiliano"},{"producto":"Rampa portátil plegable para sillas de ruedas","ejecutivo":"Maximiliano"},{"producto":"Andador De Cuatro Ruedas con Apoyo","ejecutivo":"Maximiliano"},{"producto":"Grúa eléctrica plegable para traslado de pacientes HES-108","ejecutivo":"Maximiliano"},{"producto":"Silla/Mesa de Posicionamiento","ejecutivo":"Germán"},{"producto":"Bipedestador Manual Prono","ejecutivo":"Germán"},{"producto":"Bipedestador Manual Supino","ejecutivo":"Germán"},{"producto":"Catre Clínico Manual 3 Posiciones Sin Colchón","ejecutivo":"Rayen"},{"producto":"Catre Clínico Manual 3 Posiciones + Colchón","ejecutivo":"Rayen"},{"producto":"Catre Clínico Manual 3 Posiciones + Colchón + Colchón Systam","ejecutivo":"Rayen"},{"producto":"Catre Clínico Eléctrico 4 Posiciones","ejecutivo":"Rayen"},{"producto":"Catre Clínico Eléctrico 4 Posiciones + Colchón","ejecutivo":"Rayen"},{"producto":"Catre Clínico Eléctrico 4 Posiciones + Colchón + Colchón Systam","ejecutivo":"Rayen"},{"producto":"Colchón Antiescaras Viscoflex Systam P161M","ejecutivo":"Rayen"},{"producto":"Colchón Clínico CIC Med Home Visco","ejecutivo":"Rayen"},{"producto":"Colchón Antiescaras Therafoam TM400","ejecutivo":"Rayen"},{"producto":"Silla de Ducha con Respaldo Alto y Sujeciones","ejecutivo":"Germán"},{"producto":"Button 1","ejecutivo":"Germán"},{"producto":"Button 6","ejecutivo":"Germán"}];
+
+// Mapa rapido producto-normalizado → ejecutivo
+const CATALOGO_MAP = (function(){
+  const m = {};
+  const norm = s => (s || '').toString().toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  CATALOGO_EJECUTIVOS.forEach(it => { m[norm(it.producto)] = it.ejecutivo; });
+  return m;
+})();
+function _normProducto(s){
+  return (s || '').toString().toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+}
+function getEjecutivoDe(producto){
+  const key = _normProducto(producto);
+  if(CATALOGO_MAP[key]) return CATALOGO_MAP[key];
+  // Match parcial: probar si el nombre del producto contiene o esta contenido en alguna clave
+  for(const k in CATALOGO_MAP){
+    if(k.includes(key) || key.includes(k)) return CATALOGO_MAP[k];
+  }
+  return '';
+}
+
 // Icons as SVG strings
 const icons = {
   tag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>',
@@ -253,7 +284,8 @@ const icons = {
   open: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>',
   eye: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
   retry: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>',
-  empty: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>'
+  empty: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 01-2 2H9a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>'
 };
 
 const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
@@ -305,15 +337,20 @@ function renderCards(list) {
 
   grid.innerHTML = list.map(f => {
     const generadorUrl = 'GeneradorFichasSlides.html?fichaId=' + encodeURIComponent(f.id) + '&fileId=' + encodeURIComponent(f.fileId);
+    const ejecutivo = getEjecutivoDe(f.producto) || '—';
     return `<div class="card">
       <span class="card-cat">${icons.tag} ${escHtml(f.categoria || 'Sin categoria')}</span>
       <div class="card-name">${escHtml(f.producto)}</div>
+      <div class="card-sellos">
+        <span><b>Creada por:</b> ${escHtml(ejecutivo)}</span>
+        <span><b>Aprobada por:</b> Rayen Ogalde</span>
+      </div>
       <div class="card-meta">
         <span>${icons.calendar} ${formatDate(f.fecha)}</span>
-        <span>${icons.user} ${escHtml(f.creador || 'Desconocido')}</span>
       </div>
       <div class="card-actions">
-        <a class="btn btn-primary" href="${generadorUrl}&autopdf=1" target="_blank" style="grid-column:1/-1">${icons.open} Descargar PDF</a>
+        <a class="btn btn-primary" href="${generadorUrl}&autopdf=1" target="_blank">${icons.open} Descargar PDF</a>
+        <button class="btn btn-danger" onclick="eliminarFicha('${escAttr(f.fileId)}','${escAttr(f.producto)}')" title="Eliminar ficha">${icons.trash}</button>
       </div>
     </div>`;
   }).join('');
@@ -403,6 +440,26 @@ function quickView(fileId) {
 
 function closeModal() {
   document.getElementById('modal').classList.remove('active');
+}
+
+// Eliminar ficha: confirma, llama al Apps Script para mover a papelera de Drive,
+// y quita la tarjeta de la grilla local. Reversible 30 dias desde la papelera de Drive.
+async function eliminarFicha(fileId, nombreProducto){
+  const ok = confirm('¿Eliminar la ficha "' + nombreProducto + '"?\n\nSe va a borrar del Drive y de la biblioteca. Queda en la papelera de Drive 30 dias por si fue un error.');
+  if(!ok) return;
+  try{
+    const url = BIBLIO_API_URL + '?accion=eliminar_ficha&fileId=' + encodeURIComponent(fileId);
+    const resp = await fetch(url);
+    if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    if(!data.ok) throw new Error(data.error || 'Respuesta no OK');
+    // Quitar la ficha del array local y re-renderizar
+    fichas = fichas.filter(f => f.fileId !== fileId);
+    filterFichas();
+  } catch(e){
+    console.error('Error eliminando ficha:', e);
+    alert('No se pudo eliminar la ficha:\n' + (e.message || e));
+  }
 }
 document.getElementById('modal').addEventListener('click', function(e) {
   if (e.target === this) closeModal();

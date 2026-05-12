@@ -1382,6 +1382,8 @@ body[data-active-mode="1page"] .modo2-only::after{content:'Activá "2 páginas" 
           </div>
           <div class="hint" style="margin-top:4px;font-size:10px">Recorta el espacio en blanco de los bordes y la imagen se expande automáticamente para llenar el cuadro (como en Word).</div>
         </div>
+        <button type="button" onclick="document.getElementById('f_img1_file').click()" style="margin-top:10px;width:100%;padding:10px;background:linear-gradient(135deg,#fff8f0,#ffe4cc);border:1.5px dashed #ff7e00;border-radius:8px;font-family:'Montserrat',sans-serif;font-weight:700;font-size:11.5px;color:#c54a35;cursor:pointer;letter-spacing:.3px">📁 Subir Imagen 1 desde tu PC ↑</button>
+        <input type="file" id="f_img1_file" accept="image/*" style="display:none" onchange="cargarImg1(this)">
         <label class="label" style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--grey);margin-top:10px;margin-bottom:6px">Imagen 2</label>
         <div class="row2">
           <div class="field">
@@ -1396,6 +1398,8 @@ body[data-active-mode="1page"] .modo2-only::after{content:'Activá "2 páginas" 
             <input type="range" id="img2_zoom" min="20" max="300" value="100" step="5" oninput="actualizarPreview();document.getElementById('img2_zoomLabel').textContent=this.value+'%'">
           </div>
         </div>
+        <button type="button" onclick="document.getElementById('f_img2_file').click()" style="margin-top:10px;width:100%;padding:10px;background:linear-gradient(135deg,#fff8f0,#ffe4cc);border:1.5px dashed #ff7e00;border-radius:8px;font-family:'Montserrat',sans-serif;font-weight:700;font-size:11.5px;color:#c54a35;cursor:pointer;letter-spacing:.3px">📁 Subir Imagen 2 desde tu PC ↑</button>
+        <input type="file" id="f_img2_file" accept="image/*" style="display:none" onchange="cargarImg2(this)">
       </div>
     </div>
 
@@ -1490,7 +1494,7 @@ body[data-active-mode="1page"] .modo2-only::after{content:'Activá "2 páginas" 
         <div id="p2_img3_box" style="margin-top:8px;display:none">
           <div class="hint" style="margin-bottom:6px">Selecciona del listado de Shopify (clic para elegir/desmarcar):</div>
           <div id="p2_img3_grid" class="img-grid"></div>
-          <button type="button" onclick="document.getElementById('f_img3_file').click()" style="display:none;margin-top:10px;width:100%;padding:8px;background:#fff;border:1.5px dashed var(--border);border-radius:8px;font-family:'Montserrat',sans-serif;font-weight:600;font-size:11px;color:var(--grey);cursor:pointer">o subir desde tu PC ↑</button>
+          <button type="button" onclick="document.getElementById('f_img3_file').click()" style="margin-top:10px;width:100%;padding:10px;background:linear-gradient(135deg,#fff8f0,#ffe4cc);border:1.5px dashed #ff7e00;border-radius:8px;font-family:'Montserrat',sans-serif;font-weight:700;font-size:11.5px;color:#c54a35;cursor:pointer;letter-spacing:.3px">📁 Subir imagen desde tu PC ↑</button>
           <input type="file" id="f_img3_file" accept="image/*" style="display:none" onchange="cargarImg3(this)">
 
           <div style="margin-top:10px">
@@ -1539,7 +1543,7 @@ body[data-active-mode="1page"] .modo2-only::after{content:'Activá "2 páginas" 
         <div id="p2_img4_box" style="margin-top:8px;display:none">
           <div class="hint" style="margin-bottom:6px">Selecciona del listado de Shopify (clic para elegir/desmarcar):</div>
           <div id="p2_img4_grid" class="img-grid"></div>
-          <button type="button" onclick="document.getElementById('f_img4_file').click()" style="display:none;margin-top:10px;width:100%;padding:8px;background:#fff;border:1.5px dashed var(--border);border-radius:8px;font-family:'Montserrat',sans-serif;font-weight:600;font-size:11px;color:var(--grey);cursor:pointer">o subir desde tu PC ↑</button>
+          <button type="button" onclick="document.getElementById('f_img4_file').click()" style="margin-top:10px;width:100%;padding:10px;background:linear-gradient(135deg,#fff8f0,#ffe4cc);border:1.5px dashed #ff7e00;border-radius:8px;font-family:'Montserrat',sans-serif;font-weight:700;font-size:11.5px;color:#c54a35;cursor:pointer;letter-spacing:.3px">📁 Subir imagen desde tu PC ↑</button>
           <input type="file" id="f_img4_file" accept="image/*" style="display:none" onchange="cargarImg4(this)">
 
           <div style="margin-top:10px">
@@ -3676,6 +3680,32 @@ function cargarImgWide(input){
   };
   reader.readAsDataURL(f);
 }
+/* Cargar Imagen 1 o 2 desde la PC: reemplaza el slot correspondiente en state.selectedImages
+   y re-renderiza el grid de imagenes + la preview. La imagen subida queda visible como un
+   thumbnail seleccionado (con badge) igual que las imagenes que vienen de Shopify. */
+function cargarImg1(input){ _cargarImgHero(input, 0); }
+function cargarImg2(input){ _cargarImgHero(input, 1); }
+function _cargarImgHero(input, slotIdx){
+  const f = input.files && input.files[0];
+  if(!f) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
+    if(!state.selectedImages) state.selectedImages = [];
+    // Asegurar que el array tenga al menos 2 entradas para que slotIdx=1 funcione
+    while(state.selectedImages.length <= slotIdx) state.selectedImages.push('');
+    state.selectedImages[slotIdx] = dataUrl;
+    // Tambien agregar al pool de allImages para que aparezca como thumbnail seleccionable
+    if(!state.allImages) state.allImages = [];
+    if(state.allImages.indexOf(dataUrl) === -1) state.allImages.unshift(dataUrl);
+    if(typeof renderImageGrid === 'function') renderImageGrid();
+    actualizarPreview();
+  };
+  reader.readAsDataURL(f);
+  // Limpiar el input para que se pueda volver a subir el mismo archivo si se quiere
+  input.value = '';
+}
+
 function cargarImg3(input){
   const f = input.files && input.files[0];
   if(!f) return;

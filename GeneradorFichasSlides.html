@@ -382,13 +382,13 @@ body:not([data-tpl="editorial"]) .tpl-editorial-only{display:none !important}
 .ed-cont-img3-float{float:left;width:var(--ed-img3-w, 3in);max-width:48%;margin:0 0.22in 0.12in 0;display:block}
 .ed-img3-box{background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;height:var(--ed-img3-h, 2in)}
 .ed-img3-box.placeholder::before{content:'';display:block;width:32px;height:32px;border:2px dashed var(--coral);border-radius:6px;opacity:.4}
-.ed-img3-box img{width:100%;height:100%;object-fit:contain}
+.ed-img3-box img{width:100%;height:100%;object-fit:contain;transform:scale(var(--ed-img3-zoom, 1));transform-origin:center center;transition:transform .12s}
 /* Pág 2 Editorial: imagen 4 en bloque debajo de las caracts (alineada a la derecha) — CON recuadro, slider afecta la imagen */
 .ed-cont-img4-block{float:right;width:var(--ed-img4-w, 3in);max-width:48%;margin:0 0 0.12in 0.22in;display:block}
 .ed-img4-box{background:#fff;border:1px solid var(--cream-border);border-radius:6px;padding:0.08in;display:inline-block;overflow:hidden}
 .ed-img4-box.placeholder{width:var(--ed-img4-w, 3in);height:var(--ed-img4-h, 2in);display:flex;align-items:center;justify-content:center}
 .ed-img4-box.placeholder::before{content:'';display:block;width:32px;height:32px;border:2px dashed var(--coral);border-radius:6px;opacity:.4}
-.ed-img4-box img{display:block;width:var(--ed-img4-w, 3in);height:var(--ed-img4-h, 2in);object-fit:contain}
+.ed-img4-box img{display:block;width:var(--ed-img4-w, 3in);height:var(--ed-img4-h, 2in);object-fit:contain;transform:scale(var(--ed-img4-zoom, 1));transform-origin:center center;transition:transform .12s}
 
 /* ── IMG 3 / IMG 4 — modos de posición y wrap (modo preset) ── */
 /* Posiciones predefinidas de IMG 4 (data-pos en .ed-cont-img4-block) */
@@ -1524,6 +1524,10 @@ body[data-active-mode="1page"] .modo2-only::after{content:'Activá "2 páginas" 
             <input type="range" id="ds_edImg3H" min="1.2" max="4" step="0.1" value="2" oninput="aplicarDiseno()">
           </div>
         </div>
+        <div class="field" style="margin-top:8px">
+          <label>Zoom imagen 3 <span class="vlbl" id="lbl_edImg3Zoom">100 %</span></label>
+          <input type="range" id="ds_edImg3Zoom" min="50" max="300" step="5" value="100" oninput="aplicarDiseno()">
+        </div>
       </div>
 
       <div class="field" style="margin-top:10px">
@@ -1571,6 +1575,10 @@ body[data-active-mode="1page"] .modo2-only::after{content:'Activá "2 páginas" 
             <label>Alto imagen 4 <span class="vlbl" id="lbl_edImg4H">2.0 in</span></label>
             <input type="range" id="ds_edImg4H" min="1.2" max="4" step="0.1" value="2" oninput="aplicarDiseno()">
           </div>
+        </div>
+        <div class="field" style="margin-top:8px">
+          <label>Zoom imagen 4 <span class="vlbl" id="lbl_edImg4Zoom">100 %</span></label>
+          <input type="range" id="ds_edImg4Zoom" min="50" max="300" step="5" value="100" oninput="aplicarDiseno()">
         </div>
         <div class="hint" style="margin-top:6px">Tip: con "Debajo de img 3" las dos imágenes se apilan a la izquierda y el texto fluye limpio por la derecha.</div>
       </div>
@@ -2448,6 +2456,19 @@ function aplicarDiseno(){
   set('--ed-img3-h','ds_edImg3H','in','lbl_edImg3H',1);
   set('--ed-img4-w','ds_edImg4W','in','lbl_edImg4W',1);
   set('--ed-img4-h','ds_edImg4H','in','lbl_edImg4H',1);
+  // Zoom imagen 3 y 4 (escala 50–300 % → factor 0.5–3.0 aplicado al <img> interno)
+  const z3 = document.getElementById('ds_edImg3Zoom');
+  if(z3){
+    const factor = (parseFloat(z3.value)/100).toFixed(2);
+    fichas.forEach(f => f.style.setProperty('--ed-img3-zoom', factor));
+    const lbl = document.getElementById('lbl_edImg3Zoom'); if(lbl) lbl.textContent = z3.value + ' %';
+  }
+  const z4 = document.getElementById('ds_edImg4Zoom');
+  if(z4){
+    const factor = (parseFloat(z4.value)/100).toFixed(2);
+    fichas.forEach(f => f.style.setProperty('--ed-img4-zoom', factor));
+    const lbl = document.getElementById('lbl_edImg4Zoom'); if(lbl) lbl.textContent = z4.value + ' %';
+  }
   // Aplicar también posiciones / wrap / free de img 3 y 4 (idempotente)
   if(typeof aplicarImgPosiciones === 'function') aplicarImgPosiciones();
   set('--ed-specs-pag2-gap','ds_p2SpecsGap','in','lbl_p2_specsGap',2);

@@ -498,21 +498,16 @@ body:not([data-tpl="editorial"]) .tpl-editorial-only{display:none !important}
 .ed-caja li::before{content:'';position:absolute;left:0;top:7px;width:5px;height:5px;background:var(--coral);border-radius:50%}
 
 /* === MODO LIBRE de la caja "¿Qué hay en la caja?" === */
-/* Cuando data-mode="free", la caja vive como sibling dentro de un flow container
-   (pág 1: .ed-caracts / pág 2: .ed-cont-flow). El usuario la arrastra con el mouse
-   y el texto fluye alrededor porque sigue siendo float (NO position:absolute). */
-.ed-caja[data-mode="free"]{cursor:move;user-select:none;-webkit-user-select:none;clear:none;position:relative}
-.ed-caja[data-mode="free"][data-wrap="float"]{
-  float:left;max-width:var(--caja-max-w, 3.2in);
-  margin:var(--caja-y, 0in) 0.18in 0.12in 0
-}
-.ed-caja[data-mode="free"][data-wrap="float"][data-side="right"]{
-  float:right;
-  margin:var(--caja-y, 0in) 0 0.12in 0.18in
-}
-.ed-caja[data-mode="free"][data-wrap="block"]{
-  float:none;display:block;clear:both;
-  margin:var(--caja-y, 0in) 0 0.18in 0;max-width:100%
+/* Modo libre = position:absolute relativo a .ed-page (la hoja completa 8.5x11in).
+   El usuario la arrastra con el mouse a CUALQUIER punto de la página, igual que
+   las imágenes 3 y 4 en modo libre. No usa float ni text-wrap. */
+.ed-caja[data-mode="free"]{
+  position:absolute !important;
+  left:var(--caja-x, 4.5in);
+  top:var(--caja-y, 5in);
+  margin:0 !important;float:none !important;clear:none !important;
+  width:var(--caja-w, 3.0in);max-width:none;
+  z-index:6;cursor:move;user-select:none;-webkit-user-select:none
 }
 /* Drag handle visible cuando está en modo libre (solo en pantalla, no en print) */
 @media screen{
@@ -3375,8 +3370,10 @@ function setCajaLoc(loc){
     p.classList.toggle('active', p.getAttribute('data-loc') === loc);
   });
   // Mostrar/ocultar el bloque de "Flujo del texto" (sólo aplica en modo libre)
+  // El selector de "Flujo del texto" (float/block) ya no aplica en libre — la caja en libre
+  // se mueve libre con position:absolute (igual que imágenes). Ocultar siempre.
   const wrapBox = document.getElementById('cajaWrapBox');
-  if(wrapBox) wrapBox.style.display = (loc === 'libre') ? '' : 'none';
+  if(wrapBox) wrapBox.style.display = 'none';
   try{ localStorage.setItem('oc_fichas_caja_loc', loc); }catch(e){}
   actualizarPreview();
 }
@@ -3408,36 +3405,35 @@ function setCajaPag(pag){
 function _setupCajaDrag(caja){
   if(caja.dataset.cajaDragWired === '1') return;
   caja.dataset.cajaDragWired = '1';
-  let dragging=false, startCursorY=0, startMarginYPx=0, parent=null, parentRect=null, scale=1;
+  let dragging=false, startX=0, startY=0, originX=0, originY=0, parent=null, parentRect=null;
   const onDown = (ev) => {
     if(caja.getAttribute('data-mode') !== 'free') return;
     if(ev.type === 'mousedown' && ev.button !== 0) return;
     const point = ev.touches ? ev.touches[0] : ev;
     dragging = true;
     caja.classList.add('is-dragging');
-    parent = caja.parentElement;
+    parent = caja.offsetParent || caja.parentElement;
     parentRect = parent.getBoundingClientRect();
-    // Escala del preview (transform:scale en .ficha)
-    scale = parentRect.width / parent.offsetWidth || 1;
-    startCursorY = point.clientY;
-    // Margin-top actual en px (convirtiendo --caja-y desde 'in' si está seteado)
-    const currentMy = parseFloat(getComputedStyle(caja).marginTop);
-    startMarginYPx = isNaN(currentMy) ? 0 : currentMy;
+    const rect = caja.getBoundingClientRect();
+    originX = rect.left - parentRect.left;
+    originY = rect.top - parentRect.top;
+    startX = point.clientX;
+    startY = point.clientY;
     ev.preventDefault();
   };
   const onMove = (ev) => {
     if(!dragging) return;
     const point = ev.touches ? ev.touches[0] : ev;
-    const dy = (point.clientY - startCursorY) / scale;
-    const newMyPx = Math.max(0, startMarginYPx + dy);
-    const newMyIn = (newMyPx / 96).toFixed(2) + 'in';
-    caja.style.setProperty('--caja-y', newMyIn);
-    // Determinar lado por X relativo al ancho del padre
-    const cursorXInParent = (point.clientX - parentRect.left) / scale;
-    const newSide = cursorXInParent < (parent.offsetWidth / 2) ? 'left' : 'right';
-    if(caja.getAttribute('data-side') !== newSide){
-      caja.setAttribute('data-side', newSide);
-    }
+    const dx = point.clientX - startX;
+    const dy = point.clientY - startY;
+    // Convertir px → in considerando la escala del preview (transform:scale en .ficha)
+    const scale = parentRect.width / parent.offsetWidth || 1;
+    const newPxX = originX/scale + dx/scale;
+    const newPxY = originY/scale + dy/scale;
+    const inX = (newPxX/96).toFixed(2) + 'in';
+    const inY = (newPxY/96).toFixed(2) + 'in';
+    caja.style.setProperty('--caja-x', inX);
+    caja.style.setProperty('--caja-y', inY);
     ev.preventDefault();
   };
   const onUp = () => {
@@ -3445,8 +3441,8 @@ function _setupCajaDrag(caja){
     dragging = false;
     caja.classList.remove('is-dragging');
     try{
-      localStorage.setItem('oc_fichas_caja_y', caja.style.getPropertyValue('--caja-y') || '0in');
-      localStorage.setItem('oc_fichas_caja_side', caja.getAttribute('data-side') || 'left');
+      localStorage.setItem('oc_fichas_caja_x', caja.style.getPropertyValue('--caja-x') || '4.5in');
+      localStorage.setItem('oc_fichas_caja_y', caja.style.getPropertyValue('--caja-y') || '5in');
     }catch(e){}
   };
   caja.addEventListener('mousedown', onDown);
@@ -3482,54 +3478,25 @@ function renderCaja(){
     caja.style.display = '';
     const loc = (function(){ try{ return localStorage.getItem('oc_fichas_caja_loc') || 'p1-left'; }catch(e){ return 'p1-left'; } })();
     if(loc === 'libre'){
-      // Modo libre: la caja vive en un flow container de la página elegida
+      // Modo libre: la caja vive en .ed-page (la hoja entera 8.5x11in) y se posiciona absoluto.
+      // El usuario la arrastra a CUALQUIER punto de la página (igual que img3/img4).
       const pag = (function(){ try{ return localStorage.getItem('oc_fichas_caja_pag') || '2'; }catch(e){ return '2'; } })();
-      let target = null;
-      if(pag === '1'){
-        // Pág 1 editorial: el contenedor con texto que puede rodear es .ed-caracts (columna derecha)
-        target = document.querySelector('.ficha.page-1 .ed-caracts') ||
-                 document.querySelector('#ed_page1 .ed-caracts') ||
-                 document.querySelector('.ed-caracts');
-      } else {
-        target = document.querySelector('.ficha.page-2 .ed-cont-flow') ||
-                 document.querySelector('.ed-cont-pag2 .ed-cont-flow') ||
-                 document.querySelector('.ed-cont-flow');
+      const ficha = pag === '1' ? document.querySelector('.ficha.page-1') : document.querySelector('.ficha.page-2');
+      const target = ficha ? ficha.querySelector('.ed-page') : null;
+      if(target && caja.parentElement !== target){
+        target.appendChild(caja);
       }
-      if(target){
-        // Insertar la caja DESPUÉS de los floats (img3, img4, specs) y ANTES del h3 de caracts.
-        // Si la pongo al principio, las imágenes/specs (que también son floats) se ven empujadas al
-        // mover la caja porque hacen stack con ella. Ponerla después de las imágenes mantiene fijas
-        // las imágenes y deja que solo se mueva la caja + reflow del texto a su alrededor.
-        const refSibling =
-          target.querySelector(':scope > h3.ed-section-title') ||
-          target.querySelector(':scope > .ed-section-title') ||
-          target.querySelector(':scope > ul');
-        if(refSibling){
-          if(caja.parentElement !== target || caja.nextElementSibling !== refSibling){
-            target.insertBefore(caja, refSibling);
-          }
-        } else if(caja.parentElement !== target){
-          target.appendChild(caja);
-        }
-      }
-      // Si la caja vive en .ed-caracts, marcarlo como block para que float funcione
-      document.querySelectorAll('.ed-caracts').forEach(c => {
-        c.classList.toggle('has-caja-libre', pag === '1' && c === target);
-      });
+      // Si la caja antes estaba dentro de .ed-caracts con float, sacarle la clase
+      document.querySelectorAll('.ed-caracts.has-caja-libre').forEach(c => c.classList.remove('has-caja-libre'));
       caja.setAttribute('data-mode', 'free');
-      // Wrap (float o block)
-      const wrap = (function(){ try{ return localStorage.getItem('oc_fichas_caja_wrap') || 'float'; }catch(e){ return 'float'; } })();
-      caja.setAttribute('data-wrap', wrap);
-      // Lado (left / right)
-      const side = (function(){ try{ return localStorage.getItem('oc_fichas_caja_side') || 'left'; }catch(e){ return 'left'; } })();
-      caja.setAttribute('data-side', side);
-      // Margin-top guardado
-      const y = (function(){ try{ return localStorage.getItem('oc_fichas_caja_y') || '0in'; }catch(e){ return '0in'; } })();
-      caja.style.setProperty('--caja-y', y);
-      // Reflejar pills (wrap + pag)
-      document.querySelectorAll('#cajaWrapPills .ed-hdr-pill').forEach(p => {
-        p.classList.toggle('active', p.getAttribute('data-cajawrap') === wrap);
-      });
+      caja.removeAttribute('data-wrap');
+      caja.removeAttribute('data-side');
+      // Posición absoluta guardada (X e Y en inches, relativos a .ed-page)
+      const cx = (function(){ try{ return localStorage.getItem('oc_fichas_caja_x') || '4.5in'; }catch(e){ return '4.5in'; } })();
+      const cy = (function(){ try{ return localStorage.getItem('oc_fichas_caja_y') || '5in'; }catch(e){ return '5in'; } })();
+      caja.style.setProperty('--caja-x', cx);
+      caja.style.setProperty('--caja-y', cy);
+      // Reflejar pills (pag)
       document.querySelectorAll('#cajaPagPills .ed-hdr-pill').forEach(p => {
         p.classList.toggle('active', p.getAttribute('data-cajapag') === pag);
       });
@@ -3894,10 +3861,10 @@ function resetLogo(){
     document.querySelectorAll('#cajaLocPills .ed-hdr-pill').forEach(p => {
       p.classList.toggle('active', p.getAttribute('data-loc') === savedCajaLoc);
     });
-    // Si está en modo libre, mostrar el bloque de wrap y restaurar la pill activa
+    // En libre el wrap ya no aplica — la caja se posiciona absoluto.
     if(savedCajaLoc === 'libre'){
       const wrapBox = document.getElementById('cajaWrapBox');
-      if(wrapBox) wrapBox.style.display = '';
+      if(wrapBox) wrapBox.style.display = 'none';
       const savedWrap = localStorage.getItem('oc_fichas_caja_wrap') || 'float';
       document.querySelectorAll('#cajaWrapPills .ed-hdr-pill').forEach(p => {
         p.classList.toggle('active', p.getAttribute('data-cajawrap') === savedWrap);
@@ -5148,7 +5115,8 @@ function serializarFichaCompleta(){
     caja_loc: (function(){ try{ return localStorage.getItem('oc_fichas_caja_loc') || 'p1-left'; }catch(e){ return 'p1-left'; } })(),
     caja_wrap: (function(){ try{ return localStorage.getItem('oc_fichas_caja_wrap') || 'float'; }catch(e){ return 'float'; } })(),
     caja_side: (function(){ try{ return localStorage.getItem('oc_fichas_caja_side') || 'left'; }catch(e){ return 'left'; } })(),
-    caja_y: (function(){ try{ return localStorage.getItem('oc_fichas_caja_y') || '0in'; }catch(e){ return '0in'; } })(),
+    caja_x: (function(){ try{ return localStorage.getItem('oc_fichas_caja_x') || '4.5in'; }catch(e){ return '4.5in'; } })(),
+    caja_y: (function(){ try{ return localStorage.getItem('oc_fichas_caja_y') || '5in'; }catch(e){ return '5in'; } })(),
     caja_pag: (function(){ try{ return localStorage.getItem('oc_fichas_caja_pag') || '2'; }catch(e){ return '2'; } })(),
     caja_titulo: (function(){ const el = document.getElementById('f_caja_titulo'); return el ? el.value : ''; })(),
     img3_lado: (function(){ try{ return localStorage.getItem('oc_fichas_img3_lado') || 'left'; }catch(e){ return 'left'; } })(),
@@ -5241,6 +5209,7 @@ function aplicarFichaCompleta(ficha){
     try{
       if(ficha.caja_wrap) localStorage.setItem('oc_fichas_caja_wrap', ficha.caja_wrap);
       if(ficha.caja_side) localStorage.setItem('oc_fichas_caja_side', ficha.caja_side);
+      if(ficha.caja_x)    localStorage.setItem('oc_fichas_caja_x',    ficha.caja_x);
       if(ficha.caja_y)    localStorage.setItem('oc_fichas_caja_y',    ficha.caja_y);
       if(ficha.caja_pag)  localStorage.setItem('oc_fichas_caja_pag',  ficha.caja_pag);
     }catch(e){}

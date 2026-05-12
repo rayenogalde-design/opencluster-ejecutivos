@@ -270,23 +270,29 @@ body:not([data-tpl="editorial"]) .tpl-editorial-only{display:none !important}
   float:none;display:block;clear:both;
   margin:var(--ed-indicado-fy, 0in) auto 0.18in auto;max-width:var(--ed-indicado-fw, 5in)
 }
-/* Indicador visual: badge + outline al pasar el mouse (solo en pantalla) */
+/* Indicador visual: badge + outline SOLO al pasar el mouse encima (no permanente) — y nunca en impresión */
 @media screen{
   .ed-indicado[data-mode="free"]::after{
     content:'⤧ arrastrar';position:absolute;top:-9px;right:8px;
     background:var(--orange);color:#fff;font-family:'Montserrat',sans-serif;
     font-size:7.5pt;font-weight:700;padding:1px 6px;border-radius:6px;
     letter-spacing:.3px;text-transform:uppercase;pointer-events:none;
-    box-shadow:0 1px 3px rgba(0,0,0,.15);z-index:5
+    box-shadow:0 1px 3px rgba(0,0,0,.15);z-index:5;
+    opacity:0;transition:opacity .15s
   }
-  .ed-indicado[data-mode="free"]{outline:1px dashed transparent;transition:outline-color .15s}
-  .ed-indicado[data-mode="free"]:hover{outline:2px dashed var(--coral);outline-offset:3px}
-  .ed-indicado[data-mode="free"].is-dragging{outline:2px solid var(--orange);outline-offset:3px;opacity:.88}
+  .ed-indicado[data-mode="free"]:hover::after{opacity:.95}
+  .ed-indicado[data-mode="free"]{transition:outline-color .15s}
+  .ed-indicado[data-mode="free"]:hover{outline:1px dashed var(--coral);outline-offset:2px}
+  .ed-indicado[data-mode="free"].is-dragging{outline:2px solid var(--orange);outline-offset:2px;opacity:.9}
+  .ed-indicado[data-mode="free"].is-dragging::after{opacity:.95}
 }
 @media print{
   .ed-indicado[data-mode="free"]{outline:none !important;cursor:auto !important}
-  .ed-indicado[data-mode="free"]::after{display:none !important}
+  .ed-indicado[data-mode="free"]::after{display:none !important;content:none !important}
 }
+/* Modo PDF (pdf-mode) — durante la captura para PDF se quita igual que en print */
+.ficha.pdf-mode .ed-indicado[data-mode="free"]{outline:none !important}
+.ficha.pdf-mode .ed-indicado[data-mode="free"]::after{display:none !important;content:none !important}
 /* Para que el bloque flote dentro de .ed-caracts (pág 1), forzar display:block igual que la caja */
 .ed-caracts.has-indicado-libre{display:block !important}
 

@@ -979,6 +979,33 @@ const TEAM = [
   { full: "Mario",                 short: "Mario",          rol: "direccion" }
 ];
 
+// Cadenas / empresas específicas por subcategoría — lo que Rayen llama "sub-sub".
+// Cada una se puede asignar a un ejecutivo distinto.
+// Si la subcategoría no aparece acá, se asigna a nivel general (sin cadenas).
+const CADENAS_POR_SUBCAT = {
+  "Banco": ["BancoEstado","Banco de Chile","Banco Santander","BCI","Banco Itaú","Scotiabank","Banco Falabella","Banco Ripley","Banco Security","Banco Internacional"],
+  "Tienda por Departamento": ["Falabella","Ripley","París","Hites","Tricot","Corona"],
+  "Supermercado": ["Walmart Chile (Líder / Ekono / Acuenta)","Jumbo","Santa Isabel","Tottus","Unimarc","Mayorista 10","OK Market"],
+  "Centro Comercial / Mall": ["Mall Plaza","Parque Arauco","Costanera Center","Alto Las Condes","Apumanque","Florida Center","Portal La Dehesa","Open Plaza","Espacio Urbano"],
+  "Cadena de Farmacia": ["Cruz Verde","Salcobrand","Ahumada","Doctor Simi"],
+  "Hotel Internacional": ["Marriott","Sheraton","Hyatt","Hilton","NH","Holiday Inn","Ibis","Mercure","Novotel","Radisson","DoubleTree","Crowne Plaza"],
+  "Hotel Chileno / Cadena Nacional": ["Diego de Almagro (33 hoteles)","Atton","Cumbres (4)","Enjoy (6, con casinos)","Plaza","Solace","Hotel del Mar"],
+  "Resort All-Inclusive": ["Explora (Atacama / Torres del Paine / Rapa Nui / Valle Sagrado)","Tierra Hotels (Atacama / Patagonia / Chiloé)","Awasi","Termas Puyehue Wellness & Spa","Termas de Chillán","Patagonia Camp","EcoCamp Patagonia","Hotel Las Torres Patagonia","Singular Hotels","Vira Vira Hacienda Hotel"],
+  "Termas / Spa Resort": ["Termas Puyehue","Termas de Chillán","Termas Quinamávida","Termas Geométricas (Coñaripe)","Termas El Corazón","Termas Pangui","Termas de Panimávida","Termas de Jahuel","Termas de Catillo","Termas de Polcura","Aguas Calientes"],
+  "Hospital Privado": ["Clínica Las Condes","Clínica Alemana","Clínica UC Christus","Clínica Indisa","Clínica Santa María","Clínica Dávila","Clínica Vespucio","Clínica Tabancura","Clínica Bicentenario","Clínica RedSalud","Clínica Bupa","Hospital Clínico FUSAT","Clínica Cordillera","Clínica Tarapacá","Sanatorio Alemán Concepción"],
+  "Hogar de Ancianos / ELEAM Privado": ["Cumbres del Cóndor","Residencia Bezanilla","Acalis Vital","Belén Hogares","Residencias San Camilo","Pequeño Cottolengo","Acción Familiar"],
+  "Casa de Reposo / Residencia Asistida": ["Cumbres del Cóndor","Residencia Bezanilla","Acalis Vital","Belén Hogares","Residencias San Camilo","Pequeño Cottolengo","Acción Familiar"],
+  "Centro de Día para Adulto Mayor Privado": ["CapaciTO","Centro Sentidos","ProActivo Adulto Mayor","Centro de la Memoria UC","Centro Alzheimer Chile"],
+  "Centro de Memoria / Alzheimer Privado": ["Centro de la Memoria UC","Centro Alzheimer Chile","Centro Sentidos"],
+  "Inmobiliaria / Constructora": ["Almagro","Aconcagua","Socovesa","Aitue","Manquehue","Brotec-Icafal","Echeverría Izquierdo","Paz Corp","DLP","Fundamenta","Penta","Salfa","Moller y Pérez Cotapos","Sigro"],
+  "Empresa de Capacitación / Formación": ["INACAP Capacitación","DUOC UC Educación Continua","AIEP Capacitación","Manpower Capacitación","Adecco Chile","CChC Capacitación","SOFOFA Capacitación"],
+  "Oficinas de Recursos Humanos de Gran Empresa": ["BancoEstado","Codelco","BHP","Antofagasta Minerals","LATAM Airlines","Falabella","Walmart Chile","Cencosud","CMPC","Arauco","Aguas Andinas","Enel","Empresas Copec","VTR","WOM","Sodimac","Anglo American","Collahuasi"],
+  "Distribuidor — Ortopedia": ["Ortopedia Almagro","Tecnoayudas","ProMed","Ortopedia Las Condes","Ortopedia Providencia","Ortocenter","Ortopedia Maipú","Ortopedia San Diego"],
+  "Distribuidor — Empresas de Telecuidado / Botón SOS": ["SOS Mayor","Conecta Mayor","Cuídame Chile","Asistencia Hogar","Botón Vital"],
+  "Centro de Rehabilitación Neurológica": ["Centro Alzheimer Chile","Centro de Rehabilitación Antonia Lavín","Coaniquem (rehabilitación quemados)","Mater (Concepción)","Sociedad Pro Ayuda al Niño Lisiado","Teletón / CRIT (14 institutos)"],
+  "Teletón / Instituto Teletón / CRIT": ["Teletón Santiago","Teletón Antofagasta","Teletón Iquique","Teletón Arica","Teletón Copiapó","Teletón Coquimbo","Teletón Valparaíso","Teletón Talca","Teletón Concepción","Teletón Temuco","Teletón Valdivia","Teletón Puerto Montt","Teletón Coyhaique","Teletón Punta Arenas"]
+};
+
 const CACHE = {
   vMis: null, vTodos: null, vCuentas: null,
   vTareas: null, vSinCat: null, vDup: null,
@@ -2019,42 +2046,87 @@ async function cargarTerritorios(){
       '</div>' +
     '</div>';
 
+  html += '<div style="display:flex;gap:8px;margin-bottom:10px;">' +
+    '<button class="btn" style="padding:6px 14px;font-size:12px;background:var(--purple-lt);color:var(--purple-dk);" onclick="terrToggleAll(true)">Expandir todas</button>' +
+    '<button class="btn" style="padding:6px 14px;font-size:12px;background:var(--purple-lt);color:var(--purple-dk);" onclick="terrToggleAll(false)">Colapsar todas</button>' +
+  '</div>';
+
   Object.keys(porCat).sort().forEach(cat => {
-    html += '<div class="card" style="margin-bottom:14px;">' +
-      '<div class="card-hd"><h3>' + esc(cat) + '</h3><span>' + porCat[cat].length + ' sub-categorías</span></div>' +
-      '<div class="card-body" style="padding:0;">' +
-        '<table style="width:100%;border-collapse:collapse;">' +
-        porCat[cat].map(s => {
+    const subs = porCat[cat];
+    const totalSubs = subs.length;
+    const asignadasSub = subs.filter(s => s.ejecutivo_asignado).length;
+    const totalContactos = subs.reduce((a, s) => a + (conteoBySubcat[s.sub_categoria] || 0), 0);
+
+    html += '<details class="terr-cat" style="margin-bottom:8px;background:white;border-radius:10px;box-shadow:var(--shadow-sm);overflow:hidden;">' +
+      '<summary style="cursor:pointer;list-style:none;padding:12px 16px;display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,var(--navy) 0%,var(--purple-dk) 100%);color:white;">' +
+        '<span style="font-family:Montserrat,sans-serif;font-weight:800;font-size:14.5px;letter-spacing:0.3px;flex:1;">' + esc(cat) + '</span>' +
+        '<span style="font-size:11.5px;font-weight:700;background:rgba(255,255,255,0.18);padding:3px 10px;border-radius:10px;">' + asignadasSub + ' / ' + totalSubs + ' subcategorías asignadas</span>' +
+        (totalContactos > 0 ? '<span style="font-size:11.5px;font-weight:700;background:var(--gold-lt);color:var(--navy);padding:3px 10px;border-radius:10px;">' + totalContactos + ' contactos</span>' : '') +
+        '<span class="terr-chev" style="font-size:14px;line-height:1;">▾</span>' +
+      '</summary>' +
+      '<div style="padding:0;">' +
+        subs.map(s => {
           const d = datosDeVista(s);
           const cnt = conteoBySubcat[s.sub_categoria] || 0;
-          const badge = d ?
-            ('<span class="match-badge ' + d.nivel + '">' + d.nivel.charAt(0).toUpperCase() + d.nivel.slice(1) + '</span>') : '';
-          const matchTxt = d ?
-            ('<span class="match-score" style="color:var(--purple-dk);margin-left:10px;font-weight:800;font-size:14px;">' + d.score + '%</span>') :
-            ('<span style="color:#94a3b8;margin-left:8px;font-size:11.5px;font-style:italic;">Sin match score definido</span>');
-          return '<tr style="border-bottom:1px solid var(--smoke);">' +
-            '<td style="padding:14px 14px;vertical-align:top;">' +
-              '<div style="font-weight:700;color:var(--ink);margin-bottom:6px;font-size:14.5px;">' + esc(s.sub_categoria) + '</div>' +
-              '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px;">' +
-                badge + matchTxt +
-                (cnt > 0 ? '<span style="font-size:12px;color:white;background:var(--purple-dk);padding:3px 9px;border-radius:10px;font-weight:700;">' + cnt + ' contacto' + (cnt !== 1 ? 's' : '') + ' en CRM</span>' : '') +
+          const badge = d ? '<span class="match-badge ' + d.nivel + '" style="font-size:10.5px;padding:2px 8px;">' + d.nivel.charAt(0).toUpperCase() + d.nivel.slice(1) + '</span>' : '';
+          const scoreTxt = d ? '<span style="color:var(--purple-dk);font-weight:800;font-size:13px;min-width:42px;text-align:right;">' + d.score + '%</span>' : '<span style="color:#cbd5e1;font-size:11.5px;font-style:italic;min-width:42px;text-align:right;">—</span>';
+          const productosTooltip = d && d.productos ? ' title="Productos clave: ' + String(d.productos).replace(/"/g, '&quot;') + '"' : '';
+          const cntChip = cnt > 0 ? '<span style="font-size:11px;color:white;background:var(--purple-dk);padding:2px 7px;border-radius:9px;font-weight:700;min-width:22px;text-align:center;">' + cnt + '</span>' : '<span style="font-size:11px;color:#cbd5e1;min-width:22px;text-align:center;">·</span>';
+          const asignChip = s.ejecutivo_asignado
+            ? '<span style="display:inline-block;padding:3px 10px;background:var(--purple-lt);color:var(--purple-dk);border-radius:11px;font-size:11.5px;font-weight:700;">' + esc(s.ejecutivo_asignado) + '</span>'
+            : '<span style="color:#94a3b8;font-size:11.5px;font-style:italic;">Sin asignar</span>';
+
+          const cadenas = CADENAS_POR_SUBCAT[s.sub_categoria] || [];
+          const tieneCadenas = cadenas.length > 0;
+
+          // Header de la subcategoría (siempre visible)
+          let subHtml = '';
+          if (tieneCadenas) {
+            // Si tiene cadenas — usar <details> anidado para desplegarlas
+            subHtml += '<details style="border-bottom:1px solid var(--smoke);">' +
+              '<summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--cream-lt, #fafafa);"' + productosTooltip + '>' +
+                '<span style="flex:1;font-weight:700;color:var(--ink);font-size:13px;">' + esc(s.sub_categoria) + ' <span style="color:var(--mist);font-weight:500;">· ' + cadenas.length + ' cadenas</span></span>' +
+                badge + scoreTxt + cntChip +
+                '<div style="min-width:120px;text-align:right;">' + asignChip + '</div>' +
+                '<button class="btn" style="padding:4px 10px;font-size:11px;" onclick="event.stopPropagation();event.preventDefault();abrirAsignarTerritorio(\'' + esc(s.sub_categoria) + '\')">' + (s.ejecutivo_asignado ? 'Cambiar' : 'Asignar todo') + '</button>' +
+                '<span style="font-size:11px;color:var(--mist);margin-left:2px;">▾</span>' +
+              '</summary>' +
+              '<div style="background:white;padding:4px 0;">' +
+                cadenas.map(cad => {
+                  // Marcar como asignada si tiene asignación específica (clave compuesta)
+                  const claveCad = s.sub_categoria + ' › ' + cad;
+                  const filaCad = (subs.find(x => x.sub_categoria === claveCad) || {});
+                  const ejecCad = filaCad.ejecutivo_asignado || '';
+                  const chipCad = ejecCad
+                    ? '<span style="display:inline-block;padding:2px 8px;background:var(--purple-lt);color:var(--purple-dk);border-radius:10px;font-size:11px;font-weight:700;">' + esc(ejecCad) + '</span>'
+                    : '<span style="color:#94a3b8;font-size:11px;font-style:italic;">Sin asignar</span>';
+                  return '<div style="display:flex;align-items:center;gap:10px;padding:6px 16px 6px 36px;border-top:1px dashed var(--smoke);">' +
+                    '<span style="flex:1;color:var(--ink);font-size:12.5px;">' + esc(cad) + '</span>' +
+                    '<div style="min-width:120px;text-align:right;">' + chipCad + '</div>' +
+                    '<button class="btn" style="padding:3px 9px;font-size:10.5px;" onclick="abrirAsignarTerritorio(\'' + esc(claveCad) + '\')">' + (ejecCad ? 'Cambiar' : 'Asignar') + '</button>' +
+                  '</div>';
+                }).join('') +
               '</div>' +
-              (d && d.productos ? '<div style="font-size:12.5px;color:var(--ink);margin-top:4px;line-height:1.5;"><b>Productos clave:</b> ' + esc(d.productos) + '</div>' : '') +
-            '</td>' +
-            '<td style="padding:12px 14px;text-align:right;vertical-align:top;white-space:nowrap;">' +
-              (s.ejecutivo_asignado ?
-                '<span style="display:inline-block;padding:5px 11px;background:var(--purple-lt);color:var(--purple-dk);border-radius:14px;font-size:12px;font-weight:700;">' + esc(s.ejecutivo_asignado) + '</span>' :
-                '<span style="color:#94a3b8;font-size:12.5px;">Sin asignar</span>') +
-              '<br><button class="btn" style="padding:5px 12px;font-size:11.5px;margin-top:8px;" onclick="abrirAsignarTerritorio(\'' + esc(s.sub_categoria) + '\')">' +
-                (s.ejecutivo_asignado ? 'Cambiar' : 'Asignar') +
-              '</button>' +
-            '</td>' +
-          '</tr>';
+            '</details>';
+          } else {
+            // Sin cadenas — fila simple (igual que antes)
+            subHtml += '<div style="display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--smoke);"' + productosTooltip + '>' +
+              '<span style="flex:1;font-weight:700;color:var(--ink);font-size:13px;">' + esc(s.sub_categoria) + '</span>' +
+              badge + scoreTxt + cntChip +
+              '<div style="min-width:120px;text-align:right;">' + asignChip + '</div>' +
+              '<button class="btn" style="padding:4px 10px;font-size:11px;" onclick="abrirAsignarTerritorio(\'' + esc(s.sub_categoria) + '\')">' + (s.ejecutivo_asignado ? 'Cambiar' : 'Asignar') + '</button>' +
+            '</div>';
+          }
+          return subHtml;
         }).join('') +
-        '</table>' +
-      '</div></div>';
+      '</div>' +
+    '</details>';
   });
   document.getElementById('terrContainer').innerHTML = html;
+}
+
+function terrToggleAll(open){
+  document.querySelectorAll('#terrContainer details.terr-cat').forEach(d => { d.open = !!open; });
 }
 
 function abrirAsignarTerritorio(subcat){

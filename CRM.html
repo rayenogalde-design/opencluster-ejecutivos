@@ -2009,13 +2009,42 @@ let VISTA_CATALOGO = 'campania';  // default — solo Rayen puede cambiar a "com
 
 function cambiarVistaCatalogo(modo){
   VISTA_CATALOGO = modo;
-  cargarTerritorios();
+  // Re-render desde cache, sin re-fetch — y mantener acordeones abiertos
+  if (CACHE.vTerritorios) {
+    renderTerritorios(CACHE.vTerritorios);
+  } else {
+    cargarTerritorios();
+  }
+}
+
+// Guarda los acordeones que el usuario tenía abiertos, para restaurarlos tras un re-render
+function terrSnapshotOpen(){
+  const set = new Set();
+  document.querySelectorAll('#terrContainer details[open]').forEach(d => {
+    const sm = d.querySelector('summary');
+    const id = (sm && sm.textContent || '').trim().slice(0, 200);
+    if (id) set.add(id);
+  });
+  return set;
+}
+function terrRestaurarOpen(snap){
+  if (!snap || !snap.size) return;
+  document.querySelectorAll('#terrContainer details').forEach(d => {
+    const sm = d.querySelector('summary');
+    const id = (sm && sm.textContent || '').trim().slice(0, 200);
+    if (id && snap.has(id)) d.open = true;
+  });
 }
 
 async function cargarTerritorios(){
   const r = await fetchAPI('crm_subcategorias', { solicitante: USUARIO });
   if(!r.ok){ document.getElementById('terrContainer').innerHTML = '<div class="error-state">' + esc(r.error || '') + '</div>'; return; }
-  const subs = r.subcategorias || [];
+  CACHE.vTerritorios = r.subcategorias || [];
+  renderTerritorios(CACHE.vTerritorios);
+}
+
+function renderTerritorios(subs){
+  const abiertos = terrSnapshotOpen();
 
   const contactos = CACHE.vTodos || [];
   const conteoBySubcat = {};
@@ -2187,6 +2216,7 @@ async function cargarTerritorios(){
     '</details>';
   });
   document.getElementById('terrContainer').innerHTML = html;
+  terrRestaurarOpen(abiertos);
 }
 
 function terrToggleAll(open){

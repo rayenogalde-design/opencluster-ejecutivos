@@ -2005,15 +2005,14 @@ async function cargarTerritorios(){
     }
   };
 
-  // Ordenar dentro de cada cat por nivel actual y por conteo
-  const nivelOrden = { prioritario:0, alto:1, medio:2, secundario:3, oportunista:4 };
+  // Ordenar dentro de cada categoría por % de match (descendente). Los sin score van al final.
   Object.keys(porCat).forEach(cat => {
     porCat[cat].sort((a, b) => {
       const da = datosDeVista(a);
       const db = datosDeVista(b);
-      const na = da ? nivelOrden[da.nivel] : 99;
-      const nb = db ? nivelOrden[db.nivel] : 99;
-      if(na !== nb) return na - nb;
+      const sa = da ? Number(da.score) : -1;
+      const sb = db ? Number(db.score) : -1;
+      if (sb !== sa) return sb - sa;
       const ca = conteoBySubcat[a.sub_categoria] || 0;
       const cb = conteoBySubcat[b.sub_categoria] || 0;
       return cb - ca;

@@ -337,15 +337,20 @@ input,select,textarea{font-family:inherit; font-size:14px;}
   font-size:13.5px; outline:none;
 }
 .list-stats{ font-size:12px; color:var(--mist); margin-top:10px; font-weight:600; }
-.list-items{ flex:1; overflow-y:auto; padding:10px; scrollbar-width:thin; scrollbar-color:var(--purple) var(--paper); }
-.list-items::-webkit-scrollbar{ width:10px; }
-.list-items::-webkit-scrollbar-track{ background:var(--paper); }
-.list-items::-webkit-scrollbar-thumb{ background:var(--purple-lt); border-radius:5px; border:2px solid var(--paper); }
-.list-items::-webkit-scrollbar-thumb:hover{ background:var(--purple); }
-.list-pane::after{
-  content:""; position:sticky; bottom:0; height:24px; display:block;
-  background:linear-gradient(180deg, transparent, rgba(255,255,255,.95));
-  pointer-events:none; margin-top:-24px;
+.list-items{ flex:1; overflow-y:auto; padding:10px; scrollbar-width:auto; scrollbar-color:var(--purple-dk) var(--purple-lt); }
+.list-items::-webkit-scrollbar{ width:16px; }
+.list-items::-webkit-scrollbar-track{ background:var(--purple-lt); border-radius:8px; }
+.list-items::-webkit-scrollbar-thumb{ background:var(--purple-dk); border-radius:8px; border:3px solid var(--purple-lt); min-height:40px; }
+.list-items::-webkit-scrollbar-thumb:hover{ background:var(--navy); }
+.list-scroll-hint{
+  position:sticky; top:0; z-index:5; background:linear-gradient(135deg, var(--purple-dk) 0%, var(--navy) 100%);
+  color:white; padding:8px 14px; margin:-10px -10px 10px; font-size:12px; font-weight:700;
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  border-radius:6px 6px 0 0; box-shadow:0 2px 6px rgba(15,23,42,.18);
+}
+.list-end-marker{
+  padding:14px; text-align:center; color:var(--purple-dk); background:var(--purple-lt);
+  border-radius:10px; margin-top:12px; font-size:12px; font-weight:700;
 }
 .contact-card{
   background:white; border:1px solid var(--smoke); border-radius:10px;
@@ -1461,7 +1466,14 @@ function renderLista(view){
       '</div>';
     return;
   }
-  container.innerHTML = lista.map(c => {
+  const hint = lista.length > 6
+    ? '<div class="list-scroll-hint"><span>Mostrando ' + lista.length + ' contactos</span><span style="opacity:.85;">Desplaza hacia abajo para ver todos &#8595;</span></div>'
+    : '';
+  const fin = lista.length > 6
+    ? '<div class="list-end-marker">Fin de la lista &middot; ' + lista.length + ' contactos en total</div>'
+    : '';
+
+  container.innerHTML = hint + lista.map(c => {
     const sel = String(c.id) === String(SELECTED_ID) ? ' sel' : '';
     const pipe = String(c.pipeline_estado || 'Lead').toLowerCase();
     const pipeClass = (pipe.indexOf('contactad') >= 0) ? 'contactado'
@@ -1479,7 +1491,7 @@ function renderLista(view){
         (huerfano ? '<span class="cc-pill huerfano">Sin categoría</span>' : '<span class="cc-pill">' + esc(c.sub_categoria) + '</span>') +
       '</div>' +
     '</div>';
-  }).join('');
+  }).join('') + fin;
 }
 
 function filtrarLista(view, q){

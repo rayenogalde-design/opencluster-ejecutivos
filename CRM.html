@@ -2051,7 +2051,20 @@ async function cargarTerritorios(){
     '<button class="btn" style="padding:6px 14px;font-size:12px;background:var(--purple-lt);color:var(--purple-dk);" onclick="terrToggleAll(false)">Colapsar todas</button>' +
   '</div>';
 
-  Object.keys(porCat).sort().forEach(cat => {
+  // Orden de categorías: Privados primero (la prioridad de campaña), después el resto alfabético
+  const ORDEN_CAT = ["Privados","Salud Pública","Educación","Gobierno Central/Regional","Sector Público Municipal","Fundaciones y ONGs","Profesionales de la Salud","Organizaciones Comunitarias","Otro"];
+  const catsOrdenadas = Object.keys(porCat).sort((a, b) => {
+    const ia = ORDEN_CAT.indexOf(a); const ib = ORDEN_CAT.indexOf(b);
+    if (ia >= 0 && ib >= 0) return ia - ib;
+    if (ia >= 0) return -1;
+    if (ib >= 0) return 1;
+    return a.localeCompare(b);
+  });
+
+  // Grid template: [nombre | badge | score | contactos | asignado | botón]
+  const GRID = 'display:grid;grid-template-columns:minmax(280px,1fr) 90px 55px 40px 130px 95px;align-items:center;gap:14px;';
+
+  catsOrdenadas.forEach(cat => {
     const subs = porCat[cat];
     const totalSubs = subs.length;
     const asignadasSub = subs.filter(s => s.ejecutivo_asignado).length;
@@ -2078,46 +2091,41 @@ async function cargarTerritorios(){
 
           const cadenas = CADENAS_POR_SUBCAT[s.sub_categoria] || [];
           const tieneCadenas = cadenas.length > 0;
+          const chev = tieneCadenas ? '<span style="color:var(--mist);font-size:11px;margin-right:6px;display:inline-block;width:10px;">▸</span>' : '<span style="display:inline-block;width:16px;"></span>';
+          const subNombre = '<span style="font-weight:700;color:var(--ink);font-size:13px;">' + esc(s.sub_categoria) + '</span>' +
+            (tieneCadenas ? ' <span style="color:var(--mist);font-weight:500;font-size:11.5px;">· ' + cadenas.length + ' cadenas</span>' : '');
 
-          // Header de la subcategoría (siempre visible)
-          let subHtml = '';
-          if (tieneCadenas) {
-            // Si tiene cadenas — usar <details> anidado para desplegarlas
-            subHtml += '<details style="border-bottom:1px solid var(--smoke);">' +
-              '<summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--cream-lt, #fafafa);"' + productosTooltip + '>' +
-                '<span style="flex:1;font-weight:700;color:var(--ink);font-size:13px;">' + esc(s.sub_categoria) + ' <span style="color:var(--mist);font-weight:500;">· ' + cadenas.length + ' cadenas</span></span>' +
-                badge + scoreTxt + cntChip +
-                '<div style="min-width:120px;text-align:right;">' + asignChip + '</div>' +
-                '<button class="btn" style="padding:4px 10px;font-size:11px;" onclick="event.stopPropagation();event.preventDefault();abrirAsignarTerritorio(\'' + esc(s.sub_categoria) + '\')">' + (s.ejecutivo_asignado ? 'Cambiar' : 'Asignar todo') + '</button>' +
-                '<span style="font-size:11px;color:var(--mist);margin-left:2px;">▾</span>' +
-              '</summary>' +
-              '<div style="background:white;padding:4px 0;">' +
-                cadenas.map(cad => {
-                  // Marcar como asignada si tiene asignación específica (clave compuesta)
-                  const claveCad = s.sub_categoria + ' › ' + cad;
-                  const filaCad = (subs.find(x => x.sub_categoria === claveCad) || {});
-                  const ejecCad = filaCad.ejecutivo_asignado || '';
-                  const chipCad = ejecCad
-                    ? '<span style="display:inline-block;padding:2px 8px;background:var(--purple-lt);color:var(--purple-dk);border-radius:10px;font-size:11px;font-weight:700;">' + esc(ejecCad) + '</span>'
-                    : '<span style="color:#94a3b8;font-size:11px;font-style:italic;">Sin asignar</span>';
-                  return '<div style="display:flex;align-items:center;gap:10px;padding:6px 16px 6px 36px;border-top:1px dashed var(--smoke);">' +
-                    '<span style="flex:1;color:var(--ink);font-size:12.5px;">' + esc(cad) + '</span>' +
-                    '<div style="min-width:120px;text-align:right;">' + chipCad + '</div>' +
-                    '<button class="btn" style="padding:3px 9px;font-size:10.5px;" onclick="abrirAsignarTerritorio(\'' + esc(claveCad) + '\')">' + (ejecCad ? 'Cambiar' : 'Asignar') + '</button>' +
-                  '</div>';
-                }).join('') +
-              '</div>' +
-            '</details>';
-          } else {
-            // Sin cadenas — fila simple (igual que antes)
-            subHtml += '<div style="display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--smoke);"' + productosTooltip + '>' +
-              '<span style="flex:1;font-weight:700;color:var(--ink);font-size:13px;">' + esc(s.sub_categoria) + '</span>' +
-              badge + scoreTxt + cntChip +
-              '<div style="min-width:120px;text-align:right;">' + asignChip + '</div>' +
-              '<button class="btn" style="padding:4px 10px;font-size:11px;" onclick="abrirAsignarTerritorio(\'' + esc(s.sub_categoria) + '\')">' + (s.ejecutivo_asignado ? 'Cambiar' : 'Asignar') + '</button>' +
+          const filaSub = '<div style="' + GRID + 'padding:9px 16px;border-bottom:1px solid var(--smoke);' + (tieneCadenas ? 'background:var(--cream-lt, #fafafa);cursor:pointer;' : '') + '"' + productosTooltip + '>' +
+            '<div style="display:flex;align-items:center;">' + chev + subNombre + '</div>' +
+            '<div>' + badge + '</div>' +
+            '<div style="text-align:right;">' + scoreTxt + '</div>' +
+            '<div style="text-align:center;">' + cntChip + '</div>' +
+            '<div style="text-align:right;">' + asignChip + '</div>' +
+            '<div style="text-align:right;"><button class="btn" style="padding:4px 10px;font-size:11px;width:100%;" onclick="event.stopPropagation();event.preventDefault();abrirAsignarTerritorio(\'' + esc(s.sub_categoria) + '\')">' + (s.ejecutivo_asignado ? 'Cambiar' : (tieneCadenas ? 'Asig. todo' : 'Asignar')) + '</button></div>' +
+          '</div>';
+
+          if (!tieneCadenas) return filaSub;
+
+          // Wrapping con details para las cadenas
+          const filasCad = cadenas.map(cad => {
+            const claveCad = s.sub_categoria + ' › ' + cad;
+            const filaCad = (subs.find(x => x.sub_categoria === claveCad) || {});
+            const ejecCad = filaCad.ejecutivo_asignado || '';
+            const chipCad = ejecCad
+              ? '<span style="display:inline-block;padding:2px 8px;background:var(--purple-lt);color:var(--purple-dk);border-radius:10px;font-size:11px;font-weight:700;">' + esc(ejecCad) + '</span>'
+              : '<span style="color:#94a3b8;font-size:11px;font-style:italic;">Sin asignar</span>';
+            return '<div style="' + GRID + 'padding:7px 16px 7px 42px;border-top:1px dashed var(--smoke);background:white;">' +
+              '<div style="color:var(--ink);font-size:12.5px;">' + esc(cad) + '</div>' +
+              '<div></div><div></div><div></div>' +
+              '<div style="text-align:right;">' + chipCad + '</div>' +
+              '<div style="text-align:right;"><button class="btn" style="padding:3px 9px;font-size:10.5px;width:100%;" onclick="abrirAsignarTerritorio(\'' + esc(claveCad) + '\')">' + (ejecCad ? 'Cambiar' : 'Asignar') + '</button></div>' +
             '</div>';
-          }
-          return subHtml;
+          }).join('');
+
+          return '<details>' +
+            '<summary style="list-style:none;cursor:pointer;">' + filaSub + '</summary>' +
+            filasCad +
+          '</details>';
         }).join('') +
       '</div>' +
     '</details>';

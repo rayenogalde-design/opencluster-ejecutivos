@@ -11,7 +11,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700;800&family=Montserrat:wght@600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 
 <style>
 :root{
@@ -57,21 +56,10 @@ input,select,textarea{font-family:inherit; font-size:14px;}
   font-family:'Playfair Display',serif; font-size:22px; font-weight:700;
   letter-spacing:.3px;
 }
-.topbar-mode{
-  display:flex; gap:4px; background:rgba(255,255,255,.1);
-  border:1px solid rgba(255,255,255,.16); border-radius:9px; padding:4px;
-  margin-left:auto;
-}
-.topbar-mode button{
-  background:transparent; color:rgba(255,255,255,.78); border:0;
-  padding:7px 14px; border-radius:7px; font-size:12px; font-weight:700;
-  transition:background .14s, color .14s;
-}
-.topbar-mode button.act{ background:rgba(255,255,255,.96); color:var(--navy); }
 .topbar-user{
   background:rgba(255,255,255,.16); padding:8px 14px; border-radius:18px;
   font-size:13px; font-weight:700; border:1px solid rgba(255,255,255,.22);
-  display:flex; align-items:center; gap:8px;
+  display:flex; align-items:center; gap:8px; margin-left:auto;
 }
 .topbar-user .avatar{
   width:24px; height:24px; border-radius:50%; background:var(--gold);
@@ -172,14 +160,8 @@ input,select,textarea{font-family:inherit; font-size:14px;}
 }
 .card-hd span{ font-size:11px; color:var(--mist); font-weight:600; }
 .card-body{ padding:18px 20px; }
-.chart-box{ height:260px; position:relative; }
 
 /* ════ Grids ════ */
-.grid-2{
-  display:grid; gap:18px;
-  grid-template-columns:repeat(auto-fit, minmax(360px, 1fr));
-  margin-bottom:24px;
-}
 .grid-3{
   display:grid; gap:18px;
   grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));
@@ -524,14 +506,7 @@ input,select,textarea{font-family:inherit; font-size:14px;}
     </a>
     <div class="topbar-title">CRM OpenCluster</div>
 
-    <!-- Toggle de modo (solo visible para Rayen) -->
-    <div class="topbar-mode" id="modeToggle" style="display:none;">
-      <button data-mode="ejecutiva" class="act" onclick="setMode('ejecutiva')">Ejecutiva</button>
-      <button data-mode="admin" onclick="setMode('admin')">Admin</button>
-      <button data-mode="direccion" onclick="setMode('direccion')">Dirección</button>
-    </div>
-
-    <button id="btnSyncRegistro" onclick="sincronizarConRegistro(true)" title="Trae al CRM los contactos y cotizaciones nuevos del Registro" style="display:none;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22);color:white;padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;align-items:center;gap:7px;">
+    <button id="btnSyncRegistro" onclick="sincronizarConRegistro(true)" title="Trae al CRM los contactos y cotizaciones nuevos del Registro" style="display:none;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22);color:white;padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;align-items:center;gap:7px;margin-left:auto;">
       <svg id="syncIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15.4 6.4L3 21"/><path d="M3 12a9 9 0 0 1 15.4-6.4L21 3"/><path d="M21 3v6h-6"/><path d="M3 21v-6h6"/></svg>
       <span id="syncLabel">Sincronizar con Registro</span>
     </button>
@@ -581,34 +556,6 @@ input,select,textarea{font-family:inherit; font-size:14px;}
         <span class="badge" id="badgeDup" style="display:none;">0</span>
       </div>
 
-      <div class="side-section" id="secMetricas">Métricas</div>
-      <div class="side-tab" data-view="vResumen" onclick="goView('vResumen')">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
-        Resumen
-      </div>
-      <div class="side-tab" data-view="vMetricas" onclick="goView('vMetricas')">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-6"/></svg>
-        Métricas Anuales
-      </div>
-      <div class="side-tab" data-view="vProductos" onclick="goView('vProductos')">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
-        Productos
-      </div>
-
-      <div class="side-section admin" id="secEquipo" style="display:none;">Equipo</div>
-      <div class="side-tab admin" data-view="vEquipoPipeline" id="navEquipoPipeline" onclick="goView('vEquipoPipeline')" style="display:none;">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5v-7a2 2 0 0 0-2-2H7"/><path d="M11.5 22H4a2 2 0 0 1-2-2v-7.5"/><path d="M22 7 15.5 13"/><path d="m2 17 6.5-6.5"/><circle cx="7" cy="3.5" r="1.5"/><circle cx="17" cy="20.5" r="1.5"/></svg>
-        Pipeline del Equipo
-      </div>
-      <div class="side-tab admin" data-view="vEquipoPerf" id="navEquipoPerf" onclick="goView('vEquipoPerf')" style="display:none;">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-        Performance por Ejecutivo
-      </div>
-      <div class="side-tab admin" data-view="vFAQ" id="navFAQ" onclick="goView('vFAQ')" style="display:none;">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
-        Preguntas Frecuentes
-      </div>
-
       <div class="side-section admin" id="secAdmin" style="display:none;">Administración</div>
       <div class="side-tab admin" data-view="vTerritorios" id="navTerr" onclick="goView('vTerritorios')" style="display:none;">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l3-3 12 12-3 3z"/><path d="M14 14l7 7"/><circle cx="6" cy="6" r="2"/></svg>
@@ -636,15 +583,9 @@ input,select,textarea{font-family:inherit; font-size:14px;}
           <p id="dshFecha">—</p>
         </div>
         <div class="kpis" id="dshKpis"></div>
-        <div class="grid-2">
-          <div class="card">
-            <div class="card-hd"><h3>Tareas del día</h3><span id="dshTareasCount">0</span></div>
-            <div class="card-body" id="dshTareas"></div>
-          </div>
-          <div class="card">
-            <div class="card-hd"><h3>Mi desempeño vs equipo</h3><span>últimos 6 meses</span></div>
-            <div class="card-body"><div class="chart-box"><canvas id="dsh-evo"></canvas></div></div>
-          </div>
+        <div class="card">
+          <div class="card-hd"><h3>Tareas del día</h3><span id="dshTareasCount">0</span></div>
+          <div class="card-body" id="dshTareas"></div>
         </div>
       </div>
 
@@ -744,87 +685,6 @@ input,select,textarea{font-family:inherit; font-size:14px;}
           <p>Posibles duplicados detectados. Confirmá o rechazá la fusión.</p>
         </div>
         <div id="dupContainer"></div>
-      </div>
-
-      <!-- ═══ Resumen (réplica del Portal) ═══ -->
-      <div class="view" id="vResumen">
-        <div class="sec-head">
-          <h1>Resumen</h1>
-          <p id="resPeriodo">—</p>
-        </div>
-        <div class="kpis" id="resKpis"></div>
-        <div class="grid-2">
-          <div class="card">
-            <div class="card-hd"><h3>Mi desempeño vs equipo</h3><span>últimos 6 meses</span></div>
-            <div class="card-body"><div class="chart-box"><canvas id="ch-evo"></canvas></div></div>
-          </div>
-          <div class="card">
-            <div class="card-hd"><h3>Mis reuniones vs equipo</h3><span>últimos 6 meses</span></div>
-            <div class="card-body"><div class="chart-box"><canvas id="ch-reu"></canvas></div></div>
-          </div>
-          <div class="card">
-            <div class="card-hd"><h3>Cotizaciones del mes</h3><span>vs equipo</span></div>
-            <div class="card-body"><div class="chart-box"><canvas id="ch-cot-mes"></canvas></div></div>
-          </div>
-          <div class="card">
-            <div class="card-hd"><h3>Ventas del año</h3><span>vs equipo</span></div>
-            <div class="card-body"><div class="chart-box"><canvas id="ch-vta-anio"></canvas></div></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ═══ Métricas Anuales (réplica del Portal) ═══ -->
-      <div class="view" id="vMetricas">
-        <div class="sec-head">
-          <h1>Métricas Anuales</h1>
-          <p>Año completo 2026 — Equipo Difusión</p>
-        </div>
-        <div class="grid-2">
-          <div class="card"><div class="card-hd"><h3>Cotizaciones por mes</h3></div><div class="card-body"><div class="chart-box"><canvas id="ma-cots"></canvas></div></div></div>
-          <div class="card"><div class="card-hd"><h3>Montos por mes</h3></div><div class="card-body"><div class="chart-box"><canvas id="ma-montos"></canvas></div></div></div>
-          <div class="card"><div class="card-hd"><h3>Ventas por mes</h3></div><div class="card-body"><div class="chart-box"><canvas id="ma-ventas"></canvas></div></div></div>
-          <div class="card"><div class="card-hd"><h3>Reuniones por mes</h3></div><div class="card-body"><div class="chart-box"><canvas id="ma-reuniones"></canvas></div></div></div>
-          <div class="card"><div class="card-hd"><h3>Salas Multisensoriales cotizadas</h3></div><div class="card-body"><div class="chart-box"><canvas id="ma-sm-cot"></canvas></div></div></div>
-          <div class="card"><div class="card-hd"><h3>Salas Multisensoriales ganadas</h3></div><div class="card-body"><div class="chart-box"><canvas id="ma-sm-gan"></canvas></div></div></div>
-        </div>
-      </div>
-
-      <!-- ═══ Productos ═══ -->
-      <div class="view" id="vProductos">
-        <div class="sec-head">
-          <h1>Productos</h1>
-          <p>Más cotizados, más vendidos y desglose por mes</p>
-        </div>
-        <div id="productosContainer">
-          <div class="loading-state"><div class="spinner"></div>Cargando productos…</div>
-        </div>
-      </div>
-
-      <!-- ═══ Equipo: Pipeline ═══ -->
-      <div class="view" id="vEquipoPipeline">
-        <div class="sec-head">
-          <h1>Pipeline del Equipo</h1>
-          <p>Visión global del estado comercial — todos los contactos por etapa</p>
-        </div>
-        <div id="pipelineContainer"><div class="loading-state"><div class="spinner"></div>Cargando…</div></div>
-      </div>
-
-      <!-- ═══ Equipo: Performance ═══ -->
-      <div class="view" id="vEquipoPerf">
-        <div class="sec-head">
-          <h1>Performance por Ejecutivo</h1>
-          <p>Comparativo mensual y anual del equipo</p>
-        </div>
-        <div id="perfContainer"><div class="loading-state"><div class="spinner"></div>Cargando…</div></div>
-      </div>
-
-      <!-- ═══ FAQ admin ═══ -->
-      <div class="view" id="vFAQ">
-        <div class="sec-head">
-          <h1>Preguntas Frecuentes</h1>
-          <p>Base de conocimiento del equipo</p>
-        </div>
-        <div id="faqContainer"><div class="loading-state">Próximamente — la migración mantiene las FAQ existentes.</div></div>
       </div>
 
       <!-- ═══ Territorios (admin) ═══ -->
@@ -977,8 +837,7 @@ const KEY_PASS = 'oc_central_pass';
 const KEY_OK   = 'oc_central_ok';
 
 let USUARIO = null;
-let ROL = 'ejecutivo';        // 'ejecutivo', 'admin', 'direccion'
-let MODO_VISTA = 'ejecutiva'; // solo aplica para Rayen: ejecutiva/admin/direccion
+let ROL = 'ejecutivo';        // 'ejecutivo' o 'admin' (Mario es 'direccion' pero el CRM lo redirige al Portal)
 const TEAM = [
   { full: "Rayen Ogalde",          short: "Rayen",          rol: "admin"     },
   { full: "Maximiliano Astudillo", short: "Maximiliano",    rol: "ejecutivo" },
@@ -1055,14 +914,11 @@ const CADENAS_POR_SUBCAT = {
 const CACHE = {
   vMis: null, vTodos: null, vCuentas: null,
   vTareas: null, vSinCat: null, vDup: null,
-  vResumen: null, vMetricas: null, vProductos: null,
   vTerritorios: null, vAud: null,
-  vEquipoPipeline: null, vEquipoPerf: null,
   vDashboard: null
 };
 const FILTROS = { vMis: '', vTodos: '' };
 let SELECTED_ID = null;
-const CHARTS = {};
 
 // ════════════════════════════════════════════════════════════════════════════
 // HELPERS
@@ -1171,10 +1027,7 @@ function setSaludo(){
   const saludo = horas < 12 ? 'Buenos días' : (horas < 19 ? 'Buenas tardes' : 'Buenas noches');
   const nombre = USUARIO ? USUARIO.split(' ')[0] : '';
   const el = document.getElementById('dshSaludo');
-  if(el){
-    if(ROL === 'direccion') el.textContent = 'Vista de Dirección — ' + nombre;
-    else el.textContent = saludo + ', ' + nombre;
-  }
+  if(el) el.textContent = saludo + ', ' + nombre;
   const fechaEl = document.getElementById('dshFecha');
   if(fechaEl){
     const opciones = { weekday:'long', year:'numeric', month:'long', day:'numeric' };
@@ -1212,7 +1065,12 @@ function detectarRol(usuario){
 function initApp(user){
   USUARIO = user;
   ROL = detectarRol(user);
-  MODO_VISTA = ROL === 'admin' ? 'admin' : (ROL === 'direccion' ? 'direccion' : 'ejecutiva');
+  // Mario no usa el CRM: su vista vive en el Portal del Ejecutivo
+  if (ROL === 'direccion') {
+    alert('El CRM está enfocado en gestión de contactos del equipo.\n\nTu vista principal está en el Portal del Ejecutivo.\nTe redirijo allá ahora.');
+    window.location.href = 'index.html';
+    return;
+  }
   document.getElementById('loginMask').style.display = 'none';
   document.getElementById('appWrap').style.display = '';
   document.getElementById('tbUser').textContent = user;
@@ -1220,68 +1078,21 @@ function initApp(user){
   aplicarVisibilidadPorRol();
   mostrarBannerDeploy();
   setSaludo();
-  // Vista inicial: Dashboard
   goView('vDashboard');
 }
 
 function aplicarVisibilidadPorRol(){
   const esAdmin = ROL === 'admin';
-  const esDir = ROL === 'direccion';
 
-  // Toggle de modo solo para Rayen (admin)
-  document.getElementById('modeToggle').style.display = esAdmin ? '' : 'none';
-
-  // Botón sincronizar Registro: visible para todos los ejecutivos (no Mario/Dirección)
+  // Botón sincronizar Registro: visible para todos los ejecutivos
   const btnSync = document.getElementById('btnSyncRegistro');
-  if (btnSync) btnSync.style.display = esDir ? 'none' : 'inline-flex';
+  if (btnSync) btnSync.style.display = 'inline-flex';
 
-  // Vistas admin (Territorios, Auditoría, Migración) — solo Rayen, no Mario
+  // Vistas admin (Territorios, Auditoría, Migración) — solo Rayen
   ['navTerr', 'navAud', 'navMigracion', 'secAdmin'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.style.display = esAdmin ? '' : 'none';
   });
-
-  // Vistas de Equipo (Pipeline, Performance, FAQ) — Rayen y Mario
-  ['navEquipoPipeline', 'navEquipoPerf', 'navFAQ', 'secEquipo'].forEach(id => {
-    const el = document.getElementById(id);
-    if(el) el.style.display = (esAdmin || esDir) ? '' : 'none';
-  });
-
-  // Si es Mario (Dirección): ocultar las vistas de ejecutivo individual
-  if(esDir){
-    ['navMis', 'navCuentas', 'navSinCat', 'navDup', 'navTareas', 'secContactos'].forEach(id => {
-      const el = document.getElementById(id);
-      if(el) el.style.display = 'none';
-    });
-  }
-}
-
-function setMode(modo){
-  MODO_VISTA = modo;
-  document.querySelectorAll('.topbar-mode button').forEach(b => {
-    b.classList.toggle('act', b.dataset.mode === modo);
-  });
-  // Aplicar visibilidad temporal según modo seleccionado por Rayen
-  // (sin cambiar el rol real, solo el filtro de UI)
-  // Implementación simple: re-ejecuta visibilidad usando MODO_VISTA como override
-  if(MODO_VISTA === 'direccion'){
-    ['navMis', 'navCuentas', 'navSinCat', 'navDup', 'navTareas', 'secContactos', 'navTerr', 'navAud', 'navMigracion', 'secAdmin']
-      .forEach(id => { const el = document.getElementById(id); if(el) el.style.display = 'none'; });
-    ['navEquipoPipeline', 'navEquipoPerf', 'navFAQ', 'secEquipo']
-      .forEach(id => { const el = document.getElementById(id); if(el) el.style.display = ''; });
-    goView('vDashboard');
-  } else if(MODO_VISTA === 'ejecutiva'){
-    ['navMis', 'navCuentas', 'navSinCat', 'navDup', 'navTareas', 'secContactos']
-      .forEach(id => { const el = document.getElementById(id); if(el) el.style.display = ''; });
-    ['navTerr', 'navAud', 'navMigracion', 'secAdmin']
-      .forEach(id => { const el = document.getElementById(id); if(el) el.style.display = 'none'; });
-    ['navEquipoPipeline', 'navEquipoPerf', 'navFAQ', 'secEquipo']
-      .forEach(id => { const el = document.getElementById(id); if(el) el.style.display = 'none'; });
-    goView('vMis');
-  } else { // admin = todo visible
-    aplicarVisibilidadPorRol();
-    goView('vDashboard');
-  }
 }
 
 function goView(id){
@@ -1297,11 +1108,6 @@ function goView(id){
     case 'vSinCat':          cargarHuerfanos(); break;
     case 'vDup':             cargarDuplicados(); break;
     case 'vTareas':          cargarTareas(); break;
-    case 'vResumen':         cargarResumen(); break;
-    case 'vMetricas':        cargarMetricasAnuales(); break;
-    case 'vProductos':       cargarProductos(); break;
-    case 'vEquipoPipeline':  cargarEquipoPipeline(); break;
-    case 'vEquipoPerf':      cargarEquipoPerf(); break;
     case 'vTerritorios':     cargarTerritorios(); break;
     case 'vAud':             cargarAuditoria(); break;
     case 'vMigracion':       /* no autoload */ break;
@@ -1798,103 +1604,6 @@ async function cargarDuplicados(){
     return;
   }
   cont.innerHTML = lista.map(d => '<div class="card" style="margin-bottom:12px;padding:16px;"><div>Duplicado pendiente — UI completa próxima iteración (modal comparativo lado a lado).</div></div>').join('');
-}
-
-// ════════════════════════════════════════════════════════════════════════════
-// RESUMEN / MÉTRICAS / PRODUCTOS
-// ════════════════════════════════════════════════════════════════════════════
-async function cargarResumen(){
-  const r = await fetchAPI('crm_dashboard_ejecutivo', { ejecutivo: USUARIO });
-  if(!r.ok) return;
-  const k = r.kpis || {};
-  document.getElementById('resPeriodo').textContent = 'Mes activo: ' + (k.mes || '');
-  document.getElementById('resKpis').innerHTML =
-    '<div class="kpi"><div class="kpi-lbl">Cotizaciones del mes</div><div class="kpi-val">' + (k.cotizaciones_mes || 0) + '</div></div>' +
-    '<div class="kpi kj"><div class="kpi-lbl">Ventas cerradas</div><div class="kpi-val" style="color:var(--jade-dk)">' + (k.ventas_cerradas_mes || 0) + '</div><div class="kpi-sub">Tasa ' + (k.tasa_conversion || 0) + '%</div></div>' +
-    '<div class="kpi kg"><div class="kpi-lbl">Ventas netas</div><div class="kpi-val sm">' + fmtM(k.monto_neto_mes || 0) + '</div></div>' +
-    '<div class="kpi kr"><div class="kpi-lbl">Sin gestión</div><div class="kpi-val" style="color:var(--ruby-dk)">' + (k.sin_gestion || 0) + '</div></div>';
-
-  await cargarChartsResumen();
-}
-
-async function cargarChartsResumen(){
-  const r = await fetchAPI('crm_comparativo_equipo', {});
-  if(!r.ok) return;
-  const data = r.comparativo || [];
-  mkChart('ch-cot-mes', { type:'bar', data:{ labels:data.map(d=>d.ejecutivo), datasets:[{label:'Cotizaciones mes', data:data.map(d=>d.cot_mes_cant), backgroundColor:'#7c3aed'}]}, options: barOpts() });
-  mkChart('ch-vta-anio', { type:'bar', data:{ labels:data.map(d=>d.ejecutivo), datasets:[{label:'Ventas año', data:data.map(d=>d.gan_anio_cant), backgroundColor:'#10b981'}]}, options: barOpts() });
-}
-
-async function cargarMetricasAnuales(){
-  const r = await fetchAPI('crm_metricas_anuales', { ejecutivo: USUARIO });
-  if(!r.ok) return;
-  const s = r.series || {};
-  mkChart('ma-cots',     lineCfg('Cotizaciones', s.cotizaciones_por_mes, '#7c3aed'));
-  mkChart('ma-montos',   lineCfg('Monto', s.montos_por_mes, '#C9A96E'));
-  mkChart('ma-ventas',   lineCfg('Ventas', s.ventas_por_mes, '#10b981'));
-  mkChart('ma-reuniones',lineCfg('Reuniones', s.reuniones_por_mes, '#06b3fd'));
-  mkChart('ma-sm-cot',   lineCfg('SM cotizadas', s.sm_cotizadas_por_mes, '#f59e0b'));
-  mkChart('ma-sm-gan',   lineCfg('SM ganadas', s.sm_ganadas_por_mes, '#ef4444'));
-}
-
-function lineCfg(label, serie, color){
-  return {
-    type:'line',
-    data:{ labels:(serie||[]).map(s=>s.mes), datasets:[{label:label, data:(serie||[]).map(s=>s.valor), borderColor:color, backgroundColor:color+'33', tension:0.3, fill:true, borderWidth:2}]},
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
-  };
-}
-
-function barOpts(){
-  return { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} };
-}
-
-function mkChart(id, cfg){
-  const el = document.getElementById(id);
-  if(!el) return;
-  if(CHARTS[id]) CHARTS[id].destroy();
-  CHARTS[id] = new Chart(el, cfg);
-}
-
-async function cargarProductos(){
-  document.getElementById('productosContainer').innerHTML = '<div class="loading-state">Productos — vista completa próxima iteración. Se conectará al endpoint del Cotizador para ver más cotizados / más vendidos / desglose por mes.</div>';
-}
-
-// ════════════════════════════════════════════════════════════════════════════
-// EQUIPO (Pipeline + Performance) — para Rayen y Mario
-// ════════════════════════════════════════════════════════════════════════════
-async function cargarEquipoPipeline(){
-  document.getElementById('pipelineContainer').innerHTML = '<div class="loading-state">Pipeline del equipo — próxima iteración. Mostrará funnel con cuántos contactos hay en cada etapa, agregado por ejecutivo.</div>';
-}
-
-async function cargarEquipoPerf(){
-  const r = await fetchAPI('crm_comparativo_equipo', {});
-  if(!r.ok){ document.getElementById('perfContainer').innerHTML = '<div class="error-state">' + esc(r.error || '') + '</div>'; return; }
-  const data = r.comparativo || [];
-  const cont = document.getElementById('perfContainer');
-  cont.innerHTML =
-    '<table style="width:100%;border-collapse:collapse;background:white;border-radius:10px;overflow:hidden;box-shadow:var(--shadow-sm);">' +
-      '<thead><tr style="background:var(--navy);color:white;">' +
-        '<th style="padding:14px;text-align:left;">Ejecutivo</th>' +
-        '<th style="padding:14px;">Cot. Mes</th>' +
-        '<th style="padding:14px;">Monto Mes</th>' +
-        '<th style="padding:14px;">Cot. Año</th>' +
-        '<th style="padding:14px;">Ventas Año</th>' +
-        '<th style="padding:14px;">Monto Ventas</th>' +
-        '<th style="padding:14px;">Reuniones</th>' +
-      '</tr></thead>' +
-      '<tbody>' + data.map(d =>
-        '<tr style="border-bottom:1px solid var(--smoke);">' +
-          '<td style="padding:12px 14px;font-weight:700;">' + esc(d.ejecutivo) + '</td>' +
-          '<td style="padding:12px 14px;text-align:center;">' + d.cot_mes_cant + '</td>' +
-          '<td style="padding:12px 14px;text-align:center;">' + fmtM(d.cot_mes_monto) + '</td>' +
-          '<td style="padding:12px 14px;text-align:center;">' + d.cot_anio_cant + '</td>' +
-          '<td style="padding:12px 14px;text-align:center;color:var(--jade-dk);font-weight:700;">' + d.gan_anio_cant + '</td>' +
-          '<td style="padding:12px 14px;text-align:center;color:var(--jade-dk);font-weight:700;">' + fmtM(d.gan_anio_monto) + '</td>' +
-          '<td style="padding:12px 14px;text-align:center;">' + d.reuniones_mes + '</td>' +
-        '</tr>'
-      ).join('') + '</tbody>' +
-    '</table>';
 }
 
 // ════════════════════════════════════════════════════════════════════════════

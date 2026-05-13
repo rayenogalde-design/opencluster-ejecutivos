@@ -148,11 +148,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;colo
   <p class="sub">Fichas de productos disponibles para el equipo comercial</p>
 </div>
 
-<!-- Banner: cómo publicar una ficha nueva -->
-<div style="max-width:1200px;margin:0 auto 20px;padding:16px 22px;background:linear-gradient(135deg,#fff8f0,#ffe4cc);border:1px solid #ffd9b3;border-radius:10px;display:flex;align-items:center;gap:18px;flex-wrap:wrap">
-  <div style="flex:1;min-width:240px">
-    <div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:13px;color:#c54a35;letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px">¿Cómo publicar una ficha nueva?</div>
-    <div style="font-size:13px;line-height:1.5;color:#3a4555">1. Crea la ficha en el <b>Generador</b>. <br>2. Cuando esté lista, haz clic en <b>"Registrar ficha técnica"</b> (botón azul abajo del generador). <br>3. La primera vez te pide autorizar Drive — aceptas y queda. <br>4. La ficha aparece automáticamente en esta biblioteca para todo el equipo.</div>
+<!-- Conteo de fichas + acceso rapido a Drive -->
+<div style="max-width:1100px;margin:0 auto 20px;padding:16px 24px;background:#fff;border:1px solid rgba(0,26,96,.08);border-radius:10px;display:flex;align-items:center;gap:18px;box-shadow:0 2px 8px rgba(0,26,96,.04)">
+  <div style="display:flex;align-items:center;gap:14px;flex:1;min-width:0">
+    <div style="width:48px;height:48px;border-radius:10px;background:linear-gradient(135deg,var(--navy),#0a2e8a);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+    </div>
+    <div style="min-width:0">
+      <div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:24px;color:var(--navy);line-height:1.1" id="totalCount">—</div>
+      <div style="font-size:12px;color:var(--subtle);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-top:2px">Fichas técnicas publicadas</div>
+    </div>
   </div>
   <a id="btnAbrirDrive" href="#" target="_blank" rel="noopener" style="padding:11px 22px;background:linear-gradient(135deg,#ff7e00,#c54a35);color:#fff;border-radius:8px;font-family:Montserrat,sans-serif;font-weight:700;font-size:13px;text-decoration:none;letter-spacing:.3px;flex-shrink:0;box-shadow:0 4px 12px rgba(255,126,0,.25)">Abrir carpeta de Drive</a>
 </div>
@@ -403,6 +408,9 @@ async function loadFichas() {
       creador: f.creador || '',
       categoria: f.categoria || ''
     }));
+    // Actualizar el contador grande arriba
+    const tc = document.getElementById('totalCount');
+    if(tc) tc.textContent = fichas.length;
     if (!fichas.length) { showEmpty(); return; }
     renderCards(fichas);
   } catch (e) {
@@ -466,6 +474,8 @@ async function eliminarFicha(fileId, nombreProducto){
     if(!data.ok) throw new Error(data.error || 'Respuesta no OK');
     // Quitar la ficha del array local y re-renderizar
     fichas = fichas.filter(f => f.fileId !== fileId);
+    const tc = document.getElementById('totalCount');
+    if(tc) tc.textContent = fichas.length;
     filterFichas();
   } catch(e){
     console.error('Error eliminando ficha:', e);

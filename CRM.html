@@ -1048,11 +1048,10 @@ let SELECTED_ID = null;
 // ════════════════════════════════════════════════════════════════════════════
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-// Visibilidad híbrida: ¿este contacto es del usuario actual (puede editar)?
-// Rayen como admin puede editar todo. Los ejecutivos solo lo suyo.
+// ¿Este contacto está asignado al usuario actual? (NO depende del rol)
+// Sirve para filtrar "Mis Contactos" y para mostrar "Asignado a ti".
 function esOwner(c){
   if (!c) return false;
-  if (ROL === 'admin') return true;
   const asign = String(c.ejecutivo_asignado || '');
   const corto = (USUARIO || '').split(' ')[0];
   if (asign) {
@@ -1061,6 +1060,13 @@ function esOwner(c){
   // Sin asignar: lo considero mío si yo lo creé
   const creador = String(c.ejecutivo_creador || '');
   return creador === USUARIO || creador === corto;
+}
+
+// ¿Puedo editar este contacto? Admin (Rayen) puede todo. Ejecutivos solo lo suyo.
+function puedeEditar(c){
+  if (!c) return false;
+  if (ROL === 'admin') return true;
+  return esOwner(c);
 }
 
 // Nombre amigable del dueño para sello "Asignado a X"
@@ -1479,6 +1485,7 @@ function renderFicha(container, data){
   const waNum = telLimpio.length >= 8 ? (telLimpio.startsWith('56') ? telLimpio : '56' + telLimpio) : '';
   const waMsg = encodeURIComponent('Hola ' + (c.nombre || '') + ', soy ' + USUARIO + ' de OpenCluster Tech.');
   const owner = esOwner(c);
+  const editable = puedeEditar(c);
   const ownerName = ownerLabel(c);
   const tooltipBloqueo = 'Este contacto está asignado a ' + ownerName + '. Pídele a Rayen que te lo reasigne si quieres trabajarlo.';
 
@@ -1502,10 +1509,10 @@ function renderFicha(container, data){
       sello +
     '</div>' +
     '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;">' +
-      (owner
+      (editable
         ? '<button class="btn primary" onclick="abrirModalEditarContacto(\'' + esc(c.id) + '\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Editar contacto</button>'
         : '<button class="btn" disabled title="' + esc(tooltipBloqueo) + '" style="opacity:.5;cursor:not-allowed;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Editar contacto</button>') +
-      (owner
+      (editable
         ? '<button class="btn" onclick="abrirModalNuevaInteraccion(\'' + esc(c.id) + '\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> Nueva interacción</button>'
         : '<button class="btn" disabled title="' + esc(tooltipBloqueo) + '" style="opacity:.5;cursor:not-allowed;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Nueva interacción</button>') +
       (c.email ? '<button class="btn" onclick="abrirEmailPlantilla(\'' + esc(c.id) + '\')">Enviar correo</button>' : '') +

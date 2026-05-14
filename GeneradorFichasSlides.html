@@ -5470,12 +5470,24 @@ function descargarFichaJSON(){
 const OAUTH_CLIENT_ID = '1006878042668-v7aft4fm0ldn5q75lp479hbpc7cohsr2.apps.googleusercontent.com';
 const OAUTH_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const FICHAS_FOLDER_NAME = 'OpenCluster Fichas Tecnicas';
+// FolderId fijo de la carpeta "OpenCluster Fichas Tecnicas" en el Drive de Rayen.
+// Hardcodearlo previene que otros ejecutivos (Germán, William, etc.) creen una carpeta
+// duplicada en su propio Drive — todos publican en la misma carpeta compartida.
+// Para que un ejecutivo pueda publicar, la carpeta debe estar compartida con su correo
+// @opencluster-tech.cl como Editor en Drive.
+const FICHAS_FOLDER_ID = '1cb6VtiGR9ygj_B2co5WDSNXER9jELj4y';
 var _fichasFolderId = null;
 var _oauthTokenClient = null;
 var _oauthAccessToken = null;
 
 async function buscarOCrearCarpetaFichas(tokenParam){
   if(_fichasFolderId) return _fichasFolderId;
+  // Path principal: usar el folderId fijo (carpeta compartida de Rayen)
+  if(FICHAS_FOLDER_ID){
+    _fichasFolderId = FICHAS_FOLDER_ID;
+    return _fichasFolderId;
+  }
+  // Fallback (solo si por alguna razón FICHAS_FOLDER_ID quedara vacío): buscar/crear por nombre
   const token = tokenParam || _oauthAccessToken || await obtenerAccessTokenOAuth();
   const q = encodeURIComponent("name='" + FICHAS_FOLDER_NAME + "' and mimeType='application/vnd.google-apps.folder' and trashed=false");
   const respBuscar = await fetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,name)', {

@@ -886,7 +886,13 @@ input,select,textarea{font-family:inherit; font-size:14px;}
             <div class="card-body" id="dshFunnel"></div>
           </div>
           <div class="card dsh-reuniones">
-            <div class="card-hd"><h3>Próximas reuniones</h3><span id="dshReunionesCount">0</span></div>
+            <div class="card-hd">
+              <h3>Próximas reuniones</h3>
+              <button onclick="abrirModalNuevaReunion()" style="background:var(--purple);color:white;border:none;padding:5px 11px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                Nueva
+              </button>
+            </div>
             <div class="card-body" id="dshReuniones"></div>
           </div>
         </div>
@@ -1357,6 +1363,60 @@ input,select,textarea{font-family:inherit; font-size:14px;}
     <div class="modal-foot">
       <button class="btn" onclick="cerrarModalNuevoContacto()">Cancelar</button>
       <button class="btn primary" id="nc-btn-guardar" onclick="guardarNuevoContacto()">Guardar contacto</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ Modal Nueva Reunión ════ -->
+<div class="modal-backdrop" id="modalNuevaReunion">
+  <div class="modal-box" style="max-width:580px;">
+    <div class="modal-head">
+      <h2>Nueva reunión</h2>
+      <button class="modal-close" onclick="cerrarModalNuevaReunion()" aria-label="Cerrar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="nr-contacto-id">
+      <div id="nr-buscador-area">
+        <label style="display:block;font-weight:700;font-size:13px;color:var(--ink);margin-bottom:6px;">Contacto <span style="color:var(--ruby);">*</span></label>
+        <div style="position:relative;">
+          <input type="text" id="nr-buscador" oninput="buscarContactosReunion(this.value)" placeholder="Escribe nombre, institución o email…" style="width:100%;padding:10px 12px;border:1px solid var(--border-subtle);border-radius:8px;font-size:14px;">
+          <div id="nr-resultados" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid var(--border-subtle);border-radius:8px;margin-top:4px;max-height:240px;overflow-y:auto;z-index:10;box-shadow:0 6px 20px rgba(0,0,0,.08);"></div>
+        </div>
+      </div>
+      <div id="nr-seleccionado" style="display:none;background:var(--surface-selected);border:1px solid var(--border-subtle);border-radius:10px;padding:11px 14px;margin-top:12px;font-size:13px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+          <div style="flex:1;">
+            <div style="color:var(--text-3);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Contacto</div>
+            <div id="nr-seleccionado-nombre" style="font-family:var(--font-serif);font-size:16px;color:var(--text-1);font-weight:500;"></div>
+            <div id="nr-seleccionado-inst" style="font-size:12.5px;color:var(--text-2);margin-top:2px;"></div>
+            <div id="nr-seleccionado-email" style="font-size:11.5px;color:var(--text-3);margin-top:2px;"></div>
+          </div>
+          <button onclick="limpiarSeleccionReunion()" style="background:transparent;border:1px solid var(--border-subtle);padding:4px 9px;border-radius:6px;font-size:11px;cursor:pointer;color:var(--text-2);">Cambiar</button>
+        </div>
+      </div>
+      <div class="fld-row" style="margin-top:14px;">
+        <div class="fld"><label>Fecha y hora <span style="color:var(--ruby);">*</span></label><input type="datetime-local" id="nr-fecha"></div>
+        <div class="fld"><label>Tipo</label>
+          <select id="nr-tipo">
+            <option value="Online">Online (Zoom/Meet)</option>
+            <option value="Presencial">Presencial</option>
+            <option value="Llamada">Llamada telefónica</option>
+            <option value="Visita">Visita a terreno</option>
+          </select>
+        </div>
+      </div>
+      <div class="fld-row single">
+        <div class="fld"><label>Resultado / Notas</label><textarea id="nr-notas" rows="3" placeholder="¿Qué se trató? Acuerdos, próximos pasos…"></textarea></div>
+      </div>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-2);margin-top:8px;">
+        <input type="checkbox" id="nr-cambiar-pipeline" checked> Cambiar pipeline del contacto a "Reunión"
+      </label>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="cerrarModalNuevaReunion()">Cancelar</button>
+      <button class="btn primary" id="nr-btn-guardar" onclick="guardarNuevaReunion()">Agendar reunión</button>
     </div>
   </div>
 </div>
@@ -2068,6 +2128,7 @@ async function cargarReunionesDashboard(){
   if(!container) return;
   container.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
   let r = await fetchAPI('crm_reuniones_proximas', { ejecutivo: USUARIO, dias: 14 });
+  if(cntEl) cntEl.textContent = (r && r.ok ? (r.reuniones||[]).length : 0);
   let reuniones = [];
   let modo = 'proximas';
   if(r && r.ok && Array.isArray(r.reuniones)){
@@ -2096,7 +2157,7 @@ async function cargarReunionesDashboard(){
     else if(modo === 'fallback') head.textContent = 'Contactos en reunión';
     else head.textContent = 'Reuniones';
   }
-  cntEl.textContent = reuniones.length;
+  if(cntEl) cntEl.textContent = reuniones.length;
   if(!reuniones.length){
     container.innerHTML = '<div style="padding:14px 4px;color:var(--subtle);font-size:13px;">No hay reuniones próximas registradas.</div>';
     return;
@@ -2720,6 +2781,7 @@ function renderFicha(container, data){
         ? '<button class="btn" onclick="abrirModalNuevaInteraccion(\'' + esc(c.id) + '\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> Nueva interacción</button>'
         : '<button class="btn" disabled title="' + esc(tooltipBloqueo) + '" style="opacity:.5;cursor:not-allowed;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Nueva interacción</button>') +
       '<button class="btn" onclick="abrirModalNuevaTarea(\'' + esc(c.id) + '\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Nueva tarea</button>' +
+      '<button class="btn" onclick="abrirModalNuevaReunion(\'' + esc(c.id) + '\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Agendar reunión</button>' +
       (c.email ? '<button class="btn" onclick="abrirEmailPlantilla(\'' + esc(c.id) + '\')">Enviar correo</button>' : '') +
       (waNum ? '<a class="btn" target="_blank" href="https://wa.me/' + waNum + '?text=' + waMsg + '">WhatsApp</a>' : '') +
       (ROL === 'admin'
@@ -3390,6 +3452,135 @@ document.addEventListener('click', (e) => {
     const m = document.getElementById(id);
     if(m && m.classList.contains('show') && e.target === m){ m.classList.remove('show'); }
   });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// MODAL NUEVA REUNIÓN — escribe en pestaña Reuniones del Sheet
+// ════════════════════════════════════════════════════════════════════════════
+function abrirModalNuevaReunion(contactoIdPreseleccionado){
+  document.getElementById('nr-contacto-id').value = '';
+  document.getElementById('nr-buscador').value = '';
+  document.getElementById('nr-resultados').style.display = 'none';
+  document.getElementById('nr-seleccionado').style.display = 'none';
+  document.getElementById('nr-buscador-area').style.display = '';
+  document.getElementById('nr-fecha').value = _datetimeLocalDefault();
+  document.getElementById('nr-tipo').value = 'Online';
+  document.getElementById('nr-notas').value = '';
+  document.getElementById('nr-cambiar-pipeline').checked = true;
+  document.getElementById('modalNuevaReunion').classList.add('show');
+
+  if(contactoIdPreseleccionado){
+    // Preseleccionar desde la cache local
+    try {
+      const raw = localStorage.getItem('crm_cache_contactos_' + USUARIO);
+      if(raw){
+        const cache = JSON.parse(raw);
+        const c = (cache.contactos || []).find(x => String(x.id) === String(contactoIdPreseleccionado));
+        if(c) seleccionarContactoReunion(c);
+      }
+    } catch(e){}
+  } else {
+    setTimeout(() => document.getElementById('nr-buscador').focus(), 80);
+  }
+}
+function cerrarModalNuevaReunion(){ document.getElementById('modalNuevaReunion').classList.remove('show'); }
+function _datetimeLocalDefault(){
+  // Próxima hora en punto, en formato yyyy-MM-ddTHH:mm
+  const d = new Date();
+  d.setMinutes(0, 0, 0);
+  d.setHours(d.getHours() + 1);
+  const pad = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+function buscarContactosReunion(q){
+  q = String(q || '').trim().toLowerCase();
+  const cont = document.getElementById('nr-resultados');
+  if(q.length < 2){ cont.style.display = 'none'; cont.innerHTML = ''; return; }
+  const lista = CACHE.vTodos || [];
+  const score = c => {
+    const nom = String(c.nombre||'').toLowerCase();
+    const ins = String(c.institucion||'').toLowerCase();
+    const em = String(c.email||'').toLowerCase();
+    let s = 0;
+    if(nom.indexOf(q) === 0) s += 100;
+    else if(nom.indexOf(q) >= 0) s += 50;
+    if(ins.indexOf(q) === 0) s += 30;
+    else if(ins.indexOf(q) >= 0) s += 15;
+    if(em.indexOf(q) >= 0) s += 10;
+    return s;
+  };
+  const resultados = lista.map(c => ({...c, _s: score(c)})).filter(c => c._s > 0).sort((a,b) => b._s - a._s).slice(0, 10);
+  if(!resultados.length){
+    cont.innerHTML = '<div style="padding:12px;color:var(--text-3);font-size:13px;text-align:center;">Sin coincidencias</div>';
+    cont.style.display = '';
+    return;
+  }
+  cont.innerHTML = resultados.map(c =>
+    '<div onclick="seleccionarContactoReunion(' + JSON.stringify({id:c.id, nombre:c.nombre, institucion:c.institucion, email:c.email, cargo:c.cargo}).replace(/"/g, '&quot;') + ')" style="padding:9px 14px;cursor:pointer;border-bottom:1px solid var(--border-subtle);transition:background .12s;" onmouseover="this.style.background=\'var(--surface-selected, #f7f3ee)\'" onmouseout="this.style.background=\'transparent\'">' +
+      '<div style="font-family:var(--font-serif);font-size:14px;color:var(--text-1);">' + esc(c.nombre || c.institucion || '(sin nombre)') + '</div>' +
+      '<div style="font-size:11.5px;color:var(--text-3);margin-top:2px;">' + esc(c.institucion || '') + (c.email ? ' · ' + esc(c.email) : '') + '</div>' +
+    '</div>'
+  ).join('');
+  cont.style.display = '';
+}
+function seleccionarContactoReunion(c){
+  document.getElementById('nr-contacto-id').value = c.id || '';
+  document.getElementById('nr-seleccionado-nombre').textContent = c.nombre || c.institucion || '(sin nombre)';
+  document.getElementById('nr-seleccionado-inst').textContent = [c.institucion, c.cargo].filter(Boolean).join(' · ');
+  document.getElementById('nr-seleccionado-email').textContent = c.email || '';
+  document.getElementById('nr-seleccionado').dataset.nombre = c.nombre || '';
+  document.getElementById('nr-seleccionado').dataset.institucion = c.institucion || '';
+  document.getElementById('nr-seleccionado').dataset.email = c.email || '';
+  document.getElementById('nr-buscador-area').style.display = 'none';
+  document.getElementById('nr-seleccionado').style.display = '';
+  document.getElementById('nr-resultados').style.display = 'none';
+  setTimeout(() => document.getElementById('nr-fecha').focus(), 60);
+}
+function limpiarSeleccionReunion(){
+  document.getElementById('nr-contacto-id').value = '';
+  document.getElementById('nr-buscador').value = '';
+  document.getElementById('nr-buscador-area').style.display = '';
+  document.getElementById('nr-seleccionado').style.display = 'none';
+  setTimeout(() => document.getElementById('nr-buscador').focus(), 60);
+}
+async function guardarNuevaReunion(){
+  const contactoId = document.getElementById('nr-contacto-id').value;
+  if(!contactoId){ alert('Seleccioná un contacto'); document.getElementById('nr-buscador').focus(); return; }
+  const fechaRaw = document.getElementById('nr-fecha').value;
+  if(!fechaRaw){ alert('Indicá fecha y hora'); document.getElementById('nr-fecha').focus(); return; }
+  const sel = document.getElementById('nr-seleccionado');
+  const tipo = document.getElementById('nr-tipo').value;
+  const notas = document.getElementById('nr-notas').value.trim();
+  const cambiarPipe = document.getElementById('nr-cambiar-pipeline').checked;
+  const btn = document.getElementById('nr-btn-guardar');
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  const r = await fetchAPI('crm_crear_reunion', {
+    contacto_id: contactoId,
+    nombre: sel.dataset.nombre || '',
+    institucion: sel.dataset.institucion || '',
+    email: sel.dataset.email || '',
+    fecha: fechaRaw.replace('T', ' '),
+    fecha_iso: fechaRaw,
+    tipo: tipo,
+    notas: notas,
+    resultado: notas,
+    cambiar_a_reunion: cambiarPipe,
+    solicitante: USUARIO
+  });
+  btn.disabled = false; btn.textContent = 'Agendar reunión';
+  if(!r.ok){ alert('Error: ' + (r.error || 'desconocido')); return; }
+  try {
+    localStorage.removeItem('crm_cache_contactos_' + USUARIO);
+    CACHE.vMis = null; CACHE.vTodos = null;
+  } catch(e){}
+  cerrarModalNuevaReunion();
+  // Refrescar dashboard si está activo
+  const v = document.querySelector('.view.act');
+  if(v && v.id === 'vDashboard' && typeof cargarReunionesDashboard === 'function') cargarReunionesDashboard();
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const m = document.getElementById('modalNuevaReunion');
+  if(m) m.addEventListener('click', e => { if(e.target === m) cerrarModalNuevaReunion(); });
 });
 
 // ════════════════════════════════════════════════════════════════════════════

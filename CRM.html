@@ -377,6 +377,33 @@ input,select,textarea{font-family:inherit; font-size:14px;}
 }
 @keyframes spin{ to{ transform:rotate(360deg);} }
 
+/* ════ Owner badge (sello del dueño en ficha) ════ */
+.owner-badge{
+  display:inline-flex; align-items:center; gap:8px;
+  background:var(--purple-lt); border:1px solid rgba(124,58,237,.25);
+  padding:6px 13px; border-radius:20px;
+  font-size:12.5px; font-weight:700; color:var(--purple-dk);
+  white-space:nowrap; flex-shrink:0;
+}
+.owner-badge.mine{
+  background:linear-gradient(135deg, #faf3e1, #f5edd9);
+  border-color:var(--gold);
+  color:var(--gold-dk);
+}
+.owner-av{
+  width:22px; height:22px; border-radius:50%;
+  background:var(--purple-dk); color:white;
+  display:inline-flex; align-items:center; justify-content:center;
+  font-size:10.5px; font-weight:800;
+}
+.owner-badge.mine .owner-av{ background:var(--gold-dk); }
+
+/* ════ Card de contacto en lista (owner mini info) ════ */
+.cc-owner-line{ font-size:11.5px; color:var(--purple-dk); font-weight:700; margin-top:6px; }
+.cc-owner-line.mine{ color:var(--gold-dk); }
+.cc-owner-line .ow-dot{ display:inline-block; width:6px; height:6px; border-radius:50%;
+  background:currentColor; margin-right:5px; vertical-align:middle; }
+
 /* ════ Botones genéricos ════ */
 .btn{
   display:inline-flex; align-items:center; gap:8px;
@@ -609,7 +636,13 @@ input,select,textarea{font-family:inherit; font-size:14px;}
         <div class="split">
           <div class="list-pane">
             <div class="list-head">
-              <h2>Mis Contactos</h2>
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;">
+                <h2 style="margin:0;">Mis Contactos</h2>
+                <button class="btn primary" onclick="abrirModalNuevoContacto()" style="padding:8px 14px;font-size:12.5px;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                  Nuevo
+                </button>
+              </div>
               <p>Los asignados a tus sub-categorías de territorio</p>
               <div class="searchbox">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
@@ -649,8 +682,14 @@ input,select,textarea{font-family:inherit; font-size:14px;}
         <div class="split">
           <div class="list-pane">
             <div class="list-head">
-              <h2>Todos los Contactos</h2>
-              <p>Vista completa del equipo — para coordinar</p>
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;">
+                <h2 style="margin:0;">Todos los Contactos</h2>
+                <button class="btn primary" onclick="abrirModalNuevoContacto()" style="padding:8px 14px;font-size:12.5px;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                  Nuevo
+                </button>
+              </div>
+              <p>Vista compartida del equipo — para coordinar y armar campañas</p>
               <div class="searchbox">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                 <input type="text" id="searchTodos" oninput="filtrarLista('vTodos', this.value)" placeholder="Buscar en todo el equipo…">
@@ -662,8 +701,8 @@ input,select,textarea{font-family:inherit; font-size:14px;}
           <div class="detail-pane" id="detailTodos">
             <div class="empty-detail">
               <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-              <h3>Seleccioná un contacto</h3>
-              <p>Vista compartida del equipo. Solo consulta — no podés editar contactos de otros.</p>
+              <h3>Selecciona un contacto</h3>
+              <p>Vista compartida del equipo. Ves la ficha y la línea de tiempo completa. Solo puedes editar los contactos que están asignados a ti.</p>
             </div>
           </div>
         </div>
@@ -824,6 +863,90 @@ input,select,textarea{font-family:inherit; font-size:14px;}
   </div>
 </div>
 
+<!-- ════ Modal Nuevo Contacto ════ -->
+<div class="modal-backdrop" id="modalNuevoContacto">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2>Nuevo contacto</h2>
+      <button class="modal-close" onclick="cerrarModalNuevoContacto()" aria-label="Cerrar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="fld-row">
+        <div class="fld"><label>Nombre <span style="color:var(--ruby);">*</span></label><input type="text" id="nc-nombre" placeholder="Nombre del contacto"></div>
+        <div class="fld"><label>Institución</label><input type="text" id="nc-institucion" placeholder="Hospital, escuela, fundación..."></div>
+      </div>
+      <div class="fld-row">
+        <div class="fld"><label>Cargo</label><input type="text" id="nc-cargo" placeholder="Director, kinesiólogo..."></div>
+        <div class="fld"><label>Email</label><input type="email" id="nc-email" placeholder="correo@..."></div>
+      </div>
+      <div class="fld-row">
+        <div class="fld"><label>Teléfono</label><input type="tel" id="nc-telefono" placeholder="+56 9..."></div>
+        <div class="fld"><label>Ciudad</label><input type="text" id="nc-ciudad" placeholder="Santiago, Talca..."></div>
+      </div>
+      <div class="fld-row">
+        <div class="fld"><label>Región</label>
+          <select id="nc-region">
+            <option value="">— Sin especificar —</option>
+            <option>Arica y Parinacota</option>
+            <option>Tarapacá</option>
+            <option>Antofagasta</option>
+            <option>Atacama</option>
+            <option>Coquimbo</option>
+            <option>Valparaíso</option>
+            <option>Metropolitana</option>
+            <option>O'Higgins</option>
+            <option>Maule</option>
+            <option>Ñuble</option>
+            <option>Biobío</option>
+            <option>La Araucanía</option>
+            <option>Los Ríos</option>
+            <option>Los Lagos</option>
+            <option>Aysén</option>
+            <option>Magallanes</option>
+          </select>
+        </div>
+        <div class="fld"><label>Pipeline inicial</label>
+          <select id="nc-pipeline">
+            <option>Contactado</option>
+            <option>Cotizado</option>
+            <option>Reunión</option>
+            <option>Seguimiento</option>
+          </select>
+        </div>
+      </div>
+      <div class="fld-row">
+        <div class="fld"><label>Categoría</label>
+          <select id="nc-tipo-categoria" onchange="actualizarSubcatsNuevo()">
+            <option value="">— Sin categoría —</option>
+            <option>Sector Público Municipal</option>
+            <option>Salud Pública</option>
+            <option>Educación</option>
+            <option>Gobierno Central/Regional</option>
+            <option>Fundaciones y ONGs</option>
+            <option>Organizaciones Comunitarias</option>
+            <option>Profesionales de la Salud</option>
+            <option>Privados</option>
+            <option>Otro</option>
+          </select>
+        </div>
+        <div class="fld"><label>Subcategoría</label>
+          <select id="nc-sub-categoria"><option value="">— Selecciona categoría primero —</option></select>
+        </div>
+      </div>
+      <div class="fld-row single">
+        <div class="fld"><label>Notas iniciales</label><textarea id="nc-notas" rows="3" placeholder="Cómo lo conociste, qué le interesa, detalles relevantes..."></textarea></div>
+      </div>
+      <div id="nc-dup-warning" style="display:none; background:var(--amber-lt); border:1px solid var(--amber); padding:14px 16px; border-radius:9px; margin-top:14px; color:var(--ink);"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="cerrarModalNuevoContacto()">Cancelar</button>
+      <button class="btn primary" id="nc-btn-guardar" onclick="guardarNuevoContacto()">Guardar contacto</button>
+    </div>
+  </div>
+</div>
+
 
 <script>
 // ════════════════════════════════════════════════════════════════════════════
@@ -924,6 +1047,28 @@ let SELECTED_ID = null;
 // HELPERS
 // ════════════════════════════════════════════════════════════════════════════
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// Visibilidad híbrida: ¿este contacto es del usuario actual (puede editar)?
+// Rayen como admin puede editar todo. Los ejecutivos solo lo suyo.
+function esOwner(c){
+  if (!c) return false;
+  if (ROL === 'admin') return true;
+  const asign = String(c.ejecutivo_asignado || '');
+  const corto = (USUARIO || '').split(' ')[0];
+  if (asign) {
+    return asign === USUARIO || asign === corto;
+  }
+  // Sin asignar: lo considero mío si yo lo creé
+  const creador = String(c.ejecutivo_creador || '');
+  return creador === USUARIO || creador === corto;
+}
+
+// Nombre amigable del dueño para sello "Asignado a X"
+function ownerLabel(c){
+  const a = String((c && c.ejecutivo_asignado) || '').trim();
+  if (!a) return 'Sin asignar';
+  return a;
+}
 
 function fmtM(n){
   n = Number(n) || 0;
@@ -1204,7 +1349,7 @@ async function cargarContactos(view){
   if(cachedAll){
     let lista = cachedAll;
     if(view === 'vMis'){
-      lista = lista.filter(c => String(c.ejecutivo_asignado || '').indexOf(USUARIO.split(' ')[0]) >= 0 || String(c.ejecutivo_creador || '') === USUARIO);
+      lista = lista.filter(esOwner);
     }
     CACHE[view] = lista;
     cnt.textContent = lista.length;
@@ -1227,7 +1372,7 @@ async function cargarContactos(view){
   try { localStorage.setItem(cacheKey, JSON.stringify({ contactos: allContactos, ts: Date.now() })); } catch(e){}
   let lista = allContactos;
   if(view === 'vMis'){
-    lista = lista.filter(c => String(c.ejecutivo_asignado || '').indexOf(USUARIO.split(' ')[0]) >= 0 || String(c.ejecutivo_creador || '') === USUARIO);
+    lista = lista.filter(esOwner);
   }
   CACHE[view] = lista;
   cnt.textContent = lista.length;
@@ -1243,7 +1388,7 @@ async function refrescarContactosBackground(view, cacheKey){
     localStorage.setItem(cacheKey, JSON.stringify({ contactos: allContactos, ts: Date.now() }));
     let lista = allContactos;
     if(view === 'vMis'){
-      lista = lista.filter(c => String(c.ejecutivo_asignado || '').indexOf(USUARIO.split(' ')[0]) >= 0 || String(c.ejecutivo_creador || '') === USUARIO);
+      lista = lista.filter(esOwner);
     }
     CACHE[view] = lista;
     document.getElementById(view === 'vMis' ? 'cntMis' : 'cntTodos').textContent = lista.length;
@@ -1289,6 +1434,13 @@ function renderLista(view){
                     : (pipe.indexOf('ganad') >= 0 || pipe.indexOf('cerrad') >= 0) ? 'cerrado'
                     : (pipe.indexOf('perdid') >= 0)    ? 'perdido' : '';
     const huerfano = !c.sub_categoria;
+    const mio = esOwner(c);
+    const ownerNm = ownerLabel(c);
+    // En "Mis Contactos" no muestro la línea de owner (todos son míos por definición).
+    // En "Todos los Contactos" sí — para que sepas quién lo gestiona.
+    const ownerLine = (view === 'vTodos')
+      ? '<div class="cc-owner-line' + (mio ? ' mine' : '') + '"><span class="ow-dot"></span>' + (mio ? 'Asignado a ti' : 'Asignado a ' + esc(ownerNm)) + '</div>'
+      : '';
     return '<div class="contact-card' + sel + '" onclick="abrirFicha(\'' + esc(c.id) + '\', \'' + view + '\')">' +
       '<div class="cc-name">' + esc(c.nombre || c.institucion || '(sin nombre)') + '</div>' +
       '<div class="cc-inst">' + esc(c.institucion || '') + (c.cargo ? ' · ' + esc(c.cargo) : '') + '</div>' +
@@ -1296,6 +1448,7 @@ function renderLista(view){
         '<span class="cc-pill ' + pipeClass + '">' + esc(c.pipeline_estado || 'Lead') + '</span>' +
         (huerfano ? '<span class="cc-pill huerfano">Sin categoría</span>' : '<span class="cc-pill">' + esc(c.sub_categoria) + '</span>') +
       '</div>' +
+      ownerLine +
     '</div>';
   }).join('') + fin;
 }
@@ -1325,22 +1478,36 @@ function renderFicha(container, data){
   const telLimpio = tel.replace(/\D/g, '');
   const waNum = telLimpio.length >= 8 ? (telLimpio.startsWith('56') ? telLimpio : '56' + telLimpio) : '';
   const waMsg = encodeURIComponent('Hola ' + (c.nombre || '') + ', soy ' + USUARIO + ' de OpenCluster Tech.');
+  const owner = esOwner(c);
+  const ownerName = ownerLabel(c);
+  const tooltipBloqueo = 'Este contacto está asignado a ' + ownerName + '. Pídele a Rayen que te lo reasigne si quieres trabajarlo.';
+
+  // Sello del dueño (chip arriba a la derecha)
+  const sello = owner
+    ? '<span class="owner-badge mine"><span class="owner-av">' + esc((USUARIO||'?').charAt(0).toUpperCase()) + '</span>Asignado a ti</span>'
+    : '<span class="owner-badge"><span class="owner-av">' + esc((ownerName||'?').charAt(0).toUpperCase()) + '</span>Asignado a ' + esc(ownerName) + '</span>';
 
   container.innerHTML =
-    '<div style="margin-bottom:20px;">' +
-      '<h1 style="font-family:Playfair Display,serif;font-size:26px;font-weight:700;color:var(--ink);margin:0 0 4px;">' + esc(c.nombre || c.institucion || '(sin nombre)') + '</h1>' +
-      '<p style="color:var(--mist);font-size:13.5px;margin:0 0 14px;">' + esc(c.institucion || '') + (c.cargo ? ' · ' + esc(c.cargo) : '') + '</p>' +
-      '<div style="display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--subtle);">' +
-        (c.email ? '<a href="mailto:' + esc(c.email) + '">' + esc(c.email) + '</a>' : '') +
-        (c.telefono ? '<a href="tel:' + esc(c.telefono) + '">' + esc(c.telefono) + '</a>' : '') +
-        (c.ciudad ? '<span>' + esc(c.ciudad) + (c.region ? ', ' + esc(c.region) : '') + '</span>' : '') +
-        (c.sub_categoria ? '<span><b>Cat:</b> ' + esc(c.sub_categoria) + '</span>' : '') +
-        (c.ejecutivo_asignado ? '<span><b>Ejec:</b> ' + esc(c.ejecutivo_asignado) + '</span>' : '') +
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:20px;">' +
+      '<div style="flex:1;min-width:0;">' +
+        '<h1 style="font-family:Playfair Display,serif;font-size:26px;font-weight:700;color:var(--ink);margin:0 0 4px;">' + esc(c.nombre || c.institucion || '(sin nombre)') + '</h1>' +
+        '<p style="color:var(--mist);font-size:13.5px;margin:0 0 14px;">' + esc(c.institucion || '') + (c.cargo ? ' · ' + esc(c.cargo) : '') + '</p>' +
+        '<div style="display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--subtle);">' +
+          (c.email ? '<a href="mailto:' + esc(c.email) + '">' + esc(c.email) + '</a>' : '') +
+          (c.telefono ? '<a href="tel:' + esc(c.telefono) + '">' + esc(c.telefono) + '</a>' : '') +
+          (c.ciudad ? '<span>' + esc(c.ciudad) + (c.region ? ', ' + esc(c.region) : '') + '</span>' : '') +
+          (c.sub_categoria ? '<span><b>Cat:</b> ' + esc(c.sub_categoria) + '</span>' : '') +
+        '</div>' +
       '</div>' +
+      sello +
     '</div>' +
     '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;">' +
-      '<button class="btn primary" onclick="abrirModalEditarContacto(\'' + esc(c.id) + '\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Editar contacto</button>' +
-      '<button class="btn" onclick="alert(\'Próximamente — modal Nueva Interacción\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> Nueva interacción</button>' +
+      (owner
+        ? '<button class="btn primary" onclick="abrirModalEditarContacto(\'' + esc(c.id) + '\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Editar contacto</button>'
+        : '<button class="btn" disabled title="' + esc(tooltipBloqueo) + '" style="opacity:.5;cursor:not-allowed;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Editar contacto</button>') +
+      (owner
+        ? '<button class="btn" onclick="abrirModalNuevaInteraccion(\'' + esc(c.id) + '\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> Nueva interacción</button>'
+        : '<button class="btn" disabled title="' + esc(tooltipBloqueo) + '" style="opacity:.5;cursor:not-allowed;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Nueva interacción</button>') +
       (c.email ? '<button class="btn" onclick="abrirEmailPlantilla(\'' + esc(c.id) + '\')">Enviar correo</button>' : '') +
       (waNum ? '<a class="btn" target="_blank" href="https://wa.me/' + waNum + '?text=' + waMsg + '">WhatsApp</a>' : '') +
     '</div>' +
@@ -1523,6 +1690,116 @@ async function guardarEdicionContacto(){
   if(view === 'vMis') await cargarContactos('vMis');
   else await cargarContactos('vTodos');
   abrirFicha(id, view);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// MODAL NUEVO CONTACTO
+// ════════════════════════════════════════════════════════════════════════════
+function abrirModalNuevoContacto(){
+  // Reset form
+  ['nc-nombre','nc-institucion','nc-cargo','nc-email','nc-telefono','nc-ciudad','nc-notas']
+    .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  document.getElementById('nc-region').value = '';
+  document.getElementById('nc-tipo-categoria').value = '';
+  document.getElementById('nc-sub-categoria').innerHTML = '<option value="">— Selecciona categoría primero —</option>';
+  document.getElementById('nc-pipeline').value = 'Contactado';
+  document.getElementById('nc-dup-warning').style.display = 'none';
+  document.getElementById('nc-dup-warning').innerHTML = '';
+  document.getElementById('nc-btn-guardar').textContent = 'Guardar contacto';
+  document.getElementById('nc-btn-guardar').disabled = false;
+  document.getElementById('modalNuevoContacto').classList.add('show');
+  setTimeout(() => document.getElementById('nc-nombre').focus(), 100);
+}
+
+function cerrarModalNuevoContacto(){
+  document.getElementById('modalNuevoContacto').classList.remove('show');
+}
+
+function actualizarSubcatsNuevo(){
+  const cat = document.getElementById('nc-tipo-categoria').value;
+  const sel = document.getElementById('nc-sub-categoria');
+  if(!cat){
+    sel.innerHTML = '<option value="">— Selecciona categoría primero —</option>';
+    return;
+  }
+  const ops = TIPOS_ORG_CRM[cat] || [];
+  sel.innerHTML = '<option value="">— Seleccionar —</option>' +
+    ops.map(o => '<option value="' + esc(o) + '">' + esc(o) + '</option>').join('');
+}
+
+async function guardarNuevoContacto(forzar){
+  const data = {
+    nombre: document.getElementById('nc-nombre').value.trim(),
+    institucion: document.getElementById('nc-institucion').value.trim(),
+    cargo: document.getElementById('nc-cargo').value.trim(),
+    email: document.getElementById('nc-email').value.trim(),
+    telefono: document.getElementById('nc-telefono').value.trim(),
+    ciudad: document.getElementById('nc-ciudad').value.trim(),
+    region: document.getElementById('nc-region').value,
+    tipo_categoria: document.getElementById('nc-tipo-categoria').value,
+    sub_categoria: document.getElementById('nc-sub-categoria').value,
+    pipeline_estado: document.getElementById('nc-pipeline').value,
+    notas_publicas: document.getElementById('nc-notas').value.trim(),
+    solicitante: USUARIO
+  };
+  if (forzar === true) data.confirmar_crear_aunque_haya_duplicados = true;
+
+  if(!data.nombre && !data.institucion){
+    alert('El contacto necesita al menos un nombre o una institución');
+    return;
+  }
+
+  const btn = document.getElementById('nc-btn-guardar');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+
+  const r = await fetchAPI('crm_crear_contacto', null, data);
+
+  if(r && r.requiere_revision && r.duplicados && r.duplicados.length){
+    // Mostrar duplicados detectados
+    const dw = document.getElementById('nc-dup-warning');
+    dw.style.display = 'block';
+    dw.innerHTML =
+      '<b style="font-size:14px;display:block;margin-bottom:8px;">Se encontraron contactos similares en el CRM:</b>' +
+      '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">' +
+        r.duplicados.slice(0, 5).map(d =>
+          '<div style="background:white;border:1px solid var(--smoke);padding:8px 12px;border-radius:7px;font-size:12.5px;">' +
+            '<b>' + esc(d.nombre || '(sin nombre)') + '</b> · ' + esc(d.institucion || '') +
+            (d.email ? ' · ' + esc(d.email) : '') +
+            (d.telefono ? ' · ' + esc(d.telefono) : '') +
+            (d.ejecutivo_asignado ? ' · <span style="color:var(--purple-dk);font-weight:700;">' + esc(d.ejecutivo_asignado) + '</span>' : '') +
+          '</div>'
+        ).join('') +
+      '</div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+        '<button class="btn" onclick="cerrarModalNuevoContacto()">Cancelar</button>' +
+        '<button class="btn primary" onclick="guardarNuevoContacto(true)">Crear igualmente</button>' +
+      '</div>';
+    btn.disabled = false; btn.textContent = 'Guardar contacto';
+    return;
+  }
+
+  if(!r || !r.ok){
+    alert('Error guardando: ' + ((r && r.error) || 'desconocido'));
+    btn.disabled = false; btn.textContent = 'Guardar contacto';
+    return;
+  }
+
+  cerrarModalNuevoContacto();
+  // Limpiar caches y refrescar
+  CACHE.vMis = null; CACHE.vTodos = null; CACHE.vSinCat = null;
+  try { localStorage.removeItem('crm_cache_contactos_' + USUARIO); } catch(e){}
+  toast && toast('Contacto creado correctamente', 'jade');
+  const view = document.querySelector('.view.act');
+  if (view && (view.id === 'vMis' || view.id === 'vTodos')) {
+    await cargarContactos(view.id);
+  }
+  // Abrir la ficha del nuevo contacto si tenemos su id
+  if (r.id && view) abrirFicha(r.id, view.id);
+}
+
+function toast(msg, color){
+  // Placeholder mínimo: alert si no hay toast UI. El agente de diseño lo va a reemplazar.
+  console.log('[toast]', color || '', msg);
 }
 
 // ════════════════════════════════════════════════════════════════════════════

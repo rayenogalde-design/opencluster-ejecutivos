@@ -1683,9 +1683,14 @@ function renderLista(view){
       const huerfano = !c.sub_categoria;
       const mio = esOwner(c);
       const ownerNm = ownerLabel(c);
-      const ownerLine = (view === 'vTodos')
-        ? '<div class="cc-owner-line' + (mio ? ' mine' : '') + '"><span class="ow-dot"></span>' + (mio ? 'Asignado a ti' : 'Asignado a ' + esc(ownerNm)) + '</div>'
-        : '';
+      // Si soy admin EN MODO ADMIN: muestro el ejecutivo asignado en negro prominente
+      // (sirve para identificar de un vistazo a quién pertenece cada contacto del equipo)
+      const verEjecutivoEnNegro = (ROL === 'admin' && MODO_VISTA === 'admin' && ownerNm && ownerNm !== 'Sin asignar');
+      const ownerLine = verEjecutivoEnNegro
+        ? '<div class="cc-owner-line admin-view" style="color:var(--text-1) !important;font-weight:700;font-size:12.5px;margin-top:6px;"><span class="ow-dot" style="background:var(--text-1);"></span>Ejecutivo: ' + esc(ownerNm) + '</div>'
+        : (view === 'vTodos'
+          ? '<div class="cc-owner-line' + (mio ? ' mine' : '') + '"><span class="ow-dot"></span>' + (mio ? 'Asignado a ti' : 'Asignado a ' + esc(ownerNm)) + '</div>'
+          : '');
       // El ícono $ aparece SIEMPRE que el estado indique que hay cotización en juego
       // (Cotizado, En gestión, En seguimiento, Ganado). No depende del booleano backend.
       const pipeEstado = String(estado).toLowerCase();
@@ -2535,9 +2540,11 @@ async function cargarCuentas(){
           badge +
           categoria +
         '</div>' +
-        '<div class="cc-owner-line' + (owner ? ' mine' : '') + '"><span class="ow-dot"></span>' +
-          (owner ? 'Asignada a ti' : (ownerNm ? 'Asignada a ' + esc(ownerNm) : 'Sin asignar')) +
-        '</div>' +
+        ((ROL === 'admin' && MODO_VISTA === 'admin' && ownerNm)
+          ? '<div class="cc-owner-line admin-view" style="color:var(--text-1) !important;font-weight:700;font-size:12.5px;margin-top:6px;"><span class="ow-dot" style="background:var(--text-1);"></span>Ejecutivo: ' + esc(ownerNm) + '</div>'
+          : '<div class="cc-owner-line' + (owner ? ' mine' : '') + '"><span class="ow-dot"></span>' +
+            (owner ? 'Asignada a ti' : (ownerNm ? 'Asignada a ' + esc(ownerNm) : 'Sin asignar')) +
+            '</div>') +
       '</div>';
     }).join('') + '</div>';
 }

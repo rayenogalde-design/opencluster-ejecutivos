@@ -998,6 +998,21 @@ input,select,textarea{font-family:inherit; font-size:14px;}
   </div>
 </div>
 
+<!-- ════ Modal Ficha (historial completo al click en card) ════ -->
+<div class="modal-backdrop" id="modalFichaContacto">
+  <div class="modal-box" style="max-width:840px;">
+    <div class="modal-head">
+      <h2 id="fc-titulo">Ficha del contacto</h2>
+      <button class="modal-close" onclick="cerrarFichaModal()" aria-label="Cerrar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="fc-body" style="max-height:78vh;overflow-y:auto;">
+      <div class="loading-state"><div class="spinner"></div>Cargando ficha…</div>
+    </div>
+  </div>
+</div>
+
 
 <script>
 // ════════════════════════════════════════════════════════════════════════════
@@ -1985,6 +2000,42 @@ function toast(msg, color){
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+// MODAL DE FICHA (al hacer click en una card de empresa o contacto)
+// Muestra la ficha completa con timeline sin cambiar de vista.
+// ════════════════════════════════════════════════════════════════════════════
+async function abrirFichaModal(id){
+  const modal = document.getElementById('modalFichaContacto');
+  const body = document.getElementById('fc-body');
+  modal.classList.add('show');
+  body.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando ficha…</div>';
+
+  const r = await fetchAPI('crm_perfil', { id: id, solicitante: USUARIO });
+  if(!r.ok){
+    body.innerHTML = '<div class="error-state"><b>Error:</b> ' + esc(r.error || 'desconocido') + '</div>';
+    return;
+  }
+
+  // Renderizar la ficha completa (igual que renderFicha pero adaptado al modal)
+  renderFicha(body, r);
+
+  // Cambiar título del modal según el contacto
+  const c = r.contacto || {};
+  document.getElementById('fc-titulo').textContent = c.nombre || c.institucion || 'Ficha';
+}
+
+function cerrarFichaModal(){
+  document.getElementById('modalFichaContacto').classList.remove('show');
+}
+
+// Click fuera del modal lo cierra
+document.addEventListener('click', (e) => {
+  const modal = document.getElementById('modalFichaContacto');
+  if (modal && modal.classList.contains('show') && e.target === modal) {
+    cerrarFichaModal();
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
 // CUENTAS / EMPRESAS
 // ════════════════════════════════════════════════════════════════════════════
 async function cargarCuentas(){
@@ -2021,7 +2072,7 @@ async function cargarCuentas(){
                       : (pipe.indexOf('seguim') >= 0)    ? 'seguimiento'
                       : (pipe.indexOf('ganad') >= 0)     ? 'cerrado'
                       : (pipe.indexOf('perdid') >= 0)    ? 'perdido' : '';
-      return '<div class="contact-card" onclick="abrirFicha(\'' + esc(c.id) + '\', \'vTodos\')">' +
+      return '<div class="contact-card" onclick="abrirFichaModal(\'' + esc(c.id) + '\')">' +
         '<div class="cc-name">' + esc(c.institucion || '(sin nombre)') + '</div>' +
         '<div class="cc-inst">' + esc(c.sub_categoria || 'Sin categoría') + (c.ciudad ? ' · ' + esc(c.ciudad) : '') + '</div>' +
         '<div class="cc-meta">' +

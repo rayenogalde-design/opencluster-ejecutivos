@@ -1686,9 +1686,16 @@ function renderLista(view){
       const ownerLine = (view === 'vTodos')
         ? '<div class="cc-owner-line' + (mio ? ' mine' : '') + '"><span class="ow-dot"></span>' + (mio ? 'Asignado a ti' : 'Asignado a ' + esc(ownerNm)) + '</div>'
         : '';
-      const iconoCot = c.tiene_cotizacion && !esGanado
-        ? '<span title="Tiene ' + (c.cant_cotizaciones || 1) + ' cotización(es) emitida(s)" style="display:inline-flex;align-items:center;gap:4px;color:var(--gold-deep);font-size:11px;font-weight:700;flex-shrink:0;">' +
-            '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' +
+      // El ícono $ aparece SIEMPRE que el estado indique que hay cotización en juego
+      // (Cotizado, En gestión, En seguimiento, Ganado). No depende del booleano backend.
+      const pipeEstado = String(estado).toLowerCase();
+      const hayCotizacion = pipeEstado.indexOf('cotizad') >= 0 ||
+                             pipeEstado.indexOf('gesti') >= 0 ||
+                             pipeEstado.indexOf('seguim') >= 0 ||
+                             pipeEstado.indexOf('ganad') >= 0;
+      const iconoCot = (hayCotizacion && !esGanado)
+        ? '<span title="Contacto cotizado' + (c.cant_cotizaciones > 1 ? ' (' + c.cant_cotizaciones + ' cotizaciones)' : '') + '" style="display:inline-flex;align-items:center;gap:3px;color:var(--gold-deep);font-size:11.5px;font-weight:700;flex-shrink:0;">' +
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' +
             (c.cant_cotizaciones > 1 ? c.cant_cotizaciones : '') +
           '</span>'
         : '';
@@ -2471,9 +2478,16 @@ async function cargarCuentas(){
       const estado = c.ultimo_estado || c.pipeline_estado || 'Contactado';
       const badge = pipelineBadgeHTML(estado);
       const esGanado = String(estado).toLowerCase().indexOf('ganad') >= 0 || String(estado).toLowerCase().indexOf('cerrad') >= 0;
-      const iconoCot = c.tiene_cotizacion && !esGanado
-        ? '<span title="Tiene ' + (c.cant_cotizaciones || 1) + ' cotización(es) emitida(s)" style="display:inline-flex;align-items:center;gap:4px;color:var(--gold-deep);font-size:11px;font-weight:700;flex-shrink:0;">' +
-            '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' +
+      // El ícono $ aparece SIEMPRE que el estado indique que hay cotización en juego
+      // (Cotizado, En gestión, En seguimiento, Ganado). No depende del booleano backend.
+      const pipeEstado = String(estado).toLowerCase();
+      const hayCotizacion = pipeEstado.indexOf('cotizad') >= 0 ||
+                             pipeEstado.indexOf('gesti') >= 0 ||
+                             pipeEstado.indexOf('seguim') >= 0 ||
+                             pipeEstado.indexOf('ganad') >= 0;
+      const iconoCot = (hayCotizacion && !esGanado)
+        ? '<span title="Contacto cotizado' + (c.cant_cotizaciones > 1 ? ' (' + c.cant_cotizaciones + ' cotizaciones)' : '') + '" style="display:inline-flex;align-items:center;gap:3px;color:var(--gold-deep);font-size:11.5px;font-weight:700;flex-shrink:0;">' +
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' +
             (c.cant_cotizaciones > 1 ? c.cant_cotizaciones : '') +
           '</span>'
         : '';

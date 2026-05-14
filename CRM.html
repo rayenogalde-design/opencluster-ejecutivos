@@ -899,13 +899,19 @@ input,select,textarea{font-family:inherit; font-size:14px;}
       </button>
     </div>
     <div class="modal-body">
-      <div class="fld-row">
-        <div class="fld"><label>Nombre <span style="color:var(--ruby);">*</span></label><input type="text" id="nc-nombre" placeholder="Nombre del contacto"></div>
-        <div class="fld"><label>Institución</label><input type="text" id="nc-institucion" placeholder="Hospital, escuela, fundación..."></div>
+      <div style="background:linear-gradient(135deg, var(--pale), #f7faff); border:1px solid var(--sky); border-radius:10px; padding:12px 16px; margin-bottom:18px; font-size:13px; color:var(--navy); line-height:1.55;">
+        <b>Recordatorio importante:</b><br>
+        <b>Nombre</b> = persona natural (ej: "María González", "Patricio Esparza").<br>
+        <b>Institución</b> = empresa u organización donde trabaja (ej: "Clínica Las Condes", "Fundación Descúbreme").<br>
+        <span style="color:var(--ruby-dk);">Si solo tienes el nombre de la organización pero no de una persona, regístrala en <b>Empresas / Cuentas</b>, no acá.</span>
       </div>
       <div class="fld-row">
-        <div class="fld"><label>Cargo</label><input type="text" id="nc-cargo" placeholder="Director, kinesiólogo..."></div>
-        <div class="fld"><label>Email</label><input type="email" id="nc-email" placeholder="correo@..."></div>
+        <div class="fld"><label>Nombre de la persona <span style="color:var(--ruby);">*</span></label><input type="text" id="nc-nombre" placeholder="Ej: María González" required></div>
+        <div class="fld"><label>Institución</label><input type="text" id="nc-institucion" placeholder="Ej: Clínica Las Condes"></div>
+      </div>
+      <div class="fld-row">
+        <div class="fld"><label>Cargo</label><input type="text" id="nc-cargo" placeholder="Director, kinesióloga..."></div>
+        <div class="fld"><label>Email <span style="color:var(--ruby);">*</span></label><input type="email" id="nc-email" placeholder="correo@..." required></div>
       </div>
       <div class="fld-row">
         <div class="fld"><label>Teléfono</label><input type="tel" id="nc-telefono" placeholder="+56 9..."></div>
@@ -1086,6 +1092,15 @@ let SELECTED_ID = null;
 // HELPERS
 // ════════════════════════════════════════════════════════════════════════════
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ¿Este registro es una EMPRESA (sin persona, solo institución)?
+// Estos van a la pestaña "Empresas / Cuentas", no a Contactos.
+function esEmpresa(c){
+  if (!c) return false;
+  const nm = String(c.nombre || '').trim();
+  const inst = String(c.institucion || '').trim();
+  return !nm && !!inst;
+}
 
 // ¿Este contacto está asignado al usuario actual? (NO depende del rol)
 // Sirve para filtrar "Mis Contactos" y para mostrar "Asignado a ti".
@@ -1390,7 +1405,8 @@ async function cargarContactos(view){
   } catch(e){}
 
   if(cachedAll){
-    let lista = cachedAll;
+    // Filtrar EMPRESAS afuera de las vistas de Contactos (van a "Empresas / Cuentas")
+    let lista = cachedAll.filter(c => !esEmpresa(c));
     if(view === 'vMis'){
       lista = lista.filter(esOwner);
     }
@@ -1413,7 +1429,7 @@ async function cargarContactos(view){
   const allContactos = r.contactos || [];
   // Guardar en cache local
   try { localStorage.setItem(cacheKey, JSON.stringify({ contactos: allContactos, ts: Date.now() })); } catch(e){}
-  let lista = allContactos;
+  let lista = allContactos.filter(c => !esEmpresa(c));
   if(view === 'vMis'){
     lista = lista.filter(esOwner);
   }
@@ -1429,7 +1445,7 @@ async function refrescarContactosBackground(view, cacheKey){
     if(!r.ok) return;
     const allContactos = r.contactos || [];
     localStorage.setItem(cacheKey, JSON.stringify({ contactos: allContactos, ts: Date.now() }));
-    let lista = allContactos;
+    let lista = allContactos.filter(c => !esEmpresa(c));
     if(view === 'vMis'){
       lista = lista.filter(esOwner);
     }
@@ -1829,8 +1845,20 @@ async function guardarNuevoContacto(forzar){
   };
   if (forzar === true) data.confirmar_crear_aunque_haya_duplicados = true;
 
-  if(!data.nombre && !data.institucion){
-    alert('El contacto necesita al menos un nombre o una institución');
+  if(!data.nombre){
+    alert('El nombre de la persona es obligatorio.\n\nSi vas a registrar una organización sin contacto persona, hacelo desde "Empresas / Cuentas".');
+    document.getElementById('nc-nombre').focus();
+    return;
+  }
+  if(!data.email){
+    alert('El email es obligatorio para hacer seguimiento del contacto.\n\nPedile el correo electrónico antes de registrarlo.');
+    document.getElementById('nc-email').focus();
+    return;
+  }
+  // Validación básica de formato email
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)){
+    alert('El email no tiene un formato válido (debe contener @ y dominio).');
+    document.getElementById('nc-email').focus();
     return;
   }
 
@@ -1892,21 +1920,49 @@ function toast(msg, color){
 // ════════════════════════════════════════════════════════════════════════════
 async function cargarCuentas(){
   const cont = document.getElementById('cuentasContainer');
-  cont.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando empresas…</div>';
-  const r = await fetchAPI('crm_cuentas', { ejecutivo: ROL === 'admin' ? '' : USUARIO });
+  cont.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando empresas e instituciones…</div>';
+  // Empresas = registros con SOLO institución (sin nombre de persona).
+  // Vienen de cargas históricas donde no se ingresó persona específica.
+  // Vista: admin ve todas, ejecutivo ve las que están asignadas a él.
+  const r = await fetchAPI('crm_contactos', { solicitante: USUARIO });
   if(!r.ok){ cont.innerHTML = '<div class="error-state">' + esc(r.error || '') + '</div>'; return; }
-  const cuentas = r.cuentas || [];
-  if(!cuentas.length){
-    cont.innerHTML = '<div class="loading-state">No hay empresas creadas todavía. Cuando un contacto pertenece a una empresa grande (BancoEstado, Falabella, etc.), creá la Cuenta y vinculá los contactos.</div>';
+  const todos = r.contactos || [];
+  let empresas = todos.filter(c => esEmpresa(c));
+  if (ROL !== 'admin') {
+    empresas = empresas.filter(esOwner);
+  }
+  if(!empresas.length){
+    cont.innerHTML = '<div class="loading-state" style="padding:30px;">No hay empresas o instituciones sin contacto persona.</div>';
     return;
   }
-  cont.innerHTML = '<div class="emp-sug-grid">' + cuentas.map(c =>
-    '<div class="emp-sug-card">' +
-      '<div class="emp-sug-name">' + esc(c.nombre) + '</div>' +
-      '<div class="emp-sug-cat">' + esc(c.sub_categoria || '') + (c.region ? ' · ' + esc(c.region) : '') + '</div>' +
-      '<div style="font-size:11.5px;color:var(--mist);">' + (c.contactos_count || 0) + ' contacto(s) · Ejec: ' + esc(c.ejecutivo_asignado || '—') + '</div>' +
-    '</div>'
-  ).join('') + '</div>';
+
+  const titulo = ROL === 'admin'
+    ? '<div style="margin-bottom:14px;color:var(--subtle);font-size:13.5px;"><b>' + empresas.length + '</b> empresas/instituciones del equipo. Son registros que llegaron al CRM sin nombre de persona (solo institución). Acá puedes ver quién las gestiona.</div>'
+    : '<div style="margin-bottom:14px;color:var(--subtle);font-size:13.5px;"><b>' + empresas.length + '</b> empresas asignadas a ti.</div>';
+
+  cont.innerHTML = titulo +
+    '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">' +
+    empresas.map(c => {
+      const owner = esOwner(c);
+      const ownerNm = String(c.ejecutivo_asignado || '').trim();
+      const pipe = String(c.pipeline_estado || 'Lead').toLowerCase();
+      const pipeClass = (pipe.indexOf('contactad') >= 0) ? 'contactado'
+                      : (pipe.indexOf('cotizad') >= 0)   ? 'cotizado'
+                      : (pipe.indexOf('reuni') >= 0)     ? 'reunion'
+                      : (pipe.indexOf('seguim') >= 0)    ? 'seguimiento'
+                      : (pipe.indexOf('ganad') >= 0)     ? 'cerrado'
+                      : (pipe.indexOf('perdid') >= 0)    ? 'perdido' : '';
+      return '<div class="contact-card" onclick="abrirFicha(\'' + esc(c.id) + '\', \'vTodos\')">' +
+        '<div class="cc-name">' + esc(c.institucion || '(sin nombre)') + '</div>' +
+        '<div class="cc-inst">' + esc(c.sub_categoria || 'Sin categoría') + (c.ciudad ? ' · ' + esc(c.ciudad) : '') + '</div>' +
+        '<div class="cc-meta">' +
+          '<span class="cc-pill ' + pipeClass + '">' + esc(c.pipeline_estado || 'Lead') + '</span>' +
+        '</div>' +
+        '<div class="cc-owner-line' + (owner ? ' mine' : '') + '"><span class="ow-dot"></span>' +
+          (owner ? 'Asignada a ti' : (ownerNm ? 'Asignada a ' + esc(ownerNm) : 'Sin asignar')) +
+        '</div>' +
+      '</div>';
+    }).join('') + '</div>';
 }
 
 function abrirModalCuenta(){ alert('Modal Nueva Empresa — próxima iteración'); }

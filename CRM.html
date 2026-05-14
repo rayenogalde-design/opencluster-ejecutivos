@@ -959,6 +959,19 @@ const KEY_USER = 'oc_central_user';
 const KEY_PASS = 'oc_central_pass';
 const KEY_OK   = 'oc_central_ok';
 
+// Versión del cache de contactos. Bumpear cuando cambien lógicas de filtrado
+// para invalidar caches viejos de los usuarios automáticamente.
+const CRM_CACHE_VERSION = '3';
+try {
+  const lastVer = localStorage.getItem('crm_cache_version');
+  if (lastVer !== CRM_CACHE_VERSION) {
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('crm_cache_contactos_'))
+      .forEach(k => localStorage.removeItem(k));
+    localStorage.setItem('crm_cache_version', CRM_CACHE_VERSION);
+  }
+} catch(e){}
+
 let USUARIO = null;
 let ROL = 'ejecutivo';        // 'ejecutivo' o 'admin' (Mario es 'direccion' pero el CRM lo redirige al Portal)
 const TEAM = [
@@ -1517,6 +1530,9 @@ function renderFicha(container, data){
         : '<button class="btn" disabled title="' + esc(tooltipBloqueo) + '" style="opacity:.5;cursor:not-allowed;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Nueva interacción</button>') +
       (c.email ? '<button class="btn" onclick="abrirEmailPlantilla(\'' + esc(c.id) + '\')">Enviar correo</button>' : '') +
       (waNum ? '<a class="btn" target="_blank" href="https://wa.me/' + waNum + '?text=' + waMsg + '">WhatsApp</a>' : '') +
+      (ROL === 'admin'
+        ? '<button class="btn" onclick="eliminarContacto(\'' + esc(c.id) + '\', \'' + esc(c.nombre || c.institucion || '(sin nombre)').replace(/\'/g, "&#39;") + '\')" style="background:var(--ruby-lt);color:var(--ruby-dk);border-color:var(--ruby);margin-left:auto;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Eliminar</button>'
+        : '') +
     '</div>' +
     '<div>' +
       '<div style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:800;color:var(--mist);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Línea de tiempo</div>' +
@@ -1540,6 +1556,44 @@ function renderFicha(container, data){
 
 function abrirEmailPlantilla(contactoId){
   alert('Modal de plantillas dinámicas — próxima iteración. Se va a abrir un selector de plantilla con preview del cuerpo renderizado y un botón "Abrir en Gmail" que arme el mailto: con asunto y cuerpo precargados.');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// ELIMINAR CONTACTO (solo admin)
+// ════════════════════════════════════════════════════════════════════════════
+async function eliminarContacto(id, nombre){
+  if (ROL !== 'admin') {
+    alert('Solo Rayen puede eliminar contactos.');
+    return;
+  }
+  const conf = confirm(
+    'Vas a ELIMINAR este contacto:\n\n  ' + nombre + '\n\n' +
+    'Se borrarán también todas sus interacciones (reuniones, cotizaciones, seguimientos, notas) del CRM.\n\n' +
+    'Esta acción NO se puede deshacer.\n\n' +
+    '¿Estás segura?'
+  );
+  if (!conf) return;
+
+  const r = await fetchAPI('crm_eliminar_contacto', null, { id: id, solicitante: USUARIO });
+  if (!r || !r.ok) {
+    alert('Error eliminando: ' + ((r && r.error) || 'desconocido'));
+    return;
+  }
+
+  // Limpiar cache y refrescar
+  CACHE.vMis = null; CACHE.vTodos = null; CACHE.vSinCat = null;
+  try { localStorage.removeItem('crm_cache_contactos_' + USUARIO); } catch(e){}
+  alert('Contacto eliminado.');
+
+  // Limpiar el detail pane y recargar lista
+  const view = document.querySelector('.view.act');
+  if (view && (view.id === 'vMis' || view.id === 'vTodos')) {
+    const detail = document.getElementById(view.id === 'vMis' ? 'detailMis' : 'detailTodos');
+    if (detail) {
+      detail.innerHTML = '<div class="empty-detail"><h3>Contacto eliminado</h3><p>Selecciona otro contacto de la lista.</p></div>';
+    }
+    await cargarContactos(view.id);
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════

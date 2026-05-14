@@ -910,17 +910,61 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
 
 
     <div class="sec">Cliente</div>
+
+    <!-- Banner que aparece SOLO si no se ha seleccionado contacto del CRM -->
+    <div id="banner-buscar-contacto" style="background:linear-gradient(135deg,#fef9ec,#fef3c7);border:1px solid #c9a96e;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:11px;color:#5a3c10;line-height:1.5;">
+      <b>Importante:</b> selecciona primero al contacto del CRM. Los datos del cliente (nombre, institución, email, teléfono) se autocompletan desde allá. Si el cliente no existe todavía, créalo con el botón verde.
+    </div>
+
+    <!-- Buscador de contacto del CRM -->
+    <div style="position:relative;margin-bottom:12px;" id="buscador-crm-wrap">
+      <label style="font-size:10px;font-weight:800;color:#5a3c10;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;display:block;">Buscar contacto en CRM <span style="color:#e74c3c;">*</span></label>
+      <div style="display:flex;gap:8px;align-items:stretch;">
+        <input id="crm-buscar" type="text" placeholder="Escribí 2+ letras del nombre, email o institución..." oninput="buscarContactoCRM(this.value)" onfocus="if(this.value) buscarContactoCRM(this.value)" autocomplete="off" style="flex:1;border:1px solid #c9a96e;border-radius:6px;padding:9px 12px;font-size:13px;background:white;">
+        <button onclick="abrirModalCrearContactoCotizador()" style="background:linear-gradient(135deg,#10b981,#047857);color:white;border:none;border-radius:6px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">+ Crear contacto en CRM</button>
+      </div>
+      <div id="crm-resultados" style="position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #c9a96e;border-radius:6px;max-height:280px;overflow-y:auto;display:none;z-index:50;margin-top:2px;box-shadow:0 4px 14px rgba(122,90,32,.18);"></div>
+    </div>
+
+    <!-- Datos del contacto seleccionado (read-only) -->
+    <div id="contacto-seleccionado" style="display:none;background:#f0fdf4;border:1px solid #10b981;border-radius:8px;padding:12px 14px;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px;">
+        <div>
+          <div style="font-weight:800;font-size:14px;color:#047857;" id="sel-nombre"></div>
+          <div style="font-size:12px;color:#065f46;" id="sel-institucion"></div>
+        </div>
+        <button onclick="limpiarContactoSeleccionado()" style="background:transparent;border:1px solid #10b981;color:#047857;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;">Cambiar contacto</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;font-size:11.5px;color:#065f46;">
+        <div><b>Email:</b> <span id="sel-email"></span></div>
+        <div><b>Teléfono:</b> <span id="sel-telefono"></span></div>
+        <div><b>Ciudad:</b> <span id="sel-ciudad"></span></div>
+        <div><b>Categoría:</b> <span id="sel-categoria"></span></div>
+      </div>
+    </div>
+
+    <!-- Datos para la cotización: pueden ser distintos al contacto -->
+    <div style="background:white;border:1px solid #e0c88a;border-radius:8px;padding:12px 14px;margin-bottom:12px;" id="datos-cotizacion-box">
+      <div style="font-size:10px;font-weight:800;color:#5a3c10;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Datos para esta cotización</div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#1a1208;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="radio" name="cotDestino" value="mismo" checked onchange="cambiarDestino('mismo')"> Misma persona y mismos datos del contacto del CRM</label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="radio" name="cotDestino" value="otro" onchange="cambiarDestino('otro')"> Emitir cotización a OTRO nombre, email u otros datos</label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="radio" name="cotDestino" value="solo_inst" onchange="cambiarDestino('solo_inst')"> Solo a nombre de la institución (sin persona)</label>
+      </div>
+    </div>
+
+    <!-- Campos editables, mostrados según el modo. -->
     <div class="g2">
-      <div class="f"><label>Nombre</label><input id="eCNombre" value="" placeholder="Ej: Juan Pérez" oninput="upd()"></div>
-      <div class="f"><label>Institución / Empresa</label><input id="eCInstitucion" value="" placeholder="Ej: Ministerio de Salud" oninput="upd()"></div>
+      <div class="f"><label>Nombre <span id="lbl-nombre-opc" style="color:#888;font-weight:400;font-size:10px;">(auto del CRM)</span></label><input id="eCNombre" value="" placeholder="Auto" oninput="upd()" readonly style="background:#f5f5f5;"></div>
+      <div class="f"><label>Institución / Empresa</label><input id="eCInstitucion" value="" placeholder="Auto" oninput="upd()" readonly style="background:#f5f5f5;"></div>
     </div>
     <div class="g2">
       <div class="f"><label>RUT (opcional)</label><input id="eCRut" value="" placeholder="12.345.678-9" oninput="upd()"></div>
-      <div class="f"><label>Ciudad</label><input id="eCCiudad" value="" placeholder="Ej: Santiago" oninput="upd()" list="lista-ciudades" autocomplete="off"></div>
+      <div class="f"><label>Ciudad</label><input id="eCCiudad" value="" placeholder="Auto" oninput="upd()" list="lista-ciudades" autocomplete="off" readonly style="background:#f5f5f5;"></div>
       <div class="f"><label>Dirección <span style="font-weight:400;color:#888">(opcional)</span></label><input id="eCDireccion" value="" placeholder="Ej: Av. Providencia 1234" oninput="upd()"></div>
-      <div class="f"><label>Teléfono (opcional)</label><input id="eCTel" value="" placeholder="+56 9 XXXX XXXX" oninput="upd()"></div>
+      <div class="f"><label>Teléfono (opcional)</label><input id="eCTel" value="" placeholder="Auto" oninput="upd()" readonly style="background:#f5f5f5;"></div>
     </div>
-    <div class="f"><label>Email del cliente <span style="color:#e74c3c;font-weight:700;">*</span></label><input id="eCEmail" value="" placeholder="contacto@empresa.cl" oninput="upd()" style="border-color:#e74c3c;" onfocus="this.style.borderColor='var(--sky)'" onblur="if(!this.value)this.style.borderColor='#e74c3c';else this.style.borderColor='#a0c8a0';"></div>
+    <div class="f"><label>Email del cliente <span style="color:#e74c3c;font-weight:700;">*</span></label><input id="eCEmail" value="" placeholder="Auto" oninput="upd()" readonly style="background:#f5f5f5;border-color:#a0c8a0;"></div>
     <div class="g2">
       <div class="f"><label>ID CompraÁgil <span style="font-weight:400;color:#888">(opcional)</span></label><input id="eCompraAgil" value="" placeholder="Ej: CA-2024-XXXX" oninput="upd()"></div>
     </div>
@@ -5078,6 +5122,241 @@ function showToast(msg, tipo) {
   el._t = setTimeout(() => el.classList.remove('show'), 3000);
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// VINCULACIÓN CON CRM — buscador de contactos + modal inline Nuevo Contacto
+// ════════════════════════════════════════════════════════════════════════════
+const CRM_API_URL = "https://script.google.com/macros/s/AKfycbz3Vscxz-OlTHehsnEqqTD1qfql4xzstgWM81RG79P5IiLTkRvaYTU2sNoWV_QpceeowA/exec";
+let CRM_CONTACTOS_CACHE = null;
+let CRM_CONTACTOS_CACHE_TS = 0;
+let CONTACTO_SELECCIONADO = null;
+let SEARCH_TIMEOUT = null;
+
+function getEjecutivoActual(){
+  return (document.getElementById("eExecNombre")?.value || "").trim();
+}
+
+async function cargarContactosCRM(){
+  // Cache 5 minutos
+  if (CRM_CONTACTOS_CACHE && (Date.now() - CRM_CONTACTOS_CACHE_TS) < 300000) {
+    return CRM_CONTACTOS_CACHE;
+  }
+  const ejec = getEjecutivoActual() || "Rayen Ogalde";
+  try {
+    const url = CRM_API_URL + "?accion=crm_contactos&solicitante=" + encodeURIComponent(ejec);
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    const data = await resp.json();
+    if (!data.ok) throw new Error(data.error || "error");
+    CRM_CONTACTOS_CACHE = data.contactos || [];
+    CRM_CONTACTOS_CACHE_TS = Date.now();
+    return CRM_CONTACTOS_CACHE;
+  } catch (e) {
+    console.warn("Error cargando contactos CRM:", e);
+    return [];
+  }
+}
+
+function buscarContactoCRM(q){
+  clearTimeout(SEARCH_TIMEOUT);
+  const cont = document.getElementById("crm-resultados");
+  if (!q || q.length < 2) { cont.style.display = "none"; return; }
+  cont.innerHTML = '<div style="padding:12px;color:#7a5a20;font-size:12px;">Buscando...</div>';
+  cont.style.display = "block";
+  SEARCH_TIMEOUT = setTimeout(async () => {
+    const todos = await cargarContactosCRM();
+    const norm = s => String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+    const qn = norm(q);
+    const matches = todos.filter(c => {
+      return norm(c.nombre).includes(qn) || norm(c.institucion).includes(qn) ||
+             norm(c.email).includes(qn) || norm(c.cargo).includes(qn);
+    }).slice(0, 12);
+    if (!matches.length) {
+      cont.innerHTML = '<div style="padding:14px;color:#7a5a20;font-size:12.5px;text-align:center;">No se encontró ningún contacto con "<b>'+escHTML(q)+'</b>" en el CRM. <br><br><button onclick="abrirModalCrearContactoCotizador(\''+escHTML(q).replace(/'/g,"\\'")+'\')" style="background:#10b981;color:white;border:none;border-radius:6px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;">+ Crear este contacto en CRM</button></div>';
+      return;
+    }
+    cont.innerHTML = matches.map(c => {
+      const owner = c.ejecutivo_asignado || "Sin asignar";
+      return '<div onclick="seleccionarContactoCRM(\''+escHTML(c.id||"")+'\')" style="padding:9px 12px;border-bottom:1px solid #f0e9d4;cursor:pointer;transition:background .12s;" onmouseover="this.style.background=\'#fcf9ef\'" onmouseout="this.style.background=\'\'">' +
+        '<div style="font-weight:700;color:#1a1208;font-size:13px;">'+escHTML(c.nombre||"(sin nombre)")+'</div>' +
+        '<div style="font-size:11.5px;color:#5a3c10;">'+escHTML(c.institucion||"")+(c.cargo?" · "+escHTML(c.cargo):"")+'</div>' +
+        '<div style="font-size:10.5px;color:#7a5a20;margin-top:2px;">'+escHTML(c.email||"sin email")+' · Asignado: '+escHTML(owner)+'</div>' +
+      '</div>';
+    }).join("");
+  }, 220);
+}
+
+function escHTML(s){ return String(s==null?"":s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+async function seleccionarContactoCRM(id){
+  const todos = CRM_CONTACTOS_CACHE || await cargarContactosCRM();
+  const c = todos.find(x => String(x.id) === String(id));
+  if (!c) return;
+  CONTACTO_SELECCIONADO = c;
+  // Mostrar tarjeta verde con datos
+  document.getElementById("sel-nombre").textContent = c.nombre || "(sin nombre)";
+  document.getElementById("sel-institucion").textContent = c.institucion || "(sin institución)";
+  document.getElementById("sel-email").textContent = c.email || "—";
+  document.getElementById("sel-telefono").textContent = c.telefono || "—";
+  document.getElementById("sel-ciudad").textContent = c.ciudad || "—";
+  document.getElementById("sel-categoria").textContent = c.sub_categoria || "—";
+  document.getElementById("contacto-seleccionado").style.display = "block";
+  document.getElementById("banner-buscar-contacto").style.display = "none";
+  document.getElementById("crm-resultados").style.display = "none";
+  document.getElementById("crm-buscar").value = "";
+  // Aplicar datos al formulario del cotizador (modo "mismo")
+  aplicarDatosContactoAlFormulario(c);
+  // Default: modo "mismo"
+  document.querySelector('input[name="cotDestino"][value="mismo"]').checked = true;
+  cambiarDestino("mismo");
+  if (typeof upd === "function") upd();
+}
+
+function aplicarDatosContactoAlFormulario(c){
+  document.getElementById("eCNombre").value = c.nombre || "";
+  document.getElementById("eCInstitucion").value = c.institucion || "";
+  document.getElementById("eCEmail").value = c.email || "";
+  document.getElementById("eCTel").value = c.telefono || "";
+  document.getElementById("eCCiudad").value = c.ciudad || "";
+}
+
+function limpiarContactoSeleccionado(){
+  CONTACTO_SELECCIONADO = null;
+  document.getElementById("contacto-seleccionado").style.display = "none";
+  document.getElementById("banner-buscar-contacto").style.display = "";
+  ["eCNombre","eCInstitucion","eCEmail","eCTel","eCCiudad","eCDireccion","eCRut"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.value = ""; el.readOnly = true; el.style.background = "#f5f5f5"; }
+  });
+  document.getElementById("crm-buscar").focus();
+  if (typeof upd === "function") upd();
+}
+
+function cambiarDestino(modo){
+  const campos = ["eCNombre","eCInstitucion","eCEmail","eCTel","eCCiudad"];
+  if (modo === "mismo") {
+    // Read-only, autollenados del contacto
+    if (CONTACTO_SELECCIONADO) aplicarDatosContactoAlFormulario(CONTACTO_SELECCIONADO);
+    campos.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.readOnly = true; el.style.background = "#f5f5f5"; }
+    });
+  } else if (modo === "otro") {
+    // Editable, todos los campos. Limpia para que el ejecutivo escriba.
+    campos.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.readOnly = false; el.style.background = "white"; }
+    });
+  } else if (modo === "solo_inst") {
+    // Limpia nombre y email, mantiene institución
+    const inst = CONTACTO_SELECCIONADO ? (CONTACTO_SELECCIONADO.institucion || "") : "";
+    document.getElementById("eCNombre").value = "";
+    document.getElementById("eCEmail").value = "";
+    document.getElementById("eCTel").value = "";
+    document.getElementById("eCInstitucion").value = inst;
+    campos.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.readOnly = false; el.style.background = "white"; }
+    });
+  }
+  if (typeof upd === "function") upd();
+}
+
+// ── Modal inline Crear Contacto en CRM (sin salir del Cotizador) ──
+function abrirModalCrearContactoCotizador(nombrePreLlenado){
+  const m = document.getElementById("modalCrearContactoCotizador");
+  if (!m) return;
+  // Reset
+  document.getElementById("ncc-nombre").value = nombrePreLlenado || "";
+  document.getElementById("ncc-institucion").value = "";
+  document.getElementById("ncc-cargo").value = "";
+  document.getElementById("ncc-email").value = "";
+  document.getElementById("ncc-telefono").value = "";
+  document.getElementById("ncc-ciudad").value = "";
+  document.getElementById("ncc-region").value = "";
+  document.getElementById("ncc-tipo-persona").checked = true;
+  document.getElementById("ncc-error").style.display = "none";
+  document.getElementById("ncc-btn-guardar").disabled = false;
+  document.getElementById("ncc-btn-guardar").textContent = "Crear contacto y seleccionar";
+  m.style.display = "flex";
+  setTimeout(() => document.getElementById("ncc-nombre").focus(), 100);
+}
+
+function cerrarModalCrearContactoCotizador(){
+  document.getElementById("modalCrearContactoCotizador").style.display = "none";
+}
+
+function actualizarTipoNCC(){
+  const esPersona = document.getElementById("ncc-tipo-persona").checked;
+  const lblInst = document.getElementById("ncc-label-institucion");
+  lblInst.innerHTML = esPersona
+    ? 'Institución <span style="color:#888;font-weight:500;font-size:11px;">(opcional)</span>'
+    : 'Institución <span style="color:#e74c3c;">*</span>';
+  document.getElementById("ncc-aviso-persona").style.display = esPersona ? "" : "none";
+  document.getElementById("ncc-aviso-institucion").style.display = esPersona ? "none" : "";
+}
+
+async function guardarNuevoContactoCotizador(){
+  const esInst = document.getElementById("ncc-tipo-institucion").checked;
+  const errEl = document.getElementById("ncc-error");
+  errEl.style.display = "none";
+  const data = {
+    accion: "crm_crear_contacto",
+    solicitante: getEjecutivoActual() || "Rayen Ogalde",
+    nombre: document.getElementById("ncc-nombre").value.trim(),
+    institucion: document.getElementById("ncc-institucion").value.trim(),
+    cargo: document.getElementById("ncc-cargo").value.trim(),
+    email: document.getElementById("ncc-email").value.trim(),
+    telefono: document.getElementById("ncc-telefono").value.trim(),
+    ciudad: document.getElementById("ncc-ciudad").value.trim(),
+    region: document.getElementById("ncc-region").value,
+    tipo_contacto: esInst ? "Institución" : "Persona Natural",
+    pipeline_estado: "Cotizado"
+  };
+
+  const mostrarErr = m => { errEl.textContent = m; errEl.style.display = "block"; };
+
+  if (!data.nombre) return mostrarErr("El nombre de la persona es obligatorio.");
+  if (!data.email) return mostrarErr("El email es obligatorio para hacer seguimiento.");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) return mostrarErr("El email no tiene formato válido (debe contener @ y dominio).");
+  if (esInst && !data.institucion) return mostrarErr("Para Institución/Empresa, el campo Institución es obligatorio.");
+  if (!data.solicitante) return mostrarErr("Falta el nombre del ejecutivo arriba del cotizador.");
+
+  const btn = document.getElementById("ncc-btn-guardar");
+  btn.disabled = true;
+  btn.textContent = "Guardando...";
+
+  try {
+    const resp = await fetch(CRM_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(data)
+    });
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    const r = await resp.json();
+    if (!r.ok) {
+      btn.disabled = false; btn.textContent = "Crear contacto y seleccionar";
+      return mostrarErr(r.error || "Error guardando");
+    }
+    // Refrescar cache y seleccionar el nuevo
+    CRM_CONTACTOS_CACHE = null;
+    await cargarContactosCRM();
+    if (r.id) await seleccionarContactoCRM(r.id);
+    cerrarModalCrearContactoCotizador();
+  } catch (e) {
+    btn.disabled = false; btn.textContent = "Crear contacto y seleccionar";
+    mostrarErr("Error de conexión: " + (e.message || e));
+  }
+}
+
+// Click fuera del dropdown lo cierra
+document.addEventListener("click", (e) => {
+  const wrap = document.getElementById("buscador-crm-wrap");
+  if (wrap && !wrap.contains(e.target)) {
+    const r = document.getElementById("crm-resultados");
+    if (r) r.style.display = "none";
+  }
+});
+
 </script>
 
 <!-- PANTALLA REUNIONES -->
@@ -5227,5 +5506,93 @@ const COMUNAS_CHILE = [
   });
 })();
 </script>
+
+<!-- ════════ Modal Crear Contacto inline (sin salir del Cotizador) ════════ -->
+<div id="modalCrearContactoCotizador" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:1000;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:white;border-radius:14px;max-width:640px;width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 16px 48px rgba(15,23,42,.3);">
+    <div style="padding:18px 24px;border-bottom:1px solid #e6dec5;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,#001a60,#5b21b6);color:white;border-radius:14px 14px 0 0;">
+      <h2 style="margin:0;font-family:'Playfair Display',serif;font-size:22px;font-weight:700;">Nuevo contacto en CRM</h2>
+      <button onclick="cerrarModalCrearContactoCotizador()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:white;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:18px;line-height:1;">×</button>
+    </div>
+    <div style="padding:22px 24px;">
+
+      <div style="margin-bottom:16px;">
+        <label style="font-size:11px;font-weight:800;color:#1a1208;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:8px;">Tipo de contacto <span style="color:#e74c3c;">*</span></label>
+        <div style="display:flex;gap:10px;">
+          <label style="flex:1;display:flex;align-items:center;gap:9px;padding:12px;border:2px solid #7c3aed;border-radius:10px;cursor:pointer;background:#f3e8ff;">
+            <input type="radio" name="ncc-tipo" id="ncc-tipo-persona" value="persona" checked onchange="actualizarTipoNCC()" style="width:16px;height:16px;accent-color:#5b21b6;">
+            <div>
+              <div style="font-weight:700;font-size:13px;color:#1a1208;">Persona Natural</div>
+              <div style="font-size:10.5px;color:#5a3c10;margin-top:2px;">Compra para sí o su familia</div>
+            </div>
+          </label>
+          <label style="flex:1;display:flex;align-items:center;gap:9px;padding:12px;border:2px solid #e2e8f0;border-radius:10px;cursor:pointer;background:white;">
+            <input type="radio" name="ncc-tipo" id="ncc-tipo-institucion" value="institucion" onchange="actualizarTipoNCC()" style="width:16px;height:16px;accent-color:#5b21b6;">
+            <div>
+              <div style="font-weight:700;font-size:13px;color:#1a1208;">Institución / Empresa</div>
+              <div style="font-size:10.5px;color:#5a3c10;margin-top:2px;">Clínica, hospital, etc.</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div id="ncc-aviso-persona" style="background:linear-gradient(135deg,#e0f4ff,#f7faff);border:1px solid #06b3fd;border-radius:8px;padding:9px 12px;margin-bottom:14px;font-size:11.5px;color:#001a60;line-height:1.5;">
+        <b>Persona Natural:</b> nombre y email obligatorios. Institución es opcional.
+      </div>
+      <div id="ncc-aviso-institucion" style="background:linear-gradient(135deg,#fef9ec,#fef3c7);border:1px solid #c9a96e;border-radius:8px;padding:9px 12px;margin-bottom:14px;font-size:11.5px;color:#5a3c10;line-height:1.5;display:none;">
+        <b>Institución:</b> nombre de la persona contacto, email e institución son todos obligatorios.
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px;">
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#1a1208;display:block;margin-bottom:4px;">Nombre persona <span style="color:#e74c3c;">*</span></label>
+          <input id="ncc-nombre" type="text" placeholder="Ej: María González" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;">
+        </div>
+        <div>
+          <label id="ncc-label-institucion" style="font-size:11px;font-weight:700;color:#1a1208;display:block;margin-bottom:4px;">Institución <span style="color:#888;font-weight:500;font-size:10px;">(opcional)</span></label>
+          <input id="ncc-institucion" type="text" placeholder="Ej: Clínica Las Condes" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px;">
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#1a1208;display:block;margin-bottom:4px;">Cargo</label>
+          <input id="ncc-cargo" type="text" placeholder="Director, kinesióloga..." style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#1a1208;display:block;margin-bottom:4px;">Email <span style="color:#e74c3c;">*</span></label>
+          <input id="ncc-email" type="email" placeholder="correo@..." style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:10px;">
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#1a1208;display:block;margin-bottom:4px;">Teléfono</label>
+          <input id="ncc-telefono" type="tel" placeholder="+56 9..." style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#1a1208;display:block;margin-bottom:4px;">Ciudad</label>
+          <input id="ncc-ciudad" type="text" placeholder="Santiago, Talca..." style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#1a1208;display:block;margin-bottom:4px;">Región</label>
+          <select id="ncc-region" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;background:white;">
+            <option value="">— Sin especificar —</option>
+            <option>Arica y Parinacota</option><option>Tarapacá</option><option>Antofagasta</option>
+            <option>Atacama</option><option>Coquimbo</option><option>Valparaíso</option>
+            <option>Metropolitana</option><option>O'Higgins</option><option>Maule</option>
+            <option>Ñuble</option><option>Biobío</option><option>La Araucanía</option>
+            <option>Los Ríos</option><option>Los Lagos</option><option>Aysén</option><option>Magallanes</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="ncc-error" style="display:none;background:#fee2e2;border:1px solid #ef4444;color:#7a1818;border-radius:8px;padding:10px 13px;margin-top:10px;font-size:13px;font-weight:600;"></div>
+    </div>
+    <div style="padding:14px 24px;border-top:1px solid #e6dec5;display:flex;justify-content:flex-end;gap:10px;background:#fcf9ef;border-radius:0 0 14px 14px;">
+      <button onclick="cerrarModalCrearContactoCotizador()" style="background:white;border:1px solid #e2e8f0;color:#1a1208;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;">Cancelar</button>
+      <button id="ncc-btn-guardar" onclick="guardarNuevoContactoCotizador()" style="background:linear-gradient(135deg,#001a60,#5b21b6);color:white;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;">Crear contacto y seleccionar</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

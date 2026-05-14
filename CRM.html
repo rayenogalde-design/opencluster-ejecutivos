@@ -899,15 +899,34 @@ input,select,textarea{font-family:inherit; font-size:14px;}
       </button>
     </div>
     <div class="modal-body">
-      <div style="background:linear-gradient(135deg, var(--pale), #f7faff); border:1px solid var(--sky); border-radius:10px; padding:12px 16px; margin-bottom:18px; font-size:13px; color:var(--navy); line-height:1.55;">
-        <b>Recordatorio importante:</b><br>
-        <b>Nombre</b> = persona natural (ej: "María González", "Patricio Esparza").<br>
-        <b>Institución</b> = empresa u organización donde trabaja (ej: "Clínica Las Condes", "Fundación Descúbreme").<br>
-        <span style="color:var(--ruby-dk);">Si solo tienes el nombre de la organización pero no de una persona, regístrala en <b>Empresas / Cuentas</b>, no acá.</span>
+      <div style="margin-bottom:16px;">
+        <label style="font-size:12px; font-weight:800; color:var(--ink); text-transform:uppercase; letter-spacing:.5px; display:block; margin-bottom:8px;">Tipo de contacto <span style="color:var(--ruby);">*</span></label>
+        <div style="display:flex; gap:10px;">
+          <label class="tipo-opt" style="flex:1; display:flex; align-items:center; gap:10px; padding:14px; border:2px solid var(--purple); border-radius:10px; cursor:pointer; background:var(--purple-lt);">
+            <input type="radio" name="nc-tipo" id="nc-tipo-persona" value="persona" checked onchange="actualizarTipoContacto()" style="width:18px; height:18px; accent-color:var(--purple-dk);">
+            <div>
+              <div style="font-weight:700; font-size:14px; color:var(--ink);">Persona Natural</div>
+              <div style="font-size:11.5px; color:var(--subtle); margin-top:2px;">Cliente individual que compra para sí mismo o su familia</div>
+            </div>
+          </label>
+          <label class="tipo-opt" style="flex:1; display:flex; align-items:center; gap:10px; padding:14px; border:2px solid var(--smoke); border-radius:10px; cursor:pointer; background:white;">
+            <input type="radio" name="nc-tipo" id="nc-tipo-institucion" value="institucion" onchange="actualizarTipoContacto()" style="width:18px; height:18px; accent-color:var(--purple-dk);">
+            <div>
+              <div style="font-weight:700; font-size:14px; color:var(--ink);">Institución / Empresa</div>
+              <div style="font-size:11.5px; color:var(--subtle); margin-top:2px;">Clínica, hospital, escuela, fundación, etc.</div>
+            </div>
+          </label>
+        </div>
+      </div>
+      <div style="background:linear-gradient(135deg, var(--pale), #f7faff); border:1px solid var(--sky); border-radius:10px; padding:12px 16px; margin-bottom:18px; font-size:13px; color:var(--navy); line-height:1.55;" id="nc-aviso-persona">
+        <b>Persona Natural:</b> registramos a la persona específica. La institución es opcional (puedes dejarla vacía si compra para uso personal).
+      </div>
+      <div style="background:linear-gradient(135deg, #fef3c7, #fef9ec); border:1px solid var(--gold); border-radius:10px; padding:12px 16px; margin-bottom:18px; font-size:13px; color:var(--gold-deep, #5a3c10); line-height:1.55; display:none;" id="nc-aviso-institucion">
+        <b>Institución / Empresa:</b> el nombre de la persona contacto, su email y la institución son todos obligatorios. Sin un referente humano, la institución sola no sirve para hacer seguimiento.
       </div>
       <div class="fld-row">
-        <div class="fld"><label>Nombre de la persona <span style="color:var(--ruby);">*</span></label><input type="text" id="nc-nombre" placeholder="Ej: María González" required></div>
-        <div class="fld"><label>Institución</label><input type="text" id="nc-institucion" placeholder="Ej: Clínica Las Condes"></div>
+        <div class="fld"><label id="nc-label-nombre">Nombre de la persona <span style="color:var(--ruby);">*</span></label><input type="text" id="nc-nombre" placeholder="Ej: María González" required></div>
+        <div class="fld"><label id="nc-label-institucion">Institución</label><input type="text" id="nc-institucion" placeholder="Ej: Clínica Las Condes"></div>
       </div>
       <div class="fld-row">
         <div class="fld"><label>Cargo</label><input type="text" id="nc-cargo" placeholder="Director, kinesióloga..."></div>
@@ -1796,7 +1815,8 @@ async function guardarEdicionContacto(){
 // ════════════════════════════════════════════════════════════════════════════
 // MODAL NUEVO CONTACTO
 // ════════════════════════════════════════════════════════════════════════════
-function abrirModalNuevoContacto(){
+function abrirModalNuevoContacto(opts){
+  opts = opts || {};
   // Reset form
   ['nc-nombre','nc-institucion','nc-cargo','nc-email','nc-telefono','nc-ciudad','nc-notas']
     .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
@@ -1808,8 +1828,49 @@ function abrirModalNuevoContacto(){
   document.getElementById('nc-dup-warning').innerHTML = '';
   document.getElementById('nc-btn-guardar').textContent = 'Guardar contacto';
   document.getElementById('nc-btn-guardar').disabled = false;
+  // Reset tipo (default Persona)
+  document.getElementById('nc-tipo-persona').checked = true;
+  actualizarTipoContacto();
+  // Pre-llenar campos si vienen
+  if (opts.nombre) document.getElementById('nc-nombre').value = opts.nombre;
+  if (opts.institucion) document.getElementById('nc-institucion').value = opts.institucion;
+  if (opts.email) document.getElementById('nc-email').value = opts.email;
+  if (opts.tipo === 'institucion') {
+    document.getElementById('nc-tipo-institucion').checked = true;
+    actualizarTipoContacto();
+  }
   document.getElementById('modalNuevoContacto').classList.add('show');
   setTimeout(() => document.getElementById('nc-nombre').focus(), 100);
+}
+
+function actualizarTipoContacto(){
+  const esPersona = document.getElementById('nc-tipo-persona').checked;
+  // Estilos visuales de las opciones
+  const optPersona = document.querySelectorAll('.tipo-opt')[0];
+  const optInst = document.querySelectorAll('.tipo-opt')[1];
+  if (optPersona && optInst) {
+    if (esPersona) {
+      optPersona.style.borderColor = 'var(--purple)';
+      optPersona.style.background = 'var(--purple-lt)';
+      optInst.style.borderColor = 'var(--smoke)';
+      optInst.style.background = 'white';
+    } else {
+      optPersona.style.borderColor = 'var(--smoke)';
+      optPersona.style.background = 'white';
+      optInst.style.borderColor = 'var(--gold)';
+      optInst.style.background = 'linear-gradient(135deg, #fef9ec, #fef3c7)';
+    }
+  }
+  // Avisos
+  document.getElementById('nc-aviso-persona').style.display = esPersona ? '' : 'none';
+  document.getElementById('nc-aviso-institucion').style.display = esPersona ? 'none' : '';
+  // Label institución: opcional vs obligatorio
+  const labelInst = document.getElementById('nc-label-institucion');
+  if (labelInst) {
+    labelInst.innerHTML = esPersona
+      ? 'Institución <span style="color:var(--mist); font-size:11px; font-weight:500;">(opcional)</span>'
+      : 'Institución <span style="color:var(--ruby);">*</span>';
+  }
 }
 
 function cerrarModalNuevoContacto(){
@@ -1845,8 +1906,11 @@ async function guardarNuevoContacto(forzar){
   };
   if (forzar === true) data.confirmar_crear_aunque_haya_duplicados = true;
 
+  const esInstitucion = document.getElementById('nc-tipo-institucion').checked;
+  data.tipo_contacto = esInstitucion ? 'Institución' : 'Persona Natural';
+
   if(!data.nombre){
-    alert('El nombre de la persona es obligatorio.\n\nSi vas a registrar una organización sin contacto persona, hacelo desde "Empresas / Cuentas".');
+    alert('El nombre de la persona es obligatorio.\n\nTodo contacto necesita un referente humano para hacer seguimiento.');
     document.getElementById('nc-nombre').focus();
     return;
   }
@@ -1859,6 +1923,11 @@ async function guardarNuevoContacto(forzar){
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)){
     alert('El email no tiene un formato válido (debe contener @ y dominio).');
     document.getElementById('nc-email').focus();
+    return;
+  }
+  if (esInstitucion && !data.institucion){
+    alert('Para contactos de tipo Institución, el campo Institución es obligatorio.\n\nSi es una persona individual, cambia el tipo a Persona Natural.');
+    document.getElementById('nc-institucion').focus();
     return;
   }
 

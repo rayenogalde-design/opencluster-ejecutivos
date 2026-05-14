@@ -5668,6 +5668,13 @@ async function registrarFichaEnDrive(){
 
     if(result && result.id){
       biblioToast('✓ Ficha publicada en Drive (' + tamMB + ' MB). Ya disponible en la Biblioteca.', 'ok');
+      // Invalidar caches para que la Biblioteca vea la nueva ficha de inmediato:
+      // 1) Forzar regeneración del cache de Apps Script (refresh=1) — no esperamos la respuesta
+      try{
+        fetch(BIBLIO_API_URL_V2 + '?accion=listar_fichas&refresh=1').catch(()=>{});
+      }catch(e){}
+      // 2) Señalizar a la Biblioteca (si está abierta en otra pestaña) que el cache sessionStorage debe invalidarse
+      try{ localStorage.setItem('oc_biblio_ultima_publicacion', String(Date.now())); }catch(e){}
     } else {
       biblioToast('Subida completada pero sin ID. Revisa la Biblioteca.', 'error');
     }

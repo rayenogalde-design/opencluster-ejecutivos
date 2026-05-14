@@ -409,6 +409,11 @@ function _leerCacheBiblio(){
     const obj = JSON.parse(raw);
     if(!obj || !obj.ts || !Array.isArray(obj.fichas)) return null;
     if(Date.now() - obj.ts > BIBLIO_CACHE_TTL_MS) return null;
+    // Invalidar si hubo una publicación más reciente que este cache (generador la registra en localStorage)
+    try{
+      const ult = parseInt(localStorage.getItem('oc_biblio_ultima_publicacion'), 10);
+      if(ult && ult > obj.ts) return null;
+    }catch(e){}
     return obj;
   }catch(e){ return null; }
 }
@@ -435,9 +440,15 @@ async function loadFichas(forceRefresh) {
   } else {
     showLoading();
   }
+  // Si hubo una publicación reciente (< 60s), forzar refresh para saltarse el cache de Apps Script
+  let bypassServerCache = forceRefresh;
+  try{
+    const ult = parseInt(localStorage.getItem('oc_biblio_ultima_publicacion'), 10);
+    if(ult && (Date.now() - ult) < 60000) bypassServerCache = true;
+  }catch(e){}
   // 2) Fetch en background — actualiza si hay cambios
   try {
-    const url = BIBLIO_API_URL + '?accion=listar_fichas' + (forceRefresh ? '&refresh=1' : '');
+    const url = BIBLIO_API_URL + '?accion=listar_fichas' + (bypassServerCache ? '&refresh=1' : '');
     const resp = await fetch(url);
     if(!resp.ok) throw new Error('Biblioteca API HTTP ' + resp.status);
     const data = await resp.json();

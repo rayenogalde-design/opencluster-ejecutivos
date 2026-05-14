@@ -4962,8 +4962,22 @@ var _biblioFichaActualFileId = null;
 // (var en vez de let porque el bypass de autopdf llama a init() ANTES de que el parser
 // llegue a esta línea — con let entrarían en TDZ. var sí se hoistea como undefined.)
 
-/* Identifica al ejecutivo que está usando el generador (desde localStorage del Portal Ejecutivo) */
+/* Identifica al ejecutivo que está usando el generador.
+   Prioridad: sesión activa (state.exec) → login persistido del generador (oc_fichas_exec)
+   → perfil del Portal Ejecutivo → parámetro URL ?exec= → fallback "Ejecutivo". */
 function obtenerEjecutivo(){
+  // 1) Sesión activa del generador (la fuente más confiable)
+  try{
+    if(typeof state !== 'undefined' && state && state.exec && state.exec.key){
+      return state.exec.key;
+    }
+  }catch(e){}
+  // 2) Login persistido por doLogin() del propio generador
+  try{
+    const fichaExec = (localStorage.getItem('oc_fichas_exec') || '').trim();
+    if(fichaExec) return fichaExec;
+  }catch(e){}
+  // 3) Perfil del Portal Ejecutivo (compat)
   try{
     const raw = localStorage.getItem('opencluster_perfil_ejecutivo');
     if(raw){
@@ -4972,7 +4986,7 @@ function obtenerEjecutivo(){
       if(nombre) return nombre;
     }
   }catch(e){}
-  // Fallback: parámetro URL ?exec=Nombre
+  // 4) Parámetro URL ?exec=Nombre
   try{
     const params = new URLSearchParams(window.location.search);
     const fromUrl = (params.get('exec') || '').trim();

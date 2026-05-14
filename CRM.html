@@ -1542,24 +1542,39 @@ function renderLista(view){
   // Grid de cards (igual que Empresas) con modal al click
   container.innerHTML = '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">' +
     lista.map(c => {
-      const pipe = String(c.pipeline_estado || 'Lead').toLowerCase();
-      const pipeClass = (pipe.indexOf('contactad') >= 0) ? 'contactado'
-                      : (pipe.indexOf('cotizad') >= 0)   ? 'cotizado'
-                      : (pipe.indexOf('reuni') >= 0)     ? 'reunion'
-                      : (pipe.indexOf('seguim') >= 0)    ? 'seguimiento'
+      // Usar último estado calculado (no el campo pipeline_estado viejo)
+      const estado = c.ultimo_estado || c.pipeline_estado || 'Contactado';
+      const pipe = String(estado).toLowerCase();
+      const pipeClass = (pipe.indexOf('cotizad') >= 0 || pipe.indexOf('gesti') >= 0) ? 'cotizado'
+                      : (pipe.indexOf('reuni') >= 0) ? 'reunion'
+                      : (pipe.indexOf('seguim') >= 0) ? 'seguimiento'
                       : (pipe.indexOf('ganad') >= 0 || pipe.indexOf('cerrad') >= 0) ? 'cerrado'
-                      : (pipe.indexOf('perdid') >= 0)    ? 'perdido' : '';
+                      : (pipe.indexOf('perdid') >= 0) ? 'perdido'
+                      : (pipe.indexOf('webinar') >= 0) ? 'reunion'
+                      : 'contactado';
       const huerfano = !c.sub_categoria;
       const mio = esOwner(c);
       const ownerNm = ownerLabel(c);
       const ownerLine = (view === 'vTodos')
         ? '<div class="cc-owner-line' + (mio ? ' mine' : '') + '"><span class="ow-dot"></span>' + (mio ? 'Asignado a ti' : 'Asignado a ' + esc(ownerNm)) + '</div>'
         : '';
+      // Icono $ si tiene cotización + contador si tiene más de 1
+      const iconoCot = c.tiene_cotizacion
+        ? '<span title="Tiene ' + (c.cant_cotizaciones || 1) + ' cotización(es) emitida(s)" style="display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg, var(--gold), var(--gold-dk));color:white;padding:3px 9px;border-radius:10px;font-size:11px;font-weight:800;">' +
+            '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' +
+            (c.cant_cotizaciones > 1 ? c.cant_cotizaciones : 'Cotizado') +
+          '</span>'
+        : '';
       return '<div class="contact-card" onclick="abrirFichaModal(\'' + esc(c.id) + '\')">' +
-        '<div class="cc-name">' + esc(c.nombre || c.institucion || '(sin nombre)') + '</div>' +
-        '<div class="cc-inst">' + esc(c.institucion || '') + (c.cargo ? ' · ' + esc(c.cargo) : '') + '</div>' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">' +
+          '<div style="flex:1;min-width:0;">' +
+            '<div class="cc-name">' + esc(c.nombre || c.institucion || '(sin nombre)') + '</div>' +
+            '<div class="cc-inst">' + esc(c.institucion || '') + (c.cargo ? ' · ' + esc(c.cargo) : '') + '</div>' +
+          '</div>' +
+          iconoCot +
+        '</div>' +
         '<div class="cc-meta">' +
-          '<span class="cc-pill ' + pipeClass + '">' + esc(c.pipeline_estado || 'Lead') + '</span>' +
+          '<span class="cc-pill ' + pipeClass + '">' + esc(estado) + '</span>' +
           (huerfano ? '<span class="cc-pill huerfano">Sin categoría</span>' : '<span class="cc-pill">' + esc(c.sub_categoria) + '</span>') +
         '</div>' +
         ownerLine +
@@ -2292,18 +2307,30 @@ async function cargarCuentas(){
     empresas.map(c => {
       const owner = esOwner(c);
       const ownerNm = String(c.ejecutivo_asignado || '').trim();
-      const pipe = String(c.pipeline_estado || 'Lead').toLowerCase();
-      const pipeClass = (pipe.indexOf('contactad') >= 0) ? 'contactado'
-                      : (pipe.indexOf('cotizad') >= 0)   ? 'cotizado'
-                      : (pipe.indexOf('reuni') >= 0)     ? 'reunion'
-                      : (pipe.indexOf('seguim') >= 0)    ? 'seguimiento'
-                      : (pipe.indexOf('ganad') >= 0)     ? 'cerrado'
-                      : (pipe.indexOf('perdid') >= 0)    ? 'perdido' : '';
+      const estado = c.ultimo_estado || c.pipeline_estado || 'Contactado';
+      const pipe = String(estado).toLowerCase();
+      const pipeClass = (pipe.indexOf('cotizad') >= 0 || pipe.indexOf('gesti') >= 0) ? 'cotizado'
+                      : (pipe.indexOf('reuni') >= 0) ? 'reunion'
+                      : (pipe.indexOf('seguim') >= 0) ? 'seguimiento'
+                      : (pipe.indexOf('ganad') >= 0) ? 'cerrado'
+                      : (pipe.indexOf('perdid') >= 0) ? 'perdido'
+                      : 'contactado';
+      const iconoCot = c.tiene_cotizacion
+        ? '<span title="Tiene ' + (c.cant_cotizaciones || 1) + ' cotización(es) emitida(s)" style="display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg, var(--gold), var(--gold-dk));color:white;padding:3px 9px;border-radius:10px;font-size:11px;font-weight:800;">' +
+            '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' +
+            (c.cant_cotizaciones > 1 ? c.cant_cotizaciones : 'Cotizado') +
+          '</span>'
+        : '';
       return '<div class="contact-card" onclick="abrirFichaModal(\'' + esc(c.id) + '\')">' +
-        '<div class="cc-name">' + esc(c.institucion || '(sin nombre)') + '</div>' +
-        '<div class="cc-inst">' + esc(c.sub_categoria || 'Sin categoría') + (c.ciudad ? ' · ' + esc(c.ciudad) : '') + '</div>' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">' +
+          '<div style="flex:1;min-width:0;">' +
+            '<div class="cc-name">' + esc(c.institucion || '(sin nombre)') + '</div>' +
+            '<div class="cc-inst">' + esc(c.sub_categoria || 'Sin categoría') + (c.ciudad ? ' · ' + esc(c.ciudad) : '') + '</div>' +
+          '</div>' +
+          iconoCot +
+        '</div>' +
         '<div class="cc-meta">' +
-          '<span class="cc-pill ' + pipeClass + '">' + esc(c.pipeline_estado || 'Lead') + '</span>' +
+          '<span class="cc-pill ' + pipeClass + '">' + esc(estado) + '</span>' +
         '</div>' +
         '<div class="cc-owner-line' + (owner ? ' mine' : '') + '"><span class="ow-dot"></span>' +
           (owner ? 'Asignada a ti' : (ownerNm ? 'Asignada a ' + esc(ownerNm) : 'Sin asignar')) +

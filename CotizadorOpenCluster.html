@@ -5252,45 +5252,65 @@ function aplicarDatosContactoAlFormulario(c){
   document.getElementById("eCCiudad").value = c.ciudad || "";
 }
 
+// Campos del CRM (se bloquean cuando hay contacto seleccionado en modo "mismo")
+const CAMPOS_CRM = ["eCNombre","eCInstitucion","eCEmail","eCTel","eCCiudad"];
+// Campos que SIEMPRE están editables (no vienen del CRM, son específicos de la cotización)
+const CAMPOS_SIEMPRE_EDITABLES = ["eCRut","eCDireccion"];
+
 function limpiarContactoSeleccionado(){
   CONTACTO_SELECCIONADO = null;
   document.getElementById("contacto-seleccionado").style.display = "none";
   document.getElementById("banner-buscar-contacto").style.display = "";
-  ["eCNombre","eCInstitucion","eCEmail","eCTel","eCCiudad","eCDireccion","eCRut"].forEach(id => {
+  // Limpiar valores de todos los campos
+  CAMPOS_CRM.concat(CAMPOS_SIEMPRE_EDITABLES).forEach(id => {
     const el = document.getElementById(id);
-    if (el) { el.value = ""; el.readOnly = true; el.style.background = "#f5f5f5"; }
+    if (el) el.value = "";
+  });
+  // Bloquear solo los que vienen del CRM
+  CAMPOS_CRM.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.readOnly = true; el.style.background = "#f5f5f5"; }
+  });
+  // Asegurar que RUT y Dirección queden editables
+  CAMPOS_SIEMPRE_EDITABLES.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.readOnly = false; el.style.background = "white"; }
   });
   document.getElementById("crm-buscar").focus();
   if (typeof upd === "function") upd();
 }
 
 function cambiarDestino(modo){
-  const campos = ["eCNombre","eCInstitucion","eCEmail","eCTel","eCCiudad"];
   if (modo === "mismo") {
     // Read-only, autollenados del contacto
     if (CONTACTO_SELECCIONADO) aplicarDatosContactoAlFormulario(CONTACTO_SELECCIONADO);
-    campos.forEach(id => {
+    CAMPOS_CRM.forEach(id => {
       const el = document.getElementById(id);
       if (el) { el.readOnly = true; el.style.background = "#f5f5f5"; }
     });
   } else if (modo === "otro") {
-    // Editable, todos los campos. Limpia para que el ejecutivo escriba.
-    campos.forEach(id => {
+    // Editable, todos los campos.
+    CAMPOS_CRM.forEach(id => {
       const el = document.getElementById(id);
       if (el) { el.readOnly = false; el.style.background = "white"; }
     });
   } else if (modo === "solo_inst") {
-    // Limpia nombre y email, mantiene institución
+    // Limpia nombre, email y teléfono; mantiene institución
     const inst = CONTACTO_SELECCIONADO ? (CONTACTO_SELECCIONADO.institucion || "") : "";
     document.getElementById("eCNombre").value = "";
     document.getElementById("eCEmail").value = "";
     document.getElementById("eCTel").value = "";
     document.getElementById("eCInstitucion").value = inst;
-    campos.forEach(id => {
+    CAMPOS_CRM.forEach(id => {
       const el = document.getElementById(id);
       if (el) { el.readOnly = false; el.style.background = "white"; }
     });
   }
+  // SIEMPRE asegurar que RUT y Dirección queden editables, sea cual sea el modo
+  CAMPOS_SIEMPRE_EDITABLES.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.readOnly = false; el.style.background = "white"; }
+  });
   if (typeof upd === "function") upd();
 }
 

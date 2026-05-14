@@ -776,6 +776,18 @@ input,select,textarea{font-family:inherit; font-size:14px;}
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 11l-3 3l-3-3"/></svg>
             Normalizar nombres ejecutivos
           </button>
+          <button class="btn" onclick="fusionarDuplicados(true)" style="background:#7c3aed; color:white; border-color:#7c3aed;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12h6"/><path d="M12 9v6"/><circle cx="12" cy="12" r="10"/></svg>
+            Simular fusión de duplicados
+          </button>
+          <button class="btn jade" onclick="fusionarDuplicados(false)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            Ejecutar fusión real
+          </button>
+          <button class="btn" onclick="auditarCotizaciones()" style="background:var(--gold-dk); color:white; border-color:var(--gold-dk);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            Auditar cotizaciones sin Primer Contacto
+          </button>
         </div>
         <div id="migReporte"></div>
       </div>
@@ -2466,6 +2478,101 @@ async function normalizarNombres(){
   // Refrescar caches
   CACHE.vMis = null;
   CACHE.vTodos = null;
+}
+
+async function fusionarDuplicados(dryRun){
+  const reporteEl = document.getElementById('migReporte');
+  if (!dryRun) {
+    if (!confirm('Vas a EJECUTAR la fusión real de duplicados.\n\nSe van a consolidar todos los contactos que tengan nombre+institución idénticos, conservando uno por grupo y moviendo sus interacciones al consolidado.\n\nEsta acción NO se puede deshacer. ¿Continuar?')) return;
+  }
+  reporteEl.innerHTML = '<div class="loading-state"><div class="spinner"></div>' + (dryRun ? 'Simulando fusión...' : 'Fusionando duplicados...') + '</div>';
+  const r = await fetchAPI('crm_fusionar_duplicados_exactos', null, { solicitante: USUARIO, dryRun: !!dryRun });
+  if (!r || !r.ok) {
+    reporteEl.innerHTML = '<div class="error-state"><b>Error:</b> ' + esc((r && r.error) || 'desconocido') + '</div>';
+    return;
+  }
+  const rep = r.reporte || {};
+  const detallesHTML = (rep.detalles || []).slice(0, 30).map(d =>
+    '<div style="background:white;border:1px solid var(--smoke);border-radius:8px;padding:10px 14px;margin-bottom:6px;font-size:13px;">' +
+      '<b>' + esc(d.nombre || '(sin nombre)') + '</b>' + (d.institucion ? ' · ' + esc(d.institucion) : '') +
+      ' <span style="background:var(--ruby-lt);color:var(--ruby-dk);padding:2px 8px;border-radius:6px;font-size:11.5px;font-weight:700;margin-left:6px;">' + d.duplicados + ' filas</span>' +
+    '</div>'
+  ).join('');
+  reporteEl.innerHTML =
+    '<div class="card"><div class="card-hd"><h3>Fusión de duplicados exactos · ' + esc(rep.modo || '') + '</h3></div>' +
+    '<div class="card-body" style="font-family:Open Sans,sans-serif;">' +
+      '<ul>' +
+        '<li>Grupos de duplicados detectados: <b>' + (rep.grupos_duplicados || 0) + '</b></li>' +
+        '<li>Filas a eliminar: <b>' + (rep.filas_a_eliminar || 0) + '</b></li>' +
+        '<li>Contactos que se consolidan: <b>' + (rep.contactos_consolidados || 0) + '</b></li>' +
+        (rep.interacciones_movidas !== undefined ? '<li>Interacciones reasignadas: <b>' + rep.interacciones_movidas + '</b></li>' : '') +
+      '</ul>' +
+      '<p><b>' + esc(rep.mensaje || '') + '</b></p>' +
+      (detallesHTML ? '<details style="margin-top:14px;"><summary style="cursor:pointer;font-weight:700;color:var(--purple-dk);">Ver detalle (primeros 30 grupos)</summary><div style="margin-top:10px;">' + detallesHTML + '</div></details>' : '') +
+    '</div></div>';
+  if (!dryRun) {
+    CACHE.vMis = null; CACHE.vTodos = null; CACHE.vSinCat = null;
+    try { localStorage.removeItem('crm_cache_contactos_' + USUARIO); } catch(e){}
+  }
+}
+
+async function auditarCotizaciones(){
+  const reporteEl = document.getElementById('migReporte');
+  reporteEl.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cruzando cotizaciones con Primer Contacto...</div>';
+  const r = await fetchAPI('crm_auditar_cotizaciones_sin_contacto', null, { solicitante: USUARIO });
+  if (!r || !r.ok) {
+    reporteEl.innerHTML = '<div class="error-state"><b>Error:</b> ' + esc((r && r.error) || 'desconocido') + '</div>';
+    return;
+  }
+  const total = r.total_cotizaciones || 0;
+  const conMatch = r.con_primer_contacto || 0;
+  const sinMatch = r.sin_primer_contacto || 0;
+  const huerfanas = r.huerfanas_por_ejecutivo || {};
+  const ejecutivos = Object.keys(huerfanas).sort();
+
+  const bloquesEjec = ejecutivos.map(ejec => {
+    const lista = huerfanas[ejec] || [];
+    return '<details style="margin-bottom:14px;background:white;border:1px solid var(--smoke);border-radius:10px;overflow:hidden;">' +
+      '<summary style="cursor:pointer;padding:14px 18px;font-weight:700;font-size:14px;background:linear-gradient(135deg,var(--navy),var(--purple-dk));color:white;display:flex;justify-content:space-between;">' +
+        '<span>' + esc(ejec) + '</span>' +
+        '<span style="background:var(--gold);color:var(--navy-dk,#000d3a);padding:2px 10px;border-radius:10px;font-size:12.5px;">' + lista.length + ' cotizaciones sin contacto</span>' +
+      '</summary>' +
+      '<div style="padding:10px 14px;">' +
+        '<table style="width:100%;border-collapse:collapse;font-size:12.5px;">' +
+          '<thead><tr style="border-bottom:1px solid var(--smoke);text-align:left;">' +
+            '<th style="padding:7px;">N° Cot</th><th style="padding:7px;">Fecha</th><th style="padding:7px;">Cliente</th><th style="padding:7px;">Institución</th><th style="padding:7px;text-align:right;">Monto</th>' +
+          '</tr></thead>' +
+          '<tbody>' + lista.map(c =>
+            '<tr style="border-bottom:1px dashed var(--smoke);">' +
+              '<td style="padding:6px 7px;font-weight:700;color:var(--purple-dk);">' + esc(c.cotizacion || '') + '</td>' +
+              '<td style="padding:6px 7px;color:var(--mist);">' + esc(c.fecha || '') + '</td>' +
+              '<td style="padding:6px 7px;">' + esc(c.cliente || '') + '</td>' +
+              '<td style="padding:6px 7px;color:var(--subtle);">' + esc(c.institucion || '') + '</td>' +
+              '<td style="padding:6px 7px;text-align:right;font-weight:600;">' + esc(c.monto || '') + '</td>' +
+            '</tr>'
+          ).join('') + '</tbody>' +
+        '</table>' +
+      '</div>' +
+    '</details>';
+  }).join('');
+
+  reporteEl.innerHTML =
+    '<div class="card"><div class="card-hd"><h3>Auditoría: cotizaciones sin Primer Contacto</h3></div>' +
+    '<div class="card-body" style="font-family:Open Sans,sans-serif;">' +
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px;">' +
+        '<div style="background:var(--paper);border:1px solid var(--smoke);border-radius:10px;padding:14px;text-align:center;">' +
+          '<div style="font-size:12px;color:var(--mist);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Total cotizaciones</div>' +
+          '<div style="font-size:24px;font-weight:800;color:var(--ink);margin-top:4px;">' + total + '</div></div>' +
+        '<div style="background:var(--jade-lt);border:1px solid var(--jade);border-radius:10px;padding:14px;text-align:center;">' +
+          '<div style="font-size:12px;color:var(--jade-dk);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Con Primer Contacto</div>' +
+          '<div style="font-size:24px;font-weight:800;color:var(--jade-dk);margin-top:4px;">' + conMatch + '</div></div>' +
+        '<div style="background:var(--ruby-lt);border:1px solid var(--ruby);border-radius:10px;padding:14px;text-align:center;">' +
+          '<div style="font-size:12px;color:var(--ruby-dk);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Sin Primer Contacto</div>' +
+          '<div style="font-size:24px;font-weight:800;color:var(--ruby-dk);margin-top:4px;">' + sinMatch + '</div></div>' +
+      '</div>' +
+      '<p style="margin-bottom:14px;">Lista por ejecutivo de las cotizaciones donde el cliente NO aparece en la pestaña Primer Contacto. Manda esta lista a cada ejecutivo para que ingrese el contacto faltante.</p>' +
+      (bloquesEjec || '<div style="padding:20px;color:var(--mist);">Todas las cotizaciones tienen Primer Contacto asociado. Excelente.</div>') +
+    '</div></div>';
 }
 
 async function inferirCategorias(){

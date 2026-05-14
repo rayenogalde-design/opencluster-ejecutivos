@@ -535,6 +535,12 @@ input,select,textarea{font-family:inherit; font-size:14px;}
     </a>
     <div class="topbar-title">CRM OpenCluster</div>
 
+    <!-- Toggle de modo (solo Rayen lo ve) -->
+    <div id="modoToggle" style="display:none;align-items:center;gap:4px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);border-radius:9px;padding:4px;margin-left:18px;">
+      <button data-modo="admin" class="modo-btn act" onclick="cambiarModo('admin')" style="background:white;color:var(--navy);border:0;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:800;cursor:pointer;letter-spacing:.3px;">ADMIN</button>
+      <button data-modo="ejecutiva" class="modo-btn" onclick="cambiarModo('ejecutiva')" style="background:transparent;color:rgba(255,255,255,.85);border:0;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.3px;">EJECUTIVA</button>
+    </div>
+
     <button id="btnSyncRegistro" onclick="sincronizarConRegistro(true)" title="Trae al CRM los contactos y cotizaciones nuevos del Registro" style="display:none;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22);color:white;padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;align-items:center;gap:7px;margin-left:auto;">
       <svg id="syncIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15.4 6.4L3 21"/><path d="M3 12a9 9 0 0 1 15.4-6.4L21 3"/><path d="M21 3v6h-6"/><path d="M3 21v-6h6"/></svg>
       <span id="syncLabel">Sincronizar con Registro</span>
@@ -1040,6 +1046,7 @@ try {
 
 let USUARIO = null;
 let ROL = 'ejecutivo';        // 'ejecutivo' o 'admin' (Mario es 'direccion' pero el CRM lo redirige al Portal)
+let MODO_VISTA = 'admin';     // Solo Rayen lo cambia. 'admin' = ve todo del equipo. 'ejecutiva' = ve solo lo suyo.
 const TEAM = [
   { full: "Rayen Ogalde",          short: "Rayen",          rol: "admin"     },
   { full: "Maximiliano Astudillo", short: "Maximiliano",    rol: "ejecutivo" },
@@ -1325,11 +1332,36 @@ function aplicarVisibilidadPorRol(){
   const btnSync = document.getElementById('btnSyncRegistro');
   if (btnSync) btnSync.style.display = 'inline-flex';
 
+  // Toggle Admin/Ejecutiva (solo Rayen lo ve)
+  const modoToggle = document.getElementById('modoToggle');
+  if (modoToggle) modoToggle.style.display = esAdmin ? 'flex' : 'none';
+
   // Vistas admin (Territorios, Auditoría, Migración) — solo Rayen
   ['navTerr', 'navAud', 'navMigracion', 'secAdmin'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.style.display = esAdmin ? '' : 'none';
   });
+}
+
+// Solo Rayen (admin) puede alternar entre ver TODO o ver SOLO SUS datos como ejecutiva.
+function cambiarModo(modo){
+  if (ROL !== 'admin') return;
+  MODO_VISTA = modo;
+  document.querySelectorAll('.modo-btn').forEach(b => {
+    const activo = b.dataset.modo === modo;
+    b.classList.toggle('act', activo);
+    if (activo) { b.style.background = 'white'; b.style.color = '#001a60'; b.style.fontWeight = '800'; }
+    else { b.style.background = 'transparent'; b.style.color = 'rgba(255,255,255,.85)'; b.style.fontWeight = '700'; }
+  });
+  // Limpiar caches y refrescar la vista activa
+  CACHE.vMis = null; CACHE.vTodos = null; CACHE.vCuentas = null; CACHE.vSinCat = null;
+  const v = document.querySelector('.view.act');
+  if (v) goView(v.id);
+}
+
+// ¿Estoy actuando como admin ahora? (admin + en modo admin)
+function esActuandoComoAdmin(){
+  return ROL === 'admin' && MODO_VISTA === 'admin';
 }
 
 function goView(id){
@@ -1608,24 +1640,169 @@ function renderFicha(container, data){
         ? '<button class="btn" onclick="eliminarContacto(\'' + esc(c.id) + '\', \'' + esc(c.nombre || c.institucion || '(sin nombre)').replace(/\'/g, "&#39;") + '\')" style="background:var(--ruby-lt);color:var(--ruby-dk);border-color:var(--ruby);margin-left:auto;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Eliminar</button>'
         : '') +
     '</div>' +
-    '<div>' +
-      '<div style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:800;color:var(--mist);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Línea de tiempo</div>' +
-      (tl.length === 0 ?
-        '<div style="padding:30px;text-align:center;color:var(--mist);background:var(--paper);border-radius:10px;border:1px dashed var(--smoke);">Sin actividad registrada todavía.</div>' :
-        tl.map(ev => {
-          const t = ev.tipo || 'interaccion';
-          return '<div style="background:white;border:1px solid var(--smoke);border-radius:10px;padding:12px 16px;margin-bottom:10px;border-left:3px solid var(--' + (t === 'cotizacion' ? 'gold' : t === 'reunion' ? 'purple' : 'sky') + ');">' +
-            '<div style="display:flex;gap:10px;align-items:center;font-size:11.5px;color:var(--mist);margin-bottom:4px;">' +
-              '<span style="font-weight:700;">' + esc(formatFecha(ev.fecha)) + '</span>' +
-              '<span style="font-weight:700;text-transform:uppercase;letter-spacing:.4px;">' + esc(t) + '</span>' +
+    renderHistorialAgrupado(tl);
+}
+
+// Extrae número de cotización del texto de notas/detalle (ej: "Cot OC26-3541-AT · $6.899.989")
+function extraerNumCot(texto){
+  if (!texto) return '';
+  const m = String(texto).match(/OC\d+[-\w]*/i);
+  return m ? m[0].toUpperCase() : '';
+}
+
+// Determina si una interacción es una COTIZACIÓN basándose en origen, medio o detalle
+function esCotizacion(ev){
+  if (!ev) return false;
+  if (ev.tipo === 'cotizacion') return true;
+  const origen = String(ev.origen || '').toLowerCase();
+  const medio = String(ev.titulo || '').toLowerCase();
+  const detalle = String(ev.detalle || '').toLowerCase();
+  if (origen.indexOf('cotiz') >= 0) return true;
+  if (medio.indexOf('cotiz') >= 0) return true;
+  // Si tiene N° de cotización en el detalle pero no es seguimiento
+  if (detalle.match(/^cot oc\d+/i) && origen.indexOf('segui') < 0) return true;
+  return false;
+}
+
+function esSeguimiento(ev){
+  if (!ev) return false;
+  const origen = String(ev.origen || '').toLowerCase();
+  return origen.indexOf('segui') >= 0;
+}
+
+function esReunion(ev){
+  if (!ev) return false;
+  if (ev.tipo === 'reunion') return true;
+  const origen = String(ev.origen || '').toLowerCase();
+  return origen.indexOf('reun') >= 0;
+}
+
+// Renderiza el historial agrupando cotizaciones con sus seguimientos
+function renderHistorialAgrupado(tl){
+  if (!tl || !tl.length) {
+    return '<div style="padding:30px;text-align:center;color:var(--mist);background:var(--paper);border-radius:10px;border:1px dashed var(--smoke);">Sin actividad registrada todavía.</div>';
+  }
+
+  // Separar en 3 grupos
+  const cotizaciones = [];
+  const reuniones = [];
+  const otras = [];
+
+  tl.forEach(ev => {
+    if (esCotizacion(ev)) cotizaciones.push(ev);
+    else if (esReunion(ev)) reuniones.push(ev);
+    else if (esSeguimiento(ev)) {} // se renderizan dentro de su cotización
+    else otras.push(ev);
+  });
+
+  // Para cada cotización, encontrar sus seguimientos asociados (mismo N°)
+  const seguimientos = tl.filter(esSeguimiento);
+  const segPorCot = {};
+  seguimientos.forEach(s => {
+    const num = extraerNumCot(s.detalle) || extraerNumCot(s.titulo);
+    if (num) {
+      if (!segPorCot[num]) segPorCot[num] = [];
+      segPorCot[num].push(s);
+    } else {
+      otras.push(s); // seguimiento sin n° → va a "otras"
+    }
+  });
+
+  let html = '';
+
+  // 1. COTIZACIONES (sección destacada con cards expandibles)
+  if (cotizaciones.length) {
+    html += '<div style="margin-bottom:24px;">' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">' +
+        '<div style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:800;color:var(--gold-dk);text-transform:uppercase;letter-spacing:1px;">Cotizaciones</div>' +
+        '<span style="background:var(--gold);color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:800;">' + cotizaciones.length + '</span>' +
+      '</div>';
+
+    cotizaciones.forEach((co, idx) => {
+      const num = extraerNumCot(co.detalle) || extraerNumCot(co.titulo);
+      const segs = num ? (segPorCot[num] || []) : [];
+      const monto = (co.detalle || '').match(/\$[\d.,]+/);
+      const estado = (co.titulo || '').replace(/^.*—\s*/, '').trim() || co.resultado || 'En gestión';
+      const cotId = 'cot-' + idx + '-' + (num || Date.now());
+
+      html += '<details style="background:white;border:1px solid var(--gold);border-radius:10px;padding:0;margin-bottom:10px;overflow:hidden;">' +
+        '<summary style="cursor:pointer;padding:14px 18px;list-style:none;background:linear-gradient(135deg, #faf3e1, #f5edd9);border-left:4px solid var(--gold);">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;">' +
+            '<div>' +
+              '<div style="font-size:15px;font-weight:800;color:var(--ink);font-family:Montserrat,sans-serif;letter-spacing:.3px;">' + esc(num || 'COTIZACIÓN') + '</div>' +
+              '<div style="font-size:11.5px;color:var(--gold-dk);margin-top:2px;">' + esc(formatFecha(co.fecha)) + ' · por ' + esc(co.ejecutivo || '—') + '</div>' +
             '</div>' +
-            '<div style="font-size:14px;font-weight:600;color:var(--ink);">' + esc(ev.titulo || '') + '</div>' +
-            (ev.detalle ? '<div style="font-size:12.5px;color:var(--subtle);margin-top:4px;">' + esc(ev.detalle) + '</div>' : '') +
-            (ev.ejecutivo ? '<div style="font-size:11px;color:var(--mist);margin-top:6px;">por ' + esc(ev.ejecutivo) + '</div>' : '') +
-          '</div>';
-        }).join('')
-      ) +
-    '</div>';
+            '<div style="display:flex;gap:10px;align-items:center;">' +
+              (monto ? '<span style="font-size:15px;font-weight:800;color:var(--gold-dk);">' + esc(monto[0]) + '</span>' : '') +
+              '<span style="background:var(--purple-dk);color:white;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;">' + esc(estado) + '</span>' +
+              (segs.length ? '<span style="background:var(--amber);color:white;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;">' + segs.length + ' seguim.</span>' : '<span style="color:var(--mist);font-size:11px;font-style:italic;">sin seguimientos</span>') +
+              '<span style="color:var(--gold-dk);font-weight:700;font-size:14px;">▾</span>' +
+            '</div>' +
+          '</div>' +
+        '</summary>' +
+        '<div style="padding:14px 18px;background:white;">' +
+          '<div style="font-size:12px;color:var(--subtle);margin-bottom:10px;">' + esc(co.detalle || 'Sin notas') + '</div>' +
+          (segs.length
+            ? '<div style="font-family:Montserrat,sans-serif;font-size:10.5px;font-weight:800;color:var(--amber);text-transform:uppercase;letter-spacing:.7px;margin:8px 0 8px;">Seguimientos de esta cotización</div>' +
+              segs.map(s =>
+                '<div style="background:var(--amber-lt);border-left:3px solid var(--amber);border-radius:6px;padding:10px 12px;margin-bottom:6px;">' +
+                  '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
+                    '<span style="font-size:11px;font-weight:700;color:var(--gold-dk);">' + esc(formatFecha(s.fecha)) + '</span>' +
+                    (s.ejecutivo ? '<span style="font-size:10.5px;color:var(--subtle);">por ' + esc(s.ejecutivo) + '</span>' : '') +
+                  '</div>' +
+                  '<div style="font-size:12.5px;font-weight:600;color:var(--ink);">' + esc(s.titulo || s.detalle || '') + '</div>' +
+                  (s.detalle && s.detalle !== s.titulo ? '<div style="font-size:11.5px;color:var(--subtle);margin-top:3px;">' + esc(s.detalle) + '</div>' : '') +
+                '</div>'
+              ).join('')
+            : '<div style="padding:12px;background:var(--paper);border-radius:6px;color:var(--mist);font-size:12px;font-style:italic;text-align:center;">Esta cotización todavía no tiene seguimientos registrados.</div>'
+          ) +
+        '</div>' +
+      '</details>';
+    });
+    html += '</div>';
+  }
+
+  // 2. REUNIONES
+  if (reuniones.length) {
+    html += '<div style="margin-bottom:24px;">' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">' +
+        '<div style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:800;color:var(--purple-dk);text-transform:uppercase;letter-spacing:1px;">Reuniones</div>' +
+        '<span style="background:var(--purple);color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:800;">' + reuniones.length + '</span>' +
+      '</div>';
+    reuniones.forEach(ev => {
+      html += '<div style="background:white;border:1px solid var(--smoke);border-radius:10px;padding:12px 16px;margin-bottom:8px;border-left:3px solid var(--purple);">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
+          '<span style="font-size:11.5px;font-weight:700;color:var(--purple-dk);">' + esc(formatFecha(ev.fecha)) + '</span>' +
+          (ev.ejecutivo ? '<span style="font-size:11px;color:var(--mist);">por ' + esc(ev.ejecutivo) + '</span>' : '') +
+        '</div>' +
+        '<div style="font-size:14px;font-weight:600;color:var(--ink);">' + esc(ev.titulo || '') + '</div>' +
+        (ev.detalle ? '<div style="font-size:12.5px;color:var(--subtle);margin-top:4px;">' + esc(ev.detalle) + '</div>' : '') +
+      '</div>';
+    });
+    html += '</div>';
+  }
+
+  // 3. OTRAS INTERACCIONES (primer contacto, email, llamada, etc.)
+  if (otras.length) {
+    html += '<div>' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">' +
+        '<div style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:800;color:var(--sky);text-transform:uppercase;letter-spacing:1px;">Otras interacciones</div>' +
+        '<span style="background:var(--sky);color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:800;">' + otras.length + '</span>' +
+      '</div>';
+    otras.forEach(ev => {
+      html += '<div style="background:white;border:1px solid var(--smoke);border-radius:10px;padding:11px 14px;margin-bottom:6px;border-left:3px solid var(--sky);">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">' +
+          '<span style="font-size:11px;font-weight:700;color:var(--sky);">' + esc(formatFecha(ev.fecha)) + ' · ' + esc(ev.origen || 'interacción').toUpperCase() + '</span>' +
+          (ev.ejecutivo ? '<span style="font-size:10.5px;color:var(--mist);">por ' + esc(ev.ejecutivo) + '</span>' : '') +
+        '</div>' +
+        '<div style="font-size:13px;font-weight:600;color:var(--ink);">' + esc(ev.titulo || '') + '</div>' +
+        (ev.detalle ? '<div style="font-size:12px;color:var(--subtle);margin-top:3px;">' + esc(ev.detalle) + '</div>' : '') +
+      '</div>';
+    });
+    html += '</div>';
+  }
+
+  return html;
 }
 
 function abrirEmailPlantilla(contactoId){

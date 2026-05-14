@@ -395,19 +395,54 @@ function filterFichas() {
   renderCards(filtered);
 }
 
-async function loadFichas() {
-  showLoading();
+/* === Cache local del listado en sessionStorage ===
+   Render instantaneo en recargas dentro de la misma sesion. Apps Script tiene
+   cold start de 2-5s + delay propio, asi que evitar esa llamada cuando no es necesaria
+   transforma la experiencia. */
+const BIBLIO_CACHE_KEY = 'oc_biblio_fichas_v1';
+const BIBLIO_CACHE_TTL_MS = 3 * 60 * 1000; // 3 min
+
+function _leerCacheBiblio(){
+  try{
+    const raw = sessionStorage.getItem(BIBLIO_CACHE_KEY);
+    if(!raw) return null;
+    const obj = JSON.parse(raw);
+    if(!obj || !obj.ts || !Array.isArray(obj.fichas)) return null;
+    if(Date.now() - obj.ts > BIBLIO_CACHE_TTL_MS) return null;
+    return obj;
+  }catch(e){ return null; }
+}
+function _guardarCacheBiblio(fichas, folderUrl){
+  try{
+    sessionStorage.setItem(BIBLIO_CACHE_KEY, JSON.stringify({ ts: Date.now(), fichas: fichas, folderUrl: folderUrl }));
+  }catch(e){}
+}
+function _aplicarFichas(fichasArr, folderUrl){
+  fichas = fichasArr;
+  const btnDrive = document.getElementById('btnAbrirDrive');
+  if(btnDrive && folderUrl) btnDrive.href = folderUrl;
+  const tc = document.getElementById('totalCount');
+  if(tc) tc.textContent = fichas.length;
+  if (!fichas.length) { showEmpty(); return; }
+  renderCards(fichas);
+}
+
+async function loadFichas(forceRefresh) {
+  // 1) Render inmediato desde cache si hay (evita pantalla en blanco mientras Apps Script responde)
+  const cache = forceRefresh ? null : _leerCacheBiblio();
+  if(cache){
+    _aplicarFichas(cache.fichas, cache.folderUrl);
+  } else {
+    showLoading();
+  }
+  // 2) Fetch en background — actualiza si hay cambios
   try {
-    // Listamos vía Apps Script (corre con la cuenta de despliegue, ve TODA la carpeta)
-    const resp = await fetch(BIBLIO_API_URL + '?accion=listar_fichas');
+    const url = BIBLIO_API_URL + '?accion=listar_fichas' + (forceRefresh ? '&refresh=1' : '');
+    const resp = await fetch(url);
     if(!resp.ok) throw new Error('Biblioteca API HTTP ' + resp.status);
     const data = await resp.json();
     if(!data.ok) throw new Error(data.error || 'Respuesta no OK del Apps Script');
-    // Botón "Abrir en Drive" — usa folderUrl que devuelve el Apps Script
-    const btnDrive = document.getElementById('btnAbrirDrive');
-    if(btnDrive && data.folderUrl) btnDrive.href = data.folderUrl;
-    // Mapear al formato que espera renderCards (ya viene casi listo del Apps Script)
-    fichas = (data.fichas || []).map(f => ({
+    const lista = (data.fichas || []).map(f => ({
       id: f.id,
       fileId: f.fileId || f.id,
       producto: f.producto || (f.name || '').replace(/\.json$/i, '').replace(/\.Ficha_Tecnica\.OCT$/i, ''),
@@ -415,14 +450,13 @@ async function loadFichas() {
       creador: f.creador || '',
       categoria: f.categoria || ''
     }));
-    // Actualizar el contador grande arriba
-    const tc = document.getElementById('totalCount');
-    if(tc) tc.textContent = fichas.length;
-    if (!fichas.length) { showEmpty(); return; }
-    renderCards(fichas);
+    _aplicarFichas(lista, data.folderUrl || '');
+    _guardarCacheBiblio(lista, data.folderUrl || '');
   } catch (e) {
     console.error('Error cargando fichas:', e);
-    showError(e.message || 'No se pudieron cargar las fichas. Verifica tu conexión.');
+    if(!cache){ // solo mostrar error si no teníamos cache mostrando algo
+      showError(e.message || 'No se pudieron cargar las fichas. Verifica tu conexión.');
+    }
   }
 }
 
@@ -484,6 +518,8 @@ async function eliminarFicha(fileId, nombreProducto){
     const tc = document.getElementById('totalCount');
     if(tc) tc.textContent = fichas.length;
     filterFichas();
+    // Invalidar cache para que la próxima carga refleje la eliminación
+    try{ sessionStorage.removeItem(BIBLIO_CACHE_KEY); }catch(e){}
   } catch(e){
     console.error('Error eliminando ficha:', e);
     alert('No se pudo eliminar la ficha:\n' + (e.message || e));

@@ -2228,6 +2228,17 @@ function logout(){ localStorage.removeItem('oc_fichas_exec'); location.reload();
         state.exec = { key: 'autopdf', nombre: 'Generador PDF', email: '' };
         const userNameEl = document.getElementById('userName');
         if(userNameEl) userNameEl.textContent = state.exec.nombre;
+        // PRELOAD: arrancar el fetch del JSON YA, en paralelo con init() del DOM.
+        // Apps Script tiene cold start de 2-5s + lectura del blob; solaparlo con el
+        // setup del DOM (setTemplate, ajustarEscala, setupSliders...) ahorra segundos.
+        const fileId = urlParams.get('fileId');
+        if(fileId && !window._fichaPreloadPromise){
+          const apiUrl = 'https://script.google.com/macros/s/AKfycbyzLWKA2rIp15Dn1FK5Zywtvqo7dgkoVlmyv-czqVupmOy-bIH9RHIYfKy76xcX3EAH/exec';
+          window._fichaPreloadFileId = fileId;
+          window._fichaPreloadPromise = fetch(apiUrl + '?accion=get_ficha&fileId=' + encodeURIComponent(fileId), { redirect: 'follow' })
+            .then(r => r.ok ? r.json() : null)
+            .catch(err => { console.warn('Preload error:', err); return null; });
+        }
         // Mostrar banner de progreso ANTES de iniciar la carga, así si falla el fetch
         // la usuaria igual ve el botón manual y el mensaje de error
         if(typeof mostrarBannerAutoPdf === 'function') mostrarBannerAutoPdf();
@@ -5008,9 +5019,10 @@ function pintarLabelEjecutivo(){
 
 /* Carga la lista de fichas existentes vía Apps Script (BIBLIO_API_URL_V2).
    No requiere OAuth — el Apps Script corre con la cuenta de despliegue y ve toda la carpeta. */
-async function cargarBiblioFichas(){
+async function cargarBiblioFichas(forceRefresh){
   try{
-    const resp = await fetch(BIBLIO_API_URL_V2 + '?accion=listar_fichas');
+    const url = BIBLIO_API_URL_V2 + '?accion=listar_fichas' + (forceRefresh ? '&refresh=1' : '');
+    const resp = await fetch(url);
     if(!resp.ok) throw new Error('Biblioteca API HTTP ' + resp.status);
     const data = await resp.json();
     if(!data.ok){ _biblioFichas = []; return; }
@@ -5405,7 +5417,8 @@ async function publicarFichaBiblioteca(){
       await new Promise(r => setTimeout(r, 3000));
       const segundosTranscurridos = (i + 1) * 3;
       if(btn){ btn.textContent = 'Verificando... (' + segundosTranscurridos + 's de 30s)'; }
-      await cargarBiblioFichas();
+      // Forzar refresh del cache de Apps Script para ver la ficha recién publicada
+      await cargarBiblioFichas(true);
       nuevaFicha = (_biblioFichas || []).find(f => !fichasAntesIds.has(f.id));
       if(nuevaFicha) break;
     }
@@ -5758,19 +5771,29 @@ async function cargarFichaDesdeURL(){
     if(!fileId){ dbg('Sin fileId en la URL', true); return false; }
     _biblioFichaActualFileId = fileId;
     dbg('Conectando con Drive...');
-    const url = BIBLIO_API_URL_V2 + '?accion=get_ficha&fileId=' + encodeURIComponent(fileId);
-    let resp;
-    try{
-      resp = await fetch(url, { redirect: 'follow' });
-    }catch(fetchErr){
-      dbg('Error de red al consultar Drive: ' + (fetchErr.message || fetchErr), true);
-      console.error('Fetch failed:', fetchErr);
-      return false;
-    }
-    if(!resp.ok){ dbg('Drive respondió HTTP ' + resp.status, true); return false; }
     let data;
-    try{ data = await resp.json(); }
-    catch(parseErr){ dbg('Drive devolvió texto inválido (no es JSON)', true); console.error(parseErr); return false; }
+    // Si hubo preload del JSON al arrancar la página, usar esa promesa (ahorra segundos)
+    if(window._fichaPreloadPromise && window._fichaPreloadFileId === fileId){
+      try{
+        data = await window._fichaPreloadPromise;
+      }catch(e){ data = null; }
+      window._fichaPreloadPromise = null;
+    }
+    // Fallback: si el preload falló o no se hizo, fetch en línea
+    if(!data){
+      const url = BIBLIO_API_URL_V2 + '?accion=get_ficha&fileId=' + encodeURIComponent(fileId);
+      let resp;
+      try{
+        resp = await fetch(url, { redirect: 'follow' });
+      }catch(fetchErr){
+        dbg('Error de red al consultar Drive: ' + (fetchErr.message || fetchErr), true);
+        console.error('Fetch failed:', fetchErr);
+        return false;
+      }
+      if(!resp.ok){ dbg('Drive respondió HTTP ' + resp.status, true); return false; }
+      try{ data = await resp.json(); }
+      catch(parseErr){ dbg('Drive devolvió texto inválido (no es JSON)', true); console.error(parseErr); return false; }
+    }
     if(!data.ok){ dbg('Drive: ' + (data.error || 'sin permisos / no encontrada'), true); return false; }
     if(!data.content){ dbg('Ficha vacía en Drive', true); return false; }
     dbg('Aplicando datos...');

@@ -5126,8 +5126,10 @@ function showToast(msg, tipo) {
 // VINCULACIÓN CON CRM — buscador de contactos + modal inline Nuevo Contacto
 // ════════════════════════════════════════════════════════════════════════════
 const CRM_API_URL = "https://script.google.com/macros/s/AKfycbz3Vscxz-OlTHehsnEqqTD1qfql4xzstgWM81RG79P5IiLTkRvaYTU2sNoWV_QpceeowA/exec";
+const CRM_CACHE_KEY = "crm_contactos_cotizador_v1";
+const CRM_CACHE_TTL = 5 * 60 * 1000; // 5 minutos
 let CRM_CONTACTOS_CACHE = null;
-let CRM_CONTACTOS_CACHE_TS = 0;
+let CRM_CONTACTOS_PROMESA = null;
 let CONTACTO_SELECCIONADO = null;
 let SEARCH_TIMEOUT = null;
 
@@ -5135,26 +5137,57 @@ function getEjecutivoActual(){
   return (document.getElementById("eExecNombre")?.value || "").trim();
 }
 
-async function cargarContactosCRM(){
-  // Cache 5 minutos
-  if (CRM_CONTACTOS_CACHE && (Date.now() - CRM_CONTACTOS_CACHE_TS) < 300000) {
-    return CRM_CONTACTOS_CACHE;
-  }
-  const ejec = getEjecutivoActual() || "Rayen Ogalde";
+// Lee cache de localStorage (sobrevive a refresh y navegación)
+function leerCacheLocal(){
   try {
-    const url = CRM_API_URL + "?accion=crm_contactos&solicitante=" + encodeURIComponent(ejec);
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error("HTTP " + resp.status);
-    const data = await resp.json();
-    if (!data.ok) throw new Error(data.error || "error");
-    CRM_CONTACTOS_CACHE = data.contactos || [];
-    CRM_CONTACTOS_CACHE_TS = Date.now();
-    return CRM_CONTACTOS_CACHE;
-  } catch (e) {
-    console.warn("Error cargando contactos CRM:", e);
-    return [];
-  }
+    const raw = localStorage.getItem(CRM_CACHE_KEY);
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    if (!obj || !Array.isArray(obj.contactos) || (Date.now() - (obj.ts || 0)) > CRM_CACHE_TTL) return null;
+    return obj.contactos;
+  } catch(e) { return null; }
 }
+
+function guardarCacheLocal(contactos){
+  try { localStorage.setItem(CRM_CACHE_KEY, JSON.stringify({ contactos: contactos, ts: Date.now() })); } catch(e) {}
+}
+
+async function cargarContactosCRM(forzar){
+  // 1. Memoria primero (más rápido)
+  if (!forzar && CRM_CONTACTOS_CACHE) return CRM_CONTACTOS_CACHE;
+  // 2. localStorage (cache entre sesiones)
+  if (!forzar) {
+    const local = leerCacheLocal();
+    if (local) { CRM_CONTACTOS_CACHE = local; return local; }
+  }
+  // 3. Si ya hay un fetch en curso, esperar a que termine (no hacer dos al mismo tiempo)
+  if (CRM_CONTACTOS_PROMESA) return CRM_CONTACTOS_PROMESA;
+
+  const ejec = getEjecutivoActual() || "Rayen Ogalde";
+  CRM_CONTACTOS_PROMESA = (async () => {
+    try {
+      const url = CRM_API_URL + "?accion=crm_contactos&solicitante=" + encodeURIComponent(ejec);
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error("HTTP " + resp.status);
+      const data = await resp.json();
+      if (!data.ok) throw new Error(data.error || "error");
+      CRM_CONTACTOS_CACHE = data.contactos || [];
+      guardarCacheLocal(CRM_CONTACTOS_CACHE);
+      return CRM_CONTACTOS_CACHE;
+    } catch (e) {
+      console.warn("Error cargando contactos CRM:", e);
+      return [];
+    } finally {
+      CRM_CONTACTOS_PROMESA = null;
+    }
+  })();
+  return CRM_CONTACTOS_PROMESA;
+}
+
+// Precarga automática al cargar la página (en background)
+window.addEventListener("load", () => {
+  setTimeout(() => { cargarContactosCRM().then(c => console.log("[CRM] Precargados " + c.length + " contactos")); }, 500);
+});
 
 function buscarContactoCRM(q){
   clearTimeout(SEARCH_TIMEOUT);

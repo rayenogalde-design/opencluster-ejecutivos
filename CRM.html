@@ -792,6 +792,14 @@ input,select,textarea{font-family:inherit; font-size:14px;}
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg>
             Auditar duplicados en Cotizaciones del Sheet
           </button>
+          <button class="btn" onclick="limpiarDuplicadosCotizaciones(true)" style="background:#7c3aed; color:white; border-color:#7c3aed;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            Simular limpieza de Cotizaciones
+          </button>
+          <button class="btn jade" onclick="limpiarDuplicadosCotizaciones(false)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+            Eliminar duplicados de Cotizaciones (REAL)
+          </button>
         </div>
         <div id="migReporte"></div>
       </div>
@@ -2623,6 +2631,47 @@ async function auditarDuplicadosCotizaciones(){
       (dupNum.length ? '<h4 style="margin:18px 0 10px;">N° de cotización repetido (BUG GRAVE):</h4>' + dupNum.slice(0, 30).map(g => renderGrupo(g, 'N° ' + (g.numero || ''))).join('') : '') +
       (dupCli.length ? '<h4 style="margin:18px 0 10px;">Cliente+fecha+monto repetidos (posible doble-click al guardar):</h4>' + dupCli.slice(0, 30).map(g => renderGrupo(g, 'Mismo cliente, fecha y monto')).join('') : '') +
       (!dupNum.length && !dupCli.length ? '<div style="padding:20px;color:var(--jade-dk);font-weight:700;">No hay duplicados en la pestaña Cotizaciones Difusión. El registro está limpio.</div>' : '') +
+    '</div></div>';
+}
+
+async function limpiarDuplicadosCotizaciones(dryRun){
+  const reporteEl = document.getElementById('migReporte');
+  if (!dryRun) {
+    if (!confirm('Vas a ELIMINAR filas duplicadas del Sheet "Cotizaciones Difusión".\n\nConservamos la fila más antigua de cada grupo de duplicados. Las demás se borran.\n\nEsta acción NO se puede deshacer (aunque queda log en CRM Auditoria).\n\n¿Continuar?')) return;
+  }
+  reporteEl.innerHTML = '<div class="loading-state"><div class="spinner"></div>' + (dryRun ? 'Simulando limpieza...' : 'Eliminando duplicados del Sheet...') + '</div>';
+  const r = await fetchAPI('crm_limpiar_duplicados_cotizaciones', null, { solicitante: USUARIO, dryRun: !!dryRun });
+  if (!r || !r.ok) {
+    reporteEl.innerHTML = '<div class="error-state"><b>Error:</b> ' + esc((r && r.error) || 'desconocido') + '</div>';
+    return;
+  }
+  const rep = r.reporte || {};
+  const detallesHTML = (rep.detalles || []).slice(0, 30).map(d =>
+    '<div style="background:white;border:1px solid var(--smoke);border-radius:8px;padding:9px 13px;margin-bottom:6px;font-size:12.5px;">' +
+      '<b style="color:var(--purple-dk);">' + esc(d.criterio || '') + '</b> · ' + esc(d.clave || '') +
+      ' <span style="background:var(--ruby-lt);color:var(--ruby-dk);padding:2px 9px;border-radius:6px;font-size:11px;font-weight:700;margin-left:6px;">' + d.ocurrencias + ' filas</span>' +
+      '<div style="font-size:11px;color:var(--mist);margin-top:3px;">Conservar fila ' + d.conservar_fila + ', eliminar filas: ' + (d.eliminar_filas || []).join(', ') + '</div>' +
+    '</div>'
+  ).join('');
+  reporteEl.innerHTML =
+    '<div class="card"><div class="card-hd"><h3>Limpieza de duplicados en Cotizaciones Difusión · ' + esc(rep.modo || '') + '</h3></div>' +
+    '<div class="card-body" style="font-family:Open Sans,sans-serif;">' +
+      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;">' +
+        '<div style="background:var(--paper);border:1px solid var(--smoke);border-radius:10px;padding:14px;text-align:center;">' +
+          '<div style="font-size:11.5px;color:var(--mist);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Filas antes</div>' +
+          '<div style="font-size:22px;font-weight:800;color:var(--ink);margin-top:4px;">' + (rep.total_filas_antes || 0) + '</div></div>' +
+        '<div style="background:var(--amber-lt);border:1px solid var(--amber);border-radius:10px;padding:14px;text-align:center;">' +
+          '<div style="font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Grupos duplicados</div>' +
+          '<div style="font-size:22px;font-weight:800;margin-top:4px;">' + (rep.grupos_duplicados || 0) + '</div></div>' +
+        '<div style="background:var(--ruby-lt);border:1px solid var(--ruby);border-radius:10px;padding:14px;text-align:center;">' +
+          '<div style="font-size:11.5px;color:var(--ruby-dk);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Filas a eliminar</div>' +
+          '<div style="font-size:22px;font-weight:800;color:var(--ruby-dk);margin-top:4px;">' + (rep.filas_a_eliminar || 0) + '</div></div>' +
+        '<div style="background:var(--jade-lt);border:1px solid var(--jade);border-radius:10px;padding:14px;text-align:center;">' +
+          '<div style="font-size:11.5px;color:var(--jade-dk);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Filas restantes</div>' +
+          '<div style="font-size:22px;font-weight:800;color:var(--jade-dk);margin-top:4px;">' + (rep.filas_restantes || 0) + '</div></div>' +
+      '</div>' +
+      '<p><b>' + esc(rep.mensaje || '') + '</b></p>' +
+      (detallesHTML ? '<details style="margin-top:14px;"><summary style="cursor:pointer;font-weight:700;color:var(--purple-dk);">Ver detalle (primeros 30 grupos)</summary><div style="margin-top:10px;">' + detallesHTML + '</div></details>' : '') +
     '</div></div>';
 }
 

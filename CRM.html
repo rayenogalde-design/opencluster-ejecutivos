@@ -1065,16 +1065,14 @@ function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&
 
 // ¿Este contacto está asignado al usuario actual? (NO depende del rol)
 // Sirve para filtrar "Mis Contactos" y para mostrar "Asignado a ti".
+// Regla estricta: SOLO los explícitamente asignados a mí. Los sin asignar
+// (huérfanos) van a la pestaña Categorizar Urgente.
 function esOwner(c){
   if (!c) return false;
   const asign = String(c.ejecutivo_asignado || '');
+  if (!asign) return false;
   const corto = (USUARIO || '').split(' ')[0];
-  if (asign) {
-    return asign === USUARIO || asign === corto;
-  }
-  // Sin asignar: lo considero mío si yo lo creé
-  const creador = String(c.ejecutivo_creador || '');
-  return creador === USUARIO || creador === corto;
+  return asign === USUARIO || asign === corto;
 }
 
 // ¿Puedo editar este contacto? Admin (Rayen) puede todo. Ejecutivos solo lo suyo.
@@ -1913,20 +1911,39 @@ function abrirModalTarea(){ alert('Modal Nueva Tarea — próxima iteración'); 
 async function cargarHuerfanos(){
   const cont = document.getElementById('huerfanosContainer');
   cont.innerHTML = '<div class="loading-state"><div class="spinner"></div>Buscando contactos sin categoría…</div>';
-  const r = await fetchAPI('crm_sin_categorizar', { solicitante: USUARIO });
+  // Uso crm_contactos (devuelve todos) y filtro localmente según rol.
+  // Para admin: todos los sin categoría del equipo.
+  // Para ejecutivo: solo los sin categoría que él creó.
+  const r = await fetchAPI('crm_contactos', { solicitante: USUARIO });
   if(!r.ok){ cont.innerHTML = '<div class="error-state">' + esc(r.error || '') + '</div>'; return; }
-  const lista = r.contactos || [];
+  const todos = r.contactos || [];
+  const corto = (USUARIO || '').split(' ')[0];
+  const lista = todos.filter(c => {
+    if (c.sub_categoria) return false; // tiene categoría, no es huérfano de categoría
+    if (ROL === 'admin') return true;
+    const creador = String(c.ejecutivo_creador || '');
+    return creador === USUARIO || creador === corto;
+  });
   document.getElementById('badgeSinCat').textContent = lista.length;
   document.getElementById('badgeSinCat').style.display = lista.length ? '' : 'none';
   if(!lista.length){
-    cont.innerHTML = '<div class="loading-state">No tenés contactos sin categorizar. Buen trabajo.</div>';
+    cont.innerHTML = '<div class="loading-state">No hay contactos sin categorizar. Todo limpio.</div>';
     return;
   }
-  cont.innerHTML = lista.map(c =>
-    '<div class="card" style="margin-bottom:10px;"><div class="card-body">' +
-      '<div style="font-size:15px;font-weight:700;">' + esc(c.nombre || c.institucion || '') + '</div>' +
-      '<div style="font-size:12.5px;color:var(--mist);">' + esc(c.institucion || '') + '</div>' +
-      '<button class="btn primary" style="margin-top:10px;" onclick="alert(\'Modal asignar categoría\')">Asignar Categoría</button>' +
+  const titulo = ROL === 'admin'
+    ? '<div style="margin-bottom:14px;color:var(--subtle);font-size:13.5px;">Estás viendo <b>' + lista.length + '</b> contactos sin categoría de todo el equipo. La columna "Creado por" te dice quién los ingresó.</div>'
+    : '<div style="margin-bottom:14px;color:var(--subtle);font-size:13.5px;"><b>' + lista.length + '</b> contactos sin categoría que cargaste.</div>';
+  cont.innerHTML = titulo + lista.map(c =>
+    '<div class="card" style="margin-bottom:10px;"><div class="card-body" style="display:grid;grid-template-columns:1fr 180px 160px;gap:14px;align-items:center;">' +
+      '<div>' +
+        '<div style="font-size:15px;font-weight:700;color:var(--ink);">' + esc(c.nombre || c.institucion || '(sin nombre)') + '</div>' +
+        '<div style="font-size:12.5px;color:var(--mist);margin-top:2px;">' + esc(c.institucion || '') + (c.cargo ? ' · ' + esc(c.cargo) : '') + '</div>' +
+      '</div>' +
+      '<div style="font-size:12px;color:var(--subtle);">' +
+        '<div style="font-weight:600;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;font-size:10.5px;">Creado por</div>' +
+        '<div style="font-weight:700;color:var(--ink);margin-top:2px;">' + esc(c.ejecutivo_creador || '(desconocido)') + '</div>' +
+      '</div>' +
+      '<button class="btn primary" onclick="abrirModalEditarContacto(\'' + esc(c.id) + '\')">Categorizar</button>' +
     '</div></div>'
   ).join('');
 }

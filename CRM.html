@@ -1890,7 +1890,8 @@ function renderHistorialAgrupado(tl){
         '<span style="background:var(--gold);color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:800;">' + cotizaciones.length + '</span>' +
       '</div>';
 
-    // Agrupar cotizaciones por número (si una misma cotización viene de dos fuentes, fusionarla)
+    // Dedupe robusto: agrupar primero por N°, después fusionar las sin N° con las que tengan
+    // misma fecha (probablemente la misma cotización, una con IVA, otra sin)
     const porNum = {};
     const sinNum = [];
     cotizaciones.forEach(co => {
@@ -1905,14 +1906,42 @@ function renderHistorialAgrupado(tl){
         });
       }
     });
-    const cotsAgrupadas = Object.values(porNum).concat(sinNum);
+    // Segunda pasada: si una sin-num tiene la misma fecha que una con-num, fusionarla
+    const sinNumRestantes = [];
+    sinNum.forEach(co => {
+      const fchSin = String(co.fecha || '').substring(0, 10);
+      let fusionada = false;
+      for (const k in porNum) {
+        const existente = porNum[k];
+        const fchExist = String(existente.fecha || '').substring(0, 10);
+        if (fchSin && fchSin === fchExist) {
+          Object.keys(co).forEach(kk => {
+            if (!existente[kk] && co[kk]) existente[kk] = co[kk];
+          });
+          fusionada = true;
+          break;
+        }
+      }
+      if (!fusionada) sinNumRestantes.push(co);
+    });
+    const cotsAgrupadas = Object.values(porNum).concat(sinNumRestantes);
 
     cotsAgrupadas.forEach((co, idx) => {
       const num = (co.num_cotizacion || extraerNumCot(co.detalle) || extraerNumCot(co.titulo) || '').toUpperCase();
       const segs = num ? (segPorCot[num] || []) : [];
+      // Preferir el total CON IVA (más completo). co.total es "Total Cotización c/IVA" del Sheet.
+      // Si no existe, usar total_iva (también con IVA). Como último recurso usar el detalle.
       const totalMostrado = co.total || co.total_iva || '';
-      const montoMatch = totalMostrado ? String(totalMostrado).match(/[\d.,]+/) : (co.detalle || '').match(/\$[\d.,]+/);
-      const montoStr = montoMatch ? (String(totalMostrado).indexOf('$') >= 0 ? totalMostrado : '$' + montoMatch[0]) : '';
+      let montoStr = '';
+      if (totalMostrado) {
+        const s = String(totalMostrado);
+        montoStr = s.indexOf('$') >= 0 ? s : '$' + s.replace(/^\$+/, '');
+      } else {
+        const m = (co.detalle || '').match(/\$[\d.,]+/);
+        if (m) montoStr = m[0];
+      }
+      // Limpiar doble peso ($$ → $)
+      montoStr = montoStr.replace(/^\$+/, '$');
       const estado = co.estado || (co.titulo || '').replace(/^.*—\s*/, '').trim() || 'En gestión';
       const productos = String(co.productos || '').trim();
       const tieneProductos = productos.length > 3;

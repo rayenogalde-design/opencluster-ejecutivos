@@ -1469,7 +1469,9 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
         <label><input type="radio" name="validez" value="60" onchange="upd()"> 60 días</label>
         <label><input type="radio" name="validez" value="90" onchange="upd()"> 90 días</label>
         <label><input type="radio" name="validez" value="120" onchange="upd()"> 120 días</label>
+        <label><input type="radio" name="validez" value="__otro_validez__" onchange="upd()"> Otra</label>
       </div>
+      <input type="number" min="1" class="cond-otro" id="otroValidez" placeholder="Ingresa los días de validez (ej: 45)..." oninput="upd()" style="display:none">
     </div>
 
 
@@ -3086,7 +3088,14 @@ function upd() {
   // ── Condiciones ────────────────────────────────────────────────────────
   const condLines=[];
   // Validez
-  const validez = document.querySelector('input[name="validez"]:checked')?.value || "30";
+  const validezSel = document.querySelector('input[name="validez"]:checked')?.value || "30";
+  const otroValidezInp = document.getElementById("otroValidez");
+  if(otroValidezInp) otroValidezInp.style.display = (validezSel==="__otro_validez__") ? "block" : "none";
+  let validez = validezSel;
+  if(validezSel === "__otro_validez__") {
+    const customDias = parseInt(otroValidezInp?.value, 10);
+    validez = (customDias && customDias > 0) ? String(customDias) : "30";
+  }
   condLines.push(`Esta cotización tiene validez de ${validez} días corridos.`);
 
   // Garantía
@@ -3336,7 +3345,7 @@ function upd() {
   })();
 
   const totalesHTML = `<div class="ptot-wrap">
-    ${esOfertaEspecial ? `<div class="oferta-especial-banner"><span class="oe-icon">✦</span> OFERTA ESPECIAL &nbsp;·&nbsp; VÁLIDA POR ${document.querySelector('input[name="validez"]:checked')?.value || "30"} DÍAS <span class="oe-icon">✦</span></div>` : ""}
+    ${esOfertaEspecial ? `<div class="oferta-especial-banner"><span class="oe-icon">✦</span> OFERTA ESPECIAL &nbsp;·&nbsp; VÁLIDA POR ${validez} DÍAS <span class="oe-icon">✦</span></div>` : ""}
     ${document.getElementById("chkEnvioGratuito")?.checked ? `<div style="background:linear-gradient(90deg,#06b3fd,#0090cc);color:white;text-align:center;font-family:'Montserrat',sans-serif;font-size:7.5pt;font-weight:700;padding:5px 12px;border-radius:4px;margin-bottom:8px;letter-spacing:2px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:6px;"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> ENVÍO GRATUITO · DESPACHO SIN COSTO INCLUIDO</div>` : ""}
     ${document.querySelector('input[name="envioTipo"]:checked')?.value==="retiro" ? `<div style="background:linear-gradient(90deg,#06b3fd,#001a60);color:white;text-align:center;font-family:'Open Sans',sans-serif;font-size:8pt;font-weight:700;padding:5px 12px;border-radius:4px;margin-bottom:8px;letter-spacing:0.3px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:6px;"><path d="M3 21h18"/><path d="M3 7v14"/><path d="M21 7v14"/><path d="M3 7l9-4 9 4"/><path d="M9 21V11h6v10"/><path d="M1 21h22"/></svg> PRODUCTOS SE RETIRAN EN BODEGA &nbsp;·&nbsp; QUILPUÉ, V REGIÓN, CHILE</div>` : ""}
     <table class="${esOfertaEspecial ? 'ptot oferta-table' : 'ptot'}">
@@ -4325,6 +4334,7 @@ async function guardarCotizacion() {
     // Condiciones
     condiciones: {
       validez:   document.querySelector('input[name="validez"]:checked')?.value || "30",
+      validez_otro: document.getElementById("otroValidez")?.value || "",
       garantia:  document.querySelector('input[name="garantia"]:checked')?.value || "",
       garantia_otro: document.getElementById("otroGarantia")?.value || "",
       pago:      document.querySelector('input[name="pago"]:checked')?.value || "",
@@ -4478,6 +4488,7 @@ function cargarCotizacion(input) {
         setRadio("pago",     cn.pago);
         setRadio("condpago", cn.condpago);
         setRadio("plazo",    cn.plazo);
+        if(cn.validez_otro)   document.getElementById("otroValidez").value    = cn.validez_otro;
         if(cn.garantia_otro)  document.getElementById("otroGarantia").value   = cn.garantia_otro;
         if(cn.pago_otro)      document.getElementById("otroPagoMetodo").value  = cn.pago_otro;
         if(cn.condpago_otro)  document.getElementById("otroPago").value        = cn.condpago_otro;

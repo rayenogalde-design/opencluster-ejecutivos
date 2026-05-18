@@ -2922,7 +2922,17 @@ function renderHistorialAgrupado(tl){
       // Limpiar doble peso ($$ → $)
       montoStr = montoStr.replace(/^\$+/, '$');
       const estado = co.estado || (co.titulo || '').replace(/^.*—\s*/, '').trim() || 'En gestión';
-      const productos = String(co.productos || '').trim();
+      // Limpieza de $ duplicado para todos los campos de monto
+      const limpiarMonto = v => String(v == null ? '' : v).trim().replace(/^\$+/, '').trim();
+      co.neto = limpiarMonto(co.neto);
+      co.total_iva = limpiarMonto(co.total_iva);
+      co.transporte = limpiarMonto(co.transporte);
+      co.extras = limpiarMonto(co.extras);
+      co.total = limpiarMonto(co.total);
+      // Si "productos" es en realidad un número (puro monto), descartarlo
+      const productosRaw = String(co.productos || '').trim();
+      const esSoloMonto = /^\$?\s*[\d.,]+\s*$/.test(productosRaw);
+      const productos = esSoloMonto ? '' : productosRaw;
       const tieneProductos = productos.length > 3;
       // Parsear productos: separar por saltos de línea, comas, o puntos
       const listaProd = tieneProductos

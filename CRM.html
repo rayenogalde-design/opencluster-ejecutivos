@@ -2022,6 +2022,9 @@ function cambiarModo(modo){
   });
   // Limpiar caches y refrescar la vista activa
   CACHE.vMis = null; CACHE.vTodos = null; CACHE.vCuentas = null; CACHE.vSinCat = null;
+  CACHE.vCerrar = null; CACHE.vOlvidados = null;
+  // El cache backend del dashboard es por ejecutivo, no por modo, así que
+  // forzamos un re-fetch agregando un timestamp al próximo request
   const v = document.querySelector('.view.act');
   if (v) goView(v.id);
 }
@@ -2127,7 +2130,7 @@ async function cargarReunionesDashboard(){
   const cntEl = document.getElementById('dshReunionesCount');
   if(!container) return;
   container.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
-  let r = await fetchAPI('crm_reuniones_proximas', { ejecutivo: USUARIO, dias: 14 });
+  let r = await fetchAPI('crm_reuniones_proximas', { ejecutivo: USUARIO, dias: 14, modo_vista: MODO_VISTA });
   if(cntEl) cntEl.textContent = (r && r.ok ? (r.reuniones||[]).length : 0);
   let reuniones = [];
   let modo = 'proximas';

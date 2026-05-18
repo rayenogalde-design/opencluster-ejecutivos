@@ -788,6 +788,11 @@ input,select,textarea{font-family:inherit; font-size:14px;}
       <span id="syncLabel">Sincronizar con Registro</span>
     </button>
 
+    <button id="tbBellBtn" onclick="abrirModalNotificaciones()" title="Notificaciones" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);color:rgba(255,255,255,.92);padding:7px 11px;border-radius:8px;cursor:pointer;display:none;align-items:center;gap:6px;position:relative;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span id="tbBellCount" style="position:absolute;top:-5px;right:-5px;background:var(--ruby, #c62828);color:white;font-size:10px;font-weight:800;padding:1px 6px;border-radius:10px;border:2px solid var(--purple-dk, #5b21b6);">0</span>
+    </button>
+
     <div class="topbar-user">
       <span class="avatar" id="tbAvatar">U</span>
       <span id="tbUser">—</span>
@@ -1437,6 +1442,25 @@ input,select,textarea{font-family:inherit; font-size:14px;}
   </div>
 </div>
 
+<!-- ════ Modal Notificaciones (secuencial) ════ -->
+<div class="modal-backdrop" id="modalNotif" style="z-index:9999;">
+  <div class="modal-box" style="max-width:560px;">
+    <div class="modal-head" style="background:linear-gradient(135deg, var(--purple-dk, #5b21b6), var(--purple, #7c3aed));color:white;border:none;">
+      <h2 id="notif-titulo" style="color:white;font-family:var(--font-serif);">Tienes notificaciones</h2>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span id="notif-progreso" style="font-size:12px;background:rgba(255,255,255,.2);padding:3px 10px;border-radius:10px;font-weight:700;">1 de 1</span>
+      </div>
+    </div>
+    <div class="modal-body" id="notif-body" style="min-height:200px;">
+      <div class="loading-state"><div class="spinner"></div></div>
+    </div>
+    <div class="modal-foot" id="notif-foot">
+      <button class="btn" id="notif-btn-saltar" onclick="saltarNotif()" style="font-size:12.5px;">Más tarde</button>
+      <button class="btn primary" id="notif-btn-ok" onclick="marcarNotifLeida()" style="background:var(--jade-dk, #0f4f2d);">✓ OK, entendido</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════ Modal Diagnóstico Ejecutivo ════ -->
 <div class="modal-backdrop" id="modalDiagnostico">
   <div class="modal-box" style="max-width:1000px;width:95%;">
@@ -2064,6 +2088,10 @@ function initApp(user){
   mostrarBannerDeploy();
   setSaludo();
   goView('vDashboard');
+  // Cargar notificaciones pendientes y abrir modal si hay
+  setTimeout(() => cargarNotificacionesYAbrir(), 1500);
+  // Polling cada 60s para refrescar el contador
+  setInterval(() => cargarNotificacionesYAbrir(true), 60000);
 }
 
 function aplicarVisibilidadPorRol(){
@@ -3909,6 +3937,147 @@ document.addEventListener('DOMContentLoaded', () => {
   const m = document.getElementById('modalNuevaReunion');
   if(m) m.addEventListener('click', e => { if(e.target === m) cerrarModalNuevaReunion(); });
 });
+
+// ════════════════════════════════════════════════════════════════════════════
+// NOTIFICACIONES IN-APP
+// Modal secuencial al entrar al CRM + campanita topbar para reabrir
+// ════════════════════════════════════════════════════════════════════════════
+let NOTIF_LISTA = [];
+let NOTIF_INDEX = 0;
+
+async function cargarNotificacionesYAbrir(soloRefrescarBadge){
+  try {
+    const r = await fetchAPI('crm_listar_notificaciones', { solicitante: USUARIO, solo_pendientes: true });
+    if(!r.ok) return;
+    NOTIF_LISTA = r.notificaciones || [];
+    actualizarBadgeBell();
+    if(!soloRefrescarBadge && NOTIF_LISTA.length > 0){
+      NOTIF_INDEX = 0;
+      mostrarNotifActual();
+    }
+  } catch(e){}
+}
+
+function actualizarBadgeBell(){
+  const btn = document.getElementById('tbBellBtn');
+  const cnt = document.getElementById('tbBellCount');
+  if(!btn || !cnt) return;
+  if(NOTIF_LISTA.length > 0){
+    btn.style.display = 'inline-flex';
+    cnt.textContent = NOTIF_LISTA.length;
+    cnt.style.display = '';
+  } else {
+    cnt.style.display = 'none';
+    btn.style.display = 'none';
+  }
+}
+
+function abrirModalNotificaciones(){
+  if(!NOTIF_LISTA.length){
+    cargarNotificacionesYAbrir();
+    return;
+  }
+  NOTIF_INDEX = 0;
+  mostrarNotifActual();
+}
+
+function _iconoNotif(tipo){
+  const t = String(tipo||'').toLowerCase();
+  if(t.indexOf('reasignacion_in') >= 0)
+    return '<svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="var(--jade-dk)" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
+  if(t.indexOf('reasignacion_out') >= 0)
+    return '<svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="var(--gold-deep)" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>';
+  if(t.indexOf('tarea') >= 0)
+    return '<svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="var(--purple-dk)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>';
+  if(t.indexOf('cotizacion') >= 0)
+    return '<svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="var(--gold-deep)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>';
+  if(t.indexOf('contacto') >= 0 || t.indexOf('import') >= 0)
+    return '<svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="var(--purple-dk)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 11l-3-3M19 8l-3 3"/></svg>';
+  return '<svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="var(--purple-dk)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+}
+
+function _colorPrioridad(p){
+  if(p === 'alta') return { bg: 'var(--ruby-lt, #f3d6d6)', border: 'var(--ruby-dk, #7a1a1a)', txt: 'var(--ruby-dk, #7a1a1a)' };
+  if(p === 'baja') return { bg: 'var(--paper, #f5f5f5)', border: 'var(--smoke, #c0c0c0)', txt: 'var(--text-2, #555)' };
+  return { bg: 'var(--gold-soft, #fef3c7)', border: 'var(--gold-deep, #92400e)', txt: 'var(--gold-deep, #92400e)' };
+}
+
+function mostrarNotifActual(){
+  const modal = document.getElementById('modalNotif');
+  if(NOTIF_INDEX >= NOTIF_LISTA.length){
+    modal.classList.remove('show');
+    actualizarBadgeBell();
+    return;
+  }
+  const n = NOTIF_LISTA[NOTIF_INDEX];
+  const total = NOTIF_LISTA.length;
+  document.getElementById('notif-progreso').textContent = (NOTIF_INDEX+1) + ' de ' + total;
+  const c = _colorPrioridad(n.prioridad);
+  const fecha = n.fecha_creacion ? new Date(n.fecha_creacion) : null;
+  const fechaTxt = fecha && !isNaN(fecha.getTime()) ? fecha.toLocaleString('es-CL', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}) : '';
+  document.getElementById('notif-body').innerHTML =
+    '<div style="display:flex;gap:18px;align-items:flex-start;">' +
+      '<div style="flex-shrink:0;width:60px;height:60px;border-radius:50%;background:' + c.bg + ';border:2px solid ' + c.border + ';display:flex;align-items:center;justify-content:center;">' + _iconoNotif(n.tipo) + '</div>' +
+      '<div style="flex:1;min-width:0;">' +
+        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">' +
+          '<span style="background:' + c.bg + ';color:' + c.txt + ';border:1px solid ' + c.border + ';padding:2px 8px;border-radius:10px;font-size:10.5px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;">' + esc(n.prioridad || 'media') + '</span>' +
+          (fechaTxt ? '<span style="font-size:11px;color:var(--text-3);">' + esc(fechaTxt) + '</span>' : '') +
+        '</div>' +
+        '<h3 style="font-family:var(--font-serif);font-size:19px;font-weight:600;color:var(--ink, #1a1a1a);margin:0 0 8px;line-height:1.3;">' + esc(n.titulo || '') + '</h3>' +
+        '<div style="font-size:13.5px;color:var(--text-2, #444);line-height:1.55;white-space:pre-line;">' + esc(n.mensaje || '') + '</div>' +
+        (n.creada_por && n.creada_por !== 'SISTEMA' ? '<div style="margin-top:10px;font-size:11.5px;color:var(--text-3);"><b>Notificado por:</b> ' + esc(n.creada_por) + '</div>' : '') +
+        _renderAccionNotif(n) +
+      '</div>' +
+    '</div>';
+  modal.classList.add('show');
+}
+
+function _renderAccionNotif(n){
+  const url = String(n.accion_url || '');
+  if(!url) return '';
+  if(url.indexOf('abrir_ficha:') === 0){
+    const id = url.replace('abrir_ficha:', '');
+    return '<div style="margin-top:14px;"><button onclick="abrirFichaModal(\'' + esc(id) + '\')" style="background:var(--purple-dk, #5b21b6);color:white;border:none;padding:7px 14px;border-radius:7px;font-size:12.5px;font-weight:700;cursor:pointer;">Ver ficha del contacto →</button></div>';
+  }
+  if(url === 'mis_contactos'){
+    return '<div style="margin-top:14px;"><button onclick="cerrarModalNotif(); goView(\'vMis\')" style="background:var(--purple-dk);color:white;border:none;padding:7px 14px;border-radius:7px;font-size:12.5px;font-weight:700;cursor:pointer;">Ir a Mis Contactos →</button></div>';
+  }
+  if(url === 'ver_tareas'){
+    return '<div style="margin-top:14px;"><button onclick="cerrarModalNotif(); goView(\'vTareas\')" style="background:var(--purple-dk);color:white;border:none;padding:7px 14px;border-radius:7px;font-size:12.5px;font-weight:700;cursor:pointer;">Ir a Mis Tareas →</button></div>';
+  }
+  return '';
+}
+
+function cerrarModalNotif(){ document.getElementById('modalNotif').classList.remove('show'); }
+
+async function marcarNotifLeida(){
+  const n = NOTIF_LISTA[NOTIF_INDEX];
+  if(!n) { cerrarModalNotif(); return; }
+  const btn = document.getElementById('notif-btn-ok');
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  const r = await fetchAPI('crm_marcar_notif_leida', { id: n.id, solicitante: USUARIO });
+  btn.disabled = false; btn.textContent = '✓ OK, entendido';
+  if(!r.ok){ alert('Error: ' + (r.error || 'desconocido')); return; }
+  // Sacar de la lista local
+  NOTIF_LISTA.splice(NOTIF_INDEX, 1);
+  if(NOTIF_LISTA.length === 0){
+    cerrarModalNotif();
+    actualizarBadgeBell();
+    return;
+  }
+  if(NOTIF_INDEX >= NOTIF_LISTA.length) NOTIF_INDEX = NOTIF_LISTA.length - 1;
+  mostrarNotifActual();
+  actualizarBadgeBell();
+}
+
+function saltarNotif(){
+  NOTIF_INDEX++;
+  if(NOTIF_INDEX >= NOTIF_LISTA.length){
+    cerrarModalNotif();
+    return;
+  }
+  mostrarNotifActual();
+}
 
 // ════════════════════════════════════════════════════════════════════════════
 // DIAGNÓSTICO EJECUTIVO — modal que lista todas tus cotizaciones del Sheet

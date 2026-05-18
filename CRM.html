@@ -267,14 +267,59 @@ input,select,textarea{font-family:inherit; font-size:14px;}
 
 /* Card próxima acción */
 .proxima-linea{
-  display:flex; align-items:center; gap:5px; margin-top:6px;
+  display:inline-flex; align-items:center; gap:5px; margin-top:6px;
   font-size:11px; color:var(--purple-dk, #5b21b6); font-weight:700;
   background:var(--purple-soft, #efe7f7); padding:3px 8px; border-radius:7px;
-  width:fit-content;
+  cursor:pointer; transition:background .12s;
 }
+.proxima-linea:hover{ filter:brightness(.96); }
 .proxima-linea.atrasado{ background:var(--ruby-lt, #f3d6d6); color:var(--ruby-dk, #7a1a1a); }
 .proxima-linea.snooze{ background:#e5e7eb; color:#4b5563; }
 .proxima-linea svg{ width:11px; height:11px; flex-shrink:0; }
+.proxima-add-btn{
+  display:inline-flex; align-items:center; gap:5px; margin-top:6px;
+  font-size:11px; color:var(--text-3, #999); font-weight:600;
+  background:transparent; padding:3px 8px; border-radius:7px;
+  cursor:pointer; border:1px dashed var(--smoke, #e0e0e0);
+  transition:all .12s;
+}
+.proxima-add-btn:hover{ color:var(--purple-dk); border-color:var(--purple); background:var(--purple-soft, #efe7f7); }
+.proxima-add-btn svg{ width:10px; height:10px; flex-shrink:0; }
+
+/* Popover inline date-picker */
+.date-popover{
+  position:absolute; background:white; border:1px solid var(--smoke);
+  border-radius:10px; padding:14px; box-shadow:0 10px 30px rgba(0,0,0,.15);
+  z-index:1000; min-width:280px;
+}
+.date-popover h4{
+  margin:0 0 10px; font-family:var(--font-serif); font-size:14px;
+  font-weight:600; color:var(--ink);
+}
+.date-popover .quick-row{
+  display:flex; gap:5px; flex-wrap:wrap; margin-bottom:10px;
+}
+.date-popover .quick-btn{
+  padding:4px 10px; border-radius:11px; font-size:11px; font-weight:700;
+  background:var(--paper); color:var(--text-2); border:1px solid var(--smoke);
+  cursor:pointer; transition:all .12s;
+}
+.date-popover .quick-btn:hover{ background:var(--purple-soft); color:var(--purple-dk); border-color:var(--purple); }
+.date-popover input[type=date], .date-popover input[type=text]{
+  width:100%; padding:7px 9px; border:1px solid var(--smoke);
+  border-radius:6px; font-size:12px; font-family:var(--font-sans);
+  margin-bottom:8px;
+}
+.date-popover .botonera{
+  display:flex; gap:6px; justify-content:flex-end; margin-top:8px;
+}
+.date-popover .dp-btn{
+  padding:6px 12px; border-radius:6px; font-size:11.5px; font-weight:700;
+  cursor:pointer; border:none;
+}
+.date-popover .dp-btn.primary{ background:var(--purple-dk); color:white; }
+.date-popover .dp-btn.danger{ background:transparent; color:var(--ruby-dk); }
+.date-popover .dp-btn.secondary{ background:var(--paper); color:var(--text-2); border:1px solid var(--smoke); }
 
 /* Badge incompleto */
 .badge-incompleto{
@@ -2686,13 +2731,14 @@ function renderLista(view){
         ? '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>'
         : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>';
       const favBtn = '<button class="fav-btn' + (esFav ? ' active' : '') + '" onclick="event.stopPropagation(); toggleFavorito(\'' + esc(c.id) + '\', this)" title="' + (esFav ? 'Quitar de favoritos' : 'Marcar como favorito') + '">' + starSvg + '</button>';
-      // Línea de próxima acción
+      // Línea de próxima acción (clicable para editar inline)
       const hoy0 = new Date(); hoy0.setHours(0,0,0,0);
       const pa = c.proxima_accion ? new Date(c.proxima_accion) : null;
       const sn = c.snooze_hasta ? new Date(c.snooze_hasta) : null;
       let proximaHTML = '';
+      const onClickDP = 'event.stopPropagation(); abrirDatePicker(\'' + esc(c.id) + '\', this)';
       if(sn && !isNaN(sn.getTime()) && sn > hoy0){
-        proximaHTML = '<div class="proxima-linea snooze" title="En espera hasta ' + sn.toLocaleDateString('es-CL') + '">' +
+        proximaHTML = '<div class="proxima-linea snooze" onclick="' + onClickDP + '" title="En espera hasta ' + sn.toLocaleDateString('es-CL') + ' — click para editar">' +
           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' +
           'En espera hasta ' + sn.toLocaleDateString('es-CL', {day:'2-digit', month:'short'}) +
         '</div>';
@@ -2700,11 +2746,16 @@ function renderLista(view){
         const diff = Math.round((pa - hoy0) / 86400000);
         const atrasado = diff < 0;
         const txt = diff === 0 ? 'Hoy' : (diff === 1 ? 'Mañana' : (atrasado ? 'Atrasado · ' + pa.toLocaleDateString('es-CL', {day:'2-digit', month:'short'}) : pa.toLocaleDateString('es-CL', {day:'2-digit', month:'short'})));
-        proximaHTML = '<div class="proxima-linea' + (atrasado ? ' atrasado' : '') + '" title="' + esc(c.nota_proxima || 'Próxima acción') + '">' +
+        proximaHTML = '<div class="proxima-linea' + (atrasado ? ' atrasado' : '') + '" onclick="' + onClickDP + '" title="' + esc(c.nota_proxima || 'Próxima acción') + ' — click para editar">' +
           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="10"/></svg>' +
           esc(txt) +
           (c.nota_proxima ? ' · ' + esc(String(c.nota_proxima).substring(0, 30)) : '') +
         '</div>';
+      } else {
+        proximaHTML = '<button class="proxima-add-btn" onclick="' + onClickDP + '" title="Programar próxima acción">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>' +
+          'Programar' +
+        '</button>';
       }
       return '<div class="contact-card' + (esGanado ? ' row--ganado' : '') + '" onclick="abrirFichaModal(\'' + esc(c.id) + '\')">' +
         '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">' +
@@ -2943,6 +2994,134 @@ function limpiarFiltros(view){
 
 // Retrocompat
 function toggleChipEstado(view, key){ toggleFiltro(view, 'estado', key); }
+
+// ════════════════════════════════════════════════════════════════════════════
+// DATE-PICKER INLINE — programar próxima acción / snooze desde la card
+// ════════════════════════════════════════════════════════════════════════════
+let _dpAbierto = null;
+function _ymd(d){ const pad = n => String(n).padStart(2, '0'); return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
+function _hoyYMD(){ return _ymd(new Date()); }
+function _sumarDias(n){ const d = new Date(); d.setDate(d.getDate() + n); return _ymd(d); }
+function abrirDatePicker(contactoId, anchorEl){
+  cerrarDatePicker();
+  // Buscar el contacto en cache para precargar valores
+  let c = null;
+  ['vMis','vTodos','vCerrar','vOlvidados'].forEach(v => {
+    if(!c && CACHE[v]) c = CACHE[v].find(x => String(x.id) === String(contactoId));
+  });
+  c = c || {};
+  const pa = c.proxima_accion ? _ymd(new Date(c.proxima_accion)) : '';
+  const sn = c.snooze_hasta ? _ymd(new Date(c.snooze_hasta)) : '';
+  const nota = c.nota_proxima || '';
+
+  const pop = document.createElement('div');
+  pop.className = 'date-popover';
+  pop.id = 'dp-active';
+  pop.dataset.contactoId = contactoId;
+  pop.innerHTML =
+    '<h4>Programar próxima acción</h4>' +
+    '<div class="quick-row">' +
+      '<button class="quick-btn" onclick="dpQuick(this, \'' + _hoyYMD() + '\')">Hoy</button>' +
+      '<button class="quick-btn" onclick="dpQuick(this, \'' + _sumarDias(1) + '\')">Mañana</button>' +
+      '<button class="quick-btn" onclick="dpQuick(this, \'' + _sumarDias(3) + '\')">En 3 días</button>' +
+      '<button class="quick-btn" onclick="dpQuick(this, \'' + _sumarDias(7) + '\')">Próxima semana</button>' +
+      '<button class="quick-btn" onclick="dpQuick(this, \'' + _sumarDias(14) + '\')">En 2 semanas</button>' +
+      '<button class="quick-btn" onclick="dpQuick(this, \'' + _sumarDias(30) + '\')">En 1 mes</button>' +
+    '</div>' +
+    '<label style="display:block;font-size:11px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">Fecha próxima acción</label>' +
+    '<input type="date" id="dp-fecha" value="' + esc(pa) + '">' +
+    '<label style="display:block;font-size:11px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">Nota (qué vas a hacer)</label>' +
+    '<input type="text" id="dp-nota" placeholder="Ej: Llamar para confirmar reunión" value="' + esc(nota) + '" maxlength="100">' +
+    '<div style="border-top:1px dashed var(--smoke);margin:10px 0 8px;padding-top:10px;">' +
+      '<label style="display:block;font-size:11px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">O poner en espera hasta…</label>' +
+      '<input type="date" id="dp-snooze" value="' + esc(sn) + '">' +
+    '</div>' +
+    '<div class="botonera">' +
+      '<button class="dp-btn danger" onclick="dpQuitar()">Quitar</button>' +
+      '<button class="dp-btn secondary" onclick="cerrarDatePicker()">Cancelar</button>' +
+      '<button class="dp-btn primary" onclick="dpGuardar()">Guardar</button>' +
+    '</div>';
+  document.body.appendChild(pop);
+  _dpAbierto = pop;
+  // Posicionar debajo del anchor
+  const rect = anchorEl.getBoundingClientRect();
+  pop.style.top = (window.scrollY + rect.bottom + 6) + 'px';
+  const popW = 320;
+  let left = window.scrollX + rect.left;
+  if(left + popW > window.innerWidth - 10) left = window.innerWidth - popW - 10;
+  pop.style.left = Math.max(10, left) + 'px';
+  setTimeout(() => document.getElementById('dp-fecha').focus(), 50);
+  // Close on outside click
+  setTimeout(() => document.addEventListener('click', _dpOutsideClick), 100);
+}
+function _dpOutsideClick(e){
+  if(_dpAbierto && !_dpAbierto.contains(e.target)) cerrarDatePicker();
+}
+function cerrarDatePicker(){
+  if(_dpAbierto){ _dpAbierto.remove(); _dpAbierto = null; }
+  document.removeEventListener('click', _dpOutsideClick);
+}
+function dpQuick(btn, ymd){
+  document.getElementById('dp-fecha').value = ymd;
+  document.querySelectorAll('.date-popover .quick-btn').forEach(b => b.style.background = '');
+  btn.style.background = 'var(--purple-soft)';
+  btn.style.color = 'var(--purple-dk)';
+}
+async function dpGuardar(){
+  const pop = _dpAbierto; if(!pop) return;
+  const id = pop.dataset.contactoId;
+  const fecha = document.getElementById('dp-fecha').value;
+  const nota = document.getElementById('dp-nota').value.trim();
+  const snooze = document.getElementById('dp-snooze').value;
+  // Si llenó snooze, lo prioriza sobre próxima acción
+  let resultadoOk = true;
+  if(snooze){
+    const r = await fetchAPI('crm_snooze_contacto', { id: id, fecha: snooze, solicitante: USUARIO });
+    if(!r.ok) resultadoOk = false;
+  }
+  if(fecha){
+    const r = await fetchAPI('crm_actualizar_proxima', { id: id, fecha: fecha, nota: nota, solicitante: USUARIO });
+    if(!r.ok) resultadoOk = false;
+  }
+  if(!fecha && !snooze){
+    // ambos vacíos: limpiar ambos
+    await fetchAPI('crm_snooze_contacto', { id: id, fecha: '', solicitante: USUARIO });
+    await fetchAPI('crm_actualizar_proxima', { id: id, fecha: '', nota: '', solicitante: USUARIO });
+  }
+  if(!resultadoOk){ alert('Hubo un error guardando. Intenta de nuevo.'); return; }
+  // Actualizar cache local
+  ['vMis','vTodos','vCerrar','vOlvidados'].forEach(v => {
+    if(CACHE[v]){
+      const c = CACHE[v].find(x => String(x.id) === String(id));
+      if(c){
+        c.proxima_accion = fecha || '';
+        c.nota_proxima = nota || '';
+        c.snooze_hasta = snooze || '';
+      }
+    }
+  });
+  cerrarDatePicker();
+  // Re-renderizar la vista activa
+  const vActual = document.querySelector('.view.act');
+  if(vActual && typeof renderLista === 'function' && (vActual.id === 'vMis' || vActual.id === 'vTodos')){
+    renderLista(vActual.id);
+  }
+}
+async function dpQuitar(){
+  const pop = _dpAbierto; if(!pop) return;
+  const id = pop.dataset.contactoId;
+  await fetchAPI('crm_snooze_contacto', { id: id, fecha: '', solicitante: USUARIO });
+  await fetchAPI('crm_actualizar_proxima', { id: id, fecha: '', nota: '', solicitante: USUARIO });
+  ['vMis','vTodos','vCerrar','vOlvidados'].forEach(v => {
+    if(CACHE[v]){
+      const c = CACHE[v].find(x => String(x.id) === String(id));
+      if(c){ c.proxima_accion = ''; c.nota_proxima = ''; c.snooze_hasta = ''; }
+    }
+  });
+  cerrarDatePicker();
+  const vActual = document.querySelector('.view.act');
+  if(vActual && (vActual.id === 'vMis' || vActual.id === 'vTodos')) renderLista(vActual.id);
+}
 
 // Toggle favorito desde la card (no abre la ficha)
 async function toggleFavorito(contactoId, btn){

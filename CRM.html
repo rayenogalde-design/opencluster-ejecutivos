@@ -2164,6 +2164,28 @@ function pintarBannerCampana(){
   }
   // Ejecutivo común (o Rayen viendo como ejecutiva): mostrar SU segmento
   const asig = CAMPANA_ASIG[USUARIO] || CAMPANA_ASIG[(USUARIO||'').split(' ')[0]];
+  // Si es Rayen en modo Ejecutiva y no tiene segmento asignado, mostrar selector
+  // de preview para ver exactamente qué ven los demás ejecutivos.
+  if (!asig && esAdmin) {
+    const previewActual = localStorage.getItem('crm_preview_ejec') || 'William Marin';
+    const previewAsig = CAMPANA_ASIG[previewActual] || CAMPANA_ASIG['William Marin'];
+    box.innerHTML =
+      '<div style="background:linear-gradient(135deg,#efe7f7,#fef9ec);border:1px solid var(--purple-lt, #d4c5ec);border-radius:12px;padding:14px 18px;margin-bottom:18px;">' +
+        '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;">' +
+          '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--purple-dk)" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M21 12c0 4-4 8-9 8s-9-4-9-8 4-8 9-8 9 4 9 8z"/></svg>' +
+          '<b style="font-family:var(--font-serif);font-size:15px;color:var(--purple-dk);">Vista previa: ¿qué ve este ejecutivo?</b>' +
+          '<select onchange="cambiarPreviewEjec(this.value)" style="margin-left:auto;padding:5px 10px;border:1px solid var(--purple-lt);border-radius:6px;font-size:12px;font-weight:600;color:var(--purple-dk);background:white;">' +
+            ['William Marin','Roberto','Germán','Maximiliano'].map(n => '<option value="' + esc(n) + '"' + (n === previewActual ? ' selected' : '') + '>' + esc(n) + '</option>').join('') +
+          '</select>' +
+        '</div>' +
+        '<div style="background:white;border-radius:8px;padding:10px 14px;border:1px dashed var(--gold);">' +
+          '<div style="font-size:11px;font-weight:800;color:var(--gold-deep, #5a3c10);text-transform:uppercase;letter-spacing:.5px;">Segmento de ' + esc(previewActual) + '</div>' +
+          '<div style="font-family:var(--font-serif);font-size:16px;color:var(--ink);font-weight:600;margin-top:2px;">' + esc(previewAsig.titulo) + '</div>' +
+          '<div style="font-size:12px;color:var(--gold-deep);margin-top:2px;line-height:1.5;">' + esc(previewAsig.detalle) + '</div>' +
+        '</div>' +
+      '</div>';
+    return;
+  }
   if (!asig) { box.innerHTML = ''; return; }
   box.innerHTML =
     '<div style="background:linear-gradient(135deg,#fef3c7,#fef9ec);border:1px solid var(--gold);border-radius:12px;padding:14px 18px;margin-bottom:18px;display:flex;gap:14px;align-items:center;">' +
@@ -2174,6 +2196,11 @@ function pintarBannerCampana(){
         '<div style="font-size:12.5px;color:var(--gold-deep, #5a3c10);margin-top:2px;line-height:1.5;">' + esc(asig.detalle) + '</div>' +
       '</div>' +
     '</div>';
+}
+
+function cambiarPreviewEjec(nm){
+  try { localStorage.setItem('crm_preview_ejec', nm); } catch(e){}
+  pintarBannerCampana();
 }
 
 async function cargarDashboard(){

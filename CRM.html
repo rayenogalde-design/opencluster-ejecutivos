@@ -357,6 +357,75 @@ input,select,textarea{font-family:inherit; font-size:14px;}
 }
 .badge-incompleto svg{ width:10px; height:10px; }
 
+/* ════ Productos sugeridos (dashboard) ════ */
+.prod-card{
+  background:white; border:1px solid var(--smoke); border-radius:12px;
+  margin-bottom:24px; overflow:hidden;
+}
+.prod-card-hd{
+  display:flex; align-items:center; gap:10px;
+  padding:13px 18px;
+  background:linear-gradient(135deg, #efe7f7, #fef9ec);
+  border-bottom:1px solid var(--smoke);
+}
+.prod-card-hd svg{ color:var(--purple-dk, #5b21b6); flex-shrink:0; }
+.prod-card-hd h3{
+  margin:0; font-family:var(--font-serif); font-size:16px; font-weight:600;
+  color:var(--purple-dk, #5b21b6); flex:1;
+}
+.prod-cnt{
+  font-size:11.5px; font-weight:800; color:var(--gold-deep, #92400e);
+  background:white; padding:3px 10px; border-radius:10px;
+  border:1px solid var(--gold);
+}
+.prod-card-body{ padding:14px 18px; max-height:520px; overflow-y:auto; }
+.prod-familia{ margin-bottom:14px; }
+.prod-familia:last-child{ margin-bottom:0; }
+.prod-familia-titulo{
+  font-family:Montserrat,sans-serif; font-size:11px; font-weight:800;
+  color:var(--purple-dk, #5b21b6); text-transform:uppercase; letter-spacing:.5px;
+  padding-bottom:5px; margin-bottom:7px; border-bottom:1px dashed var(--smoke);
+}
+.prod-items{ display:flex; flex-direction:column; gap:5px; }
+.prod-item{
+  background:var(--paper); border:1px solid var(--smoke); border-radius:8px;
+  overflow:hidden; transition:border-color .12s;
+}
+.prod-item[open]{ border-color:var(--purple-lt, #d4c5ec); background:white; }
+.prod-item summary{
+  list-style:none; cursor:pointer; padding:9px 12px;
+  display:flex; align-items:center; gap:10px;
+  font-size:12.5px;
+}
+.prod-item summary::-webkit-details-marker{ display:none; }
+.prod-item .prod-sku{
+  font-family:Courier New,monospace; font-size:10.5px; font-weight:700;
+  color:var(--gold-deep, #92400e);
+  background:var(--gold-soft, #fef3c7); padding:2px 6px; border-radius:5px;
+  flex-shrink:0;
+}
+.prod-item .prod-nombre{ flex:1; color:var(--ink); font-weight:500; }
+.prod-item .prod-toggle{
+  color:var(--text-3); display:inline-flex; transition:transform .12s;
+}
+.prod-item[open] .prod-toggle{ transform:rotate(180deg); color:var(--purple-dk); }
+.prod-razon{
+  padding:0 12px 11px 12px; font-size:12px; color:var(--text-2, var(--subtle));
+  line-height:1.55;
+  border-top:1px dashed var(--smoke); padding-top:8px; margin-top:0;
+  background:var(--paper);
+}
+.prod-tabs{
+  display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;
+}
+.prod-tab{
+  padding:6px 12px; border-radius:14px; background:white; border:1px solid var(--smoke);
+  font-size:12px; font-weight:700; color:var(--text-2); cursor:pointer;
+  transition:all .12s;
+}
+.prod-tab:hover{ border-color:var(--purple); color:var(--purple-dk); }
+.prod-tab.act{ background:var(--purple-dk, #5b21b6); color:white; border-color:var(--purple-dk); }
+
 /* ════ Etiquetas ════ */
 .et-chip{
   display:inline-flex; align-items:center; gap:4px;
@@ -1018,6 +1087,7 @@ input,select,textarea{font-family:inherit; font-size:14px;}
           <p id="dshFecha">—</p>
         </div>
         <div id="dshCampana"></div>
+        <div id="dshProductos"></div>
         <div class="kpis" id="dshKpis"></div>
         <div class="dsh-grid">
           <div class="card dsh-funnel">
@@ -2358,6 +2428,327 @@ const CAMPANA_ASIG = {
   'Maximiliano':     { titulo: 'Colegios particulares de Chile',                                   detalle: 'Colegios privados, bilingües, internacionales y particulares pagados/subvencionados de gestión privada.' }
 };
 
+// ════════════════════════════════════════════════════════════════════════════
+// CATÁLOGO DE PRODUCTOS OpenCluster Tech + SUGERENCIAS POR SEGMENTO
+// Cada ejecutivo verá en su dashboard una sección con los productos que más
+// se ajustan a su segmento, con razón práctica concreta del por qué.
+// ════════════════════════════════════════════════════════════════════════════
+const CATALOGO_PRODUCTOS = {
+  // Eye-tracking / CAA avanzada
+  'tobii-pc-eye-5':       { sku:'OCTECH 27', nombre:'Tobii PC Eye 5', fam:'Eye-tracking' },
+  'tobii-i13':            { sku:'OCTECH 518', nombre:'Tobii I-series 13', fam:'Eye-tracking' },
+  'tobii-i16':            { sku:'OCTECH 555', nombre:'Tobii I-series 16', fam:'Eye-tracking' },
+  'tobii-comm5':          { sku:'OCTECH 27', nombre:'Tobii PC Eye 5 + Communicator 5', fam:'Eye-tracking' },
+  'tobii-tdsnap':         { sku:'OCTECH 27', nombre:'Tobii PC Eye 5 + TD Snap', fam:'Eye-tracking' },
+  'td-pilot':             { sku:'OCTECH 575', nombre:'TD Pilot (eye-tracking iPad)', fam:'Eye-tracking' },
+  'comuniqa-eye-tdsnap':  { sku:'OCTECH 566', nombre:'ComuniQa Surface Eye + TD Snap', fam:'CAA tablet' },
+  'comuniqa-eye-comm5':   { sku:'OCTECH 507', nombre:'ComuniQa Surface Eye + Communicator 5', fam:'CAA tablet' },
+  'comuniqa-l-tdsnap':    { sku:'OCTECH 509', nombre:'ComuniQa Surface L + TD Snap', fam:'CAA tablet' },
+  'comuniqa-l-comm5':     { sku:'OCTECH 508', nombre:'ComuniQa Surface L + Communicator 5', fam:'CAA tablet' },
+  'tablero-tdsnap':       { sku:'OCTECH 7', nombre:'Tablero de Comunicación Digital TD Snap', fam:'CAA' },
+  // Software CAA
+  'sw-tdsnap':            { sku:'OCTECH 99', nombre:'Software TD Snap', fam:'Software CAA' },
+  'sw-comm5':             { sku:'OCTECH 581', nombre:'Software Communicator 5', fam:'Software CAA' },
+  // Software accesibilidad
+  'sw-jaws':              { sku:'OCTECH 43', nombre:'Software JAWS (lector de pantalla)', fam:'Accesibilidad visual' },
+  'sw-openbook':          { sku:'OCTECH 42', nombre:'Software OpenBook (escaneo de libros)', fam:'Accesibilidad visual' },
+  'sw-dragon':            { sku:'OCTECH 131', nombre:'Dragon Professional 16 (control por voz)', fam:'Acceso alternativo' },
+  // Acceso adaptado
+  'quha-zono':            { sku:'OCTECH 284', nombre:'Quha Zono 2 (seguimiento cefálico)', fam:'Acceso alternativo' },
+  'bigtrack':             { sku:'OCTECH 38', nombre:'Bigtrack Trackball 2.0', fam:'Acceso alternativo' },
+  'teclado-clevy':        { sku:'OCTECH 554', nombre:'Teclado Clevy Junior (amarillo-negro, alto contraste)', fam:'Acceso alternativo' },
+  'bjoy-stick-lite':      { sku:'OCTECH 565', nombre:'BJOY Stick C — Lite', fam:'Acceso alternativo' },
+  'bjoy-stick':           { sku:'OCTECH 564', nombre:'BJOY Stick C', fam:'Acceso alternativo' },
+  'grabadora-step':       { sku:'OCTECH 2', nombre:'Grabadora De Voz Step By Step Con Niveles', fam:'CAA básica' },
+  // Switches
+  'jelly-bean':           { sku:'OCTECH 1', nombre:'Jelly Bean Switch', fam:'Switches' },
+  'big-red':              { sku:'OCTECH 311', nombre:'Big Red Switch', fam:'Switches' },
+  'smoothie-75':          { sku:'OCTECH 570', nombre:'Smoothie Switch 75', fam:'Switches' },
+  'smoothie-125':         { sku:'OCTECH 569', nombre:'Smoothie Switch 125', fam:'Switches' },
+  'buddy-button':         { sku:'OCTECH 310', nombre:'Buddy Button', fam:'Switches' },
+  'specs-switch':         { sku:'OCTECH 548', nombre:'Specs Switch (presión leve)', fam:'Switches' },
+  'mini-cup':             { sku:'OCTECH 529', nombre:'Mini Cup Switch', fam:'Switches' },
+  'candy-corn':           { sku:'OCTECH 524', nombre:'LITTLE Candy Corn 2 (infantil)', fam:'Switches' },
+  'button-1':             { sku:'OCTECH 495', nombre:'Button 1', fam:'Switches' },
+  'button-6':             { sku:'OCTECH 496', nombre:'Button 6', fam:'Switches' },
+  'micro-light':          { sku:'OCTECH 528', nombre:'Micro Light Switch (presión mínima)', fam:'Switches' },
+  'airswitch':            { sku:'OCTECH 562', nombre:'AirSwitch (activación por aire)', fam:'Switches' },
+  'adaptador-usb-2sw':    { sku:'OCTECH 561', nombre:'Adaptador USB para dos conmutadores', fam:'Accesorio switch' },
+  'beamer-big':           { sku:'OCTECH 556', nombre:'Transmisor Big Beamer (wireless)', fam:'Accesorio switch' },
+  'beamer-jelly':         { sku:'OCTECH 308', nombre:'Transmisor Jelly Beamer (wireless)', fam:'Accesorio switch' },
+  'soporte-pie':          { sku:'OCTECH 571', nombre:'Soporte de pie para Comunicador Rehadapt', fam:'Soporte CAA' },
+  'soporte-mesa':         { sku:'OCTECH 572', nombre:'Soporte de sobremesa para comunicador/tablet', fam:'Soporte CAA' },
+  // Movilidad y bipedestación
+  'kiron-alto':           { sku:'OCTECH 134', nombre:'Silla Bipedestadora Kirón Get Up Respaldo Alto T45', fam:'Bipedestación' },
+  'kiron-bajo':           { sku:'OCTECH 132', nombre:'Silla Bipedestadora Kirón Get Up Respaldo Bajo T45', fam:'Bipedestación' },
+  'handbike-elec':        { sku:'OCTECH 148', nombre:'Handbike Eléctrico T36-39-42', fam:'Movilidad activa' },
+  'handbike-manual':      { sku:'OCTECH 143', nombre:'Handbike Manual T36-39-42', fam:'Movilidad activa' },
+  'bipedestador-prono':   { sku:'OCTECH 181', nombre:'Bipedestador Manual Prono Talla 1 (pediátrico)', fam:'Bipedestación pediátrica' },
+  'bipedestador-supino':  { sku:'OCTECH 249', nombre:'Bipedestador Manual Supino Talla 2 (pediátrico)', fam:'Bipedestación pediátrica' },
+  // Equipamiento hospitalario / cuidados
+  'grua-heinsy':          { sku:'OCTECH 69', nombre:'Grúa de transferencia Eléctrica Heinsy HES-108', fam:'Equipamiento hospitalario' },
+  'andador-4r':           { sku:'OCTECH 127', nombre:'Andador de 4 ruedas con apoyo - Talla M', fam:'Movilidad asistida' },
+  'silla-ducha-s':        { sku:'OCTECH 368', nombre:'Silla de Ducha con Respaldo Alto y Sujeciones - Talla S', fam:'Higiene asistida' },
+  'silla-ducha-m':        { sku:'OCTECH 367', nombre:'Silla de Ducha con Respaldo Alto y Sujeciones - Talla M', fam:'Higiene asistida' },
+  'silla-ducha-l':        { sku:'OCTECH 366', nombre:'Silla de Ducha con Respaldo Alto y Sujeciones - Talla L', fam:'Higiene asistida' },
+  'catre-manual':         { sku:'OCTECH 239', nombre:'Catre Clínico Manual 3 Posiciones sin Colchón', fam:'Equipamiento hospitalario' },
+  'catre-manual-cic':     { sku:'OCTECH 404', nombre:'Catre Clínico Manual 3 Pos + Colchón CIC Med Home Visco', fam:'Equipamiento hospitalario' },
+  'catre-manual-thera':   { sku:'OCTECH 414', nombre:'Catre Clínico Manual 3 Pos + Colchón Antiescaras TheraDense', fam:'Equipamiento hospitalario' },
+  'catre-elec':           { sku:'OCTECH 238', nombre:'Catre Clínico Eléctrico 4 Posiciones sin Colchón', fam:'Equipamiento hospitalario' },
+  'catre-elec-cic':       { sku:'OCTECH 404', nombre:'Catre Clínico Eléctrico 4 Pos + Colchón CIC Med Home Visco', fam:'Equipamiento hospitalario' },
+  'catre-elec-thera':     { sku:'OCTECH 414', nombre:'Catre Clínico Eléctrico 4 Pos + Colchón Antiescaras TheraDense', fam:'Equipamiento hospitalario' },
+  'colchon-systam':       { sku:'OCTECH 140', nombre:'Colchón Antiescaras Viscoflex Systam P161M', fam:'Antiescaras' },
+  'colchon-cic':          { sku:'OCTECH 404', nombre:'Colchón Clínico CIC Med Home Visco', fam:'Antiescaras' },
+  'colchon-thera':        { sku:'OCTECH 414', nombre:'Colchón Antiescaras TheraDense TM460', fam:'Antiescaras' },
+  // Posicionamiento
+  'silla-posicion':       { sku:'OCTECH 173', nombre:'Silla/Mesa de Posicionamiento - Talla S', fam:'Posicionamiento' },
+  // Rampas
+  'rampa-4ft':            { sku:'OCTECH 535', nombre:'Rampa Portátil Plegable 4 FT', fam:'Accesibilidad' },
+  'rampa-5ft':            { sku:'OCTECH 536', nombre:'Rampa Portátil Plegable 5 FT', fam:'Accesibilidad' },
+  'rampa-6ft':            { sku:'OCTECH 537', nombre:'Rampa Portátil Plegable 6 FT', fam:'Accesibilidad' }
+};
+
+const SUGERENCIAS_POR_SEGMENTO = {
+  // ── William: HOGARES DE ANCIANOS ──
+  'William': [
+    { id:'catre-elec-thera', razon:'Residentes postrados: cama eléctrica permite que el cuidador ajuste posición sin esfuerzo, el colchón antiescaras previene úlceras de presión.' },
+    { id:'catre-manual-thera', razon:'Versión más accesible para residentes semivalentes; mantiene la protección antiescaras.' },
+    { id:'colchon-systam', razon:'Reemplazo de colchones existentes; previene escaras en residentes con movilidad reducida.' },
+    { id:'colchon-thera', razon:'Alternativa premium antiescaras para hogares con presupuesto institucional.' },
+    { id:'grua-heinsy', razon:'Indispensable para residentes totalmente dependientes; protege la espalda del personal de enfermería y mejora seguridad del traslado.' },
+    { id:'silla-ducha-m', razon:'Asistencia segura en el baño para residentes que no pueden estar de pie. La talla M cubre al 70% de la población mayor.' },
+    { id:'silla-ducha-s', razon:'Para residentes mujeres de menor estatura.' },
+    { id:'silla-ducha-l', razon:'Para residentes hombres corpulentos o con sobrepeso.' },
+    { id:'andador-4r', razon:'Para residentes semivalentes que aún caminan asistidos; reduce caídas, principal causa de hospitalización en adulto mayor.' },
+    { id:'rampa-5ft', razon:'Acceso para sillas de ruedas en escalones de entrada o pasillos sin rampa fija. La 5 FT es la talla más versátil.' },
+    { id:'rampa-4ft', razon:'Para desniveles cortos (1-2 peldaños). Plegable, fácil de almacenar.' },
+    { id:'grabadora-step', razon:'Comunicación básica para residentes con afasia severa post-ACV: el cuidador graba frases ("tengo sed", "llamen al médico") y el residente las reproduce con un botón grande.' },
+    { id:'big-red', razon:'Para residentes con afasia o demencia avanzada que aún reaccionan al estímulo: activación de música, llamada al cuidador, encender/apagar luz.' },
+    { id:'buddy-button', razon:'Switch básico de bajo costo para distribuir en varias salas comunes.' },
+    { id:'sw-jaws', razon:'Para residentes con baja visión o ceguera avanzada (degeneración macular, glaucoma) que aún usan PC o tablet para mantenerse conectados.' },
+    { id:'sw-openbook', razon:'Escaneo de libros y diarios para residentes con baja visión que quieren seguir leyendo.' },
+    { id:'bigtrack', razon:'Mouse adaptado para residentes con Parkinson o temblores: la bola gigante compensa la falta de precisión.' }
+  ],
+  // ── Roberto: ORTOPEDIAS / DISTRIBUIDORES ──
+  'Roberto': [
+    { id:'catre-manual', razon:'Alta rotación, ticket bajo, fácil reventa en sus locales. Producto base que cualquier ortopedia debe tener stockeado.' },
+    { id:'catre-manual-cic', razon:'Combo competitivo para hogares de ancianos que les compren directo.' },
+    { id:'catre-manual-thera', razon:'Versión premium para clientes con presupuesto.' },
+    { id:'catre-elec', razon:'Ticket más alto, margen mejor. Demanda institucional creciente.' },
+    { id:'catre-elec-cic', razon:'Combo gama media: eléctrico + colchón estándar.' },
+    { id:'catre-elec-thera', razon:'Combo premium para clínicas privadas y hogares de alto estándar.' },
+    { id:'colchon-systam', razon:'Reposiciones constantes: las ortopedias venden colchones por separado a clientes que ya tienen cama.' },
+    { id:'colchon-cic', razon:'Colchón básico de alta rotación, complemento natural de los catres.' },
+    { id:'colchon-thera', razon:'Premium para clínicas y geriátricos exigentes.' },
+    { id:'grua-heinsy', razon:'Ticket alto y demanda estable en geriatría. Las ortopedias suelen incluirla en kits institucionales.' },
+    { id:'silla-ducha-s', razon:'Stock de las 3 tallas es clave: cubrir desde adulto pequeño hasta XL.' },
+    { id:'silla-ducha-m', razon:'Talla más demandada.' },
+    { id:'silla-ducha-l', razon:'Para clientes con sobrepeso o talla grande.' },
+    { id:'kiron-alto', razon:'Producto premium nicho (lesionados medulares completos). Alto margen, baja rotación pero gran prestigio para la ortopedia.' },
+    { id:'kiron-bajo', razon:'Variante para usuarios con torso conservado.' },
+    { id:'handbike-elec', razon:'Producto deportivo-rehabilitación. Las 3 tallas (36/39/42) cubren niños y adultos.' },
+    { id:'handbike-manual', razon:'Versión manual, más accesible. Producto deportivo de alta visibilidad en redes.' },
+    { id:'bipedestador-prono', razon:'Para PC infantil severa. Nicho fuerte en ortopedias pediátricas y subsidios FONADIS.' },
+    { id:'bipedestador-supino', razon:'Variante para niños con menor control de tronco.' },
+    { id:'silla-posicion', razon:'Posicionamiento pediátrico. Producto de catálogo en ortopedias especializadas en NEE.' },
+    { id:'andador-4r', razon:'Alta rotación en adulto mayor. Producto de entrada a precio accesible.' },
+    { id:'rampa-4ft', razon:'Las 3 tallas cubren todas las necesidades de instalación. Producto que se vende mucho en obras nuevas y remodelaciones.' },
+    { id:'rampa-5ft', razon:'Tamaño intermedio, el más vendido.' },
+    { id:'rampa-6ft', razon:'Para desniveles mayores (camionetas, accesos altos).' },
+    { id:'jelly-bean', razon:'Switch básico de alta rotación, lo piden cuidadores y familias.' },
+    { id:'big-red', razon:'Clásico, fácil reventa. Marca conocida en el ámbito de educación especial.' },
+    { id:'buddy-button', razon:'Entrada de bajo costo para captar al cliente.' },
+    { id:'bigtrack', razon:'Para clientes con Parkinson, temblor esencial o tetraplejia parcial — público que llega a la ortopedia por movilidad.' }
+  ],
+  // ── Germán: REHABILITACIÓN FÍSICA Y NEUROLÓGICA ──
+  'Germán': [
+    { id:'tobii-pc-eye-5', razon:'Pacientes ELA, lesión medular alta y post-ACV severo recuperan capacidad de comunicarse usando solo los ojos. Producto estrella del centro.' },
+    { id:'tobii-i13', razon:'Comunicador integrado portátil de 13" para pacientes que necesitan llevárselo a casa después de la terapia.' },
+    { id:'tobii-i16', razon:'Versión 16" para uso institucional o pacientes con baja visión que necesitan pantalla grande.' },
+    { id:'td-pilot', razon:'Eye-tracking en iPad. Útil para terapeutas que ya manejan iPad y quieren introducir CAA sin curva de aprendizaje técnica.' },
+    { id:'tobii-comm5', razon:'Bundle para adultos post-ACV o ELA: hardware + software clínico Communicator 5 con vocabulario adulto.' },
+    { id:'tobii-tdsnap', razon:'Bundle para pediátrico (PC, autismo no verbal): software TD Snap con vocabulario simbólico y vista por categorías.' },
+    { id:'comuniqa-eye-tdsnap', razon:'Comunicador integrado todo-en-uno para niños. Más simple que el Tobii, menor precio.' },
+    { id:'comuniqa-eye-comm5', razon:'Versión adulta del integrado.' },
+    { id:'comuniqa-l-tdsnap', razon:'Tableta grande para terapia grupal o trabajo escolar con el paciente.' },
+    { id:'comuniqa-l-comm5', razon:'Versión adulta de la tableta grande.' },
+    { id:'sw-tdsnap', razon:'Software CAA estándar para pediátricos. Se vende como upgrade a quien ya tiene tablet.' },
+    { id:'sw-comm5', razon:'Software CAA estándar para adultos.' },
+    { id:'sw-dragon', razon:'Reconocimiento de voz para pacientes con tetraplejia parcial que conservan voz: pueden seguir usando PC profesional/personal.' },
+    { id:'quha-zono', razon:'Control cefálico para pacientes sin movilidad de manos pero con control cervical conservado. Alternativa al eye-tracking.' },
+    { id:'bigtrack', razon:'Terapia ocupacional con pacientes con temblores (Parkinson, atáxico) o tetraplejia parcial.' },
+    { id:'teclado-clevy', razon:'Para pacientes pediátricos con motricidad fina reducida o baja visión asociada a discapacidad neurológica.' },
+    { id:'bjoy-stick', razon:'Joystick adaptado para terapia ocupacional: alternativa al mouse, ergonomía para tetrapléjicos parciales.' },
+    { id:'bjoy-stick-lite', razon:'Versión más simple, primera línea de acceso adaptado.' },
+    { id:'grabadora-step', razon:'Terapia del habla con pacientes afásicos. Permite a la fonoaudióloga grabar y trabajar repetición funcional.' },
+    { id:'jelly-bean', razon:'Switch terapéutico clásico: causa-efecto, evaluación de capacidades de presión.' },
+    { id:'big-red', razon:'Switch grande para evaluación inicial; el más usado en gabinetes de TO.' },
+    { id:'smoothie-75', razon:'Switch ergonómico para terapia avanzada con mejor feedback táctil.' },
+    { id:'smoothie-125', razon:'Versión más grande del Smoothie.' },
+    { id:'buddy-button', razon:'Switch básico para múltiples pacientes en un mismo gimnasio.' },
+    { id:'specs-switch', razon:'Para pacientes con muy poca fuerza muscular (esclerosis avanzada, ELA fase terminal).' },
+    { id:'mini-cup', razon:'Switch para terapia de juego adulto/pediátrico.' },
+    { id:'candy-corn', razon:'Específico pediátrico, forma divertida para sesiones con niños.' },
+    { id:'button-1', razon:'Switch numerado para evaluaciones de causa-efecto.' },
+    { id:'button-6', razon:'Versión múltiple del Button 1.' },
+    { id:'micro-light', razon:'Para pacientes con fuerza casi nula. Línea ELA fase 3-4.' },
+    { id:'airswitch', razon:'Activación por soplido para tetrapléjicos completos.' },
+    { id:'adaptador-usb-2sw', razon:'Conectar dos switches al mismo PC. Indispensable para terapia con scanning.' },
+    { id:'beamer-big', razon:'Switch inalámbrico a distancia: terapia con paciente en cama o silla de ruedas a 5 metros del PC.' },
+    { id:'beamer-jelly', razon:'Versión wireless del Jelly Bean.' },
+    { id:'kiron-alto', razon:'Bipedestación terapéutica para lesionados medulares completos en gimnasio. Mejora circulación y previene osteoporosis.' },
+    { id:'kiron-bajo', razon:'Variante de bipedestación para pacientes con torso conservado.' },
+    { id:'bipedestador-prono', razon:'Niños con PC, terapia diaria de bipedestación. Esencial en centros pediátricos.' },
+    { id:'bipedestador-supino', razon:'Niños con menor control postural.' },
+    { id:'handbike-elec', razon:'Rehabilitación cardiopulmonar y deporte adaptado. Producto que ayuda a posicionar el centro como de alta complejidad.' },
+    { id:'handbike-manual', razon:'Versión sin asistencia para entrenamiento de fuerza en pacientes con LM baja.' },
+    { id:'silla-posicion', razon:'Para terapia ocupacional pediátrica: trabajo de mesa con apoyo postural.' },
+    { id:'soporte-pie', razon:'Accesorio CAA: soporte de pie ajustable para usar el comunicador en diferentes posiciones del paciente.' },
+    { id:'soporte-mesa', razon:'Para terapia sentada con tablet/comunicador.' }
+  ],
+  // ── Maximiliano: COLEGIOS PARTICULARES ──
+  'Maximiliano': [
+    { id:'tobii-tdsnap', razon:'Para alumnos con PC severa, mutismo selectivo, autismo no verbal. Permite incluirlos al aula con comunicación funcional.' },
+    { id:'td-pilot', razon:'Eye-tracking en iPad: ideal para colegios que ya tienen programas BYOD/iPad. Menor barrera técnica para profes.' },
+    { id:'comuniqa-l-tdsnap', razon:'Tableta grande con TD Snap para uso compartido en aula. El alumno con TEA puede usarla en su pupitre.' },
+    { id:'tablero-tdsnap', razon:'Comunicación digital para alumnos no verbales: substituye al tablero impreso, más versátil y escalable.' },
+    { id:'sw-tdsnap', razon:'El software CAA más usado en educación especial. Se vende como licencia para tablets escolares existentes.' },
+    { id:'sw-comm5', razon:'Para alumnos avanzados de secundaria con LM o ELA juvenil.' },
+    { id:'sw-jaws', razon:'Para alumnos ciegos o con baja visión severa: les permite acceder a contenido digital del colegio (Moodle, Office, mails).' },
+    { id:'sw-openbook', razon:'Escaneo de libros de texto: alumnos con baja visión pueden seguir las lecturas de clase a su ritmo.' },
+    { id:'teclado-clevy', razon:'DISEÑADO PARA NIÑOS: teclado gigante amarillo-negro alto contraste, ideal para niños con baja visión, dislexia o motricidad fina reducida.' },
+    { id:'bigtrack', razon:'Para alumnos con PC, temblores o motricidad reducida en aula. La bola grande compensa falta de precisión.' },
+    { id:'grabadora-step', razon:'Comunicación funcional básica para alumno no verbal: el profe graba "necesito ir al baño", "ya terminé", y el alumno las reproduce con un botón.' },
+    { id:'jelly-bean', razon:'Switch suave para niños pequeños. Activación con presión leve, no requiere precisión.' },
+    { id:'big-red', razon:'Switch clásico para actividades inclusivas: juegos adaptados, control de cuentos digitales, votación grupal.' },
+    { id:'buddy-button', razon:'Switch de bajo costo para distribuir en varias salas y diferentes alumnos.' },
+    { id:'candy-corn', razon:'Switch infantil con forma divertida, ideal para captar atención de niños pequeños en sala de recursos.' },
+    { id:'specs-switch', razon:'Para niños con muy poca fuerza muscular (atrofia muscular espinal, distrofia).' },
+    { id:'mini-cup', razon:'Switch para juego inclusivo en preescolar.' },
+    { id:'silla-posicion', razon:'Apoyo postural para alumno con PC en aula: mejora atención y participación al fijar bien la postura.' },
+    { id:'bipedestador-prono', razon:'Para alumnos con PC: bipedestación durante parte de la jornada escolar. Mejora circulación, atención y previene contracturas.' },
+    { id:'bipedestador-supino', razon:'Variante para alumnos con menor control postural.' },
+    { id:'kiron-alto', razon:'Para alumno con lesión medular (raro pero existe): permite participar de pie en actividades de aula.' }
+  ],
+  // ── Rayen: TELETÓN / ACHS / MUTUALES (catálogo casi completo) ──
+  'Rayen Ogalde': [
+    { id:'tobii-pc-eye-5', razon:'Teletón: pacientes pediátricos con PC severa o ELA juvenil. ACHS/Mutuales: pacientes post-TEC laboral con tetraplejia.' },
+    { id:'tobii-i13', razon:'Para pacientes que requieren llevar comunicador a casa post-alta hospitalaria.' },
+    { id:'tobii-i16', razon:'Versión grande para Teletón y hospitales mutuales con baja visión asociada.' },
+    { id:'td-pilot', razon:'Plataforma iPad: Teletón y mutuales lo están adoptando porque los terapeutas ya manejan iPad clínico.' },
+    { id:'tobii-comm5', razon:'Bundle para adultos accidentados laborales en ACHS/Mutual.' },
+    { id:'tobii-tdsnap', razon:'Bundle para pediátrico Teletón: PC, parálisis cerebral severa, autismo no verbal.' },
+    { id:'comuniqa-eye-tdsnap', razon:'Comunicador integrado pediátrico Teletón: más simple y económico que Tobii.' },
+    { id:'comuniqa-eye-comm5', razon:'Versión adulta para ACHS.' },
+    { id:'comuniqa-l-tdsnap', razon:'Tableta grande para grupos terapéuticos.' },
+    { id:'sw-tdsnap', razon:'Licencia masiva: Teletón tiene 14 centros que pueden estandarizar este software.' },
+    { id:'sw-comm5', razon:'Estándar adulto: ACHS y Mutual lo usan en unidades de rehab.' },
+    { id:'sw-dragon', razon:'Reconocimiento de voz para pacientes con LM cervical incompleta. ACHS suele cubrirlo en pacientes que vuelven al trabajo.' },
+    { id:'quha-zono', razon:'Control cefálico para tetrapléjicos. Alternativa al eye-tracking, más portátil.' },
+    { id:'bigtrack', razon:'Acceso adaptado para temblor esencial post-TEC o atáxia.' },
+    { id:'teclado-clevy', razon:'Para población infantil Teletón con motricidad fina reducida.' },
+    { id:'bjoy-stick', razon:'Acceso joystick para terapia ocupacional. Volumen institucional alto en Teletón.' },
+    { id:'grabadora-step', razon:'Terapia del habla post-ACV/TEC en ACHS y Mutuales.' },
+    { id:'jelly-bean', razon:'Switch de evaluación masiva: Teletón compra docenas por sus 14 centros.' },
+    { id:'big-red', razon:'Switch de uso clínico estándar.' },
+    { id:'smoothie-75', razon:'Ergonómico, terapia avanzada.' },
+    { id:'buddy-button', razon:'Switch de entrada: cada terapeuta tiene varios para sus pacientes.' },
+    { id:'specs-switch', razon:'Para pacientes con fuerza muscular mínima.' },
+    { id:'mini-cup', razon:'Pediátrico Teletón.' },
+    { id:'candy-corn', razon:'Pediátrico Teletón, lúdico.' },
+    { id:'micro-light', razon:'Pacientes ELA avanzada en ACHS (raros pero cubiertos).' },
+    { id:'airswitch', razon:'Tetrapléjicos completos en mutual: control por soplido.' },
+    { id:'beamer-big', razon:'Switches inalámbricos para terapia con paciente en silla a distancia.' },
+    { id:'kiron-alto', razon:'Lesionados medulares completos: bipedestación terapéutica. ACHS cubre por seguro laboral.' },
+    { id:'kiron-bajo', razon:'Variante para LM incompleta.' },
+    { id:'handbike-elec', razon:'Rehab cardiopulmonar Teletón adolescentes y adultos en mutuales.' },
+    { id:'handbike-manual', razon:'Entrenamiento de fuerza para pacientes con LM.' },
+    { id:'bipedestador-prono', razon:'Pediátrico Teletón: PC infantil, esencial en todos sus centros.' },
+    { id:'bipedestador-supino', razon:'Variante para niños con menor control postural.' },
+    { id:'silla-posicion', razon:'Terapia ocupacional pediátrica.' },
+    { id:'grua-heinsy', razon:'ACHS y Mutual: traslados seguros en sus hospitales. Reduce lesiones del personal.' },
+    { id:'catre-elec-thera', razon:'Hospitales del Trabajador y Hospital Clínico Mutual: cama eléctrica con antiescaras para pacientes graves.' },
+    { id:'colchon-systam', razon:'Mutual: reemplazos masivos por unidad hospitalaria.' },
+    { id:'colchon-thera', razon:'Premium para UCI Mutual.' },
+    { id:'silla-ducha-m', razon:'Hospitales mutuales para pacientes en transición a casa.' },
+    { id:'soporte-pie', razon:'Accesorio CAA en Teletón pediátrico.' },
+    { id:'soporte-mesa', razon:'Para uso clínico de tablets en consultas.' },
+    { id:'rampa-5ft', razon:'Centros Teletón y mutuales: accesos temporales en obras o eventos.' }
+  ]
+};
+// Alias
+SUGERENCIAS_POR_SEGMENTO['William Marin'] = SUGERENCIAS_POR_SEGMENTO['William'];
+SUGERENCIAS_POR_SEGMENTO['German'] = SUGERENCIAS_POR_SEGMENTO['Germán'];
+
+function pintarProductosSugeridos(){
+  const box = document.getElementById('dshProductos');
+  if (!box) return;
+  // En modo admin (Rayen como admin) mostrar todos los segmentos en pestañas
+  // En modo ejecutiva o ejec común, solo el suyo
+  const verComoEjecutivo = ROL !== 'admin' || MODO_VISTA === 'ejecutiva';
+  const claves = verComoEjecutivo ? [USUARIO, (USUARIO||'').split(' ')[0]] : Object.keys(CAMPANA_ASIG);
+  let segmentoActivo = null;
+  if (verComoEjecutivo) {
+    for(const k of claves) { if(SUGERENCIAS_POR_SEGMENTO[k]) { segmentoActivo = k; break; } }
+    if(!segmentoActivo) { box.innerHTML = ''; return; }
+    box.innerHTML = renderListaSugerencias(segmentoActivo);
+  } else {
+    // Tabs por ejecutivo + el contenido del activo
+    const previewActual = localStorage.getItem('crm_preview_ejec') || 'William Marin';
+    const tabs = ['William Marin','Roberto','Germán','Maximiliano','Rayen Ogalde']
+      .filter(k => SUGERENCIAS_POR_SEGMENTO[k] && SUGERENCIAS_POR_SEGMENTO[k].length)
+      .map(k => '<button class="prod-tab' + (k === previewActual ? ' act' : '') + '" onclick="cambiarPreviewEjec(\'' + esc(k) + '\')">' + esc(k.split(' ')[0]) + ' · ' + SUGERENCIAS_POR_SEGMENTO[k].length + '</button>')
+      .join('');
+    box.innerHTML =
+      '<div class="prod-tabs">' + tabs + '</div>' +
+      renderListaSugerencias(previewActual);
+  }
+}
+
+function renderListaSugerencias(segmento){
+  const lista = SUGERENCIAS_POR_SEGMENTO[segmento] || [];
+  if(!lista.length) return '';
+  // Agrupar por familia para mejor lectura
+  const porFam = {};
+  lista.forEach(s => {
+    const p = CATALOGO_PRODUCTOS[s.id];
+    if(!p) return;
+    if(!porFam[p.fam]) porFam[p.fam] = [];
+    porFam[p.fam].push({ ...s, ...p });
+  });
+  const familias = Object.keys(porFam).sort();
+  let html =
+    '<div class="prod-card">' +
+      '<div class="prod-card-hd">' +
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>' +
+        '<h3>Productos sugeridos para tu segmento</h3>' +
+        '<span class="prod-cnt">' + lista.length + ' productos</span>' +
+      '</div>' +
+      '<div class="prod-card-body">' +
+        familias.map(fam =>
+          '<div class="prod-familia">' +
+            '<div class="prod-familia-titulo">' + esc(fam) + ' <span style="color:var(--text-3);font-weight:600;">· ' + porFam[fam].length + '</span></div>' +
+            '<div class="prod-items">' +
+              porFam[fam].map(p =>
+                '<details class="prod-item">' +
+                  '<summary>' +
+                    '<span class="prod-sku">' + esc(p.sku) + '</span>' +
+                    '<span class="prod-nombre">' + esc(p.nombre) + '</span>' +
+                    '<span class="prod-toggle">' +
+                      '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>' +
+                    '</span>' +
+                  '</summary>' +
+                  '<div class="prod-razon">' + esc(p.razon) + '</div>' +
+                '</details>'
+              ).join('') +
+            '</div>' +
+          '</div>'
+        ).join('') +
+      '</div>' +
+    '</div>';
+  return html;
+}
+
 function pintarBannerCampana(){
   const box = document.getElementById('dshCampana');
   if (!box) return;
@@ -2420,6 +2811,7 @@ function pintarBannerCampana(){
 function cambiarPreviewEjec(nm){
   try { localStorage.setItem('crm_preview_ejec', nm); } catch(e){}
   pintarBannerCampana();
+  pintarProductosSugeridos();
 }
 
 // Periodo activo del dashboard: 'semana' o 'mes' (se persiste en localStorage)
@@ -2428,6 +2820,7 @@ let DASH_PERIODO = (function(){ try { return localStorage.getItem('crm_dash_peri
 async function cargarDashboard(){
   setSaludo();
   pintarBannerCampana();
+  pintarProductosSugeridos();
   const kpiBox = document.getElementById('dshKpis');
   kpiBox.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando KPIs…</div>';
 

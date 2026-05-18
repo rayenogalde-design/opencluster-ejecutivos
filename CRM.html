@@ -2112,17 +2112,50 @@ async function cargarFunnelDashboard(){
   const total = Object.values(counts).reduce((a,b)=>a+b, 0);
   totalEl.textContent = total + (esActuandoComoAdmin() ? ' (equipo)' : ' (tuyos)');
   const max = Math.max(1, ...Object.values(counts));
+  // Guardar agrupación para que se pueda abrir el detalle al click
+  window.__FUNNEL_DATA = {};
+  buckets.forEach(b => {
+    window.__FUNNEL_DATA[b.key] = propios.filter(c => {
+      const pe = String(c.ultimo_estado || c.pipeline_estado || '').toLowerCase();
+      for(const bb of buckets){ if(bb.match(pe)){ return bb.key === b.key; } }
+      return false;
+    });
+  });
   container.innerHTML = buckets.map(b => {
     const n = counts[b.key];
     const pct = total ? Math.round(n*100/total) : 0;
     const w = max ? Math.max(4, Math.round(n*100/max)) : 4;
-    return '<div class="funnel-row">' +
+    return '<div class="funnel-row" style="cursor:pointer;" onclick="verDetalleFunnel(\'' + b.key + '\',\'' + esc(b.label) + '\')" title="Click para ver los ' + n + ' contactos">' +
       '<div class="funnel-lbl">' + b.label + '</div>' +
       '<div class="funnel-bar-wrap"><div class="funnel-bar ' + b.cls + '" style="width:' + w + '%;">' + (n > 0 ? n : '') + '</div></div>' +
       '<div class="funnel-count">' + n + '</div>' +
       '<div class="funnel-pct">' + pct + '%</div>' +
     '</div>';
   }).join('');
+}
+
+function verDetalleFunnel(bucketKey, label){
+  const lista = (window.__FUNNEL_DATA || {})[bucketKey] || [];
+  const body = document.getElementById('diag-body');
+  const titulo = document.getElementById('diag-titulo');
+  titulo.textContent = label + ' — ' + lista.length + ' contactos';
+  body.innerHTML =
+    '<div style="background:linear-gradient(135deg, var(--gold-soft, #fef3c7), #fef9ec);border:1px solid var(--gold);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--gold-deep, #5a3c10);line-height:1.55;">' +
+      'Estos son los contactos que el sistema agrupó en <b>' + esc(label) + '</b>. La asignación se hace por el estado MÁS AVANZADO detectado en sus interacciones. Click en cualquiera para abrir su ficha.' +
+    '</div>' +
+    (lista.length === 0
+      ? '<div class="loading-state" style="padding:30px 20px;">Sin contactos en este bucket.</div>'
+      : '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;">' +
+        lista.map(c =>
+          '<div onclick="cerrarModalDiagnostico(); abrirFichaModal(\'' + esc(c.id) + '\')" style="background:white;border:1px solid var(--border-subtle);border-radius:9px;padding:11px 13px;cursor:pointer;transition:border-color .12s;" onmouseover="this.style.borderColor=\'var(--purple)\'" onmouseout="this.style.borderColor=\'var(--border-subtle)\'">' +
+            '<div style="font-family:var(--font-serif);font-size:14px;color:var(--text-1);font-weight:500;">' + esc(c.nombre || c.institucion || '(sin nombre)') + '</div>' +
+            '<div style="font-size:11.5px;color:var(--text-3);margin-top:3px;">' + esc(c.institucion || '') + (c.cargo ? ' · ' + esc(c.cargo) : '') + '</div>' +
+            '<div style="font-size:10.5px;color:var(--text-3);margin-top:6px;font-weight:700;">' + esc(c.ultimo_estado || c.pipeline_estado || 'Sin estado') + (c.cant_cotizaciones ? ' · ' + c.cant_cotizaciones + ' cot' : '') + '</div>' +
+          '</div>'
+        ).join('') +
+      '</div>'
+    );
+  document.getElementById('modalDiagnostico').classList.add('show');
 }
 
 async function cargarReunionesDashboard(){

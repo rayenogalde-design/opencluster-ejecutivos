@@ -937,6 +937,7 @@ input,select,textarea{font-family:inherit; font-size:14px;}
           </div>
           <div style="color:var(--subtle);font-size:13.5px;font-weight:600;"><b id="cntMis" style="color:var(--ink);">0</b> contactos</div>
         </div>
+        <div id="chipsEstadoMis" style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px;"></div>
         <div id="listMis"></div>
       </div>
 
@@ -974,6 +975,7 @@ input,select,textarea{font-family:inherit; font-size:14px;}
           </div>
           <div style="color:var(--subtle);font-size:13.5px;font-weight:600;"><b id="cntTodos" style="color:var(--ink);">0</b> contactos totales</div>
         </div>
+        <div id="chipsEstadoTodos" style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px;"></div>
         <div id="listTodos"></div>
       </div>
 
@@ -1808,6 +1810,22 @@ const CACHE = {
   vCerrar: null, vOlvidados: null
 };
 const FILTROS = { vMis: '', vTodos: '', vCerrar: '', vOlvidados: '', vKanban: '' };
+const FILTROS_ESTADO = { vMis: '', vTodos: '' };
+// Buckets de pipeline compartidos por funnel + chips de filtro
+const PIPELINE_BUCKETS = [
+  { key:'cont', label:'Contactado',  cls:'f-cont', match: pe => pe.indexOf('contact') >= 0 || pe.indexOf('lead') >= 0 || pe === '' },
+  { key:'reun', label:'Reunión',     cls:'f-reun', match: pe => pe.indexOf('reuni') >= 0 },
+  { key:'cot',  label:'Cotizado',    cls:'f-cot',  match: pe => pe.indexOf('cotizad') >= 0 || pe.indexOf('gesti') >= 0 },
+  { key:'seg',  label:'Seguimiento', cls:'f-seg',  match: pe => pe.indexOf('seguim') >= 0 },
+  { key:'llam', label:'Llamada',     cls:'f-llam', match: pe => pe.indexOf('llamad') >= 0 },
+  { key:'gan',  label:'Ganado',      cls:'f-gan',  match: pe => pe.indexOf('ganad') >= 0 || pe.indexOf('cerrad') >= 0 },
+  { key:'perd', label:'Perdido',     cls:'f-perd', match: pe => pe.indexOf('perdid') >= 0 }
+];
+function _bucketDeContacto(c){
+  const pe = String(c.ultimo_estado || c.pipeline_estado || '').toLowerCase();
+  for(const b of PIPELINE_BUCKETS){ if(b.match(pe)) return b.key; }
+  return 'cont';
+}
 let SELECTED_ID = null;
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -2238,33 +2256,17 @@ async function cargarFunnelDashboard(){
   const lista = await _cargarContactosBase();
   let propios = esActuandoComoAdmin() ? lista : lista.filter(esOwner);
 
-  const buckets = [
-    { key:'cont', label:'Contactado',    cls:'f-cont', match: pe => pe.indexOf('contact') >= 0 || pe.indexOf('lead') >= 0 },
-    { key:'reun', label:'Reunión',       cls:'f-reun', match: pe => pe.indexOf('reuni') >= 0 },
-    { key:'cot',  label:'Cotizado',      cls:'f-cot',  match: pe => pe.indexOf('cotizad') >= 0 || pe.indexOf('gesti') >= 0 },
-    { key:'seg',  label:'Seguimiento',   cls:'f-seg',  match: pe => pe.indexOf('seguim') >= 0 },
-    { key:'llam', label:'Llamada',       cls:'f-llam', match: pe => pe.indexOf('llamad') >= 0 },
-    { key:'gan',  label:'Ganado',        cls:'f-gan',  match: pe => pe.indexOf('ganad') >= 0 || pe.indexOf('cerrad') >= 0 },
-    { key:'perd', label:'Perdido',       cls:'f-perd', match: pe => pe.indexOf('perdid') >= 0 }
-  ];
+  const buckets = PIPELINE_BUCKETS;
   const counts = {};
   buckets.forEach(b => counts[b.key] = 0);
-  propios.forEach(c => {
-    const pe = String(c.ultimo_estado || c.pipeline_estado || '').toLowerCase();
-    for(const b of buckets){ if(b.match(pe)){ counts[b.key]++; break; } }
-  });
+  propios.forEach(c => { counts[_bucketDeContacto(c)]++; });
   const total = Object.values(counts).reduce((a,b)=>a+b, 0);
   totalEl.textContent = total + (esActuandoComoAdmin() ? ' (equipo)' : ' (tuyos)');
   const max = Math.max(1, ...Object.values(counts));
   // Guardar agrupación para que se pueda abrir el detalle al click
   window.__FUNNEL_DATA = {};
-  buckets.forEach(b => {
-    window.__FUNNEL_DATA[b.key] = propios.filter(c => {
-      const pe = String(c.ultimo_estado || c.pipeline_estado || '').toLowerCase();
-      for(const bb of buckets){ if(bb.match(pe)){ return bb.key === b.key; } }
-      return false;
-    });
-  });
+  buckets.forEach(b => { window.__FUNNEL_DATA[b.key] = []; });
+  propios.forEach(c => { window.__FUNNEL_DATA[_bucketDeContacto(c)].push(c); });
   container.innerHTML = buckets.map(b => {
     const n = counts[b.key];
     const pct = total ? Math.round(n*100/total) : 0;
@@ -2486,6 +2488,13 @@ async function refrescarContactosBackground(view, cacheKey){
 function renderLista(view){
   const container = document.getElementById(view === 'vMis' ? 'listMis' : 'listTodos');
   let lista = CACHE[view] || [];
+  // Pintar chips de filtro por estado ANTES de filtrar (sobre la lista total)
+  pintarChipsEstado(view, lista);
+  // Aplicar filtro por estado activo
+  const estadoActivo = FILTROS_ESTADO[view] || '';
+  if(estadoActivo){
+    lista = lista.filter(c => _bucketDeContacto(c) === estadoActivo);
+  }
   const q = (FILTROS[view] || '').toLowerCase().trim();
   if(q){
     lista = lista.filter(c =>
@@ -2499,9 +2508,12 @@ function renderLista(view){
       (c.etiquetas||'').toLowerCase().includes(q)
     );
   }
+  // Actualizar contador visible con la cuenta filtrada
+  const cntEl = document.getElementById(view === 'vMis' ? 'cntMis' : 'cntTodos');
+  if(cntEl) cntEl.textContent = lista.length;
   if(!lista.length){
     container.innerHTML = '<div class="loading-state" style="padding:30px 20px;">' +
-      (q ? 'Ningún contacto coincide con "' + esc(q) + '"' : 'No hay contactos todavía') +
+      (q ? 'Ningún contacto coincide con "' + esc(q) + '"' : (estadoActivo ? 'No hay contactos en este estado' : 'No hay contactos todavía')) +
       '</div>';
     return;
   }
@@ -2599,6 +2611,50 @@ function pipelineBadgeHTML(estado){
 
 function filtrarLista(view, q){
   FILTROS[view] = q;
+  renderLista(view);
+}
+
+function pintarChipsEstado(view, lista){
+  const cont = document.getElementById(view === 'vMis' ? 'chipsEstadoMis' : 'chipsEstadoTodos');
+  if(!cont) return;
+  // Contar por bucket sobre la lista completa (sin filtros de búsqueda/estado)
+  const counts = {};
+  PIPELINE_BUCKETS.forEach(b => counts[b.key] = 0);
+  lista.forEach(c => { counts[_bucketDeContacto(c)]++; });
+  const activo = FILTROS_ESTADO[view] || '';
+  const total = lista.length;
+  // Mapeo de color por bucket
+  const colorChip = {
+    cont: ['#dbe4f5', '#3a4d75'],
+    reun: ['#cfe1f3', '#1e3a5f'],
+    cot:  ['#fef3c7', '#5a3c10'],
+    seg:  ['#f5e2c1', '#5a3c10'],
+    llam: ['#fde7c2', '#7a5e0a'],
+    gan:  ['#d1f0dd', '#0f4f2d'],
+    perd: ['#f3d6d6', '#7a1a1a']
+  };
+  const chipTodos =
+    '<button onclick="toggleChipEstado(\'' + view + '\', \'\')" style="' +
+      'padding:5px 12px;border-radius:14px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid ' +
+      (activo === '' ? 'var(--purple-dk);background:var(--purple-dk);color:white;' : 'var(--smoke);background:white;color:var(--text-2);') +
+    '">Todos · ' + total + '</button>';
+  const chips = PIPELINE_BUCKETS
+    .filter(b => counts[b.key] > 0)
+    .map(b => {
+      const c = colorChip[b.key] || ['#eee', '#333'];
+      const isActive = activo === b.key;
+      return '<button onclick="toggleChipEstado(\'' + view + '\', \'' + b.key + '\')" style="' +
+        'padding:5px 12px;border-radius:14px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid ' +
+        (isActive ? c[1] + ';background:' + c[1] + ';color:white;' : c[1] + '40;background:' + c[0] + ';color:' + c[1] + ';') +
+      '">' + esc(b.label) + ' · ' + counts[b.key] + '</button>';
+    }).join('');
+  cont.innerHTML = chipTodos + chips;
+}
+
+function toggleChipEstado(view, key){
+  // Toggle: si está activo el mismo, se desactiva
+  if(FILTROS_ESTADO[view] === key) FILTROS_ESTADO[view] = '';
+  else FILTROS_ESTADO[view] = key;
   renderLista(view);
 }
 

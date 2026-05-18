@@ -879,6 +879,7 @@ input,select,textarea{font-family:inherit; font-size:14px;}
           <h1 id="dshSaludo">Bienvenido</h1>
           <p id="dshFecha">—</p>
         </div>
+        <div id="dshCampana"></div>
         <div class="kpis" id="dshKpis"></div>
         <div class="dsh-grid">
           <div class="card dsh-funnel">
@@ -2049,20 +2050,33 @@ function initApp(user){
 
 function aplicarVisibilidadPorRol(){
   const esAdmin = ROL === 'admin';
+  // Cuando Rayen está en modo EJECUTIVA, debe ver EXACTAMENTE lo mismo que un ejecutivo común
+  // (para revisar la experiencia del equipo). El toggle Admin/Ejecutiva queda visible
+  // pero las vistas admin se ocultan.
+  const verComoEjecutivo = !esAdmin || MODO_VISTA === 'ejecutiva';
 
   // Botón sincronizar Registro: visible para todos los ejecutivos
   const btnSync = document.getElementById('btnSyncRegistro');
   if (btnSync) btnSync.style.display = 'inline-flex';
 
-  // Toggle Admin/Ejecutiva (solo Rayen lo ve)
+  // Toggle Admin/Ejecutiva (solo Rayen lo ve, en cualquier modo)
   const modoToggle = document.getElementById('modoToggle');
   if (modoToggle) modoToggle.style.display = esAdmin ? 'flex' : 'none';
 
-  // Vistas admin (Territorios, Auditoría, Migración, Importar) — solo Rayen
+  // Vistas admin (Territorios, Auditoría, Migración, Importar): visibles solo si Rayen está
+  // en modo Admin. En modo Ejecutiva o para ejecutivos no admin, se ocultan.
   ['navTerr', 'navAud', 'navMigracion', 'navImportar', 'secAdmin'].forEach(id => {
     const el = document.getElementById(id);
-    if(el) el.style.display = esAdmin ? '' : 'none';
+    if(el) el.style.display = verComoEjecutivo ? 'none' : '';
   });
+
+  // Si está en una vista admin y cambia a modo ejecutiva, redirigir al dashboard
+  if (verComoEjecutivo) {
+    const vActual = document.querySelector('.view.act');
+    if (vActual && ['vTerritorios','vAud','vMigracion','vImportar'].indexOf(vActual.id) >= 0) {
+      goView('vDashboard');
+    }
+  }
 }
 
 // Solo Rayen (admin) puede alternar entre ver TODO o ver SOLO SUS datos como ejecutiva.
@@ -2078,8 +2092,8 @@ function cambiarModo(modo){
   // Limpiar caches y refrescar la vista activa
   CACHE.vMis = null; CACHE.vTodos = null; CACHE.vCuentas = null; CACHE.vSinCat = null;
   CACHE.vCerrar = null; CACHE.vOlvidados = null;
-  // El cache backend del dashboard es por ejecutivo, no por modo, así que
-  // forzamos un re-fetch agregando un timestamp al próximo request
+  // Reaplicar visibilidad (oculta vistas admin si entra a modo ejecutiva)
+  aplicarVisibilidadPorRol();
   const v = document.querySelector('.view.act');
   if (v) goView(v.id);
 }
@@ -2115,8 +2129,56 @@ function goView(id){
 // ════════════════════════════════════════════════════════════════════════════
 // DASHBOARD
 // ════════════════════════════════════════════════════════════════════════════
+// Asignaciones de campaña OpenCluster Chile (mayo 2026)
+const CAMPANA_ASIG = {
+  'William Marin':   { titulo: 'Hogares de ancianos · Casas de reposo · Residencias asistidas',  detalle: 'Centros de cuidado y residencia de adultos mayores en todas sus modalidades.' },
+  'William':         { titulo: 'Hogares de ancianos · Casas de reposo · Residencias asistidas',  detalle: 'Centros de cuidado y residencia de adultos mayores en todas sus modalidades.' },
+  'Roberto':         { titulo: 'Ortopedias · Centros de ayudas técnicas',                         detalle: 'Distribuidores y tiendas especializadas en productos ortopédicos, movilidad y rehabilitación básica.' },
+  'Germán':          { titulo: 'Centros de rehabilitación física y neurológica privados',         detalle: 'Kinesiología, rehabilitación post-ACV, terapia ocupacional, recuperación funcional.' },
+  'German':          { titulo: 'Centros de rehabilitación física y neurológica privados',         detalle: 'Kinesiología, rehabilitación post-ACV, terapia ocupacional, recuperación funcional.' },
+  'Maximiliano':     { titulo: 'Colegios particulares de Chile',                                   detalle: 'Colegios privados, bilingües, internacionales y particulares pagados/subvencionados de gestión privada.' }
+};
+
+function pintarBannerCampana(){
+  const box = document.getElementById('dshCampana');
+  if (!box) return;
+  const verComoEjecutivo = ROL !== 'admin' || MODO_VISTA === 'ejecutiva';
+  // Si Rayen está en modo admin (real), banner con el resumen del equipo
+  if (!verComoEjecutivo) {
+    const filas = Object.entries(CAMPANA_ASIG)
+      .filter(([k]) => !['William'].includes(k) && k !== 'German') // canónicos solo
+      .map(([nm, a]) => '<div style="display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-top:1px solid rgba(91,33,182,.1);">' +
+        '<div style="flex:0 0 130px;font-weight:700;color:var(--purple-dk);">' + esc(nm) + '</div>' +
+        '<div style="flex:1;font-size:13px;color:var(--ink);"><b>' + esc(a.titulo) + '</b><div style="color:var(--subtle);font-size:12px;margin-top:1px;">' + esc(a.detalle) + '</div></div>' +
+      '</div>').join('');
+    box.innerHTML =
+      '<div style="background:linear-gradient(135deg,#efe7f7,#fef9ec);border:1px solid var(--purple-lt, #d4c5ec);border-radius:12px;padding:14px 18px;margin-bottom:18px;">' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">' +
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--purple-dk)" stroke-width="2.4" stroke-linecap="round"><path d="M3 6l3-3 12 12-3 3z"/><path d="M14 14l7 7"/></svg>' +
+          '<b style="font-family:var(--font-serif);font-size:16px;color:var(--purple-dk);">Campaña OpenCluster Chile — segmentos asignados</b>' +
+        '</div>' +
+        '<div style="font-size:12px;color:var(--subtle);margin-bottom:6px;">Cada ejecutivo trabaja exclusivamente su segmento, sin cruces.</div>' +
+        filas +
+      '</div>';
+    return;
+  }
+  // Ejecutivo común (o Rayen viendo como ejecutiva): mostrar SU segmento
+  const asig = CAMPANA_ASIG[USUARIO] || CAMPANA_ASIG[(USUARIO||'').split(' ')[0]];
+  if (!asig) { box.innerHTML = ''; return; }
+  box.innerHTML =
+    '<div style="background:linear-gradient(135deg,#fef3c7,#fef9ec);border:1px solid var(--gold);border-radius:12px;padding:14px 18px;margin-bottom:18px;display:flex;gap:14px;align-items:center;">' +
+      '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--gold-deep, #5a3c10)" stroke-width="2.2" stroke-linecap="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>' +
+      '<div>' +
+        '<div style="font-size:11px;font-weight:800;color:var(--gold-deep, #5a3c10);text-transform:uppercase;letter-spacing:.5px;">Tu segmento de campaña</div>' +
+        '<div style="font-family:var(--font-serif);font-size:18px;color:var(--ink);font-weight:600;margin-top:2px;">' + esc(asig.titulo) + '</div>' +
+        '<div style="font-size:12.5px;color:var(--gold-deep, #5a3c10);margin-top:2px;line-height:1.5;">' + esc(asig.detalle) + '</div>' +
+      '</div>' +
+    '</div>';
+}
+
 async function cargarDashboard(){
   setSaludo();
+  pintarBannerCampana();
   const kpiBox = document.getElementById('dshKpis');
   kpiBox.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando KPIs…</div>';
 

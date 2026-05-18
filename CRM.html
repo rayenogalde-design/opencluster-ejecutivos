@@ -2090,9 +2090,28 @@ function mostrarBannerDeploy(){
     '</div>';
 }
 
+// Lista de acciones write: SIEMPRE van por POST aunque el caller las llame con params
+const ACCIONES_POST = [
+  'crm_crear_contacto','crm_editar_contacto','crm_eliminar_contacto',
+  'crm_agregar_interaccion','crm_editar_interaccion','crm_eliminar_interaccion',
+  'crm_crear_tarea','crm_editar_tarea','crm_completar_tarea','crm_eliminar_tarea',
+  'crm_crear_reunion','crm_crear_seguimiento',
+  'crm_actualizar_etiquetas','crm_toggle_favorito','crm_actualizar_proxima','crm_snooze_contacto',
+  'crm_importar_csv','crm_reasignar_contactos',
+  'crm_marcar_notif_leida','crm_crear_notificacion',
+  'crm_fusionar','crm_asignar_ejecutivo_cuenta','crm_crear_cuenta','crm_editar_cuenta',
+  'crm_sync_registro','crm_migrar','crm_normalizar_nombres','crm_fusionar_duplicados',
+  'crm_inferir_categorias','crm_actualizar_categorias','crm_cruzar_cotizaciones','crm_invalidar_cache',
+  'crm_limpiar_duplicados_interacciones','crm_limpiar_duplicados_cotizaciones'
+];
 async function fetchAPI(accion, params, body){
   if(!deployOK()){
     return { ok: false, error: 'CRM_API no configurado — pegar URL del deploy primero', modo_demo: true };
+  }
+  // Auto-detección: si la acción es write y solo se pasó params, mover params a body
+  if(!body && params && ACCIONES_POST.indexOf(accion) >= 0){
+    body = params;
+    params = null;
   }
   try {
     if(body){
@@ -3604,6 +3623,25 @@ function renderHistorialAgrupado(tl, contacto){
     }
   });
 
+  // Helper: convertir fecha (Date/string/ISO/dd-mm-yyyy) a timestamp para sort
+  const _ts = f => {
+    if(!f) return 0;
+    if(f instanceof Date) return f.getTime();
+    const s = String(f);
+    // dd-mm-yyyy o dd/mm/yyyy
+    const m = s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);
+    if(m) return new Date(parseInt(m[3]), parseInt(m[2])-1, parseInt(m[1])).getTime();
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? 0 : d.getTime();
+  };
+  // Ordenar TODOS los grupos por fecha DESC (más reciente arriba)
+  const sortDesc = (a, b) => _ts(b.fecha) - _ts(a.fecha);
+  cotizaciones.sort(sortDesc);
+  reuniones.sort(sortDesc);
+  otras.sort(sortDesc);
+  // Y dentro de cada cotización, sus seguimientos también ordenados DESC
+  Object.keys(segPorCot).forEach(k => segPorCot[k].sort(sortDesc));
+
   let html = '';
 
   // 1. COTIZACIONES (sección destacada con cards expandibles)
@@ -4544,7 +4582,7 @@ async function marcarNotifLeida(){
   if(!n) { cerrarModalNotif(); return; }
   const btn = document.getElementById('notif-btn-ok');
   btn.disabled = true; btn.textContent = 'Guardando…';
-  const r = await fetchAPI('crm_marcar_notif_leida', { id: n.id, solicitante: USUARIO });
+  const r = await fetchAPI('crm_marcar_notif_leida', null, { id: n.id, solicitante: USUARIO });
   // Solo si el backend confirma la marca, removemos. Si falla, dejamos para reintentar.
   if(!r.ok){
     btn.disabled = false; btn.textContent = '✓ OK, entendido';

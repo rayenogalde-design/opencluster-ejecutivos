@@ -3944,14 +3944,21 @@ document.addEventListener('DOMContentLoaded', () => {
 // ════════════════════════════════════════════════════════════════════════════
 let NOTIF_LISTA = [];
 let NOTIF_INDEX = 0;
+// IDs de notifs marcadas como leídas en esta sesión (defense in depth contra rebote)
+const NOTIF_LEIDAS_SESION = new Set();
 
 async function cargarNotificacionesYAbrir(soloRefrescarBadge){
   try {
+    // Si el modal está abierto activamente, NO recargar (evita sobrescribir lo que está leyendo)
+    const modal = document.getElementById('modalNotif');
+    if(modal && modal.classList.contains('show') && soloRefrescarBadge) return;
+
     const r = await fetchAPI('crm_listar_notificaciones', { solicitante: USUARIO, solo_pendientes: true });
     if(!r.ok) return;
-    NOTIF_LISTA = r.notificaciones || [];
+    // Filtrar las que ya marcamos como leídas en esta sesión (por si el backend tardó en propagar)
+    NOTIF_LISTA = (r.notificaciones || []).filter(n => !NOTIF_LEIDAS_SESION.has(n.id));
     actualizarBadgeBell();
-    if(!soloRefrescarBadge && NOTIF_LISTA.length > 0){
+    if(!soloRefrescarBadge && NOTIF_LISTA.length > 0 && !modal.classList.contains('show')){
       NOTIF_INDEX = 0;
       mostrarNotifActual();
     }
@@ -4056,10 +4063,17 @@ async function marcarNotifLeida(){
   const btn = document.getElementById('notif-btn-ok');
   btn.disabled = true; btn.textContent = 'Guardando…';
   const r = await fetchAPI('crm_marcar_notif_leida', { id: n.id, solicitante: USUARIO });
-  btn.disabled = false; btn.textContent = '✓ OK, entendido';
-  if(!r.ok){ alert('Error: ' + (r.error || 'desconocido')); return; }
+  // Solo si el backend confirma la marca, removemos. Si falla, dejamos para reintentar.
+  if(!r.ok){
+    btn.disabled = false; btn.textContent = '✓ OK, entendido';
+    alert('No se pudo guardar la marca como leída. ' + (r.error || '') + '\n\nIntenta nuevamente en un momento.');
+    return;
+  }
+  // Backend confirmó. Registramos en sesión por si el polling siguiente la trae duplicada.
+  NOTIF_LEIDAS_SESION.add(n.id);
   // Sacar de la lista local
   NOTIF_LISTA.splice(NOTIF_INDEX, 1);
+  btn.disabled = false; btn.textContent = '✓ OK, entendido';
   if(NOTIF_LISTA.length === 0){
     cerrarModalNotif();
     actualizarBadgeBell();

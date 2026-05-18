@@ -1408,6 +1408,19 @@ input,select,textarea{font-family:inherit; font-size:14px;}
         </div>
       </div>
       <div class="fld-row single">
+        <div class="fld"><label>Acompañantes (opcional)</label>
+          <select id="nr-acompanantes" multiple size="4" style="font-size:13px;">
+            <option value="Rayen Ogalde">Rayen Ogalde</option>
+            <option value="Maximiliano">Maximiliano</option>
+            <option value="Roberto">Roberto</option>
+            <option value="Germán">Germán</option>
+            <option value="William">William</option>
+            <option value="Ximena Romero">Ximena Romero</option>
+          </select>
+          <div style="font-size:11px;color:var(--text-3);margin-top:3px;">Mantén Ctrl/Cmd para seleccionar varios. La reunión también aparecerá en su dashboard marcada como "Acompañante".</div>
+        </div>
+      </div>
+      <div class="fld-row single">
         <div class="fld"><label>Resultado / Notas</label><textarea id="nr-notas" rows="3" placeholder="¿Qué se trató? Acuerdos, próximos pasos…"></textarea></div>
       </div>
       <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-2);margin-top:8px;">
@@ -1845,9 +1858,26 @@ function fmtM(n){
 
 function formatFecha(f){
   if(!f) return '';
-  const s = String(f);
-  if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0, 10);
-  return s;
+  let d;
+  if(f instanceof Date) d = f;
+  else {
+    const s = String(f).trim();
+    if(!s) return '';
+    // Formato dd-mm-yyyy o dd/mm/yyyy → convertir a Date
+    let m = s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);
+    if(m){ d = new Date(parseInt(m[3]), parseInt(m[2])-1, parseInt(m[1])); }
+    else { d = new Date(s); }
+  }
+  if(!d || isNaN(d.getTime())) return String(f);
+  // Formato chileno: "27 abr 2026" o con hora si la tiene
+  const opts = {day:'2-digit', month:'short', year:'numeric'};
+  let out = d.toLocaleDateString('es-CL', opts).replace(/\.$/, '');
+  // Si la fecha original tenía hora explícita, agregarla
+  const hMatch = String(f).match(/(\d{1,2}:\d{2})/);
+  if(hMatch && (d.getHours() !== 0 || d.getMinutes() !== 0)){
+    out += ' · ' + d.toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit'});
+  }
+  return out;
 }
 
 function deployOK(){
@@ -2772,7 +2802,7 @@ async function abrirFicha(id, view){
   const detail = document.getElementById(view === 'vMis' ? 'detailMis' : 'detailTodos');
   detail.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando ficha…</div>';
 
-  const r = await fetchAPI('crm_perfil', { id: id, solicitante: USUARIO });
+  const r = await fetchAPI('crm_perfil', { id: id, solicitante: USUARIO, modo_vista: MODO_VISTA });
   if(!r.ok){ detail.innerHTML = '<div class="error-state"><b>Error:</b> ' + esc(r.error || 'desconocido') + '</div>'; return; }
   renderFicha(detail, r);
 }
@@ -3054,13 +3084,20 @@ function renderHistorialAgrupado(tl){
         '<span style="background:var(--purple);color:white;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:800;">' + reuniones.length + '</span>' +
       '</div>';
     reuniones.forEach(ev => {
-      html += '<div style="background:white;border:1px solid var(--smoke);border-radius:10px;padding:12px 16px;margin-bottom:8px;border-left:3px solid var(--purple);">' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
-          '<span style="font-size:11.5px;font-weight:700;color:var(--purple-dk);">' + esc(formatFecha(ev.fecha)) + '</span>' +
-          (ev.ejecutivo ? '<span style="font-size:11px;color:var(--mist);">por ' + esc(ev.ejecutivo) + '</span>' : '') +
+      const acompBadge = ev.es_acompanante
+        ? '<span style="background:var(--gold-soft, #fef3c7);color:var(--gold-deep, #5a3c10);padding:2px 9px;border-radius:10px;font-size:10.5px;font-weight:800;letter-spacing:.3px;border:1px solid var(--gold);">ACOMPAÑANTE de ' + esc(ev.ejecutivo || '?') + '</span>'
+        : '';
+      const acompLine = ev.acompanantes && !ev.es_acompanante
+        ? '<div style="font-size:11px;color:var(--purple-dk);margin-top:3px;"><b>Acompañantes:</b> ' + esc(ev.acompanantes) + '</div>'
+        : '';
+      html += '<div style="background:white;border:1px solid var(--smoke);border-radius:10px;padding:12px 16px;margin-bottom:8px;border-left:3px solid ' + (ev.es_acompanante ? 'var(--gold)' : 'var(--purple)') + ';">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;gap:8px;flex-wrap:wrap;">' +
+          '<span style="font-size:11.5px;font-weight:700;color:var(--purple-dk);">' + esc(formatFecha(ev.fecha_iso || ev.fecha)) + '</span>' +
+          (acompBadge || (ev.ejecutivo ? '<span style="font-size:11px;color:var(--mist);">por ' + esc(ev.ejecutivo) + '</span>' : '')) +
         '</div>' +
         '<div style="font-size:14px;font-weight:600;color:var(--ink);">' + esc(ev.titulo || '') + '</div>' +
         (ev.detalle ? '<div style="font-size:12.5px;color:var(--subtle);margin-top:4px;">' + esc(ev.detalle) + '</div>' : '') +
+        acompLine +
       '</div>';
     });
     html += '</div>';
@@ -3210,7 +3247,7 @@ async function abrirModalEditarContacto(id){
   }
   if(!c){
     // Fallback: llamar al backend solo si NO está en cache
-    const r = await fetchAPI('crm_perfil', { id: id, solicitante: USUARIO });
+    const r = await fetchAPI('crm_perfil', { id: id, solicitante: USUARIO, modo_vista: MODO_VISTA });
     if(!r.ok){ alert('Error cargando contacto: ' + (r.error || '')); return; }
     c = r.contacto || {};
   }
@@ -3470,7 +3507,7 @@ async function abrirFichaModal(id){
   modal.classList.add('show');
   body.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando ficha…</div>';
 
-  const r = await fetchAPI('crm_perfil', { id: id, solicitante: USUARIO });
+  const r = await fetchAPI('crm_perfil', { id: id, solicitante: USUARIO, modo_vista: MODO_VISTA });
   if(!r.ok){
     body.innerHTML = '<div class="error-state"><b>Error:</b> ' + esc(r.error || 'desconocido') + '</div>';
     return;
@@ -3513,6 +3550,8 @@ function abrirModalNuevaReunion(contactoIdPreseleccionado){
   document.getElementById('nr-tipo').value = 'Online';
   document.getElementById('nr-notas').value = '';
   document.getElementById('nr-cambiar-pipeline').checked = true;
+  const acompSel = document.getElementById('nr-acompanantes');
+  if(acompSel) Array.from(acompSel.options).forEach(o => o.selected = false);
   document.getElementById('modalNuevaReunion').classList.add('show');
 
   if(contactoIdPreseleccionado){
@@ -3600,6 +3639,8 @@ async function guardarNuevaReunion(){
   const cambiarPipe = document.getElementById('nr-cambiar-pipeline').checked;
   const btn = document.getElementById('nr-btn-guardar');
   btn.disabled = true; btn.textContent = 'Guardando…';
+  const acompSelect = document.getElementById('nr-acompanantes');
+  const acompanantes = acompSelect ? Array.from(acompSelect.selectedOptions).map(o => o.value).filter(v => v !== USUARIO) : [];
   const r = await fetchAPI('crm_crear_reunion', {
     contacto_id: contactoId,
     nombre: sel.dataset.nombre || '',
@@ -3610,6 +3651,7 @@ async function guardarNuevaReunion(){
     tipo: tipo,
     notas: notas,
     resultado: notas,
+    acompanantes: acompanantes,
     cambiar_a_reunion: cambiarPipe,
     solicitante: USUARIO
   });
@@ -4132,7 +4174,7 @@ async function abrirModalNuevaInteraccion(contactoId){
     }
   } catch(e){}
   if(!contacto){
-    const r = await fetchAPI('crm_perfil', { id: contactoId, solicitante: USUARIO });
+    const r = await fetchAPI('crm_perfil', { id: contactoId, solicitante: USUARIO, modo_vista: MODO_VISTA });
     if(r.ok) contacto = r.contacto;
   }
   if(contacto){

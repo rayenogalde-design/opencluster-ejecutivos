@@ -3374,8 +3374,9 @@ async function abrirDetalleKpi(tipo){
     body.innerHTML = '<div style="padding:30px;text-align:center;color:var(--subtle);">Sin registros en este período.</div>';
     return;
   }
-  // Para cotizaciones/ventas: institución = título principal, N° cotización = subtítulo
+  // Cotizaciones, ventas y reuniones: institución = título principal (los registros vienen sin "Cliente" llenado)
   const esCot = (tipo === 'cotizaciones' || tipo === 'ventas_ganadas');
+  const esReunion = (tipo === 'reuniones');
   body.innerHTML = items.map(it => {
     const fechaTxt = it.fecha ? fmtFechaCorta(it.fecha) : '';
     const ejTxt = it.ejecutivo ? '<span style="color:var(--text-3);font-size:11.5px;">· ' + esc(String(it.ejecutivo).split(' ')[0]) + '</span>' : '';
@@ -3390,6 +3391,13 @@ async function abrirDetalleKpi(tipo){
       const partes = [];
       if(it.id) partes.push('Cot. ' + it.id);
       if(it.nombre) partes.push(it.nombre);
+      if(fechaTxt) partes.push(fechaTxt);
+      subtitulo = partes.join(' · ');
+    } else if(esReunion){
+      tituloPrincipal = it.institucion || it.nombre || '(sin institución)';
+      const partes = [];
+      if(it.nombre) partes.push(it.nombre);
+      if(it.extra) partes.push(it.extra);
       if(fechaTxt) partes.push(fechaTxt);
       subtitulo = partes.join(' · ');
     } else {

@@ -3129,10 +3129,17 @@ let DASH_PERIODO = (function(){ try { return localStorage.getItem('crm_dash_peri
 
 function _kpisCacheKey(){ return 'crm_kpis_cache_v3_' + (USUARIO||'') + '_' + MODO_VISTA; }
 
+// Token monotónico para descartar respuestas de fetches viejos cuando cambia el modo rápidamente.
+window.__DASH_FETCH_TOKEN = 0;
+
 async function cargarDashboard(){
   setSaludo();
   pintarBannerCampana();
   pintarProductosSugeridos();
+
+  // Token único de esta carga — descartamos respuestas de fetches anteriores
+  const miToken = ++window.__DASH_FETCH_TOKEN;
+  const modoEnVuelo = (ROL === 'admin' && MODO_VISTA === 'ejecutiva') ? 'ejecutiva' : 'admin';
 
   // 1. PINTAR INMEDIATAMENTE con datos cacheados de localStorage (instantáneo)
   let kpisCacheados = null;
@@ -3153,9 +3160,13 @@ async function cargarDashboard(){
 
   // 2. DISPARAR las 4 cargas en paralelo SIN await (no bloqueamos)
   // Forzamos modo_vista explícito + cache buster para evitar respuesta cacheada del backend al cambiar modo
-  const modoAhora = (ROL === 'admin' && MODO_VISTA === 'ejecutiva') ? 'ejecutiva' : 'admin';
-  fetchAPI('crm_kpis_dashboard', { ejecutivo: USUARIO, modo_vista: modoAhora, _t: Date.now() })
+  fetchAPI('crm_kpis_dashboard', { ejecutivo: USUARIO, modo_vista: modoEnVuelo, _t: Date.now() })
     .then(r => {
+      // Si entremedio cambió el modo (otro cargarDashboard fue lanzado), descartamos esta respuesta.
+      if(miToken !== window.__DASH_FETCH_TOKEN) return;
+      // También descartamos si el modo que pedimos ya no coincide con el modo actual del frontend.
+      const modoActualAhora = (ROL === 'admin' && MODO_VISTA === 'ejecutiva') ? 'ejecutiva' : 'admin';
+      if(modoEnVuelo !== modoActualAhora) return;
       if(r && r.ok){
         try { localStorage.setItem(_kpisCacheKey(), JSON.stringify({ ts: Date.now(), data: r })); } catch(e){}
         pintarKpis(r, false);

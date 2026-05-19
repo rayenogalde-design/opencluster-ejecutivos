@@ -3672,15 +3672,17 @@ function pintarFiltrosBloque(view, lista){
 
   const hayFiltro = f.estado || f.segmento || f.etiqueta || f.agenda;
 
-  function chipBtn(label, count, isActive, onClick, colors, iconSvg){
+  // Render con data-attributes — los eventos van por delegation en _wireFiltroDelegation
+  function chipBtn(label, count, isActive, dataAttrs, colors, iconSvg){
     const c = colors || ['#eee', '#666'];
-    return '<button class="filtro-chip' + (isActive ? ' active' : '') + '" onclick="' + onClick + '" style="' +
+    return '<button class="filtro-chip' + (isActive ? ' active' : '') + '" ' + dataAttrs + ' style="' +
       (isActive ? 'background:' + c[1] + ';border-color:' + c[1] + ';' : 'background:' + c[0] + ';border-color:' + c[1] + '40;color:' + c[1] + ';') +
     '">' +
       (iconSvg ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">' + iconSvg + '</svg>' : '') +
       esc(label) + '<span class="cnt">' + count + '</span>' +
     '</button>';
   }
+  function dAttr(k, v){ return k + '="' + String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '"'; }
 
   let html = '';
 
@@ -3690,15 +3692,15 @@ function pintarFiltrosBloque(view, lista){
       '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' +
       'Mi agenda' +
     '</span>' +
-    chipBtn('Todos · ' + total, '', !hayFiltro, "limpiarFiltros('" + view + "')", ['#fff', '#5b21b6'], '<rect x="3" y="3" width="18" height="18" rx="2"/>') +
+    chipBtn('Todos · ' + total, '', !hayFiltro, 'data-action="limpiar"', ['#fff', '#5b21b6'], '<rect x="3" y="3" width="18" height="18" rx="2"/>') +
     agendaOpts.filter(o => cntsAgenda[o.key] > 0).map(o =>
       chipBtn(o.label, cntsAgenda[o.key], f.agenda === o.key,
-        "toggleFiltro('" + view + "','agenda','" + o.key + "')", ['#fff7ed', '#92400e'], o.iconPath)
+        'data-cat="agenda" ' + dAttr('data-valor', o.key), ['#fff7ed', '#92400e'], o.iconPath)
     ).join('') +
-    (hayFiltro ? '<button class="filtros-clear" onclick="limpiarFiltros(\'' + view + '\')"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M18 6L6 18M6 6l12 12"/></svg>Limpiar</button>' : '') +
+    (hayFiltro ? '<button class="filtros-clear" data-action="limpiar"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M18 6L6 18M6 6l12 12"/></svg>Limpiar</button>' : '') +
   '</div>';
 
-  // Fila 2: Segmentos (solo si hay alguno)
+  // Fila 2: Segmentos
   if(segmentos.length){
     html += '<div class="filtro-grupo">' +
       '<span class="filtro-label">' +
@@ -3707,13 +3709,13 @@ function pintarFiltrosBloque(view, lista){
       '</span>' +
       segmentos.slice(0, 14).map(([seg, cnt]) =>
         chipBtn(seg, cnt, f.segmento === seg,
-          'toggleFiltro("' + view + '","segmento",' + JSON.stringify(seg).replace(/"/g, '&quot;') + ')',
+          'data-cat="segmento" ' + dAttr('data-valor', seg),
           ['#efe7f7', '#5b21b6'], '')
       ).join('') +
     '</div>';
   }
 
-  // Fila 3: Pipeline (estado)
+  // Fila 3: Pipeline
   if(Object.values(cntsEstado).some(n => n > 0)){
     html += '<div class="filtro-grupo">' +
       '<span class="filtro-label">' +
@@ -3722,13 +3724,13 @@ function pintarFiltrosBloque(view, lista){
       '</span>' +
       PIPELINE_BUCKETS.filter(b => cntsEstado[b.key] > 0).map(b =>
         chipBtn(b.label, cntsEstado[b.key], f.estado === b.key,
-          "toggleFiltro('" + view + "','estado','" + b.key + "')",
+          'data-cat="estado" ' + dAttr('data-valor', b.key),
           colorChip[b.key] || ['#eee', '#333'], '')
       ).join('') +
     '</div>';
   }
 
-  // Fila 4: Mis etiquetas (creadas por el ejecutivo)
+  // Fila 4: Etiquetas
   if(etiquetas.length){
     html += '<div class="filtro-grupo">' +
       '<span class="filtro-label">' +
@@ -3737,13 +3739,29 @@ function pintarFiltrosBloque(view, lista){
       '</span>' +
       etiquetas.map(([tag, cnt]) =>
         chipBtn('#' + tag, cnt, f.etiqueta === tag,
-          'toggleFiltro("' + view + '","etiqueta",' + JSON.stringify(tag).replace(/"/g, '&quot;') + ')',
+          'data-cat="etiqueta" ' + dAttr('data-valor', tag),
           ['#fef3c7', '#92400e'], '')
       ).join('') +
     '</div>';
   }
 
   cont.innerHTML = html;
+  // Wire event delegation (una sola vez por contenedor)
+  if(!cont.dataset.wired){
+    cont.dataset.wired = '1';
+    cont.dataset.view = view;
+    cont.addEventListener('click', function(e){
+      const btn = e.target.closest('button');
+      if(!btn || !cont.contains(btn)) return;
+      const action = btn.dataset.action;
+      if(action === 'limpiar'){ limpiarFiltros(cont.dataset.view); return; }
+      const cat = btn.dataset.cat;
+      const val = btn.dataset.valor;
+      if(cat && val != null) toggleFiltro(cont.dataset.view, cat, val);
+    });
+  } else {
+    cont.dataset.view = view;
+  }
 }
 
 function toggleFiltro(view, categoria, valor){

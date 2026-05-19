@@ -3332,12 +3332,16 @@ async function cargarContactos(view){
   const container = document.getElementById(view === 'vMis' ? 'listMis' : 'listTodos');
   const cnt = document.getElementById(view === 'vMis' ? 'cntMis' : 'cntTodos');
 
+  // Como ADMIN-en-modo-ADMIN: en "Mis Contactos" ve TODOS los del equipo (puede coordinar)
+  // Como ADMIN-en-modo-EJECUTIVA o EJECUTIVO común: solo los suyos
+  const verTodoElEquipo = (ROL === 'admin' && MODO_VISTA === 'admin');
+
   // Actualizar subtítulo de Mis Contactos según rol/modo
   if (view === 'vMis') {
     const sub = document.getElementById('vMis-subtitulo');
     if (sub) {
-      if (ROL === 'admin' && MODO_VISTA === 'admin') {
-        sub.innerHTML = 'Viendo como <b style="color:var(--purple-dk);">ADMINISTRADORA</b> — todos los asignados a ti directamente';
+      if (verTodoElEquipo) {
+        sub.innerHTML = 'Viendo como <b style="color:var(--purple-dk);">ADMINISTRADORA</b> — TODOS los contactos del equipo';
       } else if (ROL === 'admin' && MODO_VISTA === 'ejecutiva') {
         sub.innerHTML = 'Viendo como <b style="color:var(--gold-dk);">EJECUTIVA</b> — solo tus contactos asignados';
       } else {
@@ -3354,26 +3358,24 @@ async function cargarContactos(view){
     if(raw){
       const parsed = JSON.parse(raw);
       if(parsed && Array.isArray(parsed.contactos) && (Date.now() - (parsed.ts || 0) < 86400000)) {
-        cachedAll = parsed.contactos;  // 24h ttl
+        cachedAll = parsed.contactos;
       }
     }
   } catch(e){}
 
   if(cachedAll){
-    // Filtrar EMPRESAS afuera de las vistas de Contactos (van a "Empresas / Cuentas")
     let lista = cachedAll.filter(c => !esEmpresa(c));
-    if(view === 'vMis'){
+    // Filtrar por owner SOLO si NO estoy actuando como admin
+    if(view === 'vMis' && !verTodoElEquipo){
       lista = lista.filter(esOwner);
     }
     CACHE[view] = lista;
     cnt.textContent = lista.length;
     renderLista(view);
-    // En background actualizar del backend (sin bloquear)
     refrescarContactosBackground(view, cacheKey);
     return;
   }
 
-  // 2. Sin cache → mostrar spinner y esperar backend
   container.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando contactos del Registro… (puede tardar 30-60 seg la primera vez)</div>';
 
   const r = await fetchAPI('crm_contactos', { solicitante: USUARIO });
@@ -3382,10 +3384,9 @@ async function cargarContactos(view){
     return;
   }
   const allContactos = r.contactos || [];
-  // Guardar en cache local
   try { localStorage.setItem(cacheKey, JSON.stringify({ contactos: allContactos, ts: Date.now() })); } catch(e){}
   let lista = allContactos.filter(c => !esEmpresa(c));
-  if(view === 'vMis'){
+  if(view === 'vMis' && !verTodoElEquipo){
     lista = lista.filter(esOwner);
   }
   CACHE[view] = lista;

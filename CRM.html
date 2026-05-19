@@ -3486,9 +3486,18 @@ function renderLista(view){
     return;
   }
 
-  // Grid de cards con modal al click
+  // Guardar lista completa para paginar
+  window.__LISTA_VIEW = window.__LISTA_VIEW || {};
+  window.__LISTA_VIEW[view] = lista;
+  window.__LISTA_LIMITE = window.__LISTA_LIMITE || {};
+  if(!window.__LISTA_LIMITE[view]) window.__LISTA_LIMITE[view] = 60;
+  const limite = window.__LISTA_LIMITE[view];
+  const visibles = lista.slice(0, limite);
+  const hayMas = lista.length > limite;
+
+  // Grid de cards con modal al click — solo las primeras N (resto lazy con "Ver más")
   container.innerHTML = '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(290px, 1fr)); gap:12px;">' +
-    lista.map(c => {
+    visibles.map(c => {
       const estado = c.ultimo_estado || c.pipeline_estado || 'Contactado';
       const badge = pipelineBadgeHTML(estado);
       const esGanado = String(estado).toLowerCase().indexOf('ganad') >= 0 || String(estado).toLowerCase().indexOf('cerrad') >= 0;
@@ -3585,7 +3594,27 @@ function renderLista(view){
         tagsHTML +
         ownerLine +
       '</div>';
-    }).join('') + '</div>';
+    }).join('') + '</div>' +
+    (hayMas
+      ? '<div style="text-align:center;margin:16px 0 8px;">' +
+          '<button onclick="verMasContactos(\'' + view + '\')" style="padding:9px 22px;border-radius:8px;background:var(--purple-dk);color:#fff;border:none;cursor:pointer;font-weight:600;font-family:var(--font-sans);font-size:13px;">' +
+            'Ver siguientes (' + (lista.length - limite) + ' restantes)' +
+          '</button>' +
+          '<div style="font-size:11px;color:var(--subtle);margin-top:6px;">Mostrando ' + limite + ' de ' + lista.length + '</div>' +
+        '</div>'
+      : (lista.length > 60 ? '<div style="text-align:center;font-size:11px;color:var(--subtle);margin:14px 0;">Mostrando los ' + lista.length + ' contactos</div>' : ''));
+}
+
+// Pagina ampliando el límite de renderizado y re-pinta la vista actual
+function verMasContactos(view){
+  window.__LISTA_LIMITE = window.__LISTA_LIMITE || {};
+  window.__LISTA_LIMITE[view] = (window.__LISTA_LIMITE[view] || 60) + 60;
+  renderLista(view);
+}
+
+// Resetea la paginación de todas las vistas (al cambiar búsqueda o filtros)
+function resetPaginacion(){
+  window.__LISTA_LIMITE = {};
 }
 
 // Genera HTML del badge de pipeline según el estado, usando los 3 tiers del rediseño boutique
@@ -3624,6 +3653,8 @@ function filtrarLista(view, q){
     window.FILTROS = window.FILTROS || {};
   }
   FILTROS[view] = String(q == null ? '' : q);
+  // Reset paginación al cambiar query — el conjunto filtrado puede ser pequeño
+  if(window.__LISTA_LIMITE) window.__LISTA_LIMITE[view] = 60;
   try {
     renderLista(view);
   } catch(e){
@@ -3832,12 +3863,14 @@ function toggleFiltro(view, categoria, valor){
   // Toggle: si está el mismo, lo apaga
   if(FILTROS_AVANZADOS[view][categoria] === valor) FILTROS_AVANZADOS[view][categoria] = '';
   else FILTROS_AVANZADOS[view][categoria] = valor;
+  if(window.__LISTA_LIMITE) window.__LISTA_LIMITE[view] = 60;
   guardarFiltrosLS();
   renderLista(view);
 }
 function limpiarFiltros(view){
   if(!FILTROS_AVANZADOS[view]) return;
   FILTROS_AVANZADOS[view] = { agenda:'', estado:'', segmento:'', etiqueta:'' };
+  if(window.__LISTA_LIMITE) window.__LISTA_LIMITE[view] = 60;
   guardarFiltrosLS();
   renderLista(view);
 }

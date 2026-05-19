@@ -3079,27 +3079,55 @@ function cambiarPreviewEjec(nm){
 // Periodo activo del dashboard: 'semana' o 'mes' (se persiste en localStorage)
 let DASH_PERIODO = (function(){ try { return localStorage.getItem('crm_dash_periodo') || 'semana'; } catch(e){ return 'semana'; } })();
 
+function _kpisCacheKey(){ return 'crm_kpis_cache_' + (USUARIO||'') + '_' + MODO_VISTA; }
+
 async function cargarDashboard(){
   setSaludo();
   pintarBannerCampana();
   pintarProductosSugeridos();
-  const kpiBox = document.getElementById('dshKpis');
-  kpiBox.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando KPIs…</div>';
 
-  // Disparar todo en paralelo
-  const [r, _t, _f, _re] = await Promise.all([
-    fetchAPI('crm_kpis_dashboard', { ejecutivo: USUARIO, modo_vista: MODO_VISTA }),
-    cargarTareasDashboard(),
-    cargarFunnelDashboard(),
-    cargarReunionesDashboard()
-  ]);
-  if(!r.ok){
-    kpiBox.innerHTML = '<div class="error-state">' + (r.modo_demo ? 'Configurar URL del deploy primero.' : (r.error || '')) + '</div>';
-    return;
+  // 1. PINTAR INMEDIATAMENTE con datos cacheados de localStorage (instantáneo)
+  let kpisCacheados = null;
+  try {
+    const raw = localStorage.getItem(_kpisCacheKey());
+    if(raw){
+      const parsed = JSON.parse(raw);
+      // 6 horas de TTL — suficiente para que entre al CRM rápido
+      if(parsed && parsed.ts && (Date.now() - parsed.ts) < 21600000) kpisCacheados = parsed.data;
+    }
+  } catch(e){}
+  if(kpisCacheados){
+    pintarKpis(kpisCacheados, true);
+  } else {
+    const kpiBox = document.getElementById('dshKpis');
+    if(kpiBox) kpiBox.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando KPIs…</div>';
   }
+
+  // 2. DISPARAR las 4 cargas en paralelo SIN await (no bloqueamos)
+  fetchAPI('crm_kpis_dashboard', { ejecutivo: USUARIO, modo_vista: MODO_VISTA })
+    .then(r => {
+      if(r && r.ok){
+        try { localStorage.setItem(_kpisCacheKey(), JSON.stringify({ ts: Date.now(), data: r })); } catch(e){}
+        pintarKpis(r, false);
+      } else {
+        if(!kpisCacheados){
+          const kpiBox = document.getElementById('dshKpis');
+          if(kpiBox) kpiBox.innerHTML = '<div class="error-state">' + (r && r.modo_demo ? 'Configurar URL del deploy primero.' : (r && r.error || 'Error cargando KPIs')) + '</div>';
+        }
+      }
+    })
+    .catch(e => {});
+  cargarTareasDashboard();
+  cargarFunnelDashboard();
+  cargarReunionesDashboard();
+}
+
+function pintarKpis(r, esCache){
+  const kpiBox = document.getElementById('dshKpis');
+  if(!kpiBox) return;
   const k = r.kpis || {};
   const esAdmin = r.es_admin_real;
-  const periodo = DASH_PERIODO; // 'semana' | 'mes'
+  const periodo = DASH_PERIODO;
 
   function renderRanking(arr){
     if(!esAdmin || !arr || !arr.length) return '';
@@ -3126,7 +3154,6 @@ async function cargarDashboard(){
     '</div>';
   }
 
-  // Toggle Semana/Mes
   const toggleHTML =
     '<div class="periodo-toggle">' +
       '<button onclick="cambiarPeriodoDash(\'semana\')" class="' + (periodo === 'semana' ? 'act' : '') + '">' +
@@ -3137,6 +3164,7 @@ async function cargarDashboard(){
         '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>' +
         'Este mes' +
       '</button>' +
+      (esCache ? '<span style="margin-left:8px;font-size:10px;color:var(--text-3);align-self:center;font-style:italic;">(actualizando…)</span>' : '') +
     '</div>';
 
   kpiBox.innerHTML = toggleHTML +
@@ -3158,6 +3186,15 @@ async function cargarDashboard(){
 function cambiarPeriodoDash(p){
   DASH_PERIODO = p;
   try { localStorage.setItem('crm_dash_periodo', p); } catch(e){}
+  // Re-pintar instantáneo con cache local (sin fetch)
+  try {
+    const raw = localStorage.getItem(_kpisCacheKey());
+    if(raw){
+      const parsed = JSON.parse(raw);
+      if(parsed && parsed.data) pintarKpis(parsed.data, false);
+      return;
+    }
+  } catch(e){}
   cargarDashboard();
 }
 
@@ -3395,18 +3432,18 @@ async function cargarContactos(view){
 }
 
 async function refrescarContactosBackground(view, cacheKey){
-  // Refrescar silenciosamente sin bloquear la UI
   try {
     const r = await fetchAPI('crm_contactos', { solicitante: USUARIO });
     if(!r.ok) return;
     const allContactos = r.contactos || [];
     localStorage.setItem(cacheKey, JSON.stringify({ contactos: allContactos, ts: Date.now() }));
+    const verTodoElEquipo = (ROL === 'admin' && MODO_VISTA === 'admin');
     let lista = allContactos.filter(c => !esEmpresa(c));
-    if(view === 'vMis'){
+    if(view === 'vMis' && !verTodoElEquipo){
       lista = lista.filter(esOwner);
     }
     CACHE[view] = lista;
-    document.getElementById(view === 'vMis' ? 'cntMis' : 'cntTodos').textContent = lista.length;
+    // No actualizar el contador "crudo" — renderLista lo hace según los filtros activos
     renderLista(view);
   } catch(e){}
 }
@@ -5820,6 +5857,25 @@ function abrirSpotlightItem(i){
 }
 
 // Atajo global Ctrl+K (Cmd+K en Mac) + handlers de teclado dentro del modal
+// Delegation robusta: captura cualquier input en los searchbox de Mis Contactos / Todos
+// (sobrevive a re-renders y autocompletes del navegador)
+document.addEventListener('input', (e) => {
+  const t = e.target;
+  if(!t || !t.id) return;
+  if(t.id === 'searchMis'){ filtrarLista('vMis', t.value); }
+  else if(t.id === 'searchTodos'){ filtrarLista('vTodos', t.value); }
+  else if(t.id === 'searchCerrar'){ filtrarPorCerrar(t.value); }
+  else if(t.id === 'searchOlvidados'){ filtrarOlvidados(t.value); }
+  else if(t.id === 'searchKanban'){ filtrarKanban(t.value); }
+});
+// También capturar el evento 'change' para autocompletes
+document.addEventListener('change', (e) => {
+  const t = e.target;
+  if(!t || !t.id) return;
+  if(t.id === 'searchMis'){ filtrarLista('vMis', t.value); }
+  else if(t.id === 'searchTodos'){ filtrarLista('vTodos', t.value); }
+});
+
 document.addEventListener('keydown', (e) => {
   // Abrir spotlight
   if((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')){

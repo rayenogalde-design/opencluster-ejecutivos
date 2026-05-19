@@ -1520,6 +1520,7 @@ body[data-active-mode="1page"] .modo2-only::after{content:'Activá "2 páginas" 
           <label style="display:flex;align-items:center;gap:8px;margin-top:10px;text-transform:none;font-size:12px;cursor:pointer">
             <input type="checkbox" id="f_p2_img3_free" onchange="toggleImg3Free()" style="width:14px;height:14px">
             <span>Modo libre (arrastrar con mouse)</span>
+            <button type="button" onclick="resetImgPos('img3')" title="Vuelve la imagen a su posicion default si se perdio fuera de la pagina" style="margin-left:auto;padding:3px 10px;background:#fff;border:1px solid var(--coral);border-radius:5px;color:var(--coral);font-size:10px;font-family:'Open Sans',sans-serif;font-weight:600;cursor:pointer">↻ Restablecer posición</button>
           </label>
           <div class="hint" style="margin-top:2px">Al activar, la imagen sale del flujo y la puedes arrastrar a cualquier punto de la página. El texto no la rodea.</div>
         </div>
@@ -1572,6 +1573,7 @@ body[data-active-mode="1page"] .modo2-only::after{content:'Activá "2 páginas" 
           <label style="display:flex;align-items:center;gap:8px;margin-top:10px;text-transform:none;font-size:12px;cursor:pointer">
             <input type="checkbox" id="f_p2_img4_free" onchange="toggleImg4Free()" style="width:14px;height:14px">
             <span>Modo libre (arrastrar con mouse)</span>
+            <button type="button" onclick="resetImgPos('img4')" title="Vuelve la imagen a su posicion default si se perdio fuera de la pagina" style="margin-left:auto;padding:3px 10px;background:#fff;border:1px solid var(--coral);border-radius:5px;color:var(--coral);font-size:10px;font-family:'Open Sans',sans-serif;font-weight:600;cursor:pointer">↻ Restablecer posición</button>
           </label>
           <div class="hint" style="margin-top:2px">Al activar, la imagen sale del flujo y la arrastras donde la necesites. El texto no la rodea.</div>
 
@@ -3038,10 +3040,31 @@ function setCaractsPreset(preset){
   if(typeof aplicarDiseno === 'function') aplicarDiseno();
 }
 
+/* Valida coordenadas guardadas; si estan fuera del area visible o son raras, las resetea.
+   .ed-cont tiene overflow:hidden, por eso una imagen arrastrada fuera de bounds queda invisible. */
+function _coordValida(s, max){
+  if(!s) return false;
+  const m = String(s).match(/^(-?[\d.]+)(in|cm|px)?$/);
+  if(!m) return false;
+  const n = parseFloat(m[1]);
+  if(isNaN(n)) return false;
+  if(n < -0.5 || n > max) return false;
+  return true;
+}
+function _sanitizarCoordsImg(which, defaultX, defaultY, maxX, maxY){
+  try{
+    const x = localStorage.getItem('oc_fichas_'+which+'_x');
+    const y = localStorage.getItem('oc_fichas_'+which+'_y');
+    if(!_coordValida(x, maxX)) localStorage.setItem('oc_fichas_'+which+'_x', defaultX);
+    if(!_coordValida(y, maxY)) localStorage.setItem('oc_fichas_'+which+'_y', defaultY);
+  }catch(e){}
+}
 function toggleImg3Free(){
   const cb = document.getElementById('f_p2_img3_free');
   const free = !!(cb && cb.checked);
   try{ localStorage.setItem('oc_fichas_img3_free', free ? '1':'0'); }catch(e){}
+  // Al activar modo libre, asegurar que las coords son razonables (sino la imagen queda oculta por overflow:hidden)
+  if(free) _sanitizarCoordsImg('img3', '0.4in', '0.3in', 7.5, 9);
   _reflejarFreeMode('img3', free);
   aplicarImgPosiciones();
 }
@@ -3049,7 +3072,16 @@ function toggleImg4Free(){
   const cb = document.getElementById('f_p2_img4_free');
   const free = !!(cb && cb.checked);
   try{ localStorage.setItem('oc_fichas_img4_free', free ? '1':'0'); }catch(e){}
+  if(free) _sanitizarCoordsImg('img4', '0.4in', '2.5in', 7.5, 9);
   _reflejarFreeMode('img4', free);
+  aplicarImgPosiciones();
+}
+/* Restablecer posición de imagen (boton al lado del checkbox modo libre) */
+function resetImgPos(which){
+  try{
+    localStorage.removeItem('oc_fichas_'+which+'_x');
+    localStorage.removeItem('oc_fichas_'+which+'_y');
+  }catch(e){}
   aplicarImgPosiciones();
 }
 /* Atenúa las pills de posición/flujo cuando el modo libre está activo,

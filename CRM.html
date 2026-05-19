@@ -3451,9 +3451,21 @@ async function refrescarContactosBackground(view, cacheKey){
 function renderLista(view){
   const container = document.getElementById(view === 'vMis' ? 'listMis' : 'listTodos');
   let lista = CACHE[view] || [];
-  // Pintar bloque de filtros completos ANTES de filtrar (sobre la lista total)
-  pintarFiltrosBloque(view, lista);
-  // Aplicar filtros combinables (AND)
+  // 1. Aplicar PRIMERO la búsqueda — así aunque pintarFiltrosBloque falle, el filtro sigue funcionando
+  const q = (FILTROS[view] || '').toLowerCase().trim();
+  if(q){
+    lista = lista.filter(c =>
+      (String(c.nombre||'')).toLowerCase().includes(q) ||
+      (String(c.institucion||'')).toLowerCase().includes(q) ||
+      (String(c.cargo||'')).toLowerCase().includes(q) ||
+      (String(c.email||'')).toLowerCase().includes(q) ||
+      (String(c.ciudad||'')).toLowerCase().includes(q) ||
+      (String(c.telefono||'')).toLowerCase().includes(q) ||
+      (String(c.sub_categoria||'')).toLowerCase().includes(q) ||
+      (String(c.etiquetas||'')).toLowerCase().includes(q)
+    );
+  }
+  // 2. Aplicar otros filtros avanzados
   const f = FILTROS_AVANZADOS[view] || {};
   if(f.estado)    lista = lista.filter(c => _bucketDeContacto(c) === f.estado);
   if(f.segmento)  lista = lista.filter(c => String(c.sub_categoria||'') === f.segmento);
@@ -3462,19 +3474,8 @@ function renderLista(view){
     const hoy = new Date(); hoy.setHours(0,0,0,0);
     lista = lista.filter(c => _matchAgenda(c, f.agenda, hoy));
   }
-  const q = (FILTROS[view] || '').toLowerCase().trim();
-  if(q){
-    lista = lista.filter(c =>
-      (c.nombre||'').toLowerCase().includes(q) ||
-      (c.institucion||'').toLowerCase().includes(q) ||
-      (c.cargo||'').toLowerCase().includes(q) ||
-      (c.email||'').toLowerCase().includes(q) ||
-      (c.ciudad||'').toLowerCase().includes(q) ||
-      (c.telefono||'').toLowerCase().includes(q) ||
-      (c.sub_categoria||'').toLowerCase().includes(q) ||
-      (c.etiquetas||'').toLowerCase().includes(q)
-    );
-  }
+  // 3. Pintar filtros — envuelto en try/catch para que un error no rompa el listado
+  try { pintarFiltrosBloque(view, CACHE[view] || []); } catch(errF){ console.error('[CRM] pintarFiltrosBloque error:', errF); }
   // Actualizar contador visible con la cuenta filtrada
   const cntEl = document.getElementById(view === 'vMis' ? 'cntMis' : 'cntTodos');
   if(cntEl) cntEl.textContent = lista.length;
@@ -3620,8 +3621,32 @@ function pipelineBadgeHTML(estado){
 }
 
 function filtrarLista(view, q){
-  FILTROS[view] = q;
-  renderLista(view);
+  if(typeof FILTROS !== 'object' || FILTROS === null){
+    window.FILTROS = window.FILTROS || {};
+  }
+  FILTROS[view] = String(q == null ? '' : q);
+  try {
+    renderLista(view);
+  } catch(e){
+    console.error('[CRM] renderLista error:', e);
+    // Fallback: filtrar directo sobre el container con la búsqueda
+    const container = document.getElementById(view === 'vMis' ? 'listMis' : 'listTodos');
+    if(!container) return;
+    const lista = (CACHE && CACHE[view]) || [];
+    const ql = (q||'').toLowerCase().trim();
+    const filtrada = ql ? lista.filter(c => {
+      const t = (String(c.nombre||'') + ' ' + String(c.institucion||'') + ' ' + String(c.email||'') + ' ' + String(c.telefono||'') + ' ' + String(c.cargo||'')).toLowerCase();
+      return t.indexOf(ql) >= 0;
+    }) : lista;
+    const cntEl = document.getElementById(view === 'vMis' ? 'cntMis' : 'cntTodos');
+    if(cntEl) cntEl.textContent = filtrada.length;
+    container.innerHTML = filtrada.map(c =>
+      '<div onclick="abrirFichaModal(\'' + esc(c.id) + '\')" style="cursor:pointer;background:white;border:1px solid #d4c5ec;border-radius:9px;padding:11px 14px;margin-bottom:8px;">' +
+        '<div style="font-family:var(--font-serif);font-weight:600;color:#1a1a1a;">' + esc(c.nombre || c.institucion || '(sin nombre)') + '</div>' +
+        '<div style="font-size:12px;color:#6b6b6b;">' + esc(c.institucion || '') + (c.email ? ' · ' + esc(c.email) : '') + '</div>' +
+      '</div>'
+    ).join('') || '<div style="padding:30px;text-align:center;color:#6b6b6b;">Ningún contacto coincide con "' + esc(q) + '"</div>';
+  }
 }
 
 // Match de agenda personal de un contacto contra el filtro elegido

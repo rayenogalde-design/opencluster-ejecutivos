@@ -211,6 +211,12 @@ input,select,textarea{font-family:inherit; font-size:14px;}
   line-height:1.5;
 }
 .kpi-ranking b{ color:var(--ink); }
+.kpi-delta-badge{
+  display:inline-block; margin-top:8px; padding:3px 9px; border-radius:999px;
+  background:linear-gradient(135deg, var(--purple-lt, #ddd6fe), var(--purple, #a78bfa));
+  color:white; font-size:10.5px; font-weight:700; letter-spacing:.2px;
+  font-family:var(--font-sans);
+}
 .kpi{
   background:white; border-radius:12px; padding:20px 22px;
   border:1px solid var(--smoke); box-shadow:var(--shadow-sm);
@@ -3127,30 +3133,62 @@ function pintarKpis(r, esCache){
   if(!kpiBox) return;
   const k = r.kpis || {};
   const esAdmin = r.es_admin_real;
-  const periodo = DASH_PERIODO;
+  const periodo = DASH_PERIODO; // 'semana' | 'mes' | 'anio'
+
+  // Delta "nuevos desde la última visita" (solo admin) — usa timestamp guardado localmente
+  let deltaBadge = '';
+  if(esAdmin){
+    try {
+      const lastVisitKey = 'crm_last_visit_admin';
+      const lastVisit = parseInt(localStorage.getItem(lastVisitKey) || '0', 10);
+      const nuevosTotalAnio = (k.nuevos_contactos && k.nuevos_contactos.anio) || 0;
+      // Aproximación frontend: si el backend trae el campo de delta lo usamos; si no, dejamos el contador del año
+      // (se actualizará en backend en una iteración futura). Por ahora mostramos "desde tu última visita" usando
+      // el timestamp local del último cargarDashboard del admin.
+      if(lastVisit && (Date.now() - lastVisit) < 90 * 86400000){
+        const horas = Math.round((Date.now() - lastVisit) / 3600000);
+        deltaBadge = '<div class="kpi-delta-badge">Última visita hace ' + (horas < 24 ? horas + ' h' : Math.round(horas/24) + ' días') + '</div>';
+      }
+      localStorage.setItem(lastVisitKey, String(Date.now()));
+    } catch(e){}
+  }
+
+  function pickVal(d, periodo){
+    if(!d) return 0;
+    if(periodo === 'semana') return d.semana || 0;
+    if(periodo === 'anio')   return d.anio   || 0;
+    return d.mes || 0;
+  }
+  function pickMonto(d, periodo){
+    if(!d) return 0;
+    if(periodo === 'semana') return d.monto_semana || 0;
+    if(periodo === 'anio')   return d.monto_anio   || 0;
+    return d.monto_mes || 0;
+  }
+  function lblPeriodo(p){
+    return p === 'semana' ? 'esta semana' : (p === 'anio' ? 'este año' : 'este mes');
+  }
 
   function renderRanking(arr){
     if(!esAdmin || !arr || !arr.length) return '';
     const top = arr.slice(0, 4)
-      .filter(x => (periodo === 'semana' ? x.semana : x.mes) > 0)
-      .map(x => '<span style="white-space:nowrap;">' + esc(x.ejec.split(' ')[0]) + ' <b>' + (periodo === 'semana' ? x.semana : x.mes) + '</b></span>')
+      .filter(x => pickVal(x, periodo) > 0)
+      .map(x => '<span style="white-space:nowrap;">' + esc(x.ejec.split(' ')[0]) + ' <b>' + pickVal(x, periodo) + '</b></span>')
       .join(' · ');
     if(!top) return '';
     return '<div class="kpi-ranking">' + top + '</div>';
   }
 
   function renderKpi(extra){
-    const k1 = extra.data;
-    const grande = periodo === 'semana' ? k1.semana : k1.mes;
-    const chico = periodo === 'semana' ? k1.mes : k1.semana;
-    const lblGrande = periodo === 'semana' ? 'esta semana' : 'este mes';
-    const lblChico = periodo === 'semana' ? 'en el mes' : 'esta semana';
-    return '<div class="kpi ' + (extra.cls || '') + '"' + (extra.onclick ? ' onclick="' + extra.onclick + '" style="cursor:pointer;"' : '') + '>' +
+    const d = extra.data;
+    const grande = pickVal(d, periodo);
+    return '<div class="kpi ' + (extra.cls || '') + '" onclick="abrirDetalleKpi(\'' + extra.tipo + '\')" style="cursor:pointer;">' +
       '<div class="kpi-lbl">' + esc(extra.label) + (esAdmin ? ' (equipo)' : '') + '</div>' +
       '<div class="kpi-val"' + (extra.color ? ' style="color:' + extra.color + ';"' : '') + '>' + grande + '</div>' +
-      '<div class="kpi-sub">' + lblGrande + ' · <b>' + chico + '</b> ' + lblChico + '</div>' +
+      '<div class="kpi-sub">' + lblPeriodo(periodo) + '</div>' +
       (extra.monto ? '<div class="kpi-monto">' + fmtM(extra.monto) + '</div>' : '') +
-      renderRanking(k1.ranking_equipo) +
+      renderRanking(d.ranking_equipo) +
+      (extra.tipo === 'nuevos_contactos' && deltaBadge ? deltaBadge : '') +
     '</div>';
   }
 
@@ -3164,21 +3202,25 @@ function pintarKpis(r, esCache){
         '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>' +
         'Este mes' +
       '</button>' +
+      '<button onclick="cambiarPeriodoDash(\'anio\')" class="' + (periodo === 'anio' ? 'act' : '') + '">' +
+        '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg>' +
+        'Este año' +
+      '</button>' +
       (esCache ? '<span style="margin-left:8px;font-size:10px;color:var(--text-3);align-self:center;font-style:italic;">(actualizando…)</span>' : '') +
     '</div>';
 
   kpiBox.innerHTML = toggleHTML +
     '<div class="kpis-grid">' +
-      renderKpi({ data: k.nuevos_contactos || {semana:0,mes:0}, label:'Nuevos contactos', cls:'' }) +
-      renderKpi({ data: k.cotizaciones || {semana:0,mes:0}, label:'Cotizaciones', cls:'kg', onclick:'abrirDiagnosticoEjecutivo()' }) +
-      renderKpi({ data: k.reuniones || {semana:0,mes:0}, label:'Reuniones', cls:'ks' }) +
+      renderKpi({ tipo:'nuevos_contactos', data: k.nuevos_contactos || {semana:0,mes:0,anio:0}, label:'Nuevos contactos', cls:'' }) +
+      renderKpi({ tipo:'cotizaciones',     data: k.cotizaciones     || {semana:0,mes:0,anio:0}, label:'Cotizaciones', cls:'kg' }) +
+      renderKpi({ tipo:'reuniones',        data: k.reuniones        || {semana:0,mes:0,anio:0}, label:'Reuniones', cls:'ks' }) +
       renderKpi({
-        data: k.ventas_ganadas || {semana:0,mes:0},
+        tipo:'ventas_ganadas',
+        data: k.ventas_ganadas || {semana:0,mes:0,anio:0},
         label:'Ventas ganadas',
         cls:'kj',
         color:'var(--jade-dk)',
-        monto: periodo === 'semana' ? (k.ventas_ganadas && k.ventas_ganadas.monto_semana) : (k.ventas_ganadas && k.ventas_ganadas.monto_mes),
-        onclick:'abrirDiagnosticoEjecutivo(true)'
+        monto: pickMonto(k.ventas_ganadas, periodo)
       }) +
     '</div>';
 }
@@ -3196,6 +3238,85 @@ function cambiarPeriodoDash(p){
     }
   } catch(e){}
   cargarDashboard();
+}
+
+// Abre el modal de detalle de un KPI (lista de items individuales del período activo)
+async function abrirDetalleKpi(tipo){
+  const periodo = DASH_PERIODO;
+  const tituloMap = {
+    nuevos_contactos: 'Nuevos contactos',
+    cotizaciones: 'Cotizaciones',
+    reuniones: 'Reuniones',
+    ventas_ganadas: 'Ventas ganadas'
+  };
+  const lblPer = periodo === 'semana' ? 'esta semana' : (periodo === 'anio' ? 'este año' : 'este mes');
+  const titulo = (tituloMap[tipo] || tipo) + ' — ' + lblPer;
+
+  // Crear overlay
+  let overlay = document.getElementById('kpiDetalleOverlay');
+  if(!overlay){
+    overlay = document.createElement('div');
+    overlay.id = 'kpiDetalleOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;';
+    overlay.onclick = e => { if(e.target === overlay) cerrarDetalleKpi(); };
+    document.body.appendChild(overlay);
+  }
+  overlay.innerHTML =
+    '<div style="background:white;border-radius:14px;max-width:760px;width:100%;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 12px 48px rgba(0,0,0,0.28);">' +
+      '<div style="padding:16px 20px;border-bottom:1px solid var(--border-subtle);display:flex;justify-content:space-between;align-items:center;">' +
+        '<div>' +
+          '<div style="font-family:var(--font-serif);font-size:22px;font-weight:600;color:var(--text-1);">' + esc(titulo) + '</div>' +
+          '<div id="kpiDetTotal" style="font-size:12px;color:var(--subtle);margin-top:2px;">Cargando…</div>' +
+        '</div>' +
+        '<button onclick="cerrarDetalleKpi()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--subtle);width:32px;height:32px;border-radius:6px;">×</button>' +
+      '</div>' +
+      '<div id="kpiDetBody" style="overflow-y:auto;padding:12px 20px;flex:1;"><div class="loading-state"><div class="spinner"></div></div></div>' +
+    '</div>';
+
+  const r = await fetchAPI('crm_kpis_detalle', { ejecutivo: USUARIO, modo_vista: MODO_VISTA, tipo: tipo, periodo: periodo });
+  const body = document.getElementById('kpiDetBody');
+  const totEl = document.getElementById('kpiDetTotal');
+  if(!r || !r.ok){
+    body.innerHTML = '<div class="error-state">Error: ' + esc((r && r.error) || 'desconocido') + '</div>';
+    return;
+  }
+  const items = r.items || [];
+  totEl.textContent = items.length + ' ' + (items.length === 1 ? 'item' : 'items');
+  if(!items.length){
+    body.innerHTML = '<div style="padding:30px;text-align:center;color:var(--subtle);">Sin registros en este período.</div>';
+    return;
+  }
+  body.innerHTML = items.map(it => {
+    const fechaTxt = it.fecha ? fmtFechaCorta(it.fecha) : '';
+    const ejTxt = it.ejecutivo ? '<span style="color:var(--text-3);font-size:11.5px;">· ' + esc(String(it.ejecutivo).split(' ')[0]) + '</span>' : '';
+    const right = (typeof it.monto !== 'undefined' && it.monto > 0)
+      ? '<div style="font-weight:700;color:var(--gold-dk);white-space:nowrap;font-family:var(--font-sans);">' + fmtM(it.monto) + '</div>'
+      : (it.estado ? '<div style="font-size:11px;color:var(--text-3);white-space:nowrap;">' + esc(it.estado) + '</div>' : '');
+    const onClick = (tipo === 'nuevos_contactos' && it.id) ? 'onclick="cerrarDetalleKpi(); abrirFichaModal(\'' + esc(it.id) + '\');"' : '';
+    return '<div ' + onClick + ' style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 6px;border-bottom:1px solid var(--border-soft);' + (onClick ? 'cursor:pointer;' : '') + '">' +
+      '<div style="flex:1;min-width:0;">' +
+        '<div style="font-family:var(--font-serif);font-size:15px;font-weight:600;color:var(--text-1);">' + esc(it.nombre || '(sin nombre)') + '</div>' +
+        '<div style="font-size:12px;color:var(--text-3);margin-top:2px;">' +
+          (it.institucion ? esc(it.institucion) + ' · ' : '') +
+          (fechaTxt ? fechaTxt + ' ' : '') + ejTxt +
+        '</div>' +
+      '</div>' +
+      right +
+    '</div>';
+  }).join('');
+}
+
+function cerrarDetalleKpi(){
+  const ov = document.getElementById('kpiDetalleOverlay');
+  if(ov) ov.remove();
+}
+
+function fmtFechaCorta(s){
+  try {
+    const d = new Date(s);
+    if(!isNaN(d.getTime())) return d.toLocaleDateString('es-CL', {day:'2-digit', month:'short'});
+  } catch(e){}
+  return esc(String(s).substring(0, 12));
 }
 
 async function cargarFunnelDashboard(){

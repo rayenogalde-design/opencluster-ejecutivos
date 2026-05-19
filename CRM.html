@@ -2021,6 +2021,17 @@ try {
 let USUARIO = null;
 let ROL = 'ejecutivo';        // 'ejecutivo' o 'admin' (Mario es 'direccion' pero el CRM lo redirige al Portal)
 let MODO_VISTA = 'admin';     // Solo Rayen lo cambia. 'admin' = ve todo del equipo. 'ejecutiva' = ve solo lo suyo.
+
+// Fuente de verdad del modo: lee del DOM (botón con class .act).
+// Si el DOM no tiene .act todavía (página inicializando), cae a MODO_VISTA variable.
+// Esto elimina cualquier desincronización entre estado visual y estado JS.
+function getModoVista(){
+  try {
+    const btnAct = document.querySelector('.modo-btn.act');
+    if (btnAct && btnAct.dataset && btnAct.dataset.modo) return btnAct.dataset.modo;
+  } catch(e){}
+  return MODO_VISTA || 'admin';
+}
 const TEAM = [
   { full: "Rayen Ogalde",          short: "Rayen",          rol: "admin"     },
   { full: "Maximiliano Astudillo", short: "Maximiliano",    rol: "ejecutivo" },
@@ -2407,7 +2418,7 @@ function aplicarVisibilidadPorRol(){
   // Cuando Rayen está en modo EJECUTIVA, debe ver EXACTAMENTE lo mismo que un ejecutivo común
   // (para revisar la experiencia del equipo). El toggle Admin/Ejecutiva queda visible
   // pero las vistas admin se ocultan.
-  const verComoEjecutivo = !esAdmin || MODO_VISTA === 'ejecutiva';
+  const verComoEjecutivo = !esAdmin || getModoVista() === 'ejecutiva';
 
   // Botón sincronizar Registro: visible para todos los ejecutivos
   const btnSync = document.getElementById('btnSyncRegistro');
@@ -2435,7 +2446,9 @@ function aplicarVisibilidadPorRol(){
 
 // Solo Rayen (admin) puede alternar entre ver TODO o ver SOLO SUS datos como ejecutiva.
 function cambiarModo(modo){
+  if (modo !== 'admin' && modo !== 'ejecutiva') return;
   if (ROL !== 'admin') return;
+  // 1) Actualizar SIMULTÁNEAMENTE la variable JS y el class .act del DOM antes de cualquier otra cosa.
   MODO_VISTA = modo;
   document.querySelectorAll('.modo-btn').forEach(b => {
     const activo = b.dataset.modo === modo;
@@ -2443,11 +2456,9 @@ function cambiarModo(modo){
     if (activo) { b.style.background = 'white'; b.style.color = '#001a60'; b.style.fontWeight = '800'; }
     else { b.style.background = 'transparent'; b.style.color = 'rgba(255,255,255,.85)'; b.style.fontWeight = '700'; }
   });
-  // Limpiar caches y refrescar la vista activa
+  // 2) Limpiar caches
   CACHE.vMis = null; CACHE.vTodos = null; CACHE.vCuentas = null; CACHE.vSinCat = null;
   CACHE.vCerrar = null; CACHE.vOlvidados = null;
-  // Limpiar TODOS los caches localStorage relacionados con KPIs (admin + ejecutiva)
-  // para forzar un re-fetch real del backend con el modo correcto.
   try {
     Object.keys(localStorage).forEach(k => {
       if (k.indexOf('crm_kpis_cache_') === 0 || k.indexOf('crm_kpis_dash_') === 0) {
@@ -2455,15 +2466,24 @@ function cambiarModo(modo){
       }
     });
   } catch(e){}
-  // Reaplicar visibilidad (oculta vistas admin si entra a modo ejecutiva)
+  // 3) Reaplicar visibilidad de vistas admin
   aplicarVisibilidadPorRol();
+  // 4) FORZAR re-render del dashboard. No dependemos de .view.act porque puede no existir
+  //    si la inicialización aún no terminó. Repintamos las 3 secciones del dashboard de inmediato.
+  pintarBannerCampana();
+  pintarProductosSugeridos();
+  // Si la vista activa es otra, también la refrescamos
   const v = document.querySelector('.view.act');
-  if (v) goView(v.id);
+  if (v) {
+    goView(v.id);
+  } else {
+    cargarDashboard();
+  }
 }
 
 // ¿Estoy actuando como admin ahora? (admin + en modo admin)
 function esActuandoComoAdmin(){
-  return ROL === 'admin' && MODO_VISTA === 'admin';
+  return ROL === 'admin' && getModoVista() === 'admin';
 }
 
 function goView(id){
@@ -2948,7 +2968,8 @@ function pintarProductosSugeridos(){
   if (!box) return;
   // En modo admin (Rayen como admin) mostrar todos los segmentos en pestañas
   // En modo ejecutiva o ejec común, solo el suyo
-  const verComoEjecutivo = ROL !== 'admin' || MODO_VISTA === 'ejecutiva';
+  const modoActivo = getModoVista();
+  const verComoEjecutivo = ROL !== 'admin' || modoActivo === 'ejecutiva';
   const claves = verComoEjecutivo ? [USUARIO, (USUARIO||'').split(' ')[0]] : Object.keys(CAMPANA_ASIG);
   let segmentoActivo = null;
   if (verComoEjecutivo) {
@@ -3062,7 +3083,8 @@ function toggleProductosSugeridos(){
 function pintarBannerCampana(){
   const box = document.getElementById('dshCampana');
   if (!box) return;
-  const verComoEjecutivo = ROL !== 'admin' || MODO_VISTA === 'ejecutiva';
+  const modoActivo = getModoVista();
+  const verComoEjecutivo = ROL !== 'admin' || modoActivo === 'ejecutiva';
   // Si Rayen está en modo admin (real), banner con el resumen del equipo
   if (!verComoEjecutivo) {
     const filas = Object.entries(CAMPANA_ASIG)
@@ -3139,7 +3161,8 @@ async function cargarDashboard(){
 
   // Token único de esta carga — descartamos respuestas de fetches anteriores
   const miToken = ++window.__DASH_FETCH_TOKEN;
-  const modoEnVuelo = (ROL === 'admin' && MODO_VISTA === 'ejecutiva') ? 'ejecutiva' : 'admin';
+  const modoVistaActivo = getModoVista();
+  const modoEnVuelo = (ROL === 'admin' && modoVistaActivo === 'ejecutiva') ? 'ejecutiva' : 'admin';
 
   // 1. PINTAR INMEDIATAMENTE con datos cacheados de localStorage (instantáneo)
   let kpisCacheados = null;
@@ -3165,7 +3188,7 @@ async function cargarDashboard(){
       // Si entremedio cambió el modo (otro cargarDashboard fue lanzado), descartamos esta respuesta.
       if(miToken !== window.__DASH_FETCH_TOKEN) return;
       // También descartamos si el modo que pedimos ya no coincide con el modo actual del frontend.
-      const modoActualAhora = (ROL === 'admin' && MODO_VISTA === 'ejecutiva') ? 'ejecutiva' : 'admin';
+      const modoActualAhora = (ROL === 'admin' && getModoVista() === 'ejecutiva') ? 'ejecutiva' : 'admin';
       if(modoEnVuelo !== modoActualAhora) return;
       if(r && r.ok){
         try { localStorage.setItem(_kpisCacheKey(), JSON.stringify({ ts: Date.now(), data: r })); } catch(e){}
@@ -3189,7 +3212,7 @@ function pintarKpis(r, esCache){
   const k = r.kpis || {};
   // Sanity: la "verdad" de admin la decide el modo del frontend, no el backend.
   // Si MODO_VISTA es ejecutiva, NUNCA pintamos como admin (no etiqueta EQUIPO, no ranking).
-  const debeSerAdmin = (ROL === 'admin' && MODO_VISTA === 'admin');
+  const debeSerAdmin = (ROL === 'admin' && getModoVista() === 'admin');
   const esAdmin = debeSerAdmin && !!r.es_admin_real;
   if(esCache && !!r.es_admin_real !== !!debeSerAdmin){
     // Cache obsoleto — mostrar loading hasta el fetch real

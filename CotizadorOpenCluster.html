@@ -5390,11 +5390,21 @@ async function guardarNuevoContactoCotizador(){
       btn.disabled = false; btn.textContent = "Crear contacto y seleccionar";
       return mostrarErr(r.error || "Error guardando");
     }
-    // Refrescar cache y seleccionar el nuevo
-    CRM_CONTACTOS_CACHE = null;
-    await cargarContactosCRM();
+    // Optimización: NO re-fetch completo. Agregar el nuevo contacto directo al cache local.
+    const nuevoContacto = r.contacto || {
+      id: r.id, nombre: data.nombre, institucion: data.institucion,
+      cargo: data.cargo, email: data.email, telefono: data.telefono,
+      ciudad: data.ciudad, region: data.region,
+      ejecutivo_asignado: data.solicitante, pipeline_estado: data.pipeline_estado || "Lead"
+    };
+    if (CRM_CONTACTOS_CACHE && Array.isArray(CRM_CONTACTOS_CACHE)) {
+      CRM_CONTACTOS_CACHE.unshift(nuevoContacto);
+      try { guardarCacheLocal(CRM_CONTACTOS_CACHE); } catch(e){}
+    }
     if (r.id) await seleccionarContactoCRM(r.id);
     cerrarModalCrearContactoCotizador();
+    // Refresco en background (sin bloquear UI) para sincronizar con cualquier cambio remoto
+    setTimeout(() => { CRM_CONTACTOS_CACHE = null; cargarContactosCRM(); }, 100);
   } catch (e) {
     btn.disabled = false; btn.textContent = "Crear contacto y seleccionar";
     mostrarErr("Error de conexión: " + (e.message || e));

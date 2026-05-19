@@ -5068,18 +5068,45 @@ async function abrirFichaModal(id){
   const modal = document.getElementById('modalFichaContacto');
   const body = document.getElementById('fc-body');
   modal.classList.add('show');
-  body.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando ficha…</div>';
 
+  // Stale-while-revalidate: pintar instantáneo con cache local si existe, refrescar en background
+  const cacheKey = 'crm_perfil_' + id + '_' + MODO_VISTA;
+  let cacheado = null;
+  try {
+    const raw = localStorage.getItem(cacheKey);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      // 15 min TTL — perfiles cambian poco entre clicks
+      if(parsed && parsed.ts && (Date.now() - parsed.ts) < 900000) cacheado = parsed.data;
+    }
+  } catch(e){}
+
+  if(cacheado){
+    renderFicha(body, cacheado);
+    const c = cacheado.contacto || {};
+    document.getElementById('fc-titulo').textContent = c.nombre || c.institucion || 'Ficha';
+    // Refrescar en background sin bloquear
+    fetchAPI('crm_perfil', { id: id, solicitante: USUARIO, modo_vista: MODO_VISTA })
+      .then(r => {
+        if(r && r.ok){
+          try { localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: r })); } catch(e){}
+          // Solo re-render si la ficha sigue abierta para este contacto
+          if(modal.classList.contains('show') && document.getElementById('fc-titulo').textContent === (r.contacto && (r.contacto.nombre || r.contacto.institucion) || 'Ficha')){
+            renderFicha(body, r);
+          }
+        }
+      }).catch(e => {});
+    return;
+  }
+
+  body.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando ficha…</div>';
   const r = await fetchAPI('crm_perfil', { id: id, solicitante: USUARIO, modo_vista: MODO_VISTA });
   if(!r.ok){
     body.innerHTML = '<div class="error-state"><b>Error:</b> ' + esc(r.error || 'desconocido') + '</div>';
     return;
   }
-
-  // Renderizar la ficha completa (igual que renderFicha pero adaptado al modal)
+  try { localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: r })); } catch(e){}
   renderFicha(body, r);
-
-  // Cambiar título del modal según el contacto
   const c = r.contacto || {};
   document.getElementById('fc-titulo').textContent = c.nombre || c.institucion || 'Ficha';
 }

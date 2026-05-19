@@ -374,12 +374,23 @@ input,select,textarea{font-family:inherit; font-size:14px;}
   padding:9px 14px;
   background:linear-gradient(135deg, #5b21b6, #7c3aed);
   color:white;
+  cursor:pointer;
+  user-select:none;
 }
+.prod-card-hd:hover{ filter:brightness(1.07); }
 .prod-card-hd svg{ color:white; flex-shrink:0; width:14px; height:14px; }
 .prod-card-hd h3{
   margin:0; font-family:var(--font-sans); font-size:13.5px; font-weight:700;
   color:white; flex:1; letter-spacing:.4px; text-transform:uppercase;
 }
+.prod-card-chevron{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:22px; height:22px; border-radius:6px; background:rgba(255,255,255,.18);
+  margin-left:8px;
+  transition:transform .18s;
+}
+.prod-card.collapsed .prod-card-chevron{ transform:rotate(-90deg); }
+.prod-card.collapsed .prod-card-body{ display:none; }
 .prod-cnt{
   font-family:var(--font-sans);
   font-size:11px; font-weight:600; color:white;
@@ -431,24 +442,37 @@ input,select,textarea{font-family:inherit; font-size:14px;}
 
 /* Modal producto */
 #modalProducto .modal-box{ font-family:var(--font-sans); }
-.prodm-bloque{ margin-bottom:18px; }
+.prodm-bloque{
+  margin-bottom:14px;
+  background:#fafafa;
+  border:1px solid #e8e0f5;
+  border-left:4px solid #5b21b6;
+  border-radius:9px;
+  padding:14px 16px;
+}
 .prodm-bloque:last-child{ margin-bottom:0; }
 .prodm-bloque-razon{
-  background:linear-gradient(135deg, #efe7f7, #fef9ec);
-  border:1px solid #d4c5ec; border-radius:10px;
-  padding:14px 16px;
+  background:linear-gradient(135deg, #f5edff, #fdf6e3);
+  border:1px solid #c9b8e8;
+  border-left:4px solid #92400e;
 }
 .prodm-bloque-razon .prodm-label{ color:#92400e; }
 .prodm-label{
   font-family:var(--font-sans);
-  font-size:11px; font-weight:700; letter-spacing:.9px;
+  font-size:11.5px; font-weight:800; letter-spacing:1px;
   text-transform:uppercase; color:#5b21b6;
-  margin-bottom:7px;
+  margin-bottom:8px;
 }
 .prodm-texto{
   font-family:var(--font-sans);
-  font-size:14px; line-height:1.65; color:#1a1a1a;
+  font-size:14.5px; line-height:1.65;
+  color:#1f1f1f;
+  font-weight:500;
   letter-spacing:.1px;
+}
+.prodm-bloque-razon .prodm-texto{
+  color:#1a1a1a;
+  font-weight:600;
 }
 
 .prod-tabs{
@@ -2953,12 +2977,15 @@ function renderListaSugerencias(segmento){
     window.__PROD_DATA[segmento][s.id] = { ...s, ...p };
   });
   const familias = Object.keys(porFam).sort();
+  // Sección colapsada por defecto (Rayen pidió que se despliegue solo al click)
+  const abierta = localStorage.getItem('crm_prod_sugeridos_abierta') === '1';
   let html =
-    '<div class="prod-card">' +
-      '<div class="prod-card-hd">' +
+    '<div class="prod-card' + (abierta ? '' : ' collapsed') + '" id="prodCardSug">' +
+      '<div class="prod-card-hd" onclick="toggleProductosSugeridos()">' +
         '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>' +
         '<h3>Productos sugeridos para tu segmento</h3>' +
         '<span class="prod-cnt">' + lista.length + ' productos</span>' +
+        '<span class="prod-card-chevron"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></span>' +
       '</div>' +
       '<div class="prod-card-body">' +
         '<div class="prod-instruccion">' +
@@ -3015,6 +3042,12 @@ function abrirModalProducto(segmento, id){
 function cerrarModalProducto(){
   const m = document.getElementById('modalProducto');
   if(m) m.classList.remove('show');
+}
+function toggleProductosSugeridos(){
+  const card = document.getElementById('prodCardSug');
+  if(!card) return;
+  const ahoraAbierta = card.classList.toggle('collapsed') === false;
+  try { localStorage.setItem('crm_prod_sugeridos_abierta', ahoraAbierta ? '1' : '0'); } catch(e){}
 }
 
 function pintarBannerCampana(){

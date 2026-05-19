@@ -3374,6 +3374,8 @@ async function abrirDetalleKpi(tipo){
     body.innerHTML = '<div style="padding:30px;text-align:center;color:var(--subtle);">Sin registros en este período.</div>';
     return;
   }
+  // Para cotizaciones/ventas: institución = título principal, N° cotización = subtítulo
+  const esCot = (tipo === 'cotizaciones' || tipo === 'ventas_ganadas');
   body.innerHTML = items.map(it => {
     const fechaTxt = it.fecha ? fmtFechaCorta(it.fecha) : '';
     const ejTxt = it.ejecutivo ? '<span style="color:var(--text-3);font-size:11.5px;">· ' + esc(String(it.ejecutivo).split(' ')[0]) + '</span>' : '';
@@ -3381,12 +3383,27 @@ async function abrirDetalleKpi(tipo){
       ? '<div style="font-weight:700;color:var(--gold-dk);white-space:nowrap;font-family:var(--font-sans);">' + fmtM(it.monto) + '</div>'
       : (it.estado ? '<div style="font-size:11px;color:var(--text-3);white-space:nowrap;">' + esc(it.estado) + '</div>' : '');
     const onClick = (tipo === 'nuevos_contactos' && it.id) ? 'onclick="cerrarDetalleKpi(); abrirFichaModal(\'' + esc(it.id) + '\');"' : '';
+    // Determinar título y subtítulo según tipo
+    let tituloPrincipal, subtitulo;
+    if(esCot){
+      tituloPrincipal = it.institucion || it.nombre || '(sin institución)';
+      const partes = [];
+      if(it.id) partes.push('Cot. ' + it.id);
+      if(it.nombre) partes.push(it.nombre);
+      if(fechaTxt) partes.push(fechaTxt);
+      subtitulo = partes.join(' · ');
+    } else {
+      tituloPrincipal = it.nombre || it.institucion || '(sin nombre)';
+      const partes = [];
+      if(it.institucion) partes.push(it.institucion);
+      if(fechaTxt) partes.push(fechaTxt);
+      subtitulo = partes.join(' · ');
+    }
     return '<div ' + onClick + ' style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 6px;border-bottom:1px solid var(--border-soft);' + (onClick ? 'cursor:pointer;' : '') + '">' +
       '<div style="flex:1;min-width:0;">' +
-        '<div style="font-family:var(--font-serif);font-size:15px;font-weight:600;color:var(--text-1);">' + esc(it.nombre || '(sin nombre)') + '</div>' +
+        '<div style="font-family:var(--font-serif);font-size:15px;font-weight:600;color:var(--text-1);">' + esc(tituloPrincipal) + '</div>' +
         '<div style="font-size:12px;color:var(--text-3);margin-top:2px;">' +
-          (it.institucion ? esc(it.institucion) + ' · ' : '') +
-          (fechaTxt ? fechaTxt + ' ' : '') + ejTxt +
+          (subtitulo ? esc(subtitulo) + ' ' : '') + ejTxt +
         '</div>' +
       '</div>' +
       right +

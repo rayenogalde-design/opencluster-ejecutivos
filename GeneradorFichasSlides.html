@@ -302,7 +302,7 @@ body:not([data-tpl="editorial"]) .tpl-editorial-only{display:none !important}
 .ed-caracts li.heading::before{display:none}
 .ed-caracts li.heading:first-child{margin-top:0;padding-top:0;border-top:none}
 /* Línea vacía en el textarea = espacio en blanco (separador visual sin texto) */
-.ed-caracts li.spacer{list-style:none;padding:0;margin:0;height:8px;line-height:0}
+.ed-caracts li.spacer{list-style:none;padding:0;margin:0;height:18px;line-height:0}
 .ed-caracts li.spacer::before{display:none}
 
 /* Especificaciones técnicas — bandas alternas crema/blanco. flex:1 1 0 con shrink + overflow:hidden para que se corten al pasar del footer */
@@ -383,6 +383,8 @@ body:not([data-tpl="editorial"]) .tpl-editorial-only{display:none !important}
 /* Pág 2 Editorial: imagen 4 en bloque debajo de las caracts (alineada a la derecha) — CON recuadro, slider afecta la imagen */
 .ed-cont-img4-block{float:right;width:var(--ed-img4-w, 3in);max-width:48%;margin:0 0 0.12in 0.22in;display:block}
 .ed-img4-box{background:#fff;border:1px solid var(--cream-border);border-radius:6px;padding:0.08in;display:inline-block;overflow:hidden}
+/* Toggle: cuando el contenedor padre tiene data-borde="0", la imagen aparece sin marco */
+.ed-cont-img4-block[data-borde="0"] .ed-img4-box{background:transparent;border:none;padding:0;border-radius:0}
 .ed-img4-box.placeholder{width:var(--ed-img4-w, 3in);height:var(--ed-img4-h, 2in);display:flex;align-items:center;justify-content:center}
 .ed-img4-box.placeholder::before{content:'';display:block;width:32px;height:32px;border:2px dashed var(--coral);border-radius:6px;opacity:.4}
 .ed-img4-box img{display:block;width:var(--ed-img4-w, 3in);height:var(--ed-img4-h, 2in);object-fit:contain;transform:scale(var(--ed-img4-zoom, 1));transform-origin:center center;transition:transform .12s}
@@ -475,7 +477,7 @@ body:not([data-tpl="editorial"]) .tpl-editorial-only{display:none !important}
 .ed-cont-flow .ed-caracts-list li.heading{font-weight:800;color:var(--navy);margin-top:14px;margin-bottom:5px;padding-top:6px;font-family:'Montserrat',sans-serif;font-size:10.5pt;letter-spacing:.2px;border-top:1.5px solid var(--cream-border);clear:both;word-break:keep-all;overflow-wrap:normal}
 .ed-cont-flow .ed-caracts-list li.heading::before{content:'';margin-right:0}
 .ed-cont-flow .ed-caracts-list li.heading:first-child{margin-top:0;padding-top:0;border-top:none}
-.ed-cont-flow .ed-caracts-list li.spacer{list-style:none;padding:0;margin:0;height:8px;line-height:0}
+.ed-cont-flow .ed-caracts-list li.spacer{list-style:none;padding:0;margin:0;height:18px;line-height:0}
 .ed-cont-flow .ed-caracts-list li.spacer::before{content:'';margin-right:0}
 
 /* Pág 2 Editorial: sección "Especificaciones técnicas" cuando overflow desde pág 1 */
@@ -1570,6 +1572,12 @@ body[data-active-mode="1page"] .modo2-only::after{content:'Activá "2 páginas" 
             <span>Modo libre (arrastrar con mouse)</span>
           </label>
           <div class="hint" style="margin-top:2px">Al activar, la imagen sale del flujo y la arrastras donde la necesites. El texto no la rodea.</div>
+
+          <label style="display:flex;align-items:center;gap:8px;margin-top:10px;text-transform:none;font-size:12px;cursor:pointer">
+            <input type="checkbox" id="f_p2_img4_borde" onchange="try{localStorage.setItem('oc_fichas_img4_borde', this.checked?'1':'0');}catch(e){} actualizarPreview()" checked style="width:14px;height:14px">
+            <span>Mostrar borde alrededor de la imagen</span>
+          </label>
+          <div class="hint" style="margin-top:2px">Desactiva para que la imagen aparezca sin el marco/recuadro.</div>
         </div>
         <div class="row2" style="margin-top:10px">
           <div class="field">
@@ -3227,10 +3235,18 @@ function aplicarImgPosiciones(){
     if(img3Y != null) el.style.setProperty('--ed-img3-y', img3Y);
   });
   // Aplicar a img4 wrappers
+  const img4Borde = document.getElementById('f_p2_img4_borde');
+  // Sincronizar checkbox con localStorage (sin perder el default checked)
+  try {
+    const stored = localStorage.getItem('oc_fichas_img4_borde');
+    if(img4Borde && stored !== null) img4Borde.checked = (stored === '1');
+  } catch(e) {}
+  const img4ConBorde = img4Borde ? img4Borde.checked : true;
   document.querySelectorAll('.ed-cont-img4-block').forEach(el => {
     el.setAttribute('data-pos', img4Pos);
     el.setAttribute('data-wrap', img4Wrap);
     el.setAttribute('data-mode', img4Free ? 'free' : 'preset');
+    el.setAttribute('data-borde', img4ConBorde ? '1' : '0');
     if(img4X != null) el.style.setProperty('--ed-img4-x', img4X);
     if(img4Y != null) el.style.setProperty('--ed-img4-y', img4Y);
   });

@@ -2446,6 +2446,15 @@ function cambiarModo(modo){
   // Limpiar caches y refrescar la vista activa
   CACHE.vMis = null; CACHE.vTodos = null; CACHE.vCuentas = null; CACHE.vSinCat = null;
   CACHE.vCerrar = null; CACHE.vOlvidados = null;
+  // Limpiar TODOS los caches localStorage relacionados con KPIs (admin + ejecutiva)
+  // para forzar un re-fetch real del backend con el modo correcto.
+  try {
+    Object.keys(localStorage).forEach(k => {
+      if (k.indexOf('crm_kpis_cache_') === 0 || k.indexOf('crm_kpis_dash_') === 0) {
+        localStorage.removeItem(k);
+      }
+    });
+  } catch(e){}
   // Reaplicar visibilidad (oculta vistas admin si entra a modo ejecutiva)
   aplicarVisibilidadPorRol();
   const v = document.querySelector('.view.act');
@@ -3166,6 +3175,13 @@ function pintarKpis(r, esCache){
   if(!kpiBox) return;
   const k = r.kpis || {};
   const esAdmin = r.es_admin_real;
+  // Sanity: si la respuesta no coincide con el modo activo, descartamos (cache stale).
+  const debeSerAdmin = (ROL === 'admin' && MODO_VISTA === 'admin');
+  if(esCache && !!esAdmin !== !!debeSerAdmin){
+    // Cache obsoleto — mostrar loading hasta el fetch real
+    kpiBox.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando KPIs…</div>';
+    return;
+  }
   const periodo = DASH_PERIODO; // 'semana' | 'mes' | 'anio'
 
   // Delta "nuevos desde la última visita" (solo admin) — usa timestamp guardado localmente

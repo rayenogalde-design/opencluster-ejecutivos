@@ -3127,7 +3127,7 @@ function cambiarPreviewEjec(nm){
 // Periodo activo del dashboard: 'semana' o 'mes' (se persiste en localStorage)
 let DASH_PERIODO = (function(){ try { return localStorage.getItem('crm_dash_periodo') || 'semana'; } catch(e){ return 'semana'; } })();
 
-function _kpisCacheKey(){ return 'crm_kpis_cache_' + (USUARIO||'') + '_' + MODO_VISTA; }
+function _kpisCacheKey(){ return 'crm_kpis_cache_v3_' + (USUARIO||'') + '_' + MODO_VISTA; }
 
 async function cargarDashboard(){
   setSaludo();
@@ -3152,7 +3152,9 @@ async function cargarDashboard(){
   }
 
   // 2. DISPARAR las 4 cargas en paralelo SIN await (no bloqueamos)
-  fetchAPI('crm_kpis_dashboard', { ejecutivo: USUARIO, modo_vista: MODO_VISTA })
+  // Forzamos modo_vista explícito + cache buster para evitar respuesta cacheada del backend al cambiar modo
+  const modoAhora = (ROL === 'admin' && MODO_VISTA === 'ejecutiva') ? 'ejecutiva' : 'admin';
+  fetchAPI('crm_kpis_dashboard', { ejecutivo: USUARIO, modo_vista: modoAhora, _t: Date.now() })
     .then(r => {
       if(r && r.ok){
         try { localStorage.setItem(_kpisCacheKey(), JSON.stringify({ ts: Date.now(), data: r })); } catch(e){}
@@ -3174,10 +3176,11 @@ function pintarKpis(r, esCache){
   const kpiBox = document.getElementById('dshKpis');
   if(!kpiBox) return;
   const k = r.kpis || {};
-  const esAdmin = r.es_admin_real;
-  // Sanity: si la respuesta no coincide con el modo activo, descartamos (cache stale).
+  // Sanity: la "verdad" de admin la decide el modo del frontend, no el backend.
+  // Si MODO_VISTA es ejecutiva, NUNCA pintamos como admin (no etiqueta EQUIPO, no ranking).
   const debeSerAdmin = (ROL === 'admin' && MODO_VISTA === 'admin');
-  if(esCache && !!esAdmin !== !!debeSerAdmin){
+  const esAdmin = debeSerAdmin && !!r.es_admin_real;
+  if(esCache && !!r.es_admin_real !== !!debeSerAdmin){
     // Cache obsoleto — mostrar loading hasta el fetch real
     kpiBox.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando KPIs…</div>';
     return;

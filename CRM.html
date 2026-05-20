@@ -837,6 +837,10 @@ input,select,textarea{font-family:inherit; font-size:14px;}
 }
 .pipeline-badge .dot{ width:5px; height:5px; border-radius:50%; flex-shrink:0; }
 
+/* TIER 0: Por contactar — gris suave, "aún no hemos hecho nada" */
+.pipeline-badge--porcontactar{ background:#f3f4f6; color:#525252; border:1px dashed #b5b5b5; }
+.pipeline-badge--porcontactar .dot{ background:#9ca3af; }
+
 /* TIER 1: Pastel */
 .pipeline-badge--contactado{ background: var(--st-contactado-bg); color: var(--st-contactado-text); }
 .pipeline-badge--contactado .dot{ background: var(--st-contactado-dot); }
@@ -1560,10 +1564,12 @@ input,select,textarea{font-family:inherit; font-size:14px;}
       <div class="fld-row">
         <div class="fld"><label>Pipeline</label>
           <select id="edPipeline">
+            <option>Por contactar</option>
             <option>Contactado</option>
-            <option>Cotizado</option>
             <option>Reunión</option>
+            <option>Cotizado</option>
             <option>Seguimiento</option>
+            <option>Llamada</option>
             <option>Cerrado / Ganado</option>
             <option>Perdido</option>
           </select>
@@ -2210,7 +2216,8 @@ const FILTROS_ESTADO = new Proxy({}, {
 });
 // Buckets de pipeline compartidos por funnel + chips de filtro
 const PIPELINE_BUCKETS = [
-  { key:'cont', label:'Contactado',  cls:'f-cont', match: pe => pe.indexOf('contact') >= 0 || pe.indexOf('lead') >= 0 || pe === '' },
+  { key:'porCont', label:'Por contactar', cls:'f-porcont', match: pe => pe.indexOf('por contactar') >= 0 || pe.indexOf('por_contactar') >= 0 || pe === 'lead' || pe.indexOf('lead') >= 0 || pe === '' },
+  { key:'cont', label:'Contactado',  cls:'f-cont', match: pe => pe === 'contactado' || (pe.indexOf('contact') >= 0 && pe.indexOf('por ') < 0) },
   { key:'reun', label:'Reunión',     cls:'f-reun', match: pe => pe.indexOf('reuni') >= 0 },
   { key:'cot',  label:'Cotizado',    cls:'f-cot',  match: pe => pe.indexOf('cotizad') >= 0 || pe.indexOf('gesti') >= 0 },
   { key:'seg',  label:'Seguimiento', cls:'f-seg',  match: pe => pe.indexOf('seguim') >= 0 },
@@ -2221,7 +2228,7 @@ const PIPELINE_BUCKETS = [
 function _bucketDeContacto(c){
   const pe = String(c.ultimo_estado || c.pipeline_estado || '').toLowerCase();
   for(const b of PIPELINE_BUCKETS){ if(b.match(pe)) return b.key; }
-  return 'cont';
+  return 'porCont';
 }
 let SELECTED_ID = null;
 
@@ -3392,10 +3399,10 @@ async function pintarBannerListaPartida(){
     return tags.some(t => /campa.?a mayo 2026/i.test(t));
   });
   if (!campana.length) { box.innerHTML = ''; return; }
-  // Subset SIN trabajar: estado Contactado y sin interacciones
+  // Subset SIN trabajar: estado "Por contactar" (lead o vacío) — aún no hubo primer contacto
   const sinTrabajar = campana.filter(c => {
-    const est = String(c.ultimo_estado || c.pipeline_estado || 'Contactado').toLowerCase();
-    return est === 'contactado' || est === '';
+    const est = String(c.ultimo_estado || c.pipeline_estado || '').toLowerCase();
+    return est === '' || est === 'lead' || est.indexOf('por contactar') >= 0;
   });
   const totalCamp = campana.length;
   const totalSin = sinTrabajar.length;
@@ -3582,7 +3589,8 @@ function irAListaPartida(sinTrabajar){
   // Setear filtros antes de cambiar de vista
   if (!FILTROS_AVANZADOS.vMis) FILTROS_AVANZADOS.vMis = { agenda:'', estado:'', segmento:'', etiqueta:'' };
   FILTROS_AVANZADOS.vMis.etiqueta = 'Campaña mayo 2026';
-  FILTROS_AVANZADOS.vMis.estado = sinTrabajar ? 'cont' : '';
+  // "Por contactar" = bucket porCont (sin trabajar todavía)
+  FILTROS_AVANZADOS.vMis.estado = sinTrabajar ? 'porCont' : '';
   FILTROS_AVANZADOS.vMis.agenda = '';
   FILTROS_AVANZADOS.vMis.segmento = '';
   try { guardarFiltrosLS(); } catch(e){}
@@ -4398,6 +4406,10 @@ function pipelineBadgeHTML(estado){
   if (pipe.indexOf('reuni') >= 0 || pipe.indexOf('webinar') >= 0) {
     return '<span class="pipeline-badge pipeline-badge--reunion"><span class="dot"></span>' + (pipe.indexOf('webinar') >= 0 ? 'Asistió webinar' : 'Reunión') + '</span>';
   }
+  // Por contactar: estado "Lead" o vacío (empresas pre-cargadas que aún nadie llamó/escribió)
+  if (pipe === '' || pipe === 'lead' || pipe.indexOf('por contactar') >= 0) {
+    return '<span class="pipeline-badge pipeline-badge--porcontactar"><span class="dot"></span>Por contactar</span>';
+  }
   return '<span class="pipeline-badge pipeline-badge--contactado"><span class="dot"></span>Contactado</span>';
 }
 
@@ -4508,6 +4520,7 @@ function pintarFiltrosBloque(view, lista){
 
   // Colores por bucket
   const colorChip = {
+    porCont: ['#f3f4f6', '#525252'],
     cont: ['#dbe4f5', '#3a4d75'],
     reun: ['#cfe1f3', '#1e3a5f'],
     cot:  ['#fef3c7', '#5a3c10'],
@@ -5663,7 +5676,13 @@ async function abrirModalEditarContacto(id){
   setTimeout(() => {
     document.getElementById('edSubCategoria').value = c.sub_categoria || '';
   }, 50);
-  document.getElementById('edPipeline').value = c.pipeline_estado || 'Contactado';
+  // Mapear estados legacy (Lead, vacío) a "Por contactar" en el select
+  {
+    const v = String(c.pipeline_estado || '').trim();
+    const sel = document.getElementById('edPipeline');
+    if (!v || /^lead$/i.test(v)) sel.value = 'Por contactar';
+    else sel.value = v;
+  }
   document.getElementById('edNotas').value = c.notas_publicas || '';
   document.getElementById('modalEditContacto').classList.add('show');
 }

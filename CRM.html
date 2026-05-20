@@ -211,6 +211,8 @@ input,select,textarea{font-family:inherit; font-size:14px;}
   line-height:1.5;
 }
 .kpi-ranking b{ color:var(--ink); }
+.banner-campana-admin.collapsed .banner-camp-body{ display:none; }
+.banner-campana-admin.collapsed .banner-camp-chevron{ transform:rotate(-90deg); }
 .kpi-delta-badge{
   display:inline-block; margin-top:8px; padding:3px 9px; border-radius:999px;
   background:linear-gradient(135deg, var(--purple-lt, #ddd6fe), var(--purple, #a78bfa));
@@ -1194,6 +1196,7 @@ input,select,textarea{font-family:inherit; font-size:14px;}
           <p id="dshFecha">—</p>
         </div>
         <div id="dshCampana"></div>
+        <div id="dshListaPartida"></div>
         <div id="dshProductos"></div>
         <div class="kpis" id="dshKpis"></div>
         <div class="dsh-grid">
@@ -3297,6 +3300,15 @@ function toggleProductosSugeridos(){
   try { localStorage.setItem('crm_prod_sugeridos_abierta', ahoraAbierta ? '1' : '0'); } catch(e){}
 }
 
+function toggleBannerCampanaAdmin(e){
+  // Si el click viene del selector u otro control interno, no hacer toggle
+  if(e && e.target && e.target.closest('select, label, button')) return;
+  const card = document.getElementById('bannerCampanaAdmin');
+  if(!card) return;
+  const ahoraAbierta = card.classList.toggle('collapsed') === false;
+  try { localStorage.setItem('crm_campana_admin_abierta', ahoraAbierta ? '1' : '0'); } catch(e2){}
+}
+
 function pintarBannerCampana(){
   const box = document.getElementById('dshCampana');
   if (!box) return;
@@ -3327,22 +3339,26 @@ function pintarBannerCampana(){
         '</div>';
       return;
     }
-    // Sin drill-down: vista normal de administradora con tabla de segmentos y selector arriba
+    // Sin drill-down: vista normal de administradora con tabla de segmentos colapsable
     const filas = Object.entries(CAMPANA_ASIG)
       .filter(([k]) => !['William'].includes(k) && k !== 'German') // canónicos solo
       .map(([nm, a]) => '<div style="display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-top:1px solid rgba(91,33,182,.1);">' +
         '<div style="flex:0 0 130px;font-weight:700;color:var(--purple-dk);">' + esc(nm) + '</div>' +
         '<div style="flex:1;font-size:13px;color:var(--ink);"><b>' + esc(a.titulo) + '</b><div style="color:var(--subtle);font-size:12px;margin-top:1px;">' + esc(a.detalle) + '</div></div>' +
       '</div>').join('');
+    const abiertaCamp = localStorage.getItem('crm_campana_admin_abierta') === '1';
     box.innerHTML =
-      '<div style="background:linear-gradient(135deg,#efe7f7,#fef9ec);border:1px solid var(--purple-lt, #d4c5ec);border-radius:12px;padding:14px 18px;margin-bottom:18px;">' +
-        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">' +
+      '<div id="bannerCampanaAdmin" class="banner-campana-admin' + (abiertaCamp ? '' : ' collapsed') + '" style="background:linear-gradient(135deg,#efe7f7,#fef9ec);border:1px solid var(--purple-lt, #d4c5ec);border-radius:12px;padding:0 18px;margin-bottom:18px;overflow:hidden;">' +
+        '<div onclick="toggleBannerCampanaAdmin(event)" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;cursor:pointer;padding:12px 0;user-select:none;">' +
           '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--purple-dk)" stroke-width="2.4" stroke-linecap="round"><path d="M3 6l3-3 12 12-3 3z"/><path d="M14 14l7 7"/></svg>' +
           '<b style="font-family:var(--font-sans);font-size:14px;color:var(--purple-dk);font-weight:700;letter-spacing:.2px;">Campaña OpenCluster Chile — segmentos asignados</b>' +
-          renderSelectorDrillDown() +
+          '<span class="banner-camp-chevron" style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:rgba(91,33,182,.12);margin-left:6px;transition:transform .18s;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--purple-dk)" stroke-width="2.6" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></span>' +
+          '<span onclick="event.stopPropagation();" style="margin-left:auto;">' + renderSelectorDrillDown() + '</span>' +
         '</div>' +
-        '<div style="font-size:12px;color:var(--subtle);margin-bottom:6px;">Cada ejecutivo trabaja exclusivamente su segmento, sin cruces.</div>' +
-        filas +
+        '<div class="banner-camp-body" style="padding-bottom:14px;">' +
+          '<div style="font-size:12px;color:var(--subtle);margin-bottom:6px;">Cada ejecutivo trabaja exclusivamente su segmento, sin cruces.</div>' +
+          filas +
+        '</div>' +
       '</div>';
     return;
   }
@@ -3364,6 +3380,71 @@ function cambiarPreviewEjec(nm){
   try { localStorage.setItem('crm_preview_ejec', nm); } catch(e){}
   pintarBannerCampana();
   pintarProductosSugeridos();
+}
+
+// Banner naranja en el dashboard del ejecutivo: "Tu lista de partida — X empresas pre-cargadas sin trabajar"
+// Solo aparece para ejecutivos comunes (o admin en drill-down) que tengan contactos pre-cargados
+// de la Campaña Mayo 2026 que aún están en estado "Contactado" (sin trabajar).
+async function pintarBannerListaPartida(){
+  const box = document.getElementById('dshListaPartida');
+  if (!box) return;
+  // No mostrar en modo admin sin drill-down (Rayen ve totales del equipo, no lista de partida)
+  if (ROL === 'admin' && getModoVista() === 'admin' && !hayDrillDown()) {
+    box.innerHTML = '';
+    return;
+  }
+  const ejecActivo = getEjecutivoEfectivo();
+  if (!ejecActivo) { box.innerHTML = ''; return; }
+  let lista;
+  try { lista = await _cargarContactosBase(); } catch(e){ lista = []; }
+  if (!lista || !lista.length) { box.innerHTML = ''; return; }
+  // Filtrar a contactos del ejecutivo activo + etiqueta "Campaña mayo 2026"
+  const mios = lista.filter(c => esOwnerDe(c, ejecActivo));
+  const campana = mios.filter(c => {
+    const tags = parsearEtiquetas(c.etiquetas);
+    return tags.some(t => /campa.?a mayo 2026/i.test(t));
+  });
+  if (!campana.length) { box.innerHTML = ''; return; }
+  // Subset SIN trabajar: estado Contactado y sin interacciones
+  const sinTrabajar = campana.filter(c => {
+    const est = String(c.ultimo_estado || c.pipeline_estado || 'Contactado').toLowerCase();
+    return est === 'contactado' || est === '';
+  });
+  const totalCamp = campana.length;
+  const totalSin = sinTrabajar.length;
+  if (totalSin === 0 && totalCamp === 0) { box.innerHTML = ''; return; }
+  // Botón abre Mis Contactos con filtro etiqueta = Campaña mayo 2026 aplicado
+  const onclickIr = 'irAListaPartida()';
+  const onclickIrSin = 'irAListaPartida(true)';
+  box.innerHTML =
+    '<div style="background:linear-gradient(135deg,#fff7ed,#fef3c7);border:1px solid var(--gold);border-radius:12px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">' +
+      '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--gold-deep, #5a3c10)" stroke-width="2.2" stroke-linecap="round" style="flex-shrink:0;"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>' +
+      '<div style="flex:1;min-width:240px;">' +
+        '<div style="font-size:11px;font-weight:800;color:var(--gold-deep, #5a3c10);text-transform:uppercase;letter-spacing:.5px;">Tu lista de partida — Campaña Mayo 2026</div>' +
+        '<div style="font-family:var(--font-sans);font-size:14.5px;color:var(--ink);font-weight:700;margin-top:3px;letter-spacing:.1px;">' +
+          '<span style="color:var(--gold-deep);">' + totalCamp + '</span> empresas pre-cargadas listas para trabajar' +
+          (totalSin > 0 ? ' · <span style="color:#a04004;">' + totalSin + ' sin contactar todavía</span>' : '') +
+        '</div>' +
+        '<div style="font-size:12.5px;color:var(--gold-deep, #5a3c10);margin-top:2px;line-height:1.5;">Ya tienen institución, ciudad, sitio web y notas. Solo te falta llamarlas o escribirles.</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;flex-shrink:0;">' +
+        (totalSin > 0 ? '<button onclick="' + onclickIrSin + '" style="padding:9px 16px;background:#a04004;color:white;border:none;border-radius:8px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:var(--font-sans);letter-spacing:.2px;">Ver las ' + totalSin + ' sin trabajar</button>' : '') +
+        '<button onclick="' + onclickIr + '" style="padding:9px 16px;background:white;color:var(--gold-deep, #5a3c10);border:1px solid var(--gold);border-radius:8px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:var(--font-sans);letter-spacing:.2px;">Ver las ' + totalCamp + '</button>' +
+      '</div>' +
+    '</div>';
+}
+
+// Va a Mis Contactos con el filtro etiqueta = "Campaña mayo 2026" aplicado.
+// Si sinTrabajar=true, además aplica filtro de pipeline = Contactado.
+function irAListaPartida(sinTrabajar){
+  // Setear filtros antes de cambiar de vista
+  if (!FILTROS_AVANZADOS.vMis) FILTROS_AVANZADOS.vMis = { agenda:'', estado:'', segmento:'', etiqueta:'' };
+  FILTROS_AVANZADOS.vMis.etiqueta = 'Campaña mayo 2026';
+  FILTROS_AVANZADOS.vMis.estado = sinTrabajar ? 'cont' : '';
+  FILTROS_AVANZADOS.vMis.agenda = '';
+  FILTROS_AVANZADOS.vMis.segmento = '';
+  try { guardarFiltrosLS(); } catch(e){}
+  goView('vMis');
 }
 
 // Lista canónica de ejecutivos del equipo (para el selector de drill-down).
@@ -3418,6 +3499,7 @@ window.__DASH_FETCH_TOKEN = 0;
 async function cargarDashboard(){
   setSaludo();
   pintarBannerCampana();
+  pintarBannerListaPartida();
   pintarProductosSugeridos();
 
   // Token único de esta carga — descartamos respuestas de fetches anteriores
@@ -3522,9 +3604,10 @@ function pintarKpis(r, esCache){
 
   function renderRanking(arr){
     if(!esAdmin || !arr || !arr.length) return '';
-    // Mostramos TODO el equipo (no solo top 4) — si el card está suma de equipo, la suma debe cuadrar
+    // Mostramos TODO el equipo, incluso quien tenga 0 en el período activo (Rayen quiere verlos a todos).
+    // Solo descartamos quien tenga 0 en TODOS los períodos (semana/mes/anio) — alguien que nunca ha trabajado.
     const top = arr
-      .filter(x => pickVal(x, periodo) > 0)
+      .filter(x => (x.semana||0) + (x.mes||0) + (x.anio||0) > 0)
       .map(x => '<span style="white-space:nowrap;">' + esc(x.ejec.split(' ')[0]) + ' <b>' + pickVal(x, periodo) + '</b></span>')
       .join(' · ');
     if(!top) return '';

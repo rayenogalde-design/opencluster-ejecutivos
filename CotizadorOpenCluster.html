@@ -4305,13 +4305,17 @@ async function registrarCotizacion() {
 
   _modoReemplazo=false;
   btn.style.background="";
-  btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> <span>${esReemplazo?'Cotización reemplazada ✓ — bloqueada':'Cotización registrada ✓ — bloqueada'}</span>`;
+  btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> <span>${esReemplazo?'Cotización '+numFinalConfirmado+' reemplazada ✓':'Cotización '+numFinalConfirmado+' registrada ✓'} — bloqueada</span>`;
   btn.classList.add("enviado");
   // Bloqueo permanente: el botón queda deshabilitado hasta que el usuario cree una nueva cotización
   // (vía "Duplicar", "Nueva cotización", "Reemplazar") — esas rutinas re-habilitan explícitamente.
   btn.disabled = true;
-  // Cargar siguiente número SOLO si NO es reemplazo (en reemplazo el número debe quedarse igual para el PDF)
-  if(!esReemplazo) fetchSiguienteNumero();
+  // 2026-05-19 BUGFIX: NO auto-actualizar eNum al siguiente número aquí.
+  // Antes: tras registrar 3637, el campo se rellenaba inmediatamente con 3638 (siguiente).
+  // Si el usuario generaba el PDF después de registrar, el PDF salía con 3638 pero el Sheet tenía 3637.
+  // Ahora: el campo queda mostrando el número recién guardado. Cuando el usuario crea una NUEVA cotización
+  // (vía botones "Nueva cotización" / "Duplicar para mismo cliente"), esas rutinas piden el siguiente número
+  // por sí mismas (ver crearNuevaDesdeCargada y duplicarParaMismoCliente).
 }
 
 // ── Guardar cotización en computadora ─────────────────────────────────────

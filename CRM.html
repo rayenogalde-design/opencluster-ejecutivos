@@ -450,6 +450,37 @@ input,select,textarea{font-family:inherit; font-size:14px;}
   background:#5b21b6; color:white;
   border-color:#5b21b6;
 }
+.prod-chip-grupo{
+  border-color:#7c3aed; background:#f5edff;
+  position:relative;
+}
+.prod-chip-variantes{
+  display:inline-block; margin-left:7px;
+  font-size:10.5px; font-weight:700;
+  color:#7c3aed; background:white;
+  padding:1px 7px; border-radius:9px;
+  border:1px solid #c9b8e8; letter-spacing:.2px;
+}
+.prod-chip-grupo:hover .prod-chip-variantes{ background:white; color:#5b21b6; }
+.prodm-bloque-variantes{
+  background:linear-gradient(135deg, #f5edff, #fdf6e3);
+  border-left:4px solid #7c3aed;
+}
+.prodm-variantes-lista{ display:flex; flex-direction:column; gap:8px; margin-top:4px; }
+.prodm-variante{
+  display:flex; justify-content:space-between; align-items:center; gap:12px;
+  background:white; border:1px solid #e8e0f5; border-radius:8px;
+  padding:9px 12px;
+}
+.prodm-variante-nombre{
+  font-family:var(--font-sans); font-size:13.5px; font-weight:600; color:#1f1f1f;
+}
+.prodm-variante-sku{
+  font-family:'Inter', sans-serif; font-size:11px; font-weight:700;
+  color:#7c3aed; background:#f5edff;
+  padding:2px 9px; border-radius:6px;
+  white-space:nowrap;
+}
 
 /* Modal producto */
 #modalProducto .modal-box{ font-family:var(--font-sans); }
@@ -3057,21 +3088,117 @@ function pintarProductosSugeridos(){
 // Diccionario en runtime para que el modal acceda a producto + razón al click
 window.__PROD_DATA = {};
 
+// Agrupación de variantes: distintos IDs del catálogo que en realidad son
+// el MISMO producto con tallas, combos o software adicional.
+// Cada entrada define: id_base (id del producto principal), nombre_base (rótulo del grupo),
+// variantes con su sufijo descriptivo.
+const PRODUCTO_GRUPOS = {
+  'tobii-pc-eye-5': {
+    base_id: 'tobii-pc-eye-5',
+    nombre_base: 'Tobii PC Eye 5 (cámara de mirada)',
+    variantes: [
+      { id:'tobii-pc-eye-5', etiqueta:'Solo (hardware)' },
+      { id:'tobii-comm5',    etiqueta:'+ Communicator 5 (adultos)' },
+      { id:'tobii-tdsnap',   etiqueta:'+ TD Snap (niños/visual)' }
+    ]
+  },
+  'comuniqa-eye': {
+    base_id: 'comuniqa-eye-tdsnap',
+    nombre_base: 'ComuniQa Surface Eye (tablet con cámara)',
+    variantes: [
+      { id:'comuniqa-eye-tdsnap', etiqueta:'+ TD Snap (infantil)' },
+      { id:'comuniqa-eye-comm5',  etiqueta:'+ Communicator 5 (adultos)' }
+    ]
+  },
+  'comuniqa-l': {
+    base_id: 'comuniqa-l-tdsnap',
+    nombre_base: 'ComuniQa Surface L (tablet grande táctil)',
+    variantes: [
+      { id:'comuniqa-l-tdsnap', etiqueta:'+ TD Snap (infantil)' },
+      { id:'comuniqa-l-comm5',  etiqueta:'+ Communicator 5 (adultos)' }
+    ]
+  },
+  'silla-ducha': {
+    base_id: 'silla-ducha-m',
+    nombre_base: 'Silla de Ducha con Respaldo Alto y Sujeciones',
+    variantes: [
+      { id:'silla-ducha-s', etiqueta:'Talla S (delgado)' },
+      { id:'silla-ducha-m', etiqueta:'Talla M (promedio)' },
+      { id:'silla-ducha-l', etiqueta:'Talla L (corpulento)' }
+    ]
+  },
+  'rampa': {
+    base_id: 'rampa-5ft',
+    nombre_base: 'Rampa Portátil Plegable',
+    variantes: [
+      { id:'rampa-4ft', etiqueta:'4 FT (1,2 m) — escalón corto' },
+      { id:'rampa-5ft', etiqueta:'5 FT (1,5 m) — la más vendida' },
+      { id:'rampa-6ft', etiqueta:'6 FT (1,8 m) — desniveles altos' }
+    ]
+  },
+  'catre-manual': {
+    base_id: 'catre-manual',
+    nombre_base: 'Catre Clínico Manual 3 Posiciones',
+    variantes: [
+      { id:'catre-manual',       etiqueta:'Solo (sin colchón)' },
+      { id:'catre-manual-cic',   etiqueta:'+ Colchón CIC Med Home Visco' },
+      { id:'catre-manual-thera', etiqueta:'+ Colchón Antiescaras TheraDense' }
+    ]
+  },
+  'catre-elec': {
+    base_id: 'catre-elec',
+    nombre_base: 'Catre Clínico Eléctrico 4 Posiciones',
+    variantes: [
+      { id:'catre-elec',       etiqueta:'Solo (sin colchón)' },
+      { id:'catre-elec-cic',   etiqueta:'+ Colchón CIC Med Home Visco' },
+      { id:'catre-elec-thera', etiqueta:'+ Colchón Antiescaras TheraDense' }
+    ]
+  }
+};
+
+// Mapa inverso: id de producto → clave de grupo. Si el id NO está aquí, es un producto único.
+const PROD_ID_TO_GRUPO = (function(){
+  const m = {};
+  Object.entries(PRODUCTO_GRUPOS).forEach(([key, g]) => {
+    g.variantes.forEach(v => { m[v.id] = key; });
+  });
+  return m;
+})();
+
 function renderListaSugerencias(segmento){
   const lista = SUGERENCIAS_POR_SEGMENTO[segmento] || [];
   if(!lista.length) return '';
   // Guardar data para el modal (segmento + producto + razón)
   window.__PROD_DATA[segmento] = {};
-  // Agrupar por familia
+  // Agrupar primero por GRUPO (un grupo = un chip clicable) y dentro por familia
+  // Estructura: porFam[familia] = [{ key, esGrupo, nombreMostrado, variantes[] | producto }]
   const porFam = {};
+  const grupoVisto = {}; // dedupe: si ya agregué un grupo, no lo agrego de nuevo
   lista.forEach(s => {
     const p = CATALOGO_PRODUCTOS[s.id];
     if(!p) return;
-    if(!porFam[p.fam]) porFam[p.fam] = [];
-    porFam[p.fam].push({ ...s, ...p });
     window.__PROD_DATA[segmento][s.id] = { ...s, ...p };
+    const grupoKey = PROD_ID_TO_GRUPO[s.id];
+    if(grupoKey){
+      if(grupoVisto[grupoKey]) return; // ya está agregado a la lista visible
+      grupoVisto[grupoKey] = true;
+      const g = PRODUCTO_GRUPOS[grupoKey];
+      // Tomar la familia del producto base
+      const baseProd = CATALOGO_PRODUCTOS[g.base_id] || p;
+      if(!porFam[baseProd.fam]) porFam[baseProd.fam] = [];
+      porFam[baseProd.fam].push({
+        clickId: g.base_id,
+        nombre: g.nombre_base,
+        esGrupo: true,
+        grupoKey: grupoKey
+      });
+    } else {
+      if(!porFam[p.fam]) porFam[p.fam] = [];
+      porFam[p.fam].push({ clickId: s.id, nombre: p.nombre, esGrupo: false });
+    }
   });
   const familias = Object.keys(porFam).sort();
+  const totalUnicos = Object.values(porFam).reduce((s, arr) => s + arr.length, 0);
   // Sección colapsada por defecto (Rayen pidió que se despliegue solo al click)
   const abierta = localStorage.getItem('crm_prod_sugeridos_abierta') === '1';
   let html =
@@ -3079,7 +3206,7 @@ function renderListaSugerencias(segmento){
       '<div class="prod-card-hd" onclick="toggleProductosSugeridos()">' +
         '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>' +
         '<h3>Productos sugeridos para tu segmento</h3>' +
-        '<span class="prod-cnt">' + lista.length + ' productos</span>' +
+        '<span class="prod-cnt">' + totalUnicos + ' productos</span>' +
         '<span class="prod-card-chevron"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></span>' +
       '</div>' +
       '<div class="prod-card-body">' +
@@ -3092,8 +3219,9 @@ function renderListaSugerencias(segmento){
             '<div class="prod-familia-titulo">' + esc(fam) + ' <span class="prod-fam-cnt">' + porFam[fam].length + '</span></div>' +
             '<div class="prod-grid">' +
               porFam[fam].map(p =>
-                '<button class="prod-chip" onclick="abrirModalProducto(\'' + esc(segmento).replace(/'/g, "\\'") + '\',\'' + esc(p.id) + '\')">' +
+                '<button class="prod-chip' + (p.esGrupo ? ' prod-chip-grupo' : '') + '" onclick="abrirModalProducto(\'' + esc(segmento).replace(/'/g, "\\'") + '\',\'' + esc(p.clickId) + '\')">' +
                   esc(p.nombre) +
+                  (p.esGrupo ? '<span class="prod-chip-variantes">' + PRODUCTO_GRUPOS[p.grupoKey].variantes.length + ' variantes</span>' : '') +
                 '</button>'
               ).join('') +
             '</div>' +
@@ -3107,6 +3235,10 @@ function renderListaSugerencias(segmento){
 function abrirModalProducto(segmento, id){
   const p = (window.__PROD_DATA[segmento] || {})[id];
   if(!p) return;
+  // ¿Este id pertenece a un grupo de variantes?
+  const grupoKey = PROD_ID_TO_GRUPO[id];
+  const grupo = grupoKey ? PRODUCTO_GRUPOS[grupoKey] : null;
+
   let modal = document.getElementById('modalProducto');
   if(!modal){
     modal = document.createElement('div');
@@ -3127,10 +3259,30 @@ function abrirModalProducto(segmento, id){
     document.body.appendChild(modal);
     modal.addEventListener('click', e => { if(e.target === modal) cerrarModalProducto(); });
   }
-  document.getElementById('prodm-nombre').textContent = p.nombre || '';
+  // Título: nombre del grupo (si aplica) o del producto
+  document.getElementById('prodm-nombre').textContent = grupo ? grupo.nombre_base : (p.nombre || '');
+
+  // Render del bloque de variantes (si es un grupo)
+  let variantesHTML = '';
+  if(grupo){
+    const items = grupo.variantes.map(v => {
+      const variante = CATALOGO_PRODUCTOS[v.id];
+      const sku = variante ? variante.sku : '';
+      return '<div class="prodm-variante">' +
+        '<div class="prodm-variante-nombre">' + esc(v.etiqueta) + '</div>' +
+        (sku ? '<div class="prodm-variante-sku">' + esc(sku) + '</div>' : '') +
+      '</div>';
+    }).join('');
+    variantesHTML = '<div class="prodm-bloque prodm-bloque-variantes">' +
+      '<div class="prodm-label">Variantes disponibles · ' + grupo.variantes.length + '</div>' +
+      '<div class="prodm-variantes-lista">' + items + '</div>' +
+    '</div>';
+  }
+
   document.getElementById('prodm-body').innerHTML =
     (p.desc ? '<div class="prodm-bloque"><div class="prodm-label">Qué es</div><div class="prodm-texto">' + esc(p.desc) + '</div></div>' : '') +
     (p.para ? '<div class="prodm-bloque"><div class="prodm-label">Para quién</div><div class="prodm-texto">' + esc(p.para) + '</div></div>' : '') +
+    variantesHTML +
     (p.razon ? '<div class="prodm-bloque prodm-bloque-razon"><div class="prodm-label">Por qué venderlo en tu segmento</div><div class="prodm-texto">' + esc(p.razon) + '</div></div>' : '');
   modal.classList.add('show');
 }

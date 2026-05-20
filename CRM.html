@@ -1144,6 +1144,10 @@ input,select,textarea{font-family:inherit; font-size:14px;}
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         Todos los Contactos
       </div>
+      <div class="side-tab" data-view="vMiTerritorio" id="navMiTerritorio" onclick="goView('vMiTerritorio')">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l3-3 12 12-3 3z"/><path d="M14 14l7 7"/></svg>
+        Mi Territorio
+      </div>
       <div class="side-tab" data-view="vSinCat" id="navSinCat" onclick="goView('vSinCat')">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6M12 18h.01"/></svg>
         Categorizar Urgente
@@ -1301,6 +1305,15 @@ input,select,textarea{font-family:inherit; font-size:14px;}
         </div>
         <div id="filtrosTodos" class="filtros-bloque"></div>
         <div id="listTodos"></div>
+      </div>
+
+      <!-- ═══ Mi Territorio ═══ -->
+      <div class="view" id="vMiTerritorio">
+        <div class="sec-head">
+          <h1>Mi Territorio</h1>
+          <p>Las subcategorías que tenés asignadas. Los contactos nuevos con estas subcategorías se te asignan automáticamente.</p>
+        </div>
+        <div id="miTerritorioContainer"></div>
       </div>
 
       <!-- ═══ Categorizar Urgente ═══ -->
@@ -2626,6 +2639,7 @@ function goView(id){
     case 'vCerrar':          cargarPorCerrar(); break;
     case 'vOlvidados':       cargarOlvidados(); break;
     case 'vTerritorios':     cargarTerritorios(); break;
+    case 'vMiTerritorio':    cargarMiTerritorio(); break;
     case 'vAud':             cargarAuditoria(); break;
     case 'vMigracion':       /* no autoload */ break;
   }
@@ -7495,6 +7509,92 @@ async function rechazarFusion(idA, idB){
   const r = await fetchAPI('crm_rechazar_fusion', null, { id_a: idA, id_b: idB, solicitante: USUARIO });
   if (!r || !r.ok) { alert('Error: ' + ((r && r.error) || 'desconocido')); return; }
   await cargarDuplicados();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// MI TERRITORIO — vista visible a todos los ejecutivos
+// ════════════════════════════════════════════════════════════════════════════
+async function cargarMiTerritorio(){
+  const cont = document.getElementById('miTerritorioContainer');
+  if (!cont) return;
+  cont.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando tu territorio…</div>';
+  // Ejecutivo efectivo (para drill-down de admin)
+  const ejec = getEjecutivoEfectivo();
+  // 1. Cargar territorios desde el backend
+  const r = await fetchAPI('crm_territorios', { solicitante: USUARIO });
+  if (!r || !r.ok) {
+    cont.innerHTML = '<div class="error-state">Error: ' + esc((r && r.error) || 'desconocido') + '</div>';
+    return;
+  }
+  const todos = r.territorios || [];
+  // Filtrar las subcategorías asignadas al ejecutivo efectivo (comparación tolerante)
+  const e = String(ejec || '').toLowerCase();
+  const eCorto = e.split(' ')[0];
+  const mias = todos.filter(t => {
+    const ej = String(t.ejecutivo || '').toLowerCase();
+    return ej === e || ej === eCorto || ej.indexOf(eCorto) >= 0;
+  });
+  // 2. Contar cuántos contactos tiene en cada subcategoría
+  let lista;
+  try { lista = await _cargarContactosCrudo(); } catch(e){ lista = []; }
+  const conteoPorSub = {};
+  (lista || []).forEach(c => {
+    if (!esOwnerDe(c, ejec)) return;
+    const sub = String(c.sub_categoria || '').trim();
+    if (!sub) return;
+    conteoPorSub[sub] = (conteoPorSub[sub] || 0) + 1;
+  });
+
+  if (!mias.length) {
+    cont.innerHTML =
+      '<div style="background:linear-gradient(135deg,#fff7ed,#fef3c7);border:1px solid var(--gold);border-radius:12px;padding:24px;text-align:center;">' +
+        '<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--gold-deep, #5a3c10)" stroke-width="1.8" stroke-linecap="round" style="margin-bottom:10px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
+        '<div style="font-family:var(--font-serif);font-size:18px;font-weight:600;color:var(--text-1);margin-bottom:6px;">Aún no tenés territorio asignado</div>' +
+        '<div style="font-size:13.5px;color:var(--text-2);max-width:480px;margin:0 auto;line-height:1.55;">Rayen todavía no te asignó subcategorías oficiales. Igualmente podés trabajar los contactos que ya tenés en "Mis Contactos".</div>' +
+      '</div>';
+    return;
+  }
+
+  // 3. Renderizar tarjetas con cada subcategoría asignada
+  const cards = mias.map(t => {
+    const sub = t.sub_categoria || t.subcategoria || '';
+    const cnt = conteoPorSub[sub] || 0;
+    return '<div class="card" style="padding:16px 18px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:14px;">' +
+      '<div style="flex:1;min-width:0;">' +
+        '<div style="font-family:var(--font-serif);font-size:17px;font-weight:600;color:var(--text-1);">' + esc(sub) + '</div>' +
+        '<div style="font-size:12px;color:var(--subtle);margin-top:3px;">' +
+          (cnt > 0 ? '<b style="color:var(--gold-deep);">' + cnt + '</b> contacto' + (cnt === 1 ? '' : 's') + ' en esta subcategoría' : 'Aún no tenés contactos cargados con esta subcategoría') +
+        '</div>' +
+      '</div>' +
+      (cnt > 0
+        ? '<button class="btn primary" onclick="irAMisContactosFiltrado(\'' + esc(sub).replace(/\'/g, "\\\\'") + '\')">Ver contactos</button>'
+        : '<span style="font-size:11.5px;color:var(--subtle);">Sin contactos</span>'
+      ) +
+    '</div>';
+  }).join('');
+
+  cont.innerHTML =
+    '<div style="background:linear-gradient(135deg,#fff7ed,#fef3c7);border:1px solid var(--gold);border-radius:12px;padding:14px 18px;margin-bottom:18px;">' +
+      '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
+        '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--gold-deep, #5a3c10)" stroke-width="2.2" stroke-linecap="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>' +
+        '<div>' +
+          '<div style="font-size:11px;font-weight:800;color:var(--gold-deep, #5a3c10);text-transform:uppercase;letter-spacing:.5px;">Tu territorio · ' + mias.length + ' subcategoría' + (mias.length === 1 ? '' : 's') + ' asignada' + (mias.length === 1 ? '' : 's') + '</div>' +
+          '<div style="font-size:13px;color:var(--text-2);margin-top:2px;">Cuando alguien crea un contacto nuevo con cualquiera de estas subcategorías, se te asigna automáticamente.</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+    cards;
+}
+
+// Ir a Mis Contactos con un filtro de subcategoría aplicado
+function irAMisContactosFiltrado(subcategoria){
+  if (!FILTROS_AVANZADOS.vMis) FILTROS_AVANZADOS.vMis = { agenda:'', estado:'', segmento:'', etiqueta:'' };
+  FILTROS_AVANZADOS.vMis.segmento = subcategoria;
+  FILTROS_AVANZADOS.vMis.agenda = '';
+  FILTROS_AVANZADOS.vMis.estado = '';
+  FILTROS_AVANZADOS.vMis.etiqueta = '';
+  try { guardarFiltrosLS(); } catch(e){}
+  goView('vMis');
 }
 
 // ════════════════════════════════════════════════════════════════════════════

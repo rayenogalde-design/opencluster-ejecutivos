@@ -4151,7 +4151,12 @@ async function cargarContactos(view){
     CACHE[view] = lista;
     cnt.textContent = lista.length;
     renderLista(view);
-    refrescarContactosBackground(view, cacheKey);
+    // Solo refrescar en background si el cache tiene > 5 minutos (evita fetch innecesario al navegar entre vistas)
+    try {
+      const parsed = JSON.parse(localStorage.getItem(cacheKey) || '{}');
+      const edadCache = Date.now() - (parsed.ts || 0);
+      if (edadCache > 300000) refrescarContactosBackground(view, cacheKey);
+    } catch(e){ refrescarContactosBackground(view, cacheKey); }
     return;
   }
 

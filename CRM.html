@@ -2021,6 +2021,9 @@ try {
 let USUARIO = null;
 let ROL = 'ejecutivo';        // 'ejecutivo' o 'admin' (Mario es 'direccion' pero el CRM lo redirige al Portal)
 let MODO_VISTA = 'admin';     // Solo Rayen lo cambia. 'admin' = ve todo del equipo. 'ejecutiva' = ve solo lo suyo.
+// Drill-down: en modo admin, Rayen puede ver el dashboard COMPLETO de un ejecutivo específico
+// (para reuniones 1-a-1 de avance). null = ver "Todo el equipo".
+let DRILL_DOWN_EJEC = null;
 
 // Fuente de verdad del modo: lee del DOM (botón con class .act).
 // Si el DOM no tiene .act todavía (página inicializando), cae a MODO_VISTA variable.
@@ -2031,6 +2034,30 @@ function getModoVista(){
     if (btnAct && btnAct.dataset && btnAct.dataset.modo) return btnAct.dataset.modo;
   } catch(e){}
   return MODO_VISTA || 'admin';
+}
+
+// Drill-down activo: admin + modo admin + ejecutivo seleccionado distinto de "Todo el equipo".
+function hayDrillDown(){
+  return ROL === 'admin' && getModoVista() === 'admin' && !!DRILL_DOWN_EJEC;
+}
+
+// Ejecutivo "efectivo" para queries del dashboard. Si hay drill-down, ese; sino, USUARIO.
+function getEjecutivoEfectivo(){
+  if (hayDrillDown()) return DRILL_DOWN_EJEC;
+  return USUARIO;
+}
+
+// ¿El contacto c pertenece al ejecutivo arbitrario `ejec`? (helper reusable)
+function esOwnerDe(c, ejec){
+  if (!ejec) return false;
+  const cEj = String(c.ejecutivo_asignado || c.ejecutivo_creador || '').toLowerCase();
+  if (!cEj) return false;
+  const e = String(ejec).toLowerCase();
+  if (cEj === e) return true;
+  if (cEj.indexOf(e) >= 0) return true;
+  const firstE = e.split(' ')[0];
+  if (firstE && cEj.indexOf(firstE) >= 0) return true;
+  return false;
 }
 const TEAM = [
   { full: "Rayen Ogalde",          short: "Rayen",          rol: "admin"     },
@@ -2398,6 +2425,13 @@ function initApp(user){
     window.location.href = 'index.html';
     return;
   }
+  // Restaurar drill-down si Rayen lo había dejado activo (solo admins)
+  if (ROL === 'admin') {
+    try {
+      const drillGuardado = localStorage.getItem('crm_drill_ejec');
+      if (drillGuardado) DRILL_DOWN_EJEC = drillGuardado;
+    } catch(e){}
+  }
   document.getElementById('loginMask').style.display = 'none';
   document.getElementById('appWrap').style.display = '';
   document.getElementById('tbUser').textContent = user;
@@ -2448,6 +2482,11 @@ function aplicarVisibilidadPorRol(){
 function cambiarModo(modo){
   if (modo !== 'admin' && modo !== 'ejecutiva') return;
   if (ROL !== 'admin') return;
+  // Cambiar a EJECUTIVA implica salir del drill-down (no aplica fuera de admin)
+  if (modo === 'ejecutiva') {
+    DRILL_DOWN_EJEC = null;
+    try { localStorage.removeItem('crm_drill_ejec'); } catch(e){}
+  }
   // 1) Actualizar SIMULTÁNEAMENTE la variable JS y el class .act del DOM antes de cualquier otra cosa.
   MODO_VISTA = modo;
   document.querySelectorAll('.modo-btn').forEach(b => {
@@ -2966,6 +3005,14 @@ SUGERENCIAS_POR_SEGMENTO['German'] = SUGERENCIAS_POR_SEGMENTO['Germán'];
 function pintarProductosSugeridos(){
   const box = document.getElementById('dshProductos');
   if (!box) return;
+  // Si hay drill-down (admin viendo ejecutivo específico), mostrar productos de ese ejecutivo
+  if (hayDrillDown()) {
+    const clavesDrill = [DRILL_DOWN_EJEC, (DRILL_DOWN_EJEC||'').split(' ')[0]];
+    let seg = null;
+    for(const k of clavesDrill) { if(SUGERENCIAS_POR_SEGMENTO[k]) { seg = k; break; } }
+    box.innerHTML = seg ? renderListaSugerencias(seg) : '';
+    return;
+  }
   // En modo admin (Rayen como admin) mostrar todos los segmentos en pestañas
   // En modo ejecutiva o ejec común, solo el suyo
   const modoActivo = getModoVista();
@@ -3086,8 +3133,31 @@ function pintarBannerCampana(){
   const modoActivo = getModoVista();
   const esAdmin = ROL === 'admin';
   const verComoEjecutivo = !esAdmin || modoActivo === 'ejecutiva';
-  // Si Rayen está en modo admin (real), banner con el resumen del equipo
+
+  // === ADMIN modo admin: opciones "Ver dashboard de" + (si no hay drill-down) tabla equipo ===
   if (!verComoEjecutivo) {
+    // Si hay drill-down activo, mostrar el segmento de ESE ejecutivo (no la tabla del equipo)
+    if (hayDrillDown()) {
+      const drillAsig = CAMPANA_ASIG[DRILL_DOWN_EJEC] || CAMPANA_ASIG[(DRILL_DOWN_EJEC||'').split(' ')[0]];
+      box.innerHTML =
+        '<div style="background:linear-gradient(135deg,#fef3c7,#fef9ec);border:1px solid var(--gold);border-radius:12px;padding:12px 18px;margin-bottom:14px;">' +
+          '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
+            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--purple-dk)" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M21 12c0 4-4 8-9 8s-9-4-9-8 4-8 9-8 9 4 9 8z"/></svg>' +
+            '<b style="font-family:var(--font-sans);font-size:13px;color:var(--purple-dk);font-weight:700;letter-spacing:.2px;">Viendo el dashboard de ' + esc(DRILL_DOWN_EJEC) + '</b>' +
+            renderSelectorDrillDown() +
+            '<button onclick="cambiarDrillDown(\'__equipo__\')" style="margin-left:auto;padding:5px 12px;background:var(--purple-dk);color:white;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.2px;">' +
+              'Volver al equipo' +
+            '</button>' +
+          '</div>' +
+          (drillAsig ? '<div style="background:white;border-radius:8px;padding:10px 14px;border:1px dashed var(--gold);margin-top:10px;">' +
+            '<div style="font-size:11px;font-weight:800;color:var(--gold-deep, #5a3c10);text-transform:uppercase;letter-spacing:.5px;">Segmento</div>' +
+            '<div style="font-family:var(--font-sans);font-size:14px;color:var(--ink);font-weight:700;margin-top:3px;letter-spacing:.1px;">' + esc(drillAsig.titulo) + '</div>' +
+            '<div style="font-size:12px;color:var(--gold-deep);margin-top:2px;line-height:1.5;">' + esc(drillAsig.detalle) + '</div>' +
+          '</div>' : '') +
+        '</div>';
+      return;
+    }
+    // Sin drill-down: vista normal de administradora con tabla de segmentos y selector arriba
     const filas = Object.entries(CAMPANA_ASIG)
       .filter(([k]) => !['William'].includes(k) && k !== 'German') // canónicos solo
       .map(([nm, a]) => '<div style="display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-top:1px solid rgba(91,33,182,.1);">' +
@@ -3096,39 +3166,18 @@ function pintarBannerCampana(){
       '</div>').join('');
     box.innerHTML =
       '<div style="background:linear-gradient(135deg,#efe7f7,#fef9ec);border:1px solid var(--purple-lt, #d4c5ec);border-radius:12px;padding:14px 18px;margin-bottom:18px;">' +
-        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">' +
           '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--purple-dk)" stroke-width="2.4" stroke-linecap="round"><path d="M3 6l3-3 12 12-3 3z"/><path d="M14 14l7 7"/></svg>' +
           '<b style="font-family:var(--font-sans);font-size:14px;color:var(--purple-dk);font-weight:700;letter-spacing:.2px;">Campaña OpenCluster Chile — segmentos asignados</b>' +
+          renderSelectorDrillDown() +
         '</div>' +
         '<div style="font-size:12px;color:var(--subtle);margin-bottom:6px;">Cada ejecutivo trabaja exclusivamente su segmento, sin cruces.</div>' +
         filas +
       '</div>';
     return;
   }
-  // Ejecutivo común (o Rayen viendo como ejecutiva): mostrar SU segmento
+  // === EJECUTIVO común (o Rayen viendo como ejecutiva): mostrar SU segmento ===
   const asig = CAMPANA_ASIG[USUARIO] || CAMPANA_ASIG[(USUARIO||'').split(' ')[0]];
-  // Si es Rayen en modo Ejecutiva y no tiene segmento asignado, mostrar selector
-  // de preview para ver exactamente qué ven los demás ejecutivos.
-  if (!asig && esAdmin) {
-    const previewActual = localStorage.getItem('crm_preview_ejec') || 'William Marin';
-    const previewAsig = CAMPANA_ASIG[previewActual] || CAMPANA_ASIG['William Marin'];
-    box.innerHTML =
-      '<div style="background:linear-gradient(135deg,#efe7f7,#fef9ec);border:1px solid var(--purple-lt, #d4c5ec);border-radius:12px;padding:14px 18px;margin-bottom:18px;">' +
-        '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;">' +
-          '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--purple-dk)" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M21 12c0 4-4 8-9 8s-9-4-9-8 4-8 9-8 9 4 9 8z"/></svg>' +
-          '<b style="font-family:var(--font-sans);font-size:13.5px;color:var(--purple-dk);font-weight:700;letter-spacing:.2px;">Vista previa: ¿qué ve este ejecutivo?</b>' +
-          '<select onchange="cambiarPreviewEjec(this.value)" style="margin-left:auto;padding:5px 10px;border:1px solid var(--purple-lt);border-radius:6px;font-size:12px;font-weight:600;color:var(--purple-dk);background:white;">' +
-            ['William Marin','Roberto','Germán','Maximiliano'].map(n => '<option value="' + esc(n) + '"' + (n === previewActual ? ' selected' : '') + '>' + esc(n) + '</option>').join('') +
-          '</select>' +
-        '</div>' +
-        '<div style="background:white;border-radius:8px;padding:10px 14px;border:1px dashed var(--gold);">' +
-          '<div style="font-size:11px;font-weight:800;color:var(--gold-deep, #5a3c10);text-transform:uppercase;letter-spacing:.5px;">Segmento de ' + esc(previewActual) + '</div>' +
-          '<div style="font-family:var(--font-sans);font-size:14px;color:var(--ink);font-weight:700;margin-top:3px;letter-spacing:.1px;">' + esc(previewAsig.titulo) + '</div>' +
-          '<div style="font-size:12px;color:var(--gold-deep);margin-top:2px;line-height:1.5;">' + esc(previewAsig.detalle) + '</div>' +
-        '</div>' +
-      '</div>';
-    return;
-  }
   if (!asig) { box.innerHTML = ''; return; }
   box.innerHTML =
     '<div style="background:linear-gradient(135deg,#fef3c7,#fef9ec);border:1px solid var(--gold);border-radius:12px;padding:14px 18px;margin-bottom:18px;display:flex;gap:14px;align-items:center;">' +
@@ -3147,10 +3196,51 @@ function cambiarPreviewEjec(nm){
   pintarProductosSugeridos();
 }
 
+// Lista canónica de ejecutivos del equipo (para el selector de drill-down).
+// Rayen no aparece en el selector — para verse a sí misma usa el toggle EJECUTIVA.
+const EJECUTIVOS_DRILLDOWN = ['William Marin', 'Roberto', 'Germán', 'Maximiliano'];
+
+// Renderiza el selector "Ver dashboard de: [Todo el equipo / William / Roberto / ...]"
+function renderSelectorDrillDown(){
+  const actual = DRILL_DOWN_EJEC || '__equipo__';
+  const opts = ['<option value="__equipo__">Todo el equipo</option>']
+    .concat(EJECUTIVOS_DRILLDOWN.map(n =>
+      '<option value="' + esc(n) + '"' + (n === actual ? ' selected' : '') + '>' + esc(n) + '</option>'
+    ));
+  return '<label style="display:inline-flex;align-items:center;gap:6px;margin-left:auto;font-size:11.5px;font-weight:600;color:var(--purple-dk);">' +
+    'Ver dashboard de:' +
+    '<select onchange="cambiarDrillDown(this.value)" style="padding:5px 10px;border:1px solid var(--purple-lt, #d4c5ec);border-radius:6px;font-size:12px;font-weight:700;color:var(--purple-dk);background:white;cursor:pointer;">' +
+      opts.join('') +
+    '</select>' +
+  '</label>';
+}
+
+// Cambia el ejecutivo del drill-down y refresca todo el dashboard.
+function cambiarDrillDown(nm){
+  DRILL_DOWN_EJEC = (nm === '__equipo__' || !nm) ? null : nm;
+  try {
+    if (DRILL_DOWN_EJEC) localStorage.setItem('crm_drill_ejec', DRILL_DOWN_EJEC);
+    else localStorage.removeItem('crm_drill_ejec');
+  } catch(e){}
+  // Limpiar caches que dependen del ejecutivo
+  CACHE.vMis = null; CACHE.vTodos = null; CACHE.vCuentas = null; CACHE.vSinCat = null;
+  CACHE.vCerrar = null; CACHE.vOlvidados = null;
+  try {
+    Object.keys(localStorage).forEach(k => {
+      if (k.indexOf('crm_kpis_cache_') === 0) localStorage.removeItem(k);
+    });
+  } catch(e){}
+  // Refrescar dashboard entero
+  if (typeof cargarDashboard === 'function') cargarDashboard();
+}
+
 // Periodo activo del dashboard: 'semana' o 'mes' (se persiste en localStorage)
 let DASH_PERIODO = (function(){ try { return localStorage.getItem('crm_dash_periodo') || 'semana'; } catch(e){ return 'semana'; } })();
 
-function _kpisCacheKey(){ return 'crm_kpis_cache_v3_' + (USUARIO||'') + '_' + MODO_VISTA; }
+function _kpisCacheKey(){
+  // La cache key incluye el drill-down para no mezclar datos de distintos ejecutivos.
+  return 'crm_kpis_cache_v4_' + (USUARIO||'') + '_' + MODO_VISTA + '_' + (DRILL_DOWN_EJEC || 'EQUIPO');
+}
 
 // Token monotónico para descartar respuestas de fetches viejos cuando cambia el modo rápidamente.
 window.__DASH_FETCH_TOKEN = 0;
@@ -3163,7 +3253,11 @@ async function cargarDashboard(){
   // Token único de esta carga — descartamos respuestas de fetches anteriores
   const miToken = ++window.__DASH_FETCH_TOKEN;
   const modoVistaActivo = getModoVista();
-  const modoEnVuelo = (ROL === 'admin' && modoVistaActivo === 'ejecutiva') ? 'ejecutiva' : 'admin';
+  // Si hay drill-down activo, querés los datos filtrados al ejecutivo elegido → pedirlos como "ejecutiva".
+  // Si no hay drill-down y estás en admin → admin (suma del equipo).
+  // Si estás en ejecutiva → ejecutiva (tus propios datos).
+  const modoEnVuelo = (hayDrillDown() || (ROL === 'admin' && modoVistaActivo === 'ejecutiva')) ? 'ejecutiva' : 'admin';
+  const ejecParaFetch = getEjecutivoEfectivo();
 
   // 1. PINTAR INMEDIATAMENTE con datos cacheados de localStorage (instantáneo)
   let kpisCacheados = null;
@@ -3184,12 +3278,12 @@ async function cargarDashboard(){
 
   // 2. DISPARAR las 4 cargas en paralelo SIN await (no bloqueamos)
   // Forzamos modo_vista explícito + cache buster para evitar respuesta cacheada del backend al cambiar modo
-  fetchAPI('crm_kpis_dashboard', { ejecutivo: USUARIO, modo_vista: modoEnVuelo, _t: Date.now() })
+  fetchAPI('crm_kpis_dashboard', { ejecutivo: ejecParaFetch, modo_vista: modoEnVuelo, _t: Date.now() })
     .then(r => {
       // Si entremedio cambió el modo (otro cargarDashboard fue lanzado), descartamos esta respuesta.
       if(miToken !== window.__DASH_FETCH_TOKEN) return;
       // También descartamos si el modo que pedimos ya no coincide con el modo actual del frontend.
-      const modoActualAhora = (ROL === 'admin' && getModoVista() === 'ejecutiva') ? 'ejecutiva' : 'admin';
+      const modoActualAhora = (hayDrillDown() || (ROL === 'admin' && getModoVista() === 'ejecutiva')) ? 'ejecutiva' : 'admin';
       if(modoEnVuelo !== modoActualAhora) return;
       if(r && r.ok){
         try { localStorage.setItem(_kpisCacheKey(), JSON.stringify({ ts: Date.now(), data: r })); } catch(e){}
@@ -3212,8 +3306,8 @@ function pintarKpis(r, esCache){
   if(!kpiBox) return;
   const k = r.kpis || {};
   // Sanity: la "verdad" de admin la decide el modo del frontend, no el backend.
-  // Si MODO_VISTA es ejecutiva, NUNCA pintamos como admin (no etiqueta EQUIPO, no ranking).
-  const debeSerAdmin = (ROL === 'admin' && getModoVista() === 'admin');
+  // Si MODO_VISTA es ejecutiva O hay drill-down, NUNCA pintamos como admin (no etiqueta EQUIPO, no ranking).
+  const debeSerAdmin = (ROL === 'admin' && getModoVista() === 'admin' && !hayDrillDown());
   const esAdmin = debeSerAdmin && !!r.es_admin_real;
   if(esCache && !!r.es_admin_real !== !!debeSerAdmin){
     // Cache obsoleto — mostrar loading hasta el fetch real
@@ -3361,7 +3455,8 @@ async function abrirDetalleKpi(tipo){
       '<div id="kpiDetBody" style="overflow-y:auto;padding:12px 20px;flex:1;"><div class="loading-state"><div class="spinner"></div></div></div>' +
     '</div>';
 
-  const r = await fetchAPI('crm_kpis_detalle', { ejecutivo: USUARIO, modo_vista: MODO_VISTA, tipo: tipo, periodo: periodo });
+  const modoDetalle = hayDrillDown() ? 'ejecutiva' : MODO_VISTA;
+  const r = await fetchAPI('crm_kpis_detalle', { ejecutivo: getEjecutivoEfectivo(), modo_vista: modoDetalle, tipo: tipo, periodo: periodo });
   const body = document.getElementById('kpiDetBody');
   const totEl = document.getElementById('kpiDetTotal');
   if(!r || !r.ok){
@@ -3438,14 +3533,25 @@ async function cargarFunnelDashboard(){
   if(!container) return;
   container.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
   const lista = await _cargarContactosBase();
-  let propios = esActuandoComoAdmin() ? lista : lista.filter(esOwner);
+  let propios;
+  let etiquetaTotal = '';
+  if (hayDrillDown()) {
+    propios = lista.filter(c => esOwnerDe(c, getEjecutivoEfectivo()));
+    etiquetaTotal = ' (de ' + (getEjecutivoEfectivo() || '').split(' ')[0] + ')';
+  } else if (esActuandoComoAdmin()) {
+    propios = lista;
+    etiquetaTotal = ' (equipo)';
+  } else {
+    propios = lista.filter(esOwner);
+    etiquetaTotal = ' (tuyos)';
+  }
 
   const buckets = PIPELINE_BUCKETS;
   const counts = {};
   buckets.forEach(b => counts[b.key] = 0);
   propios.forEach(c => { counts[_bucketDeContacto(c)]++; });
   const total = Object.values(counts).reduce((a,b)=>a+b, 0);
-  totalEl.textContent = total + (esActuandoComoAdmin() ? ' (equipo)' : ' (tuyos)');
+  totalEl.textContent = total + etiquetaTotal;
   const max = Math.max(1, ...Object.values(counts));
   // Guardar agrupación para que se pueda abrir el detalle al click
   window.__FUNNEL_DATA = {};
@@ -3505,7 +3611,8 @@ async function cargarReunionesDashboard(){
   const cntEl = document.getElementById('dshReunionesCount');
   if(!container) return;
   container.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
-  let r = await fetchAPI('crm_reuniones_proximas', { ejecutivo: USUARIO, dias: 14, modo_vista: MODO_VISTA });
+  const modoReu = hayDrillDown() ? 'ejecutiva' : MODO_VISTA;
+  let r = await fetchAPI('crm_reuniones_proximas', { ejecutivo: getEjecutivoEfectivo(), dias: 14, modo_vista: modoReu });
   if(cntEl) cntEl.textContent = (r && r.ok ? (r.reuniones||[]).length : 0);
   let reuniones = [];
   let modo = 'proximas';
@@ -3514,7 +3621,14 @@ async function cargarReunionesDashboard(){
     modo = r.modo || 'proximas';
   } else {
     const lista = await _cargarContactosBase();
-    const propios = esActuandoComoAdmin() ? lista : lista.filter(esOwner);
+    let propios;
+    if (hayDrillDown()) {
+      propios = lista.filter(c => esOwnerDe(c, getEjecutivoEfectivo()));
+    } else if (esActuandoComoAdmin()) {
+      propios = lista;
+    } else {
+      propios = lista.filter(esOwner);
+    }
     reuniones = propios
       .filter(c => String(c.ultimo_estado || c.pipeline_estado || '').toLowerCase().indexOf('reuni') >= 0)
       .slice(0, 10)
@@ -3558,7 +3672,7 @@ async function cargarTareasDashboard(){
   const cnt = document.getElementById('dshTareasCount');
   container.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
 
-  const r = await fetchAPI('crm_tareas_ejecutivo', { ejecutivo: USUARIO, solo_pendientes: true });
+  const r = await fetchAPI('crm_tareas_ejecutivo', { ejecutivo: getEjecutivoEfectivo(), solo_pendientes: true });
   if(!r.ok){ container.innerHTML = ''; cnt.textContent = 0; return; }
   const tareas = r.tareas || [];
   cnt.textContent = tareas.length;

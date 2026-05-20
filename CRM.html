@@ -5602,8 +5602,131 @@ function renderHistorialAgrupado(tl, contacto){
   return html;
 }
 
-function abrirEmailPlantilla(contactoId){
-  alert('Modal de plantillas dinámicas — próxima iteración. Se va a abrir un selector de plantilla con preview del cuerpo renderizado y un botón "Abrir en Gmail" que arme el mailto: con asunto y cuerpo precargados.');
+// Modal para enviar email usando plantillas: selector de plantilla + preview renderizado +
+// botón "Abrir en Gmail" que arme un mailto con asunto y cuerpo precargados.
+async function abrirEmailPlantilla(contactoId){
+  // Localizar el contacto en cache para tener nombre, email, etc.
+  let c = null;
+  ['vMis','vTodos','vSinCat','vCerrar','vOlvidados','vKanban'].forEach(v => {
+    if (!c && CACHE[v]) c = CACHE[v].find(x => String(x.id) === String(contactoId));
+  });
+  if (!c) {
+    try {
+      const lista = await _cargarContactosCrudo();
+      c = (lista || []).find(x => String(x.id) === String(contactoId));
+    } catch(e){}
+  }
+  if (!c) { alert('Contacto no encontrado.'); return; }
+  if (!c.email) { alert('Este contacto no tiene email registrado.'); return; }
+
+  // Crear overlay del modal
+  let overlay = document.getElementById('emailPlantillaOverlay');
+  if (overlay) overlay.remove();
+  overlay = document.createElement('div');
+  overlay.id = 'emailPlantillaOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;';
+  overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+  document.body.appendChild(overlay);
+  overlay.innerHTML =
+    '<div style="background:white;border-radius:14px;max-width:720px;width:100%;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 12px 48px rgba(0,0,0,0.28);">' +
+      '<div style="padding:16px 22px;border-bottom:1px solid var(--border-subtle);display:flex;justify-content:space-between;align-items:center;">' +
+        '<div>' +
+          '<div style="font-family:var(--font-serif);font-size:20px;font-weight:600;color:var(--text-1);">Enviar correo</div>' +
+          '<div style="font-size:12.5px;color:var(--subtle);margin-top:2px;">Para: <b>' + esc(c.nombre || c.institucion) + '</b> · ' + esc(c.email) + '</div>' +
+        '</div>' +
+        '<button onclick="document.getElementById(\'emailPlantillaOverlay\').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--subtle);width:32px;height:32px;border-radius:6px;">×</button>' +
+      '</div>' +
+      '<div style="overflow-y:auto;padding:18px 22px;flex:1;">' +
+        '<div style="margin-bottom:14px;">' +
+          '<label style="display:block;font-size:11.5px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">Plantilla</label>' +
+          '<select id="emPlSelect" style="width:100%;padding:9px 12px;border:1px solid var(--border-subtle);border-radius:8px;font-size:14px;font-family:var(--font-sans);background:white;">' +
+            '<option value="">Cargando plantillas…</option>' +
+          '</select>' +
+        '</div>' +
+        '<div style="margin-bottom:14px;">' +
+          '<label style="display:block;font-size:11.5px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">Asunto</label>' +
+          '<input id="emPlAsunto" type="text" style="width:100%;padding:9px 12px;border:1px solid var(--border-subtle);border-radius:8px;font-size:14px;font-family:var(--font-sans);">' +
+        '</div>' +
+        '<div style="margin-bottom:6px;">' +
+          '<label style="display:block;font-size:11.5px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">Cuerpo del mensaje</label>' +
+          '<textarea id="emPlCuerpo" rows="12" style="width:100%;padding:11px 12px;border:1px solid var(--border-subtle);border-radius:8px;font-size:13.5px;font-family:var(--font-sans);line-height:1.55;resize:vertical;"></textarea>' +
+        '</div>' +
+        '<div style="font-size:11.5px;color:var(--subtle);margin-top:4px;">Las variables como <code>{nombre}</code>, <code>{institucion}</code>, <code>{ejecutivo}</code> ya están reemplazadas con los datos reales del contacto.</div>' +
+      '</div>' +
+      '<div style="padding:14px 22px;border-top:1px solid var(--border-subtle);display:flex;justify-content:flex-end;gap:10px;">' +
+        '<button onclick="document.getElementById(\'emailPlantillaOverlay\').remove()" style="padding:9px 18px;background:white;border:1px solid var(--border-subtle);border-radius:8px;font-weight:600;cursor:pointer;font-family:var(--font-sans);">Cancelar</button>' +
+        '<button onclick="abrirEmailEnGmail()" style="padding:9px 22px;background:var(--purple-dk);color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-family:var(--font-sans);letter-spacing:.2px;">Abrir en Gmail</button>' +
+      '</div>' +
+    '</div>';
+
+  // Guardar contexto para el botón
+  window.__EMAIL_PL_CTX = { contacto: c };
+
+  // Cargar plantillas
+  const r = await fetchAPI('crm_plantillas_email', { solicitante: USUARIO });
+  const sel = document.getElementById('emPlSelect');
+  if (!sel) return;
+  const plantillas = (r && r.ok && Array.isArray(r.plantillas)) ? r.plantillas : [];
+  if (!plantillas.length) {
+    sel.innerHTML = '<option value="">(no hay plantillas — escribe el correo manualmente)</option>';
+    document.getElementById('emPlAsunto').value = '';
+    document.getElementById('emPlCuerpo').value = '';
+    return;
+  }
+  sel.innerHTML = '<option value="">— Elige una plantilla o escribe manualmente —</option>' +
+    plantillas.map(p => '<option value="' + esc(p.id) + '">' + esc(p.nombre) + '</option>').join('');
+  window.__EMAIL_PL_CTX.plantillas = plantillas;
+  sel.onchange = async function(){
+    const id = this.value;
+    if (!id) { document.getElementById('emPlAsunto').value=''; document.getElementById('emPlCuerpo').value=''; return; }
+    const r2 = await fetchAPI('crm_renderizar_plantilla', { plantilla_id: id, contacto_id: c.id, solicitante: USUARIO });
+    if (r2 && r2.ok) {
+      document.getElementById('emPlAsunto').value = r2.asunto || '';
+      document.getElementById('emPlCuerpo').value = r2.cuerpo || '';
+    } else {
+      // Fallback: usar la plantilla cruda y hacer replacements simples en cliente
+      const pl = (window.__EMAIL_PL_CTX.plantillas || []).find(p => String(p.id) === String(id));
+      if (pl) {
+        const repl = s => String(s||'')
+          .replace(/\{nombre\}/g, c.nombre || c.institucion || '')
+          .replace(/\{institucion\}/g, c.institucion || '')
+          .replace(/\{cargo\}/g, c.cargo || '')
+          .replace(/\{ejecutivo\}/g, USUARIO || '');
+        document.getElementById('emPlAsunto').value = repl(pl.asunto);
+        document.getElementById('emPlCuerpo').value = repl(pl.cuerpo);
+      }
+    }
+  };
+}
+
+// Abre Gmail (compose) con el destinatario, asunto y cuerpo ya armados.
+function abrirEmailEnGmail(){
+  const ctx = window.__EMAIL_PL_CTX;
+  if (!ctx || !ctx.contacto) return;
+  const c = ctx.contacto;
+  const asunto = document.getElementById('emPlAsunto').value || '';
+  const cuerpo = document.getElementById('emPlCuerpo').value || '';
+  // URL de Gmail compose con campos pre-cargados
+  const url = 'https://mail.google.com/mail/?view=cm&fs=1' +
+    '&to=' + encodeURIComponent(c.email) +
+    '&su=' + encodeURIComponent(asunto) +
+    '&body=' + encodeURIComponent(cuerpo);
+  window.open(url, '_blank');
+  // Registrar interacción de email en el CRM (best effort)
+  try {
+    fetchAPI('crm_agregar_interaccion', null, {
+      contacto_id: c.id,
+      ejecutivo: USUARIO,
+      tipo: 'email',
+      medio: 'email',
+      origen: 'CRM',
+      asunto: asunto,
+      notas: 'Correo enviado desde CRM con plantilla'
+    });
+  } catch(e){}
+  // Cerrar modal
+  const ov = document.getElementById('emailPlantillaOverlay');
+  if (ov) ov.remove();
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -7245,8 +7368,26 @@ async function cargarHuerfanos(){
   const titulo = verTodoEquipo
     ? '<div style="margin-bottom:14px;color:var(--subtle);font-size:13.5px;">Estás viendo <b>' + lista.length + '</b> contactos sin categoría de todo el equipo. La columna "Creado por" te dice quién los ingresó.</div>'
     : '<div style="margin-bottom:14px;color:var(--subtle);font-size:13.5px;"><b>' + lista.length + '</b> contactos sin categoría que cargaste.</div>';
+
+  // Lista de subcategorías para el dropdown inline (las más usadas en el CRM)
+  const subcatsOpts = [
+    'Hogar de ancianos','Residencia asistida','Casa de reposo',
+    'Ortopedia / Distribuidor','Centro de ayudas técnicas',
+    'Centro de rehabilitación','Kinesiología','Terapia ocupacional',
+    'Colegio particular','Colegio bilingüe','Colegio internacional',
+    'Programa PIE (Integración Escolar)','Jardín Infantil (JUNJI/Integra)',
+    'Hospital Público','Hospital Mutual','CESFAM (Centro de Salud Familiar)',
+    'Teletón / CRIT','Teletón / Instituto Teletón / CRIT',
+    'Universidad / Instituto','DAEM (Educación Municipal)',
+    'Otra oficina municipal','Corporación / ONG','Otra fundación',
+    'Fundación de Discapacidad','SENAMA (Adulto Mayor)','Parroquia / Iglesia / Centro Religioso',
+    'Clínica Privada','Otro privado','Otra agrupación comunitaria','Otro (especificar en notas)'
+  ];
+  const optsHTML = '<option value="">— Elegir segmento —</option>' +
+    subcatsOpts.map(s => '<option value="' + esc(s) + '">' + esc(s) + '</option>').join('');
+
   cont.innerHTML = titulo + lista.map(c =>
-    '<div class="card" style="margin-bottom:10px;"><div class="card-body" style="display:grid;grid-template-columns:1fr 180px 160px;gap:14px;align-items:center;">' +
+    '<div class="card" id="cat-card-' + esc(c.id) + '" style="margin-bottom:10px;"><div class="card-body" style="display:grid;grid-template-columns:1fr 160px 240px 120px;gap:12px;align-items:center;">' +
       '<div>' +
         '<div style="font-size:15px;font-weight:700;color:var(--ink);">' + esc(c.nombre || c.institucion || '(sin nombre)') + '</div>' +
         '<div style="font-size:12.5px;color:var(--mist);margin-top:2px;">' + esc(c.institucion || '') + (c.cargo ? ' · ' + esc(c.cargo) : '') + '</div>' +
@@ -7255,9 +7396,39 @@ async function cargarHuerfanos(){
         '<div style="font-weight:600;color:var(--mist);text-transform:uppercase;letter-spacing:.5px;font-size:10.5px;">Creado por</div>' +
         '<div style="font-weight:700;color:var(--ink);margin-top:2px;">' + esc(c.ejecutivo_creador || '(desconocido)') + '</div>' +
       '</div>' +
-      '<button class="btn primary" onclick="abrirModalEditarContacto(\'' + esc(c.id) + '\')">Categorizar</button>' +
+      '<select id="catSel-' + esc(c.id) + '" style="padding:8px 10px;border:1px solid var(--purple-lt);border-radius:8px;font-size:13px;font-family:var(--font-sans);">' + optsHTML + '</select>' +
+      '<button class="btn primary" onclick="aplicarCategorizacionInline(\'' + esc(c.id) + '\')">Guardar</button>' +
     '</div></div>'
   ).join('');
+}
+
+// Aplica la subcategoría elegida en el dropdown inline y refresca la lista.
+async function aplicarCategorizacionInline(id){
+  const sel = document.getElementById('catSel-' + id);
+  if (!sel) return;
+  const subcat = sel.value;
+  if (!subcat) { alert('Seleccioná un segmento primero.'); return; }
+  // Reusamos el endpoint crm_categorizar_contacto que ya hace todo (sub_categoria + recalcula ejecutivo_asignado)
+  const r = await fetchAPI('crm_categorizar_contacto', null, { id: id, sub_categoria: subcat, solicitante: USUARIO });
+  if (!r || !r.ok) { alert('Error: ' + ((r && r.error) || 'desconocido')); return; }
+  // Quitar la card visualmente (animación corta)
+  const card = document.getElementById('cat-card-' + id);
+  if (card) {
+    card.style.transition = 'opacity .25s, transform .25s';
+    card.style.opacity = '0';
+    card.style.transform = 'scale(.96)';
+    setTimeout(() => { card.remove(); }, 280);
+  }
+  // Invalidar cache para que se reflejen los cambios en otras vistas
+  try { localStorage.removeItem('crm_cache_contactos_v2_' + USUARIO); } catch(e){}
+  CACHE.vMis = null; CACHE.vTodos = null; CACHE.vSinCat = null;
+  // Actualizar contador de la sidebar
+  const badge = document.getElementById('badgeSinCat');
+  if (badge) {
+    const n = parseInt(badge.textContent || '0', 10) - 1;
+    badge.textContent = Math.max(0, n);
+    if (n <= 0) badge.style.display = 'none';
+  }
 }
 
 async function cargarDuplicados(){
@@ -7272,7 +7443,58 @@ async function cargarDuplicados(){
     cont.innerHTML = '<div class="loading-state">Sin duplicados pendientes. Todo limpio.</div>';
     return;
   }
-  cont.innerHTML = lista.map(d => '<div class="card" style="margin-bottom:12px;padding:16px;"><div>Duplicado pendiente — UI completa próxima iteración (modal comparativo lado a lado).</div></div>').join('');
+  // UI lado-a-lado: cada duplicado muestra A y B con sus datos. Botones: Fusionar (mantener A) / Fusionar (mantener B) / No son duplicados.
+  cont.innerHTML = lista.map((d, idx) => {
+    const a = d.a || d.contacto_a || {};
+    const b = d.b || d.contacto_b || {};
+    const motivo = d.motivo || d.razon || 'Mismo email/teléfono';
+    function colCard(c, lado){
+      return '<div style="flex:1;background:#fafafa;border:1px solid var(--border-subtle);border-radius:9px;padding:12px 14px;">' +
+        '<div style="font-size:10.5px;font-weight:800;color:var(--purple-dk);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;">' + lado + '</div>' +
+        '<div style="font-family:var(--font-serif);font-size:16px;font-weight:600;color:var(--text-1);">' + esc(c.nombre || c.institucion || '(sin nombre)') + '</div>' +
+        (c.institucion ? '<div style="font-size:13px;color:var(--text-2);margin-top:2px;">' + esc(c.institucion) + '</div>' : '') +
+        (c.cargo ? '<div style="font-size:12px;color:var(--text-3);margin-top:2px;">' + esc(c.cargo) + '</div>' : '') +
+        '<div style="border-top:1px dashed var(--border-soft);margin-top:9px;padding-top:9px;display:flex;flex-direction:column;gap:3px;font-size:12.5px;">' +
+          (c.email ? '<div><b>Email:</b> ' + esc(c.email) + '</div>' : '') +
+          (c.telefono ? '<div><b>Tel:</b> ' + esc(c.telefono) + '</div>' : '') +
+          (c.ciudad ? '<div><b>Ciudad:</b> ' + esc(c.ciudad) + '</div>' : '') +
+          (c.sub_categoria ? '<div><b>Segmento:</b> ' + esc(c.sub_categoria) + '</div>' : '') +
+          (c.ejecutivo_asignado ? '<div><b>Asignado:</b> ' + esc(c.ejecutivo_asignado) + '</div>' : '') +
+          (c.fecha_creacion ? '<div style="color:var(--subtle);font-size:11.5px;margin-top:3px;">Creado: ' + esc(String(c.fecha_creacion).substring(0,10)) + '</div>' : '') +
+        '</div>' +
+      '</div>';
+    }
+    return '<div class="card" style="margin-bottom:14px;padding:16px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">' +
+        '<div style="font-size:11.5px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.4px;">Posible duplicado #' + (idx+1) + '</div>' +
+        '<div style="font-size:11.5px;color:var(--subtle);background:#fef3c7;padding:3px 10px;border-radius:9px;">Motivo: ' + esc(motivo) + '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;">' +
+        colCard(a, 'A — Más antiguo') + colCard(b, 'B — Más reciente') +
+      '</div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">' +
+        '<button class="btn" onclick="rechazarFusion(\'' + esc(a.id) + '\',\'' + esc(b.id) + '\')" style="background:white;">No son duplicados</button>' +
+        '<button class="btn" onclick="fusionarDuplicados(\'' + esc(a.id) + '\',\'' + esc(b.id) + '\',\'a\')" style="background:#dbe4f5;color:#3a4d75;border-color:#9bb0d4;">Fusionar (mantener A)</button>' +
+        '<button class="btn primary" onclick="fusionarDuplicados(\'' + esc(a.id) + '\',\'' + esc(b.id) + '\',\'b\')">Fusionar (mantener B)</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+async function fusionarDuplicados(idA, idB, mantener){
+  if (!confirm('Confirmá la fusión. Los datos no marcados se perderán.')) return;
+  const r = await fetchAPI('crm_fusionar', null, { id_a: idA, id_b: idB, mantener: mantener, solicitante: USUARIO });
+  if (!r || !r.ok) { alert('Error: ' + ((r && r.error) || 'desconocido')); return; }
+  // Invalidar cache de contactos para que se vea la fusión
+  try { localStorage.removeItem('crm_cache_contactos_v2_' + USUARIO); } catch(e){}
+  CACHE.vMis = null; CACHE.vTodos = null;
+  await cargarDuplicados();
+}
+
+async function rechazarFusion(idA, idB){
+  const r = await fetchAPI('crm_rechazar_fusion', null, { id_a: idA, id_b: idB, solicitante: USUARIO });
+  if (!r || !r.ok) { alert('Error: ' + ((r && r.error) || 'desconocido')); return; }
+  await cargarDuplicados();
 }
 
 // ════════════════════════════════════════════════════════════════════════════

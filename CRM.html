@@ -4146,18 +4146,21 @@ function pintarFiltrosBloque(view, lista){
 
   let html = '';
 
-  // Fila 1: Agenda personal + botón limpiar
+  // Fila 1: Agenda personal — dropdown elegante + botón limpiar al final
+  const agendaConCnt = agendaOpts.filter(o => cntsAgenda[o.key] > 0);
+  const optsAgenda = ['<option value="">Todos · ' + total + '</option>']
+    .concat(agendaConCnt.map(o =>
+      '<option value="' + esc(o.key) + '"' + (f.agenda === o.key ? ' selected' : '') + '>' +
+        esc(o.label) + ' · ' + cntsAgenda[o.key] +
+      '</option>'
+    ));
   html += '<div class="filtro-grupo">' +
     '<span class="filtro-label">' +
       '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' +
       'Mi agenda' +
     '</span>' +
-    chipBtn('Todos · ' + total, '', !hayFiltro, 'data-action="limpiar"', ['#fff', '#5b21b6'], '<rect x="3" y="3" width="18" height="18" rx="2"/>') +
-    agendaOpts.filter(o => cntsAgenda[o.key] > 0).map(o =>
-      chipBtn(o.label, cntsAgenda[o.key], f.agenda === o.key,
-        'data-cat="agenda" ' + dAttr('data-valor', o.key), ['#fff7ed', '#92400e'], o.iconPath)
-    ).join('') +
-    (hayFiltro ? '<button class="filtros-clear" data-action="limpiar"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M18 6L6 18M6 6l12 12"/></svg>Limpiar</button>' : '') +
+    '<select class="filtro-select" data-cat="agenda" data-view="' + view + '">' + optsAgenda.join('') + '</select>' +
+    (hayFiltro ? '<button class="filtros-clear" data-action="limpiar"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M18 6L6 18M6 6l12 12"/></svg>Limpiar todo</button>' : '') +
   '</div>';
 
   // Fila 2: Segmentos — dropdown (organizado) en vez de muchos chips
@@ -4178,50 +4181,40 @@ function pintarFiltrosBloque(view, lista){
     '</div>';
   }
 
-  // Fila 3: Pipeline
+  // Fila 3: Pipeline — dropdown elegante
   if(Object.values(cntsEstado).some(n => n > 0)){
+    const totalPipe = Object.values(cntsEstado).reduce((s, n) => s + n, 0);
+    const optsPipe = ['<option value="">Todos los estados · ' + totalPipe + '</option>']
+      .concat(PIPELINE_BUCKETS.filter(b => cntsEstado[b.key] > 0).map(b =>
+        '<option value="' + esc(b.key) + '"' + (f.estado === b.key ? ' selected' : '') + '>' +
+          esc(b.label) + ' · ' + cntsEstado[b.key] +
+        '</option>'
+      ));
     html += '<div class="filtro-grupo">' +
       '<span class="filtro-label">' +
         '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' +
         'Pipeline' +
       '</span>' +
-      PIPELINE_BUCKETS.filter(b => cntsEstado[b.key] > 0).map(b =>
-        chipBtn(b.label, cntsEstado[b.key], f.estado === b.key,
-          'data-cat="estado" ' + dAttr('data-valor', b.key),
-          colorChip[b.key] || ['#eee', '#333'], '')
-      ).join('') +
+      '<select class="filtro-select" data-cat="estado" data-view="' + view + '">' + optsPipe.join('') + '</select>' +
     '</div>';
   }
 
-  // Fila 4: Etiquetas — dropdown si hay más de 4, chips si son pocas
+  // Fila 4: Etiquetas — dropdown elegante uniforme
   if(etiquetas.length){
-    if(etiquetas.length > 4){
-      const opts = ['<option value="">Todas las etiquetas · ' + etiquetas.length + '</option>']
-        .concat(etiquetas.map(([tag, cnt]) =>
-          '<option value="' + esc(tag).replace(/"/g, '&quot;') + '"' + (f.etiqueta === tag ? ' selected' : '') + '>' +
-            '#' + esc(tag) + ' · ' + cnt +
-          '</option>'
-        ));
-      html += '<div class="filtro-grupo">' +
-        '<span class="filtro-label">' +
-          '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>' +
-          'Etiquetas' +
-        '</span>' +
-        '<select class="filtro-select" data-cat="etiqueta" data-view="' + view + '">' + opts.join('') + '</select>' +
-      '</div>';
-    } else {
-      html += '<div class="filtro-grupo">' +
-        '<span class="filtro-label">' +
-          '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>' +
-          'Etiquetas' +
-        '</span>' +
-        etiquetas.map(([tag, cnt]) =>
-          chipBtn('#' + tag, cnt, f.etiqueta === tag,
-            'data-cat="etiqueta" ' + dAttr('data-valor', tag),
-            ['#fef3c7', '#92400e'], '')
-        ).join('') +
-      '</div>';
-    }
+    const totalEtiquetadas = etiquetas.reduce((s, [, c]) => s + c, 0);
+    const opts = ['<option value="">Todas las etiquetas · ' + totalEtiquetadas + '</option>']
+      .concat(etiquetas.map(([tag, cnt]) =>
+        '<option value="' + esc(tag).replace(/"/g, '&quot;') + '"' + (f.etiqueta === tag ? ' selected' : '') + '>' +
+          '#' + esc(tag) + ' · ' + cnt +
+        '</option>'
+      ));
+    html += '<div class="filtro-grupo">' +
+      '<span class="filtro-label">' +
+        '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>' +
+        'Etiquetas' +
+      '</span>' +
+      '<select class="filtro-select" data-cat="etiqueta" data-view="' + view + '">' + opts.join('') + '</select>' +
+    '</div>';
   }
 
   cont.innerHTML = html;

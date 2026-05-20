@@ -4232,13 +4232,12 @@ async function cargarContactos(view){
 
   container.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando contactos del Registro… (puede tardar 30-60 seg la primera vez)</div>';
 
-  const r = await fetchAPI('crm_contactos', { solicitante: USUARIO });
-  if(!r.ok){
-    container.innerHTML = '<div class="error-state"><b>Error:</b> ' + esc(r.error || 'desconocido') + '<br><br><small>Intentá refrescar la página en 30 segundos. El Apps Script puede tardar al "calentarse" después de no usarse un rato.</small></div>';
+  // Usar la promesa compartida — si initApp ya disparó el fetch, lo reusamos
+  const allContactos = await _fetchContactosUnico();
+  if(!allContactos || !allContactos.length){
+    container.innerHTML = '<div class="error-state"><b>Sin contactos.</b><br><small>Si esto persiste, refrescá en 30 segundos. El Apps Script puede tardar al "calentarse".</small></div>';
     return;
   }
-  const allContactos = r.contactos || [];
-  try { localStorage.setItem(cacheKey, JSON.stringify({ contactos: allContactos, ts: Date.now() })); } catch(e){}
   let lista = allContactos;
   if(view === 'vMis' && !verTodoElEquipo){
     lista = lista.filter(esOwner);
@@ -4898,48 +4897,55 @@ function _diasDesde(fechaStr){
 function _ultimaFecha(c){
   return c.ultima_actualizacion || c.fecha_creacion || c.fecha_ultima_interaccion || '';
 }
+// Promesa compartida para deduplicar fetches simultáneos de contactos.
+// Si initApp + cargarDashboard + pintarBannerListaPartida disparan a la vez, hacen UN solo fetch.
+window.__CONTACTOS_PROMISE = null;
+
 async function _cargarContactosBase(){
-  // Reusa CACHE.vTodos si existe; si no, hace fetch (compartido).
-  // Ya NO filtramos empresas — los contactos pre-cargados de la Campaña Mayo 2026 son
-  // instituciones (Hogar X, Escuela Y) que vienen sin nombre de persona pero los ejecutivos
-  // necesitan trabajarlos como contactos normales.
+  // Reusa CACHE.vTodos si existe (cache en memoria, instantáneo)
   if(CACHE.vTodos && CACHE.vTodos.length) return CACHE.vTodos;
+  const data = await _fetchContactosUnico();
+  CACHE.vTodos = data;
+  return data;
+}
+
+// Versión CRUDA (idéntica a _cargarContactosBase ahora). Se mantiene por compatibilidad.
+async function _cargarContactosCrudo(){
+  if(CACHE.vTodos && CACHE.vTodos.length) return CACHE.vTodos;
+  return await _fetchContactosUnico();
+}
+
+// Core: 1 sola promesa pendiente. Si hay una en vuelo, la reusa. Si no, lee cache local y dispara fetch.
+async function _fetchContactosUnico(){
+  // Dedupe: si ya hay un fetch en vuelo, esperamos ese mismo
+  if (window.__CONTACTOS_PROMISE) return window.__CONTACTOS_PROMISE;
   const cacheKey = 'crm_cache_contactos_v2_' + USUARIO;
+  // Intentar cache local (TTL 24h)
   try {
     const raw = localStorage.getItem(cacheKey);
     if(raw){
       const parsed = JSON.parse(raw);
       if(parsed && Array.isArray(parsed.contactos) && (Date.now() - (parsed.ts || 0) < 86400000)){
+        // Setear CACHE para que las próximas llamadas no entren acá
         CACHE.vTodos = parsed.contactos;
         return parsed.contactos;
       }
     }
   } catch(e){}
-  const r = await fetchAPI('crm_contactos', { solicitante: USUARIO });
-  if(!r.ok) return [];
-  try { localStorage.setItem(cacheKey, JSON.stringify({ contactos: r.contactos || [], ts: Date.now() })); } catch(e){}
-  CACHE.vTodos = r.contactos || [];
-  return CACHE.vTodos;
-}
-
-// Versión CRUDA: devuelve TODOS los contactos sin filtrar empresas.
-// (Después del fix de no filtrar empresas, esta función es idéntica a _cargarContactosBase pero
-//  la mantenemos para mantener semántica clara en el código del banner.)
-async function _cargarContactosCrudo(){
-  const cacheKey = 'crm_cache_contactos_v2_' + USUARIO;
-  try {
-    const raw = localStorage.getItem(cacheKey);
-    if(raw){
-      const parsed = JSON.parse(raw);
-      if(parsed && Array.isArray(parsed.contactos) && (Date.now() - (parsed.ts || 0) < 86400000)){
-        return parsed.contactos;
-      }
+  // Crear la promesa única y guardarla globalmente
+  window.__CONTACTOS_PROMISE = (async () => {
+    try {
+      const r = await fetchAPI('crm_contactos', { solicitante: USUARIO });
+      if(!r.ok) return [];
+      const lista = r.contactos || [];
+      try { localStorage.setItem(cacheKey, JSON.stringify({ contactos: lista, ts: Date.now() })); } catch(e){}
+      CACHE.vTodos = lista;
+      return lista;
+    } finally {
+      window.__CONTACTOS_PROMISE = null;
     }
-  } catch(e){}
-  const r = await fetchAPI('crm_contactos', { solicitante: USUARIO });
-  if(!r.ok) return [];
-  try { localStorage.setItem(cacheKey, JSON.stringify({ contactos: r.contactos || [], ts: Date.now() })); } catch(e){}
-  return r.contactos || [];
+  })();
+  return window.__CONTACTOS_PROMISE;
 }
 
 async function cargarPorCerrar(){

@@ -3371,8 +3371,11 @@ function cambiarPreviewEjec(nm){
 async function pintarBannerListaPartida(){
   const box = document.getElementById('dshListaPartida');
   if (!box) return;
+  // IMPORTANTE: usar _cargarContactosCrudo (NO _cargarContactosBase) porque los contactos
+  // pre-cargados de la campaña no tienen "nombre" (solo institucion) y _cargarContactosBase
+  // los filtra como "empresa". Aquí necesitamos TODA la lista (personas + empresas).
   let lista;
-  try { lista = await _cargarContactosBase(); } catch(e){ lista = []; }
+  try { lista = await _cargarContactosCrudo(); } catch(e){ lista = []; }
   if (!lista || !lista.length) { box.innerHTML = ''; return; }
 
   // Modo ADMIN sin drill-down: mostrar resumen del EQUIPO
@@ -3521,7 +3524,7 @@ function pintarBannerListaPartidaEquipo(box, lista){
 // Marca como vista la lista del equipo entero
 async function marcarListaPartidaEquipoVista(){
   try {
-    const lista = await _cargarContactosBase();
+    const lista = await _cargarContactosCrudo();
     const ids = (lista || []).filter(c => {
       const tags = parsearEtiquetas(c.etiquetas);
       return tags.some(t => /campa.?a mayo 2026/i.test(t));
@@ -3536,7 +3539,7 @@ async function marcarListaPartidaVista(){
   const ejecActivo = getEjecutivoEfectivo();
   if (!ejecActivo) return;
   try {
-    const lista = await _cargarContactosBase();
+    const lista = await _cargarContactosCrudo();
     const mios = (lista || []).filter(c => esOwnerDe(c, ejecActivo));
     const idsCampaña = mios.filter(c => {
       const tags = parsearEtiquetas(c.etiquetas);
@@ -4844,6 +4847,25 @@ async function _cargarContactosBase(){
   const lista = (r.contactos || []).filter(c => !esEmpresa(c));
   CACHE.vTodos = lista;
   return lista;
+}
+
+// Versión CRUDA: devuelve TODOS los contactos sin filtrar empresas.
+// Usar SOLO para el banner de lista de partida (los contactos pre-cargados son "empresas").
+async function _cargarContactosCrudo(){
+  const cacheKey = 'crm_cache_contactos_' + USUARIO;
+  try {
+    const raw = localStorage.getItem(cacheKey);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      if(parsed && Array.isArray(parsed.contactos) && (Date.now() - (parsed.ts || 0) < 86400000)){
+        return parsed.contactos;
+      }
+    }
+  } catch(e){}
+  const r = await fetchAPI('crm_contactos', { solicitante: USUARIO });
+  if(!r.ok) return [];
+  try { localStorage.setItem(cacheKey, JSON.stringify({ contactos: r.contactos || [], ts: Date.now() })); } catch(e){}
+  return r.contactos || [];
 }
 
 async function cargarPorCerrar(){

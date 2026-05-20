@@ -212,6 +212,8 @@ input,select,textarea{font-family:inherit; font-size:14px;}
 }
 .kpi-ranking b{ color:var(--ink); }
 .banner-campana-admin.collapsed .banner-camp-body{ display:none; }
+@keyframes pulse{ 0%, 100% { opacity:1; } 50% { opacity:0.55; } }
+@keyframes slideInRight{ from{ transform:translateX(120%); opacity:0; } to{ transform:translateX(0); opacity:1; } }
 .banner-campana-admin.collapsed .banner-camp-chevron{ transform:rotate(-90deg); }
 .kpi-delta-badge{
   display:inline-block; margin-top:8px; padding:3px 9px; border-radius:999px;
@@ -3370,25 +3372,101 @@ async function pintarBannerListaPartida(){
   const totalCamp = campana.length;
   const totalSin = sinTrabajar.length;
   if (totalSin === 0 && totalCamp === 0) { box.innerHTML = ''; return; }
+
+  // Detección de contactos NUEVOS desde la última visita del ejecutivo a este banner.
+  // Se guarda el set de IDs ya vistos en localStorage. Los IDs presentes hoy que no estaban
+  // antes se consideran "nuevos" y se muestran en el banner.
+  const keyVistos = 'crm_lista_partida_vistos_' + ejecActivo;
+  let vistosAntes = [];
+  try {
+    const raw = localStorage.getItem(keyVistos);
+    if (raw) vistosAntes = JSON.parse(raw) || [];
+  } catch(e){}
+  const setVistos = new Set(vistosAntes);
+  const idsCampaña = campana.map(c => c.id).filter(Boolean);
+  const nuevos = idsCampaña.filter(id => !setVistos.has(id));
+  const totalNuevos = nuevos.length;
+
   // Botón abre Mis Contactos con filtro etiqueta = Campaña mayo 2026 aplicado
   const onclickIr = 'irAListaPartida()';
   const onclickIrSin = 'irAListaPartida(true)';
+  const onclickMarcarVistos = 'marcarListaPartidaVista()';
   box.innerHTML =
     '<div style="background:linear-gradient(135deg,#fff7ed,#fef3c7);border:1px solid var(--gold);border-radius:12px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">' +
       '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--gold-deep, #5a3c10)" stroke-width="2.2" stroke-linecap="round" style="flex-shrink:0;"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>' +
       '<div style="flex:1;min-width:240px;">' +
-        '<div style="font-size:11px;font-weight:800;color:var(--gold-deep, #5a3c10);text-transform:uppercase;letter-spacing:.5px;">Tu lista de partida — Campaña Mayo 2026</div>' +
+        '<div style="display:flex;align-items:center;gap:8px;">' +
+          '<div style="font-size:11px;font-weight:800;color:var(--gold-deep, #5a3c10);text-transform:uppercase;letter-spacing:.5px;">Tu lista de partida — Campaña Mayo 2026</div>' +
+          (totalNuevos > 0 ? '<span style="background:#a04004;color:white;padding:2px 9px;border-radius:9px;font-size:10.5px;font-weight:800;letter-spacing:.3px;animation:pulse 2s infinite;">+' + totalNuevos + ' NUEVOS</span>' : '') +
+        '</div>' +
         '<div style="font-family:var(--font-sans);font-size:14.5px;color:var(--ink);font-weight:700;margin-top:3px;letter-spacing:.1px;">' +
           '<span style="color:var(--gold-deep);">' + totalCamp + '</span> empresas pre-cargadas listas para trabajar' +
           (totalSin > 0 ? ' · <span style="color:#a04004;">' + totalSin + ' sin contactar todavía</span>' : '') +
         '</div>' +
-        '<div style="font-size:12.5px;color:var(--gold-deep, #5a3c10);margin-top:2px;line-height:1.5;">Ya tienen institución, ciudad, sitio web y notas. Solo te falta llamarlas o escribirles.</div>' +
+        '<div style="font-size:12.5px;color:var(--gold-deep, #5a3c10);margin-top:2px;line-height:1.5;">' +
+          (totalNuevos > 0
+            ? '<b>Rayen agregó ' + totalNuevos + ' contacto' + (totalNuevos === 1 ? '' : 's') + ' nuevo' + (totalNuevos === 1 ? '' : 's') + '</b> desde la última vez que entraste. Hacé click abajo para verlos.'
+            : 'Ya tienen institución, ciudad, sitio web y notas. Solo te falta llamarlas o escribirles.') +
+        '</div>' +
       '</div>' +
-      '<div style="display:flex;gap:8px;flex-shrink:0;">' +
+      '<div style="display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">' +
+        (totalNuevos > 0 ? '<button onclick="' + onclickMarcarVistos + '" title="Marcar como visto y quitar el indicador" style="padding:9px 12px;background:transparent;color:var(--gold-deep, #5a3c10);border:1px solid var(--gold);border-radius:8px;font-weight:600;font-size:11.5px;cursor:pointer;font-family:var(--font-sans);">Marcar como visto</button>' : '') +
         (totalSin > 0 ? '<button onclick="' + onclickIrSin + '" style="padding:9px 16px;background:#a04004;color:white;border:none;border-radius:8px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:var(--font-sans);letter-spacing:.2px;">Ver las ' + totalSin + ' sin trabajar</button>' : '') +
         '<button onclick="' + onclickIr + '" style="padding:9px 16px;background:white;color:var(--gold-deep, #5a3c10);border:1px solid var(--gold);border-radius:8px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:var(--font-sans);letter-spacing:.2px;">Ver las ' + totalCamp + '</button>' +
       '</div>' +
     '</div>';
+
+  // Si hay nuevos contactos, mostrar un toast notificación SOLO la primera vez por sesión
+  // (para que no aparezca cada vez que vuelve al dashboard).
+  if (totalNuevos > 0) {
+    const flagSesion = 'crm_toast_lista_partida_shown_' + ejecActivo;
+    if (!sessionStorage.getItem(flagSesion)) {
+      mostrarToastNuevosContactos(totalNuevos, ejecActivo);
+      try { sessionStorage.setItem(flagSesion, '1'); } catch(e){}
+    }
+  }
+}
+
+// Marca como vista la lista actual: guarda los IDs vistos para que el "+N NUEVOS" desaparezca.
+async function marcarListaPartidaVista(){
+  const ejecActivo = getEjecutivoEfectivo();
+  if (!ejecActivo) return;
+  try {
+    const lista = await _cargarContactosBase();
+    const mios = (lista || []).filter(c => esOwnerDe(c, ejecActivo));
+    const idsCampaña = mios.filter(c => {
+      const tags = parsearEtiquetas(c.etiquetas);
+      return tags.some(t => /campa.?a mayo 2026/i.test(t));
+    }).map(c => c.id).filter(Boolean);
+    localStorage.setItem('crm_lista_partida_vistos_' + ejecActivo, JSON.stringify(idsCampaña));
+  } catch(e){}
+  pintarBannerListaPartida();
+}
+
+// Toast flotante en esquina inferior derecha avisando de nuevos contactos agregados.
+function mostrarToastNuevosContactos(cantidad, ejecutivo){
+  const existente = document.getElementById('toastNuevosContactos');
+  if (existente) existente.remove();
+  const toast = document.createElement('div');
+  toast.id = 'toastNuevosContactos';
+  toast.style.cssText = 'position:fixed;bottom:24px;right:24px;background:linear-gradient(135deg,#a04004,#d97706);color:white;padding:14px 18px;border-radius:12px;box-shadow:0 12px 36px rgba(0,0,0,0.28);z-index:9998;max-width:340px;font-family:var(--font-sans);animation:slideInRight .3s ease;';
+  toast.innerHTML =
+    '<div style="display:flex;align-items:flex-start;gap:10px;">' +
+      '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" style="flex-shrink:0;margin-top:1px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' +
+      '<div style="flex:1;">' +
+        '<div style="font-size:13.5px;font-weight:800;letter-spacing:.2px;">' + cantidad + ' contacto' + (cantidad === 1 ? '' : 's') + ' nuevo' + (cantidad === 1 ? '' : 's') + ' en tu lista de partida</div>' +
+        '<div style="font-size:12px;margin-top:3px;opacity:.92;line-height:1.4;">Rayen agregó empresas pre-cargadas a la Campaña Mayo 2026. Reviselas en el banner amarillo del dashboard.</div>' +
+      '</div>' +
+      '<button onclick="document.getElementById(\'toastNuevosContactos\').remove()" style="background:rgba(255,255,255,.18);border:none;color:white;width:24px;height:24px;border-radius:6px;cursor:pointer;font-size:16px;line-height:1;flex-shrink:0;">×</button>' +
+    '</div>';
+  document.body.appendChild(toast);
+  // Auto-cerrar a los 8 segundos
+  setTimeout(() => {
+    const t = document.getElementById('toastNuevosContactos');
+    if (t) t.style.transition = 'opacity .4s';
+    if (t) t.style.opacity = '0';
+    setTimeout(() => { if (t) t.remove(); }, 400);
+  }, 8000);
 }
 
 // Va a Mis Contactos con el filtro etiqueta = "Campaña mayo 2026" aplicado.
@@ -3560,14 +3638,16 @@ function pintarKpis(r, esCache){
   }
 
   function renderRanking(arr){
-    if(!esAdmin || !arr || !arr.length) return '';
-    // Mostramos TODO el equipo, incluso quien tenga 0 en el período activo (Rayen quiere verlos a todos).
-    // Solo descartamos quien tenga 0 en TODOS los períodos (semana/mes/anio) — alguien que nunca ha trabajado.
-    const top = arr
-      .filter(x => (x.semana||0) + (x.mes||0) + (x.anio||0) > 0)
+    if(!esAdmin) return '';
+    // Mostramos SIEMPRE TODO el equipo (sin filtro). Si el backend no manda a alguien,
+    // lo agregamos con 0 para que quede claro que aún no ha trabajado en ese KPI.
+    const equipoCanonico = ['William', 'Rayen Ogalde', 'Roberto', 'Maximiliano', 'Germán', 'Ximena Romero'];
+    const mapaBackend = {};
+    (arr || []).forEach(x => { mapaBackend[x.ejec] = x; });
+    const completo = equipoCanonico.map(e => mapaBackend[e] || { ejec:e, semana:0, mes:0, anio:0 });
+    const top = completo
       .map(x => '<span style="white-space:nowrap;">' + esc(x.ejec.split(' ')[0]) + ' <b>' + pickVal(x, periodo) + '</b></span>')
       .join(' · ');
-    if(!top) return '';
     return '<div class="kpi-ranking">' + top + '</div>';
   }
 

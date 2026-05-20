@@ -2420,7 +2420,7 @@ async function sincronizarConRegistro(forzar){
     alert(msg);
     // Limpiar cache cliente para forzar refresh
     CACHE.vMis = null; CACHE.vTodos = null; CACHE.vSinCat = null;
-    try { localStorage.removeItem('crm_cache_contactos_' + USUARIO); } catch(e) {}
+    try { localStorage.removeItem('crm_cache_contactos_v2_' + USUARIO); } catch(e) {}
     // Recargar vista actual si es de contactos
     const vActual = document.querySelector('.view.act');
     if (vActual && (vActual.id === 'vMis' || vActual.id === 'vTodos' || vActual.id === 'vSinCat')) {
@@ -4133,7 +4133,9 @@ async function cargarContactos(view){
   }
 
   // 1. Cache local (localStorage) — mostrar instantáneo si existe
-  const cacheKey = 'crm_cache_contactos_' + USUARIO;
+  // VERSION v2: incluye empresas pre-cargadas (antes filtraba esEmpresa, ahora no).
+  // Para invalidar caches viejos creados con el filtro anterior, usamos clave nueva.
+  const cacheKey = 'crm_cache_contactos_v2_' + USUARIO;
   let cachedAll = null;
   try {
     const raw = localStorage.getItem(cacheKey);
@@ -4146,7 +4148,8 @@ async function cargarContactos(view){
   } catch(e){}
 
   if(cachedAll){
-    let lista = cachedAll.filter(c => !esEmpresa(c));
+    // Ya no filtramos esEmpresa: los contactos pre-cargados (instituciones) son contactos válidos.
+    let lista = cachedAll;
     // Filtrar por owner SOLO si NO estoy actuando como admin
     if(view === 'vMis' && !verTodoElEquipo){
       lista = lista.filter(esOwner);
@@ -4172,7 +4175,7 @@ async function cargarContactos(view){
   }
   const allContactos = r.contactos || [];
   try { localStorage.setItem(cacheKey, JSON.stringify({ contactos: allContactos, ts: Date.now() })); } catch(e){}
-  let lista = allContactos.filter(c => !esEmpresa(c));
+  let lista = allContactos;
   if(view === 'vMis' && !verTodoElEquipo){
     lista = lista.filter(esOwner);
   }
@@ -4188,7 +4191,7 @@ async function refrescarContactosBackground(view, cacheKey){
     const allContactos = r.contactos || [];
     localStorage.setItem(cacheKey, JSON.stringify({ contactos: allContactos, ts: Date.now() }));
     const verTodoElEquipo = (ROL === 'admin' && MODO_VISTA === 'admin');
-    let lista = allContactos.filter(c => !esEmpresa(c));
+    let lista = allContactos;
     if(view === 'vMis' && !verTodoElEquipo){
       lista = lista.filter(esOwner);
     }
@@ -4827,32 +4830,34 @@ function _ultimaFecha(c){
   return c.ultima_actualizacion || c.fecha_creacion || c.fecha_ultima_interaccion || '';
 }
 async function _cargarContactosBase(){
-  // Reusa CACHE.vTodos si existe; si no, hace fetch (compartido)
+  // Reusa CACHE.vTodos si existe; si no, hace fetch (compartido).
+  // Ya NO filtramos empresas — los contactos pre-cargados de la Campaña Mayo 2026 son
+  // instituciones (Hogar X, Escuela Y) que vienen sin nombre de persona pero los ejecutivos
+  // necesitan trabajarlos como contactos normales.
   if(CACHE.vTodos && CACHE.vTodos.length) return CACHE.vTodos;
-  const cacheKey = 'crm_cache_contactos_' + USUARIO;
+  const cacheKey = 'crm_cache_contactos_v2_' + USUARIO;
   try {
     const raw = localStorage.getItem(cacheKey);
     if(raw){
       const parsed = JSON.parse(raw);
       if(parsed && Array.isArray(parsed.contactos) && (Date.now() - (parsed.ts || 0) < 86400000)){
-        const lista = parsed.contactos.filter(c => !esEmpresa(c));
-        CACHE.vTodos = lista;
-        return lista;
+        CACHE.vTodos = parsed.contactos;
+        return parsed.contactos;
       }
     }
   } catch(e){}
   const r = await fetchAPI('crm_contactos', { solicitante: USUARIO });
   if(!r.ok) return [];
   try { localStorage.setItem(cacheKey, JSON.stringify({ contactos: r.contactos || [], ts: Date.now() })); } catch(e){}
-  const lista = (r.contactos || []).filter(c => !esEmpresa(c));
-  CACHE.vTodos = lista;
-  return lista;
+  CACHE.vTodos = r.contactos || [];
+  return CACHE.vTodos;
 }
 
 // Versión CRUDA: devuelve TODOS los contactos sin filtrar empresas.
-// Usar SOLO para el banner de lista de partida (los contactos pre-cargados son "empresas").
+// (Después del fix de no filtrar empresas, esta función es idéntica a _cargarContactosBase pero
+//  la mantenemos para mantener semántica clara en el código del banner.)
 async function _cargarContactosCrudo(){
-  const cacheKey = 'crm_cache_contactos_' + USUARIO;
+  const cacheKey = 'crm_cache_contactos_v2_' + USUARIO;
   try {
     const raw = localStorage.getItem(cacheKey);
     if(raw){
@@ -5134,7 +5139,7 @@ async function dropEnKanban(event, columnaDestino){
   }
   // Invalidar cache local para reflejar el cambio en otras vistas
   try {
-    localStorage.removeItem('crm_cache_contactos_' + USUARIO);
+    localStorage.removeItem('crm_cache_contactos_v2_' + USUARIO);
     CACHE.vMis = null; CACHE.vTodos = null; CACHE.vCerrar = null; CACHE.vOlvidados = null;
   } catch(e){}
 }
@@ -5545,7 +5550,7 @@ async function eliminarContacto(id, nombre){
 
   // Limpiar cache y refrescar
   CACHE.vMis = null; CACHE.vTodos = null; CACHE.vSinCat = null;
-  try { localStorage.removeItem('crm_cache_contactos_' + USUARIO); } catch(e){}
+  try { localStorage.removeItem('crm_cache_contactos_v2_' + USUARIO); } catch(e){}
   alert('Contacto eliminado.');
 
   // Limpiar el detail pane y recargar lista
@@ -5873,7 +5878,7 @@ async function guardarNuevoContacto(forzar){
   cerrarModalNuevoContacto();
   // Limpiar caches y refrescar
   CACHE.vMis = null; CACHE.vTodos = null; CACHE.vSinCat = null;
-  try { localStorage.removeItem('crm_cache_contactos_' + USUARIO); } catch(e){}
+  try { localStorage.removeItem('crm_cache_contactos_v2_' + USUARIO); } catch(e){}
   toast && toast('Contacto creado correctamente', 'jade');
   const view = document.querySelector('.view.act');
   if (view && (view.id === 'vMis' || view.id === 'vTodos')) {
@@ -5984,7 +5989,7 @@ async function guardarSeguimientoInline(numCot, contactoId, btn){
   btn.disabled = false; btn.textContent = 'Guardar seguimiento';
   if(!r.ok){ alert('Error: ' + (r.error || 'desconocido')); return; }
   try {
-    localStorage.removeItem('crm_cache_contactos_' + USUARIO);
+    localStorage.removeItem('crm_cache_contactos_v2_' + USUARIO);
     CACHE.vMis = null; CACHE.vTodos = null;
   } catch(e){}
   // Refrescar la ficha si está en modal
@@ -6018,7 +6023,7 @@ function abrirModalNuevaReunion(contactoIdPreseleccionado){
   if(contactoIdPreseleccionado){
     // Preseleccionar desde la cache local
     try {
-      const raw = localStorage.getItem('crm_cache_contactos_' + USUARIO);
+      const raw = localStorage.getItem('crm_cache_contactos_v2_' + USUARIO);
       if(raw){
         const cache = JSON.parse(raw);
         const c = (cache.contactos || []).find(x => String(x.id) === String(contactoIdPreseleccionado));
@@ -6119,7 +6124,7 @@ async function guardarNuevaReunion(){
   btn.disabled = false; btn.textContent = 'Agendar reunión';
   if(!r.ok){ alert('Error: ' + (r.error || 'desconocido')); return; }
   try {
-    localStorage.removeItem('crm_cache_contactos_' + USUARIO);
+    localStorage.removeItem('crm_cache_contactos_v2_' + USUARIO);
     CACHE.vMis = null; CACHE.vTodos = null;
   } catch(e){}
   cerrarModalNuevaReunion();
@@ -6509,7 +6514,7 @@ async function ejecutarImport(simular){
     '</div>';
   if(!simular && res.ok > 0){
     try {
-      localStorage.removeItem('crm_cache_contactos_' + USUARIO);
+      localStorage.removeItem('crm_cache_contactos_v2_' + USUARIO);
       CACHE.vMis = null; CACHE.vTodos = null;
     } catch(e){}
   }
@@ -6541,7 +6546,7 @@ async function abrirModalEtiquetas(contactoId){
   // Cargar etiquetas actuales del cache
   let contacto = null;
   try {
-    const raw = localStorage.getItem('crm_cache_contactos_' + USUARIO);
+    const raw = localStorage.getItem('crm_cache_contactos_v2_' + USUARIO);
     if(raw){ const cache = JSON.parse(raw); contacto = (cache.contactos||[]).find(c => String(c.id) === String(contactoId)); }
   } catch(e){}
   const tagsActuales = parsearEtiquetas(contacto && contacto.etiquetas);
@@ -6621,7 +6626,7 @@ async function guardarEtiquetas(){
   btn.disabled = false; btn.textContent = 'Guardar';
   if(!r.ok){ alert('Error: ' + (r.error || 'desconocido')); return; }
   try {
-    localStorage.removeItem('crm_cache_contactos_' + USUARIO);
+    localStorage.removeItem('crm_cache_contactos_v2_' + USUARIO);
     CACHE.vMis = null; CACHE.vTodos = null;
   } catch(e){}
   cerrarModalEtiquetas();
@@ -6802,7 +6807,7 @@ async function abrirModalNuevaInteraccion(contactoId){
   // Cargar info del contacto desde cache local
   let contacto = null;
   try {
-    const cacheStr = localStorage.getItem('crm_cache_contactos_' + USUARIO);
+    const cacheStr = localStorage.getItem('crm_cache_contactos_v2_' + USUARIO);
     if(cacheStr){
       const cache = JSON.parse(cacheStr);
       contacto = (cache.contactos || []).find(c => String(c.id) === String(contactoId));
@@ -6850,7 +6855,7 @@ async function guardarNuevaInteraccion(){
   if(!r.ok){ alert('Error: ' + (r.error || 'desconocido')); return; }
 
   // Invalidar cache local para forzar refresh de la lista
-  try { localStorage.removeItem('crm_cache_contactos_' + USUARIO); CACHE.vMis = null; CACHE.vTodos = null; CACHE.vCuentas = null; } catch(e){}
+  try { localStorage.removeItem('crm_cache_contactos_v2_' + USUARIO); CACHE.vMis = null; CACHE.vTodos = null; CACHE.vCuentas = null; } catch(e){}
   cerrarModalNuevaInteraccion();
 
   // Refrescar ficha si está abierta
@@ -6883,7 +6888,7 @@ async function abrirModalNuevaTarea(contactoId){
     document.getElementById('nt-contacto-inst').textContent = '';
     let contacto = null;
     try {
-      const cacheStr = localStorage.getItem('crm_cache_contactos_' + USUARIO);
+      const cacheStr = localStorage.getItem('crm_cache_contactos_v2_' + USUARIO);
       if(cacheStr){
         const cache = JSON.parse(cacheStr);
         contacto = (cache.contactos || []).find(c => String(c.id) === String(contactoId));
@@ -7023,7 +7028,7 @@ async function guardarNuevaEmpresa(){
       alert('Error: ' + (r.error || 'desconocido')); return;
     }
   }
-  try { localStorage.removeItem('crm_cache_contactos_' + USUARIO); CACHE.vMis = null; CACHE.vTodos = null; CACHE.vCuentas = null; } catch(e){}
+  try { localStorage.removeItem('crm_cache_contactos_v2_' + USUARIO); CACHE.vMis = null; CACHE.vTodos = null; CACHE.vCuentas = null; } catch(e){}
   cerrarModalNuevaEmpresa();
   if(typeof cargarCuentas === 'function') cargarCuentas();
   // Refrescar vista activa si es de contactos
@@ -7718,7 +7723,7 @@ async function fusionarDuplicados(dryRun){
     '</div></div>';
   if (!dryRun) {
     CACHE.vMis = null; CACHE.vTodos = null; CACHE.vSinCat = null;
-    try { localStorage.removeItem('crm_cache_contactos_' + USUARIO); } catch(e){}
+    try { localStorage.removeItem('crm_cache_contactos_v2_' + USUARIO); } catch(e){}
   }
 }
 

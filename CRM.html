@@ -2502,10 +2502,27 @@ function initApp(user){
   setSaludo();
   cargarFiltrosLS();
   goView('vDashboard');
+  // Pre-carga agresiva en background: contactos + KPIs + reuniones + tareas (sin await,
+  // para que cuando el usuario navegue a Mis Contactos / Tareas / etc. ya esté todo en cache).
+  setTimeout(() => preCargarTodoEnBackground(), 200);
   // Cargar notificaciones pendientes y abrir modal si hay
   setTimeout(() => cargarNotificacionesYAbrir(), 1500);
   // Polling cada 60s para refrescar el contador
   setInterval(() => cargarNotificacionesYAbrir(true), 60000);
+}
+
+// Pre-carga en background todo lo que el usuario probablemente va a necesitar.
+// No bloquea la UI: si tarda 30s, no importa, lo verá ya cargado al navegar.
+async function preCargarTodoEnBackground(){
+  try {
+    // Disparar fetches en paralelo (no awaitamos individualmente)
+    const promesas = [
+      _cargarContactosCrudo().catch(() => null),
+      fetchAPI('crm_tareas_ejecutivo', { ejecutivo: USUARIO, solo_pendientes: true }).catch(() => null)
+    ];
+    // Esperar a que terminen (sin await que bloquee la UI principal)
+    await Promise.all(promesas);
+  } catch(e){}
 }
 
 function aplicarVisibilidadPorRol(){
@@ -3667,8 +3684,8 @@ async function cargarDashboard(){
     const raw = localStorage.getItem(_kpisCacheKey());
     if(raw){
       const parsed = JSON.parse(raw);
-      // 6 horas de TTL — suficiente para que entre al CRM rápido
-      if(parsed && parsed.ts && (Date.now() - parsed.ts) < 21600000) kpisCacheados = parsed.data;
+      // 24 horas de TTL — el dashboard pinta instantáneo desde cache, después refresca en background
+      if(parsed && parsed.ts && (Date.now() - parsed.ts) < 86400000) kpisCacheados = parsed.data;
     }
   } catch(e){}
   if(kpisCacheados){
@@ -4015,9 +4032,23 @@ async function cargarReunionesDashboard(){
   const container = document.getElementById('dshReuniones');
   const cntEl = document.getElementById('dshReunionesCount');
   if(!container) return;
-  container.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
+  const ejec = getEjecutivoEfectivo();
   const modoReu = hayDrillDown() ? 'ejecutiva' : MODO_VISTA;
-  let r = await fetchAPI('crm_reuniones_proximas', { ejecutivo: getEjecutivoEfectivo(), dias: 14, modo_vista: modoReu });
+  const keyReu = 'crm_cache_reuniones_' + ejec + '_' + modoReu;
+  // Pintar instantáneo desde cache si existe (TTL 30 min)
+  let pintadoDesdeCache = false;
+  try {
+    const raw = localStorage.getItem(keyReu);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.ts && (Date.now() - parsed.ts) < 1800000) {
+        renderReunionesDashboard(parsed.data || [], parsed.modo || 'proximas', container, cntEl);
+        pintadoDesdeCache = true;
+      }
+    }
+  } catch(e){}
+  if (!pintadoDesdeCache) container.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
+  let r = await fetchAPI('crm_reuniones_proximas', { ejecutivo: ejec, dias: 14, modo_vista: modoReu });
   if(cntEl) cntEl.textContent = (r && r.ok ? (r.reuniones||[]).length : 0);
   let reuniones = [];
   let modo = 'proximas';
@@ -4046,7 +4077,13 @@ async function cargarReunionesDashboard(){
       }));
     modo = 'fallback';
   }
-  // Actualizar el header del card según el modo
+  // Guardar cache para próximas cargas
+  try { localStorage.setItem(keyReu, JSON.stringify({ ts: Date.now(), data: reuniones, modo: modo })); } catch(e){}
+  renderReunionesDashboard(reuniones, modo, container, cntEl);
+}
+
+// Render reusable del card de reuniones del dashboard
+function renderReunionesDashboard(reuniones, modo, container, cntEl){
   const head = document.querySelector('.dsh-reuniones .card-hd h3');
   if(head){
     if(modo === 'proximas') head.textContent = 'Próximas reuniones (14 días)';
@@ -4075,11 +4112,30 @@ async function cargarReunionesDashboard(){
 async function cargarTareasDashboard(){
   const container = document.getElementById('dshTareas');
   const cnt = document.getElementById('dshTareasCount');
-  container.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
+  const ejec = getEjecutivoEfectivo();
+  const keyTareas = 'crm_cache_tareas_' + ejec;
+  // Pintar instantáneo con cache localStorage si existe (TTL 30 min)
+  try {
+    const raw = localStorage.getItem(keyTareas);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.ts && (Date.now() - parsed.ts) < 1800000) {
+        const tareasCache = parsed.data || [];
+        cnt.textContent = tareasCache.length;
+        if (!tareasCache.length) container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--mist);font-size:13px;">Sin tareas pendientes. ¡Buen trabajo!</div>';
+        else container.innerHTML = tareasCache.slice(0, 5).map(t => renderTarea(t)).join('');
+      } else {
+        container.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
+      }
+    } else {
+      container.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
+    }
+  } catch(e){ container.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>'; }
 
-  const r = await fetchAPI('crm_tareas_ejecutivo', { ejecutivo: getEjecutivoEfectivo(), solo_pendientes: true });
-  if(!r.ok){ container.innerHTML = ''; cnt.textContent = 0; return; }
+  const r = await fetchAPI('crm_tareas_ejecutivo', { ejecutivo: ejec, solo_pendientes: true });
+  if(!r.ok){ return; }
   const tareas = r.tareas || [];
+  try { localStorage.setItem(keyTareas, JSON.stringify({ ts: Date.now(), data: tareas })); } catch(e){}
   cnt.textContent = tareas.length;
 
   if(!tareas.length){

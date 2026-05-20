@@ -3347,16 +3347,17 @@ function cambiarPreviewEjec(nm){
 async function pintarBannerListaPartida(){
   const box = document.getElementById('dshListaPartida');
   if (!box) return;
-  // No mostrar en modo admin sin drill-down (Rayen ve totales del equipo, no lista de partida)
+  let lista;
+  try { lista = await _cargarContactosBase(); } catch(e){ lista = []; }
+  if (!lista || !lista.length) { box.innerHTML = ''; return; }
+
+  // Modo ADMIN sin drill-down: mostrar resumen del EQUIPO
   if (ROL === 'admin' && getModoVista() === 'admin' && !hayDrillDown()) {
-    box.innerHTML = '';
+    pintarBannerListaPartidaEquipo(box, lista);
     return;
   }
   const ejecActivo = getEjecutivoEfectivo();
   if (!ejecActivo) { box.innerHTML = ''; return; }
-  let lista;
-  try { lista = await _cargarContactosBase(); } catch(e){ lista = []; }
-  if (!lista || !lista.length) { box.innerHTML = ''; return; }
   // Filtrar a contactos del ejecutivo activo + etiqueta "Campaña mayo 2026"
   const mios = lista.filter(c => esOwnerDe(c, ejecActivo));
   const campana = mios.filter(c => {
@@ -3425,6 +3426,85 @@ async function pintarBannerListaPartida(){
       try { sessionStorage.setItem(flagSesion, '1'); } catch(e){}
     }
   }
+}
+
+// Versión EQUIPO del banner: muestra el total de empresas pre-cargadas por ejecutivo (admin sin drill-down).
+function pintarBannerListaPartidaEquipo(box, lista){
+  // Agrupar por ejecutivo asignado
+  const porEjec = {};
+  let totalEquipo = 0;
+  lista.forEach(c => {
+    const tags = parsearEtiquetas(c.etiquetas);
+    if (!tags.some(t => /campa.?a mayo 2026/i.test(t))) return;
+    const ej = String(c.ejecutivo_asignado || c.ejecutivo_creador || '').trim();
+    if (!ej) return;
+    const key = ej.split(' ')[0]; // William, Rayen, Roberto, etc.
+    porEjec[key] = (porEjec[key] || 0) + 1;
+    totalEquipo++;
+  });
+  if (totalEquipo === 0) { box.innerHTML = ''; return; }
+  // Detectar nuevos contactos del EQUIPO desde la última visita admin a este banner
+  const keyVistosEq = 'crm_lista_partida_vistos_EQUIPO';
+  let vistosAntes = [];
+  try { const r = localStorage.getItem(keyVistosEq); if (r) vistosAntes = JSON.parse(r) || []; } catch(e){}
+  const setVistos = new Set(vistosAntes);
+  const idsCampana = lista.filter(c => {
+    const tags = parsearEtiquetas(c.etiquetas);
+    return tags.some(t => /campa.?a mayo 2026/i.test(t));
+  }).map(c => c.id).filter(Boolean);
+  const nuevos = idsCampana.filter(id => !setVistos.has(id));
+  const totalNuevos = nuevos.length;
+
+  // Tabla por ejecutivo
+  const equipoCanonico = ['William', 'Roberto', 'Germán', 'Maximiliano', 'Rayen', 'Ximena'];
+  const filas = equipoCanonico.map(e => {
+    const cant = porEjec[e] || 0;
+    return '<div onclick="cambiarDrillDown(\'' + (e === 'Rayen' ? 'Rayen Ogalde' : (e === 'William' ? 'William Marin' : e)).replace(/'/g, "\\'") + '\')" style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid rgba(91,33,182,.1);cursor:pointer;" title="Click para ver el dashboard de ' + esc(e) + '">' +
+      '<span style="font-weight:700;color:var(--purple-dk);font-size:13px;">' + esc(e) + '</span>' +
+      '<span style="font-weight:700;color:var(--gold-deep, #5a3c10);font-size:13.5px;">' + cant + ' empresas</span>' +
+    '</div>';
+  }).join('');
+
+  box.innerHTML =
+    '<div style="background:linear-gradient(135deg,#fff7ed,#fef3c7);border:1px solid var(--gold);border-radius:12px;padding:14px 18px;margin-bottom:16px;">' +
+      '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
+        '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--gold-deep, #5a3c10)" stroke-width="2.2" stroke-linecap="round" style="flex-shrink:0;"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>' +
+        '<div style="flex:1;">' +
+          '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+            '<div style="font-size:11px;font-weight:800;color:var(--gold-deep, #5a3c10);text-transform:uppercase;letter-spacing:.5px;">Empresas pre-cargadas del equipo — Campaña Mayo 2026</div>' +
+            (totalNuevos > 0 ? '<span style="background:#a04004;color:white;padding:2px 9px;border-radius:9px;font-size:10.5px;font-weight:800;letter-spacing:.3px;animation:pulse 2s infinite;">+' + totalNuevos + ' NUEVOS</span>' : '') +
+          '</div>' +
+          '<div style="font-family:var(--font-sans);font-size:14.5px;color:var(--ink);font-weight:700;margin-top:3px;">' +
+            '<span style="color:var(--gold-deep);">' + totalEquipo + '</span> empresas pre-cargadas asignadas al equipo' +
+          '</div>' +
+        '</div>' +
+        (totalNuevos > 0 ? '<button onclick="marcarListaPartidaEquipoVista()" style="padding:8px 12px;background:transparent;color:var(--gold-deep, #5a3c10);border:1px solid var(--gold);border-radius:8px;font-weight:600;font-size:11.5px;cursor:pointer;font-family:var(--font-sans);">Marcar como visto</button>' : '') +
+      '</div>' +
+      '<div style="margin-top:10px;">' + filas + '</div>' +
+      '<div style="font-size:11px;color:var(--gold-deep, #5a3c10);margin-top:8px;opacity:.8;">Click en un ejecutivo para ver su dashboard completo.</div>' +
+    '</div>';
+
+  // Toast en primera visita de la sesión con admin
+  if (totalNuevos > 0) {
+    const flagSesion = 'crm_toast_lista_partida_eq_shown';
+    if (!sessionStorage.getItem(flagSesion)) {
+      mostrarToastNuevosContactos(totalNuevos, 'el equipo');
+      try { sessionStorage.setItem(flagSesion, '1'); } catch(e){}
+    }
+  }
+}
+
+// Marca como vista la lista del equipo entero
+async function marcarListaPartidaEquipoVista(){
+  try {
+    const lista = await _cargarContactosBase();
+    const ids = (lista || []).filter(c => {
+      const tags = parsearEtiquetas(c.etiquetas);
+      return tags.some(t => /campa.?a mayo 2026/i.test(t));
+    }).map(c => c.id).filter(Boolean);
+    localStorage.setItem('crm_lista_partida_vistos_EQUIPO', JSON.stringify(ids));
+  } catch(e){}
+  pintarBannerListaPartida();
 }
 
 // Marca como vista la lista actual: guarda los IDs vistos para que el "+N NUEVOS" desaparezca.

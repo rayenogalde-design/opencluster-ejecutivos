@@ -1755,6 +1755,10 @@ body{
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         Todos los Contactos
       </div>
+      <div class="side-tab" data-view="vProductosCampana" id="navProductosCampana" onclick="goView('vProductosCampana')">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        Productos Campaña
+      </div>
       <div class="side-tab" data-view="vMiTerritorio" id="navMiTerritorio" onclick="goView('vMiTerritorio')">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l3-3 12 12-3 3z"/><path d="M14 14l7 7"/></svg>
         Mi Territorio
@@ -1817,6 +1821,7 @@ body{
           <p id="dshFecha">—</p>
         </div>
         <div id="dshCampana"></div>
+        <div id="dshProductosCampanaCard"></div>
         <div id="dshListaPartida"></div>
         <div id="dshProductos"></div>
         <div class="kpis" id="dshKpis"></div>
@@ -1916,6 +1921,31 @@ body{
         </div>
         <div id="filtrosTodos" class="filtros-bloque"></div>
         <div id="listTodos"></div>
+      </div>
+
+      <!-- ═══ Productos Campaña ═══ -->
+      <div class="view" id="vProductosCampana">
+        <div class="sec-head">
+          <h1>Productos Campaña</h1>
+          <p>Catálogo interno con las 68 fichas de producto. Buscá por nombre, marca o SKU y se abre la ficha completa con precios por volumen.</p>
+        </div>
+        <div class="pc-buscador-bloque">
+          <div class="pc-buscador">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <input type="text" id="pcInput" placeholder="Buscar producto, marca o SKU…" oninput="filtrarProductosCampana()" autocomplete="off">
+            <button type="button" class="pc-buscador-clear" id="pcClear" onclick="limpiarBusquedaCampana()" style="display:none;" aria-label="Limpiar">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div class="pc-familias" id="pcFamilias"></div>
+        </div>
+        <div class="pc-stats" id="pcStats"></div>
+        <div class="pc-grid" id="pcGrid"></div>
+        <div class="pc-empty" id="pcEmpty" style="display:none;">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <h3>Sin resultados</h3>
+          <p>Probá con otra palabra o limpiá el filtro.</p>
+        </div>
       </div>
 
       <!-- ═══ Mi Territorio ═══ -->
@@ -3251,6 +3281,7 @@ function goView(id){
     case 'vOlvidados':       cargarOlvidados(); break;
     case 'vTerritorios':     cargarTerritorios(); break;
     case 'vMiTerritorio':    cargarMiTerritorio(); break;
+    case 'vProductosCampana': cargarProductosCampana(); break;
     case 'vAud':             cargarAuditoria(); break;
     case 'vMigracion':       /* no autoload */ break;
   }
@@ -4303,6 +4334,7 @@ window.__DASH_FETCH_TOKEN = 0;
 async function cargarDashboard(){
   setSaludo();
   pintarBannerCampana();
+  pintarTarjetaProductosCampana();
   pintarBannerListaPartida();
   pintarProductosSugeridos();
 
@@ -9023,24 +9055,40 @@ async function correrMigracion(dryRun){
 
 /* ═══════════════════════════════════════════════════════════════
    FICHAS DE PRODUCTO — 68 fichas internas para el equipo comercial
-   Carga fichas.json y las muestra en el modal de producto cuando
-   hay match por SKU. Uso interno (no público).
+   Carga fichas.json y las pone disponibles globalmente para:
+   - Tarjeta "Productos Campaña" del dashboard
+   - Vista vProductosCampana (buscador + ficha detalle)
+   - Modal de producto sugerido (match por SKU)
    ═══════════════════════════════════════════════════════════════ */
 window.__FICHAS = [];
 window.__FICHAS_BY_SKU = {};
+window.__FICHAS_LOADED = false;
+window.__FICHA_SELECCIONADA = null;
+window.__FICHA_FAMILIA_FILTRO = null;
+
+function _indexarFichas(data){
+  window.__FICHAS = Array.isArray(data) ? data : [];
+  window.__FICHAS_BY_SKU = {};
+  window.__FICHAS.forEach(f => {
+    if(!f.sku) return;
+    if(!window.__FICHAS_BY_SKU[f.sku]) window.__FICHAS_BY_SKU[f.sku] = [];
+    window.__FICHAS_BY_SKU[f.sku].push(f);
+  });
+  window.__FICHAS_LOADED = true;
+}
+
 (function cargarFichas(){
+  // 1. Si hay JSON embebido inline, usarlo directo (funciona en file:// y servidor).
+  const inline = document.getElementById('fichasData');
+  if(inline && inline.textContent.trim()){
+    try { _indexarFichas(JSON.parse(inline.textContent)); return; }
+    catch(e){ /* cae a fetch */ }
+  }
+  // 2. Fallback: fetch del archivo en el repo (GitHub Pages).
   fetch('fichas.json', { cache: 'no-store' })
     .then(r => r.ok ? r.json() : Promise.reject(r.status))
-    .then(data => {
-      window.__FICHAS = Array.isArray(data) ? data : [];
-      window.__FICHAS_BY_SKU = {};
-      window.__FICHAS.forEach(f => {
-        if(!f.sku) return;
-        if(!window.__FICHAS_BY_SKU[f.sku]) window.__FICHAS_BY_SKU[f.sku] = [];
-        window.__FICHAS_BY_SKU[f.sku].push(f);
-      });
-    })
-    .catch(() => { /* silencio: las fichas son opcionales */ });
+    .then(_indexarFichas)
+    .catch(() => { /* silencio */ });
 })();
 
 function formatearPrecioCLP(v){
@@ -9100,6 +9148,179 @@ function renderFichaCompleta(f){
         '</div>'
       : '') +
     '</div>';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TARJETA "PRODUCTOS CAMPAÑA" EN DASHBOARD + VISTA BUSCADOR
+   ═══════════════════════════════════════════════════════════════ */
+function pintarTarjetaProductosCampana(){
+  const box = document.getElementById('dshProductosCampanaCard');
+  if(!box) return;
+  const total = (window.__FICHAS || []).length;
+  // Si todavía no cargaron las fichas, mostrar la tarjeta igual con "Cargando…"
+  box.innerHTML =
+    '<div class="pc-card-dashboard" onclick="goView(\'vProductosCampana\')" role="button" tabindex="0" onkeypress="if(event.key===\'Enter\'||event.key===\' \')goView(\'vProductosCampana\')">' +
+      '<div class="pc-card-dashboard-icon">' +
+        '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>' +
+      '</div>' +
+      '<div class="pc-card-dashboard-body">' +
+        '<div class="pc-card-dashboard-label">Productos Campaña</div>' +
+        '<div class="pc-card-dashboard-title">Catálogo completo con precios</div>' +
+        '<div class="pc-card-dashboard-sub">' + (total ? total + ' productos · busca por nombre, marca o SKU' : 'Cargando catálogo…') + '</div>' +
+      '</div>' +
+      '<div class="pc-card-dashboard-cta">' +
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>' +
+      '</div>' +
+    '</div>';
+}
+
+function _esperarFichas(cb, intentos){
+  intentos = intentos == null ? 20 : intentos;
+  if(window.__FICHAS_LOADED){ cb(); return; }
+  if(intentos <= 0){ cb(); return; }
+  setTimeout(() => _esperarFichas(cb, intentos - 1), 150);
+}
+
+function cargarProductosCampana(){
+  window.__FICHA_SELECCIONADA = null;
+  window.__FICHA_FAMILIA_FILTRO = null;
+  const input = document.getElementById('pcInput');
+  if(input) input.value = '';
+  _esperarFichas(() => {
+    pintarChipsFamilias();
+    renderListaProductosCampana();
+    // Refrescar también la tarjeta del dashboard (puede que ya tengamos total real)
+    pintarTarjetaProductosCampana();
+  });
+}
+
+function pintarChipsFamilias(){
+  const box = document.getElementById('pcFamilias');
+  if(!box) return;
+  const familias = {};
+  (window.__FICHAS || []).forEach(f => {
+    if(!f.familia_nombre) return;
+    if(!familias[f.familia_nombre]){
+      familias[f.familia_nombre] = { nombre: f.familia_nombre, color: f.color_primary, count: 0, slug: f.familia_slug };
+    }
+    familias[f.familia_nombre].count++;
+  });
+  const lista = Object.values(familias).sort((a,b) => b.count - a.count);
+  const activa = window.__FICHA_FAMILIA_FILTRO;
+  box.innerHTML =
+    '<button type="button" class="pc-fam-chip ' + (!activa ? 'act' : '') + '" onclick="filtrarFamiliaCampana(null)">Todas <span class="pc-fam-count">' + (window.__FICHAS || []).length + '</span></button>' +
+    lista.map(f => {
+      const act = activa === f.nombre ? 'act' : '';
+      const style = activa === f.nombre ? ' style="background:' + f.color + ';border-color:' + f.color + ';color:white;"' : ' style="border-color:' + f.color + ';color:' + f.color + ';"';
+      return '<button type="button" class="pc-fam-chip ' + act + '"' + style + ' onclick="filtrarFamiliaCampana(\'' + f.nombre.replace(/'/g,"\\'") + '\')">' + esc(f.nombre) + ' <span class="pc-fam-count">' + f.count + '</span></button>';
+    }).join('');
+}
+
+function filtrarFamiliaCampana(nombre){
+  window.__FICHA_FAMILIA_FILTRO = (window.__FICHA_FAMILIA_FILTRO === nombre) ? null : nombre;
+  pintarChipsFamilias();
+  renderListaProductosCampana();
+}
+
+function filtrarProductosCampana(){
+  renderListaProductosCampana();
+  const input = document.getElementById('pcInput');
+  const clr = document.getElementById('pcClear');
+  if(input && clr) clr.style.display = input.value ? 'inline-flex' : 'none';
+}
+
+function limpiarBusquedaCampana(){
+  const input = document.getElementById('pcInput');
+  if(input){ input.value = ''; input.focus(); }
+  renderListaProductosCampana();
+  const clr = document.getElementById('pcClear');
+  if(clr) clr.style.display = 'none';
+}
+
+function _filtrarFichas(){
+  const q = ((document.getElementById('pcInput') || {}).value || '').trim().toLowerCase();
+  const fam = window.__FICHA_FAMILIA_FILTRO;
+  return (window.__FICHAS || []).filter(f => {
+    if(fam && f.familia_nombre !== fam) return false;
+    if(!q) return true;
+    return (
+      (f.nombre || '').toLowerCase().includes(q) ||
+      (f.marca || '').toLowerCase().includes(q) ||
+      (f.sku || '').toLowerCase().includes(q) ||
+      (f.familia_nombre || '').toLowerCase().includes(q) ||
+      (Array.isArray(f.indicado) && f.indicado.some(i => (i||'').toLowerCase().includes(q)))
+    );
+  });
+}
+
+function renderListaProductosCampana(){
+  const grid = document.getElementById('pcGrid');
+  const empty = document.getElementById('pcEmpty');
+  const stats = document.getElementById('pcStats');
+  if(!grid) return;
+  const fichas = _filtrarFichas();
+  if(stats) stats.textContent = fichas.length + (fichas.length === 1 ? ' producto' : ' productos');
+  if(!fichas.length){
+    grid.innerHTML = '';
+    if(empty) empty.style.display = '';
+    return;
+  }
+  if(empty) empty.style.display = 'none';
+  const seleccionado = window.__FICHA_SELECCIONADA;
+  grid.innerHTML = fichas.map(f => {
+    const sel = seleccionado && seleccionado === f.id ? 'sel' : '';
+    const color = f.color_primary || 'var(--oct-sky)';
+    const statusCls = (f.status || '').toLowerCase().includes('disponible') ? 'pc-status-ok'
+                    : (f.status || '').toLowerCase().includes('bajo pedido') ? 'pc-status-warn' : '';
+    return '<article class="pc-tarjeta ' + sel + '" onclick="abrirFichaCampanaDetalle(\'' + f.id + '\')">' +
+        '<div class="pc-tarjeta-color" style="background:' + color + ';"></div>' +
+        '<div class="pc-tarjeta-fam" style="color:' + color + ';">' + esc(f.familia_nombre || '') + '</div>' +
+        '<div class="pc-tarjeta-nombre">' + esc(f.nombre || '') + '</div>' +
+        '<div class="pc-tarjeta-marca">' + esc(f.marca || '') + '</div>' +
+        '<div class="pc-tarjeta-foot">' +
+          (f.status ? '<span class="pc-tarjeta-status ' + statusCls + '">' + esc(f.status) + '</span>' : '') +
+          (f.sku ? '<span class="pc-tarjeta-sku">' + esc(f.sku) + '</span>' : '') +
+        '</div>' +
+        ((f.precio_v1) ? '<div class="pc-tarjeta-precio">Desde <strong>' + formatearPrecioCLP(f.precio_v1) + '</strong></div>' : '') +
+      '</article>';
+  }).join('');
+}
+
+function abrirFichaCampanaDetalle(id){
+  const ficha = (window.__FICHAS || []).find(f => f.id === id);
+  if(!ficha) return;
+  let modal = document.getElementById('modalFichaCampana');
+  if(!modal){
+    modal = document.createElement('div');
+    modal.id = 'modalFichaCampana';
+    modal.className = 'modal-backdrop';
+    modal.style.zIndex = '10000';
+    modal.innerHTML =
+      '<div class="modal-box" style="max-width:680px;">' +
+        '<div class="modal-head">' +
+          '<h2 id="mfc-titulo" style="flex:1;"></h2>' +
+          '<button class="modal-close" onclick="cerrarFichaCampana()" aria-label="Cerrar">' +
+            '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>' +
+          '</button>' +
+        '</div>' +
+        '<div class="modal-body" id="mfc-body" style="max-height:75vh;overflow-y:auto;padding:20px 22px;"></div>' +
+        '<div class="modal-foot"><button class="btn primary" onclick="cerrarFichaCampana()">Cerrar</button></div>' +
+      '</div>';
+    document.body.appendChild(modal);
+    modal.addEventListener('click', e => { if(e.target === modal) cerrarFichaCampana(); });
+  }
+  document.getElementById('mfc-titulo').textContent = ficha.nombre || 'Ficha';
+  document.getElementById('mfc-body').innerHTML = renderFichaCompleta(ficha);
+  modal.classList.add('show');
+  window.__FICHA_SELECCIONADA = id;
+  renderListaProductosCampana();
+}
+
+function cerrarFichaCampana(){
+  const m = document.getElementById('modalFichaCampana');
+  if(m) m.classList.remove('show');
+  window.__FICHA_SELECCIONADA = null;
+  renderListaProductosCampana();
 }
 </script>
 
@@ -9238,6 +9459,270 @@ function renderFichaCompleta(f){
 }
 @media (max-width: 600px){
   .fch-tarifa-grid{ grid-template-columns: 1fr; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TARJETA "PRODUCTOS CAMPAÑA" EN DASHBOARD
+   ═══════════════════════════════════════════════════════════════ */
+.pc-card-dashboard{
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: linear-gradient(135deg, var(--oct-navy) 0%, #002a8a 100%);
+  color: white;
+  border-radius: 14px;
+  padding: 18px 22px;
+  margin-bottom: 16px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  font-family: var(--font-sans);
+  border: none;
+  box-shadow: 0 4px 14px rgba(0,26,96,0.18);
+}
+.pc-card-dashboard:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(0,26,96,0.28);
+}
+.pc-card-dashboard:focus{ outline: 3px solid var(--oct-sky); outline-offset: 2px; }
+.pc-card-dashboard-icon{
+  width: 46px; height: 46px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.15);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: white;
+}
+.pc-card-dashboard-body{ flex: 1; min-width: 0; }
+.pc-card-dashboard-label{
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  opacity: 0.78;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.pc-card-dashboard-title{
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+.pc-card-dashboard-sub{
+  font-size: 12.5px;
+  opacity: 0.85;
+  font-weight: 500;
+}
+.pc-card-dashboard-cta{
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.18);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   VISTA PRODUCTOS CAMPAÑA — buscador + grid de tarjetas
+   ═══════════════════════════════════════════════════════════════ */
+.pc-buscador-bloque{
+  margin-bottom: 16px;
+}
+.pc-buscador{
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: white;
+  border: 1px solid var(--oct-border);
+  border-radius: 12px;
+  padding: 0 14px;
+  height: 46px;
+  box-shadow: 0 1px 2px rgba(0,26,96,0.04);
+  transition: border-color 0.15s, box-shadow 0.15s;
+  margin-bottom: 14px;
+  font-family: var(--font-sans);
+}
+.pc-buscador:focus-within{
+  border-color: var(--oct-sky);
+  box-shadow: 0 0 0 3px var(--oct-softblue);
+}
+.pc-buscador > svg{ color: var(--oct-text-mute); flex-shrink: 0; }
+.pc-buscador input{
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  padding: 0 10px;
+  font-size: 14.5px;
+  color: var(--oct-text);
+  font-family: var(--font-sans);
+}
+.pc-buscador input::placeholder{ color: var(--oct-text-mute); }
+.pc-buscador-clear{
+  background: var(--oct-bg);
+  border: none;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  color: var(--oct-text-soft);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.pc-buscador-clear:hover{ background: var(--oct-divider); color: var(--oct-text); }
+
+.pc-familias{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pc-fam-chip{
+  background: white;
+  border: 1px solid var(--oct-divider);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--oct-text);
+  font-family: var(--font-sans);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.pc-fam-chip:hover{ border-color: var(--oct-sky); }
+.pc-fam-chip.act{ background: var(--oct-navy); border-color: var(--oct-navy); color: white; }
+.pc-fam-count{
+  background: rgba(0,0,0,0.06);
+  color: inherit;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+.pc-fam-chip.act .pc-fam-count{ background: rgba(255,255,255,0.22); }
+
+.pc-stats{
+  font-size: 12px;
+  color: var(--oct-text-soft);
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+.pc-grid{
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+.pc-tarjeta{
+  background: white;
+  border: 1px solid var(--oct-border);
+  border-radius: 12px;
+  padding: 14px 16px 12px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+  font-family: var(--font-sans);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pc-tarjeta:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0,26,96,0.10);
+  border-color: var(--oct-border);
+}
+.pc-tarjeta.sel{ border-color: var(--oct-sky); box-shadow: 0 0 0 3px var(--oct-softblue); }
+.pc-tarjeta-color{
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+}
+.pc-tarjeta-fam{
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+.pc-tarjeta-nombre{
+  font-size: 14.5px;
+  font-weight: 800;
+  color: var(--oct-navy);
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+.pc-tarjeta-marca{
+  font-size: 11.5px;
+  color: var(--oct-text-soft);
+}
+.pc-tarjeta-foot{
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 8px;
+}
+.pc-tarjeta-status{
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--oct-bg);
+  color: var(--oct-text-soft);
+}
+.pc-tarjeta-status.pc-status-ok{ background: #E1F5EE; color: #04342C; }
+.pc-tarjeta-status.pc-status-warn{ background: var(--oct-cream); color: #92400e; }
+.pc-tarjeta-sku{
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--oct-text-soft);
+  background: var(--oct-bg);
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.02em;
+}
+.pc-tarjeta-precio{
+  font-size: 12.5px;
+  color: var(--oct-text);
+  padding-top: 6px;
+  border-top: 1px dashed var(--oct-border);
+  margin-top: 2px;
+}
+.pc-tarjeta-precio strong{
+  color: var(--oct-orange);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.pc-empty{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 56px 20px;
+  color: var(--oct-text-mute);
+  text-align: center;
+  background: white;
+  border: 1px dashed var(--oct-divider);
+  border-radius: 12px;
+}
+.pc-empty h3{ font-size: 16px; font-weight: 700; color: var(--oct-text-soft); margin: 0; }
+.pc-empty p{ font-size: 13px; margin: 0; }
+@media (max-width: 600px){
+  .pc-card-dashboard{ flex-wrap: wrap; }
+  .pc-card-dashboard-cta{ display: none; }
 }
 </style>
 

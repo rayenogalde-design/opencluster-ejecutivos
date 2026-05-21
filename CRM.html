@@ -8168,72 +8168,147 @@ async function cargarMiTerritorio(){
   const cont = document.getElementById('miTerritorioContainer');
   if (!cont) return;
   cont.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando tu territorio…</div>';
-  // Ejecutivo efectivo (para drill-down de admin)
+
   const ejec = getEjecutivoEfectivo();
-  // 1. Cargar territorios desde el backend
   const r = await fetchAPI('crm_territorios', { solicitante: USUARIO });
   if (!r || !r.ok) {
     cont.innerHTML = '<div class="error-state">Error: ' + esc((r && r.error) || 'desconocido') + '</div>';
     return;
   }
   const todos = r.territorios || [];
-  // Filtrar las subcategorías asignadas al ejecutivo efectivo (comparación tolerante)
   const e = String(ejec || '').toLowerCase();
   const eCorto = e.split(' ')[0];
   const mias = todos.filter(t => {
     const ej = String(t.ejecutivo || '').toLowerCase();
     return ej === e || ej === eCorto || ej.indexOf(eCorto) >= 0;
   });
-  // 2. Contar cuántos contactos tiene en cada subcategoría
+
+  // Cargar contactos para cruzar
   let lista;
-  try { lista = await _cargarContactosCrudo(); } catch(e){ lista = []; }
-  const conteoPorSub = {};
-  (lista || []).forEach(c => {
-    if (!esOwnerDe(c, ejec)) return;
+  try { lista = await _cargarContactosCrudo(); } catch(err){ lista = []; }
+  const misContactos = (lista || []).filter(c => esOwnerDe(c, ejec));
+
+  // Normalizar subcategorías oficiales (set para lookup rápido)
+  const subsOficiales = mias.map(t => String(t.sub_categoria || t.subcategoria || '').trim());
+  const subsOficialesSet = new Set(subsOficiales.map(s => s.toLowerCase()));
+
+  // Agrupar contactos por sub_categoria
+  const porSub = {};
+  const sinSub = [];
+  const fueraDeTerritorio = {};
+  misContactos.forEach(c => {
     const sub = String(c.sub_categoria || '').trim();
-    if (!sub) return;
-    conteoPorSub[sub] = (conteoPorSub[sub] || 0) + 1;
+    if (!sub){ sinSub.push(c); return; }
+    if (subsOficialesSet.has(sub.toLowerCase())){
+      if (!porSub[sub]) porSub[sub] = [];
+      porSub[sub].push(c);
+    } else {
+      if (!fueraDeTerritorio[sub]) fueraDeTerritorio[sub] = [];
+      fueraDeTerritorio[sub].push(c);
+    }
   });
 
+  // Si NO tiene territorio asignado
   if (!mias.length) {
     cont.innerHTML =
-      '<div style="background:linear-gradient(135deg,#fff7ed,#fef3c7);border:1px solid var(--gold);border-radius:12px;padding:24px;text-align:center;">' +
-        '<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--gold-deep, #5a3c10)" stroke-width="1.8" stroke-linecap="round" style="margin-bottom:10px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
-        '<div style="font-family:var(--font-serif);font-size:18px;font-weight:600;color:var(--text-1);margin-bottom:6px;">Aún no tenés territorio asignado</div>' +
-        '<div style="font-size:13.5px;color:var(--text-2);max-width:480px;margin:0 auto;line-height:1.55;">Rayen todavía no te asignó subcategorías oficiales. Igualmente podés trabajar los contactos que ya tenés en "Mis Contactos".</div>' +
+      '<div class="mt-empty">' +
+        '<svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
+        '<h3>Aún no tenés territorio asignado</h3>' +
+        '<p>Rayen todavía no te asignó subcategorías oficiales. Igualmente podés trabajar los contactos que ya tenés en "Mis Contactos".</p>' +
       '</div>';
     return;
   }
 
-  // 3. Renderizar tarjetas con cada subcategoría asignada
-  const cards = mias.map(t => {
-    const sub = t.sub_categoria || t.subcategoria || '';
-    const cnt = conteoPorSub[sub] || 0;
-    return '<div class="card" style="padding:16px 18px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:14px;">' +
-      '<div style="flex:1;min-width:0;">' +
-        '<div style="font-family:var(--font-serif);font-size:17px;font-weight:600;color:var(--text-1);">' + esc(sub) + '</div>' +
-        '<div style="font-size:12px;color:var(--subtle);margin-top:3px;">' +
-          (cnt > 0 ? '<b style="color:var(--gold-deep);">' + cnt + '</b> contacto' + (cnt === 1 ? '' : 's') + ' en esta subcategoría' : 'Aún no tenés contactos cargados con esta subcategoría') +
-        '</div>' +
-      '</div>' +
-      (cnt > 0
-        ? '<button class="btn primary" onclick="irAMisContactosFiltrado(\'' + esc(sub).replace(/\'/g, "\\\\'") + '\')">Ver contactos</button>'
-        : '<span style="font-size:11.5px;color:var(--subtle);">Sin contactos</span>'
-      ) +
-    '</div>';
-  }).join('');
+  // Stats globales
+  const totalEnTerritorio = Object.values(porSub).reduce((a,arr) => a + arr.length, 0);
+  const totalFuera = Object.values(fueraDeTerritorio).reduce((a,arr) => a + arr.length, 0);
 
-  cont.innerHTML =
-    '<div style="background:linear-gradient(135deg,#fff7ed,#fef3c7);border:1px solid var(--gold);border-radius:12px;padding:14px 18px;margin-bottom:18px;">' +
-      '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
-        '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--gold-deep, #5a3c10)" stroke-width="2.2" stroke-linecap="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>' +
-        '<div>' +
-          '<div style="font-size:11px;font-weight:800;color:var(--gold-deep, #5a3c10);text-transform:uppercase;letter-spacing:.5px;">Tu territorio · ' + mias.length + ' subcategoría' + (mias.length === 1 ? '' : 's') + ' asignada' + (mias.length === 1 ? '' : 's') + '</div>' +
-          '<div style="font-size:13px;color:var(--text-2);margin-top:2px;">Cuando alguien crea un contacto nuevo con cualquiera de estas subcategorías, se te asigna automáticamente.</div>' +
-        '</div>' +
+  // 1. HEADER STATS
+  let html =
+    '<div class="mt-header">' +
+      '<div class="mt-header-stats">' +
+        '<div class="mt-stat"><div class="mt-stat-val">' + mias.length + '</div><div class="mt-stat-lbl">Subcategorías asignadas</div></div>' +
+        '<div class="mt-stat"><div class="mt-stat-val">' + totalEnTerritorio + '</div><div class="mt-stat-lbl">Contactos en tu territorio</div></div>' +
+        (totalFuera ? '<div class="mt-stat mt-stat-warn"><div class="mt-stat-val">' + totalFuera + '</div><div class="mt-stat-lbl">Fuera de territorio</div></div>' : '') +
+        (sinSub.length ? '<div class="mt-stat mt-stat-warn"><div class="mt-stat-val">' + sinSub.length + '</div><div class="mt-stat-lbl">Sin subcategoría</div></div>' : '') +
       '</div>' +
-    '</div>' +
-    cards;
+      '<div class="mt-header-help">Cuando alguien crea un contacto nuevo con cualquiera de tus subcategorías, se te asigna automáticamente.</div>' +
+    '</div>';
+
+  // 2. DIAGNÓSTICO si hay problemas
+  if (totalFuera || sinSub.length){
+    html += '<div class="mt-diagnostico">';
+    html += '<div class="mt-diagnostico-titulo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Revisar asignaciones</div>';
+
+    if (totalFuera){
+      const subsFuera = Object.keys(fueraDeTerritorio).sort();
+      html += '<div class="mt-diagnostico-bloque">';
+      html += '<div class="mt-diagnostico-label">Tenés <b>' + totalFuera + '</b> contacto' + (totalFuera === 1 ? '' : 's') + ' con subcategorías que NO están en tu territorio oficial:</div>';
+      html += '<ul class="mt-diagnostico-list">';
+      subsFuera.forEach(sub => {
+        const arr = fueraDeTerritorio[sub];
+        html += '<li><strong>' + esc(sub) + '</strong> <span class="mt-pill">' + arr.length + '</span></li>';
+      });
+      html += '</ul>';
+      html += '</div>';
+    }
+
+    if (sinSub.length){
+      html += '<div class="mt-diagnostico-bloque">';
+      html += '<div class="mt-diagnostico-label">Tenés <b>' + sinSub.length + '</b> contacto' + (sinSub.length === 1 ? '' : 's') + ' sin subcategoría asignada.</div>';
+      html += '<button class="btn primary" style="margin-top:6px;" onclick="goView(\'vSinCat\')">Ir a Categorizar Urgente</button>';
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+
+  // 3. GRID DE SUBCATEGORÍAS
+  html += '<div class="mt-grid">';
+  mias.forEach(t => {
+    const sub = t.sub_categoria || t.subcategoria || '';
+    const contactos = porSub[sub] || [];
+    const cnt = contactos.length;
+    const top = contactos.slice(0, 5);
+    const resto = cnt - top.length;
+    const subEsc = esc(sub).replace(/'/g, "\\'");
+
+    html += '<div class="mt-card">';
+    html += '<div class="mt-card-head">';
+    html += '<div class="mt-card-titulo">' + esc(sub) + '</div>';
+    html += '<div class="mt-card-badge ' + (cnt ? '' : 'mt-card-badge-empty') + '">' + cnt + '</div>';
+    html += '</div>';
+
+    if (cnt){
+      html += '<div class="mt-card-lista">';
+      top.forEach(c => {
+        const nombre = c.nombre || c.institucion || '(sin nombre)';
+        const inst = c.institucion && c.nombre ? c.institucion : '';
+        html += '<div class="mt-card-item" onclick="verContactoDesdeMiTerritorio(\'' + esc(c.id) + '\')">' +
+          '<div class="mt-card-item-nombre">' + esc(nombre) + '</div>' +
+          (inst ? '<div class="mt-card-item-inst">' + esc(inst) + '</div>' : '') +
+          '</div>';
+      });
+      html += '</div>';
+      html += '<button class="mt-card-cta" onclick="irAMisContactosFiltrado(\'' + subEsc + '\')">' +
+        (resto > 0 ? 'Ver los ' + cnt + ' contactos' : 'Ver en Mis Contactos') +
+        ' <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>' +
+        '</button>';
+    } else {
+      html += '<div class="mt-card-vacia">Aún no tenés contactos en esta subcategoría. Los nuevos contactos que se carguen con esta etiqueta se te asignarán automáticamente.</div>';
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+
+  cont.innerHTML = html;
+}
+
+function verContactoDesdeMiTerritorio(idContacto){
+  if (typeof abrirFichaModal === 'function'){
+    abrirFichaModal(idContacto);
+  } else {
+    goView('vMis');
+  }
 }
 
 // Ir a Mis Contactos con un filtro de subcategoría aplicado
@@ -9723,6 +9798,228 @@ function cerrarFichaCampana(){
 @media (max-width: 600px){
   .pc-card-dashboard{ flex-wrap: wrap; }
   .pc-card-dashboard-cta{ display: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MI TERRITORIO — rediseño 2026-05-21
+   ═══════════════════════════════════════════════════════════════ */
+.mt-header{
+  background: linear-gradient(135deg, var(--oct-navy) 0%, #002a8a 100%);
+  color: white;
+  border-radius: 14px;
+  padding: 22px 26px;
+  margin-bottom: 18px;
+  font-family: var(--font-sans);
+  box-shadow: 0 4px 14px rgba(0,26,96,0.15);
+}
+.mt-header-stats{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+  margin-bottom: 12px;
+}
+.mt-stat{ display: flex; flex-direction: column; }
+.mt-stat-val{
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.mt-stat-lbl{
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.82;
+  margin-top: 6px;
+}
+.mt-stat-warn .mt-stat-val{ color: #FCD34D; }
+.mt-header-help{
+  font-size: 13px;
+  opacity: 0.88;
+  font-weight: 500;
+  border-top: 1px solid rgba(255,255,255,0.18);
+  padding-top: 12px;
+  line-height: 1.55;
+}
+
+.mt-diagnostico{
+  background: var(--oct-cream);
+  border: 1px solid #F5C77B;
+  border-left: 4px solid var(--oct-orange);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 18px;
+  font-family: var(--font-sans);
+}
+.mt-diagnostico-titulo{
+  font-size: 13px;
+  font-weight: 800;
+  color: #92400e;
+  letter-spacing: -0.01em;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.mt-diagnostico-titulo svg{ color: var(--oct-orange); }
+.mt-diagnostico-bloque{ margin-bottom: 10px; }
+.mt-diagnostico-bloque:last-child{ margin-bottom: 0; }
+.mt-diagnostico-label{
+  font-size: 13px;
+  color: var(--oct-text);
+  line-height: 1.55;
+  margin-bottom: 6px;
+}
+.mt-diagnostico-label b{ color: #92400e; font-weight: 800; }
+.mt-diagnostico-list{
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--oct-text);
+  line-height: 1.7;
+}
+.mt-diagnostico-list strong{ color: var(--oct-navy); font-weight: 700; }
+.mt-pill{
+  display: inline-block;
+  background: white;
+  border: 1px solid #F5C77B;
+  color: #92400e;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 999px;
+  margin-left: 4px;
+}
+
+.mt-grid{
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+.mt-card{
+  background: white;
+  border: 1px solid var(--oct-border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  font-family: var(--font-sans);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.mt-card-head{
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.mt-card-titulo{
+  font-size: 15.5px;
+  font-weight: 800;
+  color: var(--oct-navy);
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  flex: 1;
+}
+.mt-card-badge{
+  background: var(--oct-ltblue);
+  color: var(--oct-navy);
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: -0.02em;
+  padding: 4px 12px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  min-width: 32px;
+  text-align: center;
+}
+.mt-card-badge-empty{
+  background: var(--oct-bg);
+  color: var(--oct-text-mute);
+}
+.mt-card-lista{
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-top: 1px solid var(--oct-border);
+  padding-top: 10px;
+  margin-top: 2px;
+}
+.mt-card-item{
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.mt-card-item:hover{ background: var(--oct-softblue); }
+.mt-card-item-nombre{
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--oct-navy);
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+.mt-card-item-inst{
+  font-size: 11.5px;
+  color: var(--oct-text-soft);
+  margin-top: 2px;
+}
+.mt-card-cta{
+  background: white;
+  border: 1px solid var(--oct-divider);
+  color: var(--oct-navy);
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 9px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background 0.15s, border-color 0.15s;
+  margin-top: auto;
+}
+.mt-card-cta:hover{ background: var(--oct-navy); color: white; border-color: var(--oct-navy); }
+.mt-card-cta:hover svg{ stroke: white; }
+.mt-card-vacia{
+  font-size: 12.5px;
+  color: var(--oct-text-soft);
+  line-height: 1.55;
+  background: var(--oct-bg);
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px dashed var(--oct-divider);
+}
+
+.mt-empty{
+  background: white;
+  border: 1px dashed var(--oct-divider);
+  border-radius: 14px;
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--oct-text-mute);
+  font-family: var(--font-sans);
+}
+.mt-empty svg{ color: var(--oct-text-mute); margin-bottom: 10px; }
+.mt-empty h3{
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--oct-navy);
+  letter-spacing: -0.02em;
+  margin: 0 0 6px;
+}
+.mt-empty p{
+  font-size: 13.5px;
+  color: var(--oct-text-soft);
+  max-width: 460px;
+  margin: 0 auto;
+  line-height: 1.55;
+}
+@media (max-width: 600px){
+  .mt-header-stats{ gap: 18px; }
+  .mt-stat-val{ font-size: 26px; }
 }
 </style>
 

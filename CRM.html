@@ -6187,52 +6187,73 @@ async function abrirFicha(id, view){
 function renderFicha(container, data){
   const c = data.contacto || {};
   const tl = data.timeline || [];
-  const tel = (c.telefono || '').toString();
-  const telLimpio = tel.replace(/\D/g, '');
-  const waNum = telLimpio.length >= 8 ? (telLimpio.startsWith('56') ? telLimpio : '56' + telLimpio) : '';
-  const waMsg = encodeURIComponent('Hola ' + (c.nombre || '') + ', soy ' + USUARIO + ' de OpenCluster Tech.');
-  const owner = esOwner(c);
   const editable = puedeEditar(c);
   const ownerName = ownerLabel(c);
   const tooltipBloqueo = 'Este contacto está asignado a ' + ownerName + '. Pídele a Rayen que te lo reasigne si quieres trabajarlo.';
 
-  // Sello del dueño (chip arriba a la derecha)
-  const sello = owner
-    ? '<span class="owner-badge mine"><span class="owner-av">' + esc((USUARIO||'?').charAt(0).toUpperCase()) + '</span>Asignado a ti</span>'
-    : '<span class="owner-badge"><span class="owner-av">' + esc((ownerName||'?').charAt(0).toUpperCase()) + '</span>Asignado a ' + esc(ownerName) + '</span>';
+  // Pipeline v2: grupo del embudo + links nativos con plantilla/ejecutivo
+  const gF = grupoPipeline(c.ultimo_estado || c.pipeline_estado || 'Contactado');
+  const LF = construirLinksContacto(c, gF);
+  const dir = [c.direccion, c.ciudad, c.region].filter(Boolean).join(', ');
+  // Iconos para las pills de contacto (16-18px) — phone, whatsapp filled, gmail multicolor, pin
+  const icoPhone = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>';
+  const icoWaFill = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>';
+  const icoPin = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+  const icoUser = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
 
-  container.innerHTML =
-    '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:20px;">' +
-      '<div style="flex:1;min-width:0;">' +
-        '<h1 style="font-family:Playfair Display,serif;font-size:26px;font-weight:700;color:var(--ink);margin:0 0 4px;">' + esc(c.nombre || c.institucion || '(sin nombre)') + '</h1>' +
-        '<p style="color:var(--mist);font-size:13.5px;margin:0 0 14px;">' + esc(c.institucion || '') + (c.cargo ? ' · ' + esc(c.cargo) : '') + '</p>' +
-        '<div style="display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--subtle);">' +
-          (c.email ? '<a href="mailto:' + esc(c.email) + '">' + esc(c.email) + '</a>' : '') +
-          (c.telefono ? '<a href="tel:' + esc(c.telefono) + '">' + esc(c.telefono) + '</a>' : '') +
-          (c.ciudad ? '<span>' + esc(c.ciudad) + (c.region ? ', ' + esc(c.region) : '') + '</span>' : '') +
-          (c.sub_categoria ? '<span><b>Cat:</b> ' + esc(c.sub_categoria) + '</span>' : '') +
+  // Banda + header v2 con los 3 botones de links nativos
+  const headerV2 =
+    '<div class="v2-detail">' +
+      '<div class="v2-detail-banda ' + gF.clase + '"><span><strong>' + gF.grupo + '</strong> · ' + esc(gF.etapa) + '</span>' + (c.sub_categoria ? '<span style="opacity:.85">' + esc(c.sub_categoria) + '</span>' : '') + '</div>' +
+      '<div class="v2-detail-header">' +
+        '<div class="v2-detail-title">' +
+          '<h1 class="v2-detail-name">' + esc(c.nombre || c.institucion || '(sin nombre)') + '</h1>' +
+          '<p class="v2-detail-sub">' + esc(c.institucion || '') + (c.cargo ? ' · ' + esc(c.cargo) : '') + (dir ? (c.institucion || c.cargo ? ' · ' : '') + esc(dir) : '') + '</p>' +
+          '<div class="v2-detail-meta">' +
+            (c.nombre && c.institucion ? '<span style="display:inline-flex;align-items:center;gap:4px">' + icoUser + esc(c.nombre) + (c.cargo ? ' · ' + esc(c.cargo) : '') + '</span>' : '') +
+            (c.email ? '<span class="sep">·</span><span>' + esc(c.email) + '</span>' : '') +
+          '</div>' +
+          renderEtiquetasBloque(c, editable) +
         '</div>' +
-        renderEtiquetasBloque(c, editable) +
+        '<div class="v2-detail-actions">' +
+          (LF.hasTel ? '<a href="' + LF.tel + '" class="v2-btn call">' + V2_SVG.phone + 'Llamar</a>' : '<span class="v2-btn call disabled">' + V2_SVG.phone + 'Llamar</span>') +
+          (LF.hasTel ? '<a href="' + LF.wa + '" target="_blank" rel="noopener" class="v2-btn wa">' + V2_SVG.wa + 'WhatsApp</a>' : '<span class="v2-btn wa disabled">' + V2_SVG.wa + 'WhatsApp</span>') +
+          (LF.hasMail ? '<a href="' + LF.mail + '" class="v2-btn mail" title="Enviar correo (Gmail)">' + V2_SVG.gmail + '</a>' : '') +
+        '</div>' +
       '</div>' +
-      sello +
-    '</div>' +
-    '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;">' +
+      '<div class="v2-detail-divider"></div>' +
+    '</div>';
+
+  // Botones de gestión (editar / interacción / tarea / reunión / plantilla / eliminar)
+  const adminBtns =
+    '<div style="display:flex;gap:10px;flex-wrap:wrap;margin:16px 0 22px;">' +
       (editable
         ? '<button class="btn primary" onclick="abrirModalEditarContacto(\'' + esc(c.id) + '\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Editar contacto</button>'
         : '<button class="btn" disabled title="' + esc(tooltipBloqueo) + '" style="opacity:.5;cursor:not-allowed;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Editar contacto</button>') +
       (editable
         ? '<button class="btn" onclick="abrirModalNuevaInteraccion(\'' + esc(c.id) + '\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> Nueva interacción</button>'
-        : '<button class="btn" disabled title="' + esc(tooltipBloqueo) + '" style="opacity:.5;cursor:not-allowed;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Nueva interacción</button>') +
+        : '') +
       '<button class="btn" onclick="abrirModalNuevaTarea(\'' + esc(c.id) + '\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Nueva tarea</button>' +
       '<button class="btn" onclick="abrirModalNuevaReunion(\'' + esc(c.id) + '\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Agendar reunión</button>' +
-      (c.email ? '<button class="btn" onclick="abrirEmailPlantilla(\'' + esc(c.id) + '\')">Enviar correo</button>' : '') +
-      (waNum ? '<a class="btn" target="_blank" href="https://wa.me/' + waNum + '?text=' + waMsg + '">WhatsApp</a>' : '') +
-      // Eliminar: visible para admin (siempre) y para ejecutivos solo en sus propios contactos
+      (c.email ? '<button class="btn" onclick="abrirEmailPlantilla(\'' + esc(c.id) + '\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> Correo con plantilla</button>' : '') +
       ((ROL === 'admin' || esOwner(c))
         ? '<button class="btn" onclick="eliminarContacto(\'' + esc(c.id) + '\', \'' + esc(c.nombre || c.institucion || '(sin nombre)').replace(/\'/g, "&#39;") + '\')" style="background:var(--ruby-lt);color:var(--ruby-dk);border-color:var(--ruby);margin-left:auto;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Eliminar</button>'
         : '') +
-    '</div>' +
-    renderHistorialAgrupado(tl, c);
+    '</div>';
+
+  // Bloque DATOS DE CONTACTO — pills clickeables grandes y tocables
+  const pillsDatos =
+    '<div class="v2-block" style="margin-bottom:22px;">' +
+      '<div class="v2-block-head">' + icoUser + '<span class="v2-block-label">DATOS DE CONTACTO</span><span class="v2-block-aside">toca para contactar</span></div>' +
+      '<div class="v2-cpills" style="max-width:460px;">' +
+        (LF.hasTel ? '<a href="' + LF.tel + '" class="v2-cpill phone"><span class="v2-cpill-icon">' + icoPhone + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">Llamar</span><span class="v2-cpill-value">' + esc(c.telefono) + '</span></span></a>' : '') +
+        (LF.hasTel ? '<a href="' + LF.wa + '" target="_blank" rel="noopener" class="v2-cpill wa"><span class="v2-cpill-icon">' + icoWaFill + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">WhatsApp</span><span class="v2-cpill-value">' + esc(c.telefono) + '</span></span></a>' : '') +
+        (LF.hasMail ? '<a href="' + LF.mail + '" class="v2-cpill email"><span class="v2-cpill-icon">' + V2_SVG.gmail + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">Gmail</span><span class="v2-cpill-value">' + esc(c.email) + '</span></span></a>' : '') +
+        (dir ? '<div class="v2-cpill static"><span class="v2-cpill-icon">' + icoPin + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">Dirección</span><span class="v2-cpill-value">' + esc(dir) + '</span></span></div>' : '') +
+      '</div>' +
+    '</div>';
+
+  container.innerHTML = headerV2 + adminBtns + pillsDatos + renderHistorialAgrupado(tl, c);
 }
 
 // Extrae número de cotización del texto de notas/detalle (ej: "Cot OC26-3541-AT · $6.899.989")

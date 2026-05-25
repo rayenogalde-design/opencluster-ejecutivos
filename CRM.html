@@ -4276,6 +4276,9 @@ function scrollToSugeridos(){
 async function pintarBannerCampana(){
   const box = document.getElementById('dshCampana');
   if (!box) return;
+  // Resetear la fecha a su base (quita el chip de segmento si venía de una vista ejecutiva)
+  const _fbase = document.getElementById('dshFecha');
+  if(_fbase){ const b = _fbase.getAttribute('data-fecha'); if(b) _fbase.textContent = b; }
   const modoActivo = getModoVista();
   const esAdmin = ROL === 'admin';
   const verComoEjecutivo = !esAdmin || modoActivo === 'ejecutiva';
@@ -4303,41 +4306,44 @@ async function pintarBannerCampana(){
         '</div>';
       return;
     }
-    // Sin drill-down: vista normal de administradora con tabla de segmentos colapsable
-    const filas = Object.entries(CAMPANA_ASIG)
-      .filter(([k]) => ['William','German','Rayen'].indexOf(k) < 0) // canónicos solo (sin duplicados cortos)
-      .map(([nm, a]) => '<div style="display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-top:1px solid rgba(91,33,182,.1);">' +
-        '<div style="flex:0 0 130px;font-weight:700;color:var(--purple-dk);">' + esc(nm) + '</div>' +
-        '<div style="flex:1;font-size:13px;color:var(--ink);"><b>' + esc(a.titulo) + '</b><div style="color:var(--subtle);font-size:12px;margin-top:1px;">' + esc(a.detalle) + '</div></div>' +
-      '</div>').join('');
-    const abiertaCamp = localStorage.getItem('crm_campana_admin_abierta') === '1';
+    // Sin drill-down: GRID de tarjetas por ejecutivo (Equipo OpenCluster — Campaña Chile 2026)
+    box.innerHTML = '<div style="margin-bottom:20px;"><div class="loading-state" style="padding:14px;"><div class="spinner"></div>Cargando equipo…</div></div>';
+    let _lista = [];
+    try { _lista = await _cargarContactosCrudo(); } catch(e){}
+    const _porEjec = {};
+    (_lista || []).forEach(c => {
+      const tags = parsearEtiquetas(c.etiquetas);
+      if(!tags.some(t => /campa.?a mayo 2026/i.test(t))) return;
+      const ej = String(c.ejecutivo_asignado || c.ejecutivo_creador || '').trim();
+      if(!ej) return;
+      const k = ej.split(' ')[0];
+      _porEjec[k] = (_porEjec[k] || 0) + 1;
+    });
+    const _orden = ['William','Germán','Rayen','Roberto','Maximiliano'];
+    const _cards = _orden.map(n => renderEjecutivoCard(n, _porEjec[n] || 0, (SUGERENCIAS_POR_SEGMENTO[n] || []).length)).join('');
+    const _ximena = (_porEjec['Ximena'] !== undefined || true) ? renderXimenaCard(_porEjec['Ximena'] || 0) : '';
     box.innerHTML =
-      '<div id="bannerCampanaAdmin" class="banner-campana-admin' + (abiertaCamp ? '' : ' collapsed') + '" style="background:linear-gradient(135deg,#efe7f7,#fef9ec);border:1px solid var(--purple-lt, #d4c5ec);border-radius:12px;padding:0 18px;margin-bottom:18px;overflow:hidden;">' +
-        '<div onclick="toggleBannerCampanaAdmin(event)" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;cursor:pointer;padding:12px 0;user-select:none;">' +
-          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--purple-dk)" stroke-width="2.4" stroke-linecap="round"><path d="M3 6l3-3 12 12-3 3z"/><path d="M14 14l7 7"/></svg>' +
-          '<b style="font-family:var(--font-sans);font-size:14px;color:var(--purple-dk);font-weight:700;letter-spacing:.2px;">Campaña OpenCluster Chile — segmentos asignados</b>' +
-          '<span class="banner-camp-chevron" style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:var(--oct-ltblue);margin-left:6px;transition:transform .18s;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--oct-navy)" stroke-width="2.6" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></span>' +
-          '<span onclick="event.stopPropagation();" style="margin-left:auto;">' + renderSelectorDrillDown() + '</span>' +
+      '<div style="margin-bottom:20px;">' +
+        '<div style="margin-bottom:14px;">' +
+          '<h2 style="font-size:18px;font-weight:800;color:var(--oct-navy,#001A60);margin:0;letter-spacing:-.01em;">Equipo OpenCluster — Campaña Chile 2026</h2>' +
+          '<div style="font-size:12.5px;color:var(--subtle);margin-top:2px;">5 ejecutivos · cada uno atiende su segmento exclusivamente, sin cruces</div>' +
         '</div>' +
-        '<div class="banner-camp-body" style="padding-bottom:14px;">' +
-          '<div style="font-size:12px;color:var(--subtle);margin-bottom:6px;">Cada ejecutivo trabaja exclusivamente su segmento, sin cruces.</div>' +
-          filas +
-        '</div>' +
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;">' + _cards + _ximena + '</div>' +
       '</div>';
     return;
   }
-  // === EJECUTIVO común (o Rayen viendo como ejecutiva): mostrar SU segmento ===
-  const asig = CAMPANA_ASIG[USUARIO] || CAMPANA_ASIG[(USUARIO||'').split(' ')[0]];
-  if (!asig) { box.innerHTML = ''; return; }
-  box.innerHTML =
-    '<div style="background:var(--oct-cream);border:1px solid #F5C77B;border-radius:12px;padding:14px 18px;margin-bottom:18px;display:flex;gap:14px;align-items:center;">' +
-      '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--gold-deep, #5a3c10)" stroke-width="2.2" stroke-linecap="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>' +
-      '<div>' +
-        '<div style="font-size:11px;font-weight:800;color:var(--gold-deep, #5a3c10);text-transform:uppercase;letter-spacing:.5px;">Tu segmento de campaña</div>' +
-        '<div style="font-family:var(--font-sans);font-size:15px;color:var(--ink);font-weight:700;margin-top:3px;letter-spacing:.1px;">' + esc(asig.titulo) + '</div>' +
-        '<div style="font-size:12.5px;color:var(--gold-deep, #5a3c10);margin-top:2px;line-height:1.5;">' + esc(asig.detalle) + '</div>' +
-      '</div>' +
-    '</div>';
+  // === EJECUTIVO (o Rayen como ejecutiva): chip pequeño de segmento junto a la fecha ===
+  box.innerHTML = '';
+  const _fn = (getEjecutivoEfectivo() || USUARIO || '').split(' ')[0];
+  const _m = EJEC_META[_fn];
+  const _f = document.getElementById('dshFecha');
+  if(_f){
+    const _base = _f.getAttribute('data-fecha') || _f.textContent || '';
+    _f.setAttribute('data-fecha', _base);
+    _f.innerHTML = esc(_base) + (_m
+      ? '  ·  <span style="color:var(--subtle);">Tu segmento:</span> <span title="' + esc(_m.desc) + '" style="display:inline-flex;align-items:center;background:#FFF4EA;color:' + _m.color + ';font-size:12px;font-weight:500;padding:3px 12px;border-radius:999px;vertical-align:middle;">' + esc(_m.pills.join(' · ')) + '</span>'
+      : '');
+  }
 }
 
 function cambiarPreviewEjec(nm){
@@ -4352,81 +4358,34 @@ function cambiarPreviewEjec(nm){
 async function pintarBannerListaPartida(){
   const box = document.getElementById('dshListaPartida');
   if (!box) return;
-  // IMPORTANTE: usar _cargarContactosCrudo (NO _cargarContactosBase) porque los contactos
-  // pre-cargados de la campaña no tienen "nombre" (solo institucion) y _cargarContactosBase
-  // los filtra como "empresa". Aquí necesitamos TODA la lista (personas + empresas).
   let lista;
   try { lista = await _cargarContactosCrudo(); } catch(e){ lista = []; }
-  if (!lista || !lista.length) { box.innerHTML = ''; return; }
-
-  // Modo ADMIN sin drill-down: mostrar resumen del EQUIPO
-  if (ROL === 'admin' && getModoVista() === 'admin' && !hayDrillDown()) {
-    pintarBannerListaPartidaEquipo(box, lista);
-    return;
-  }
+  // ADMIN sin drill-down: las tarjetas de equipo ya muestran las empresas → no duplicar aquí
+  if (ROL === 'admin' && getModoVista() === 'admin' && !hayDrillDown()) { box.innerHTML = ''; return; }
   const ejecActivo = getEjecutivoEfectivo();
   if (!ejecActivo) { box.innerHTML = ''; return; }
-  // Filtrar a contactos del ejecutivo activo + etiqueta "Campaña mayo 2026"
-  const mios = lista.filter(c => esOwnerDe(c, ejecActivo));
-  const campana = mios.filter(c => {
-    const tags = parsearEtiquetas(c.etiquetas);
-    return tags.some(t => /campa.?a mayo 2026/i.test(t));
-  });
-  if (!campana.length) { box.innerHTML = ''; return; }
-  // Subset SIN trabajar: estado "Por contactar" (lead o vacío) — aún no hubo primer contacto
+  // Lista de partida del ejecutivo: contactos suyos etiquetados Campaña mayo 2026
+  const mios = (lista || []).filter(c => esOwnerDe(c, ejecActivo));
+  const campana = mios.filter(c => parsearEtiquetas(c.etiquetas).some(t => /campa.?a mayo 2026/i.test(t)));
   const sinTrabajar = campana.filter(c => {
     const est = String(c.ultimo_estado || c.pipeline_estado || '').toLowerCase();
     return est === '' || est === 'lead' || est.indexOf('por contactar') >= 0;
   });
-  const totalCamp = campana.length;
   const totalSin = sinTrabajar.length;
-  if (totalSin === 0 && totalCamp === 0) { box.innerHTML = ''; return; }
-
-  // Detección de contactos NUEVOS desde la última visita del ejecutivo a este banner.
-  // Se guarda el set de IDs ya vistos en localStorage. Los IDs presentes hoy que no estaban
-  // antes se consideran "nuevos" y se muestran en el banner.
+  // Nuevos desde la última visita
   const keyVistos = 'crm_lista_partida_vistos_' + ejecActivo;
   let vistosAntes = [];
-  try {
-    const raw = localStorage.getItem(keyVistos);
-    if (raw) vistosAntes = JSON.parse(raw) || [];
-  } catch(e){}
+  try { const raw = localStorage.getItem(keyVistos); if (raw) vistosAntes = JSON.parse(raw) || []; } catch(e){}
   const setVistos = new Set(vistosAntes);
-  const idsCampaña = campana.map(c => c.id).filter(Boolean);
-  const nuevos = idsCampaña.filter(id => !setVistos.has(id));
-  const totalNuevos = nuevos.length;
+  const totalNuevos = campana.map(c => c.id).filter(id => id && !setVistos.has(id)).length;
+  // Stats de las otras 2 tarjetas
+  const fn = (ejecActivo || '').split(' ')[0];
+  const sugeridos = (SUGERENCIAS_POR_SEGMENTO[fn] || SUGERENCIAS_POR_SEGMENTO[ejecActivo] || []).length;
+  const catalogo = (window.__FICHAS && window.__FICHAS.length) || 68;
 
-  // Botón abre Mis Contactos con filtro etiqueta = Campaña mayo 2026 aplicado
-  const onclickIr = 'irAListaPartida()';
-  const onclickIrSin = 'irAListaPartida(true)';
-  const onclickMarcarVistos = 'marcarListaPartidaVista()';
-  box.innerHTML =
-    '<div style="background:var(--oct-cream);border:1px solid #F5C77B;border-radius:12px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">' +
-      '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--gold-deep, #5a3c10)" stroke-width="2.2" stroke-linecap="round" style="flex-shrink:0;"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>' +
-      '<div style="flex:1;min-width:240px;">' +
-        '<div style="display:flex;align-items:center;gap:8px;">' +
-          '<div style="font-size:11px;font-weight:800;color:var(--gold-deep, #5a3c10);text-transform:uppercase;letter-spacing:.5px;">Tu lista de partida — Campaña Mayo 2026</div>' +
-          (totalNuevos > 0 ? '<span style="background:#a04004;color:white;padding:2px 9px;border-radius:9px;font-size:10.5px;font-weight:800;letter-spacing:.3px;animation:pulse 2s infinite;">+' + totalNuevos + ' NUEVOS</span>' : '') +
-        '</div>' +
-        '<div style="font-family:var(--font-sans);font-size:14.5px;color:var(--ink);font-weight:700;margin-top:3px;letter-spacing:.1px;">' +
-          '<span style="color:var(--gold-deep);">' + totalCamp + '</span> empresas pre-cargadas listas para trabajar' +
-          (totalSin > 0 ? ' · <span style="color:#a04004;">' + totalSin + ' sin contactar todavía</span>' : '') +
-        '</div>' +
-        '<div style="font-size:12.5px;color:var(--gold-deep, #5a3c10);margin-top:2px;line-height:1.5;">' +
-          (totalNuevos > 0
-            ? '<b>Rayen agregó ' + totalNuevos + ' contacto' + (totalNuevos === 1 ? '' : 's') + ' nuevo' + (totalNuevos === 1 ? '' : 's') + '</b> desde la última vez que entraste. Hacé click abajo para verlos.'
-            : 'Ya tienen institución, ciudad, sitio web y notas. Solo te falta llamarlas o escribirles.') +
-        '</div>' +
-      '</div>' +
-      '<div style="display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">' +
-        (totalNuevos > 0 ? '<button onclick="' + onclickMarcarVistos + '" title="Marcar como visto y quitar el indicador" style="padding:9px 12px;background:transparent;color:var(--gold-deep, #5a3c10);border:1px solid var(--gold);border-radius:8px;font-weight:600;font-size:11.5px;cursor:pointer;font-family:var(--font-sans);">Marcar como visto</button>' : '') +
-        (totalSin > 0 ? '<button onclick="' + onclickIrSin + '" style="padding:9px 16px;background:#a04004;color:white;border:none;border-radius:8px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:var(--font-sans);letter-spacing:.2px;">Ver las ' + totalSin + ' sin trabajar</button>' : '') +
-        '<button onclick="' + onclickIr + '" style="padding:9px 16px;background:white;color:var(--gold-deep, #5a3c10);border:1px solid var(--gold);border-radius:8px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:var(--font-sans);letter-spacing:.2px;">Ver las ' + totalCamp + '</button>' +
-      '</div>' +
-    '</div>';
+  box.innerHTML = renderTarjetasAccionEjec(totalSin, totalNuevos, catalogo, sugeridos);
 
-  // Si hay nuevos contactos, mostrar un toast notificación SOLO la primera vez por sesión
-  // (para que no aparezca cada vez que vuelve al dashboard).
+  // Toast en primera visita de la sesión si hay nuevos
   if (totalNuevos > 0) {
     const flagSesion = 'crm_toast_lista_partida_shown_' + ejecActivo;
     if (!sessionStorage.getItem(flagSesion)) {
@@ -4650,7 +4609,7 @@ async function cargarDashboard(){
     pintarKpis(kpisCacheados, true);
   } else {
     const kpiBox = document.getElementById('dshKpis');
-    if(kpiBox) kpiBox.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando KPIs…</div>';
+    if(kpiBox) kpiBox.innerHTML = '';
   }
 
   // 2. DISPARAR las 4 cargas en paralelo SIN await (no bloqueamos)
@@ -4688,7 +4647,7 @@ function pintarKpis(r, esCache){
   const esAdmin = debeSerAdmin && !!r.es_admin_real;
   if(esCache && !!r.es_admin_real !== !!debeSerAdmin){
     // Cache obsoleto — mostrar loading hasta el fetch real
-    kpiBox.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando KPIs…</div>';
+    kpiBox.innerHTML = '';
     return;
   }
   const periodo = DASH_PERIODO; // 'semana' | 'mes' | 'anio'
@@ -9777,6 +9736,9 @@ function renderFichaCompleta(f){
 function pintarTarjetaProductosCampana(){
   const box = document.getElementById('dshProductosCampanaCard');
   if(!box) return;
+  // Vista ejecutiva: el catálogo vive en la Tarjeta B de la fila de acciones → no duplicar acá.
+  const verComoEjecutivo = !(ROL === 'admin') || getModoVista() === 'ejecutiva' || hayDrillDown();
+  if(verComoEjecutivo){ box.innerHTML = ''; return; }
   const total = (window.__FICHAS || []).length;
   // Si todavía no cargaron las fichas, mostrar la tarjeta igual con "Cargando…"
   box.innerHTML =

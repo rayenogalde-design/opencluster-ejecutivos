@@ -1964,12 +1964,26 @@ body{
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
         Importar CSV
       </div>
+      <div class="side-tab admin" data-view="vConfig" id="navConfig" onclick="goView('vConfig')" style="display:none;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Configuración
+      </div>
 
     </div>
 
     <!-- ─── Main ─── -->
     <div class="main" id="mainPanel">
       <div id="deployBanner"></div>
+
+      <!-- ═══ Configuración (admin) ═══ -->
+      <div class="view" id="vConfig">
+        <div class="sec-head">
+          <h1>Configuración</h1>
+          <p>Ejecutivos, segmentos y plantillas de mensajes</p>
+        </div>
+        <div id="cfg-body"></div>
+      </div>
+
 
       <!-- ═══ Dashboard ═══ -->
       <div class="view act" id="vDashboard">
@@ -3360,7 +3374,7 @@ function aplicarVisibilidadPorRol(){
 
   // Vistas admin (Territorios, Auditoría, Migración, Importar): visibles solo si Rayen está
   // en modo Admin. En modo Ejecutiva o para ejecutivos no admin, se ocultan.
-  ['navTerr', 'navAud', 'navMigracion', 'navImportar', 'secAdmin'].forEach(id => {
+  ['navTerr', 'navAud', 'navMigracion', 'navImportar', 'navConfig', 'secAdmin'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.style.display = verComoEjecutivo ? 'none' : '';
   });
@@ -3368,7 +3382,7 @@ function aplicarVisibilidadPorRol(){
   // Si está en una vista admin y cambia a modo ejecutiva, redirigir al dashboard
   if (verComoEjecutivo) {
     const vActual = document.querySelector('.view.act');
-    if (vActual && ['vTerritorios','vAud','vMigracion','vImportar'].indexOf(vActual.id) >= 0) {
+    if (vActual && ['vTerritorios','vAud','vMigracion','vImportar','vConfig'].indexOf(vActual.id) >= 0) {
       goView('vDashboard');
     }
   }
@@ -3443,6 +3457,7 @@ function goView(id){
     case 'vProductosCampana': cargarProductosCampana(); break;
     case 'vAud':             cargarAuditoria(); break;
     case 'vMigracion':       /* no autoload */ break;
+    case 'vConfig':          cargarConfig(); break;
   }
 }
 
@@ -5272,7 +5287,15 @@ function construirLinksContacto(c, g){
   var telLink = tel ? 'tel:'+cleanPhone(tel) : '';
   var waNum = tel ? cleanWhatsApp(tel) : '';
   var ej = ejecutivoDeContacto(c);
-  var pl = (window.__PLANTILLAS_PIPE||{})[g.key];
+  // Selección de dos niveles: si el ejecutivo tiene segmento y existe plantilla
+  // segmentada con contenido para (segmento, estado) → usarla; si no → genérica.
+  var pl = null;
+  var seg = (ej && ej.segmento) ? String(ej.segmento).toLowerCase().trim() : '';
+  if(seg){
+    var sp = (window.__PLANTILLAS_SEG||{})[seg + '|' + g.key];
+    if(sp && (String(sp.mensaje_whatsapp||'').trim() || String(sp.email_cuerpo||'').trim())) pl = sp;
+  }
+  if(!pl) pl = (window.__PLANTILLAS_PIPE||{})[g.key];
   var repl = function(s){
     return String(s||'')
       .replace(/\{nombre_contacto\}/g, c.nombre || c.institucion || '')
@@ -5389,13 +5412,15 @@ function renderTarjetaV2(c, view){
 async function cargarPipelineData(){
   try {
     var raw = localStorage.getItem('crm_pipeline_data_v1');
-    if(raw){ var p = JSON.parse(raw); if(p && p.ts && (Date.now()-p.ts) < 43200000){ _aplicarPipelineData(p.ejec, p.plan); } }
+    if(raw){ var p = JSON.parse(raw); if(p && p.ts && (Date.now()-p.ts) < 43200000){ _aplicarPipelineData(p.ejec, p.plan, p.seg); } }
   } catch(e){}
   try {
     var re = await fetchAPI('crm_ejecutivos', {});
     var rp = await fetchAPI('crm_plantillas_pipeline', {});
+    var rsg = await fetchAPI('crm_plantillas_segmentadas', {});
     var ejec = (re && re.ok && re.ejecutivos) || [];
     var plan = (rp && rp.ok && rp.plantillas) || [];
+    var seg  = (rsg && rsg.ok && rsg.plantillas) || [];
     if(ROL==='admin' && (!ejec.length || !plan.length)){
       var rs = await fetchAPI('crm_seed_pipeline', null, { solicitante: USUARIO });
       if(rs && rs.ok){
@@ -5403,21 +5428,195 @@ async function cargarPipelineData(){
         ejec = (re && re.ok && re.ejecutivos) || []; plan = (rp && rp.ok && rp.plantillas) || [];
       }
     }
-    if(ejec.length || plan.length){
-      _aplicarPipelineData(ejec, plan);
-      try { localStorage.setItem('crm_pipeline_data_v1', JSON.stringify({ ts: Date.now(), ejec: ejec, plan: plan })); } catch(e){}
+    if(ejec.length || plan.length || seg.length){
+      _aplicarPipelineData(ejec, plan, seg);
+      try { localStorage.setItem('crm_pipeline_data_v1', JSON.stringify({ ts: Date.now(), ejec: ejec, plan: plan, seg: seg })); } catch(e){}
       // Re-pintar la vista activa para que las tarjetas tomen los links con plantilla
       try { var v = document.querySelector('.view.act'); if(v && typeof renderLista==='function' && (v.id==='vMis'||v.id==='vTodos')) renderLista(v.id==='vMis'?'vMis':'vTodos'); } catch(e){}
     }
   } catch(e){ console.warn('[CRM] No se pudieron cargar ejecutivos/plantillas:', e); }
 }
-function _aplicarPipelineData(ejec, plan){
+function _aplicarPipelineData(ejec, plan, seg){
   window.__EJECUTIVOS = ejec || [];
   window.__EJECUTIVOS_BY_NOMBRE = {};
   (ejec||[]).forEach(function(e){ window.__EJECUTIVOS_BY_NOMBRE[String(e.nombre||'').toLowerCase().trim()] = e; });
   window.__PLANTILLAS_PIPE = {};
   (plan||[]).forEach(function(p){ window.__PLANTILLAS_PIPE[String(p.estado_pipeline||'').toLowerCase().trim()] = p; });
+  window.__PLANTILLAS_SEG = {};
+  (seg||[]).forEach(function(p){ window.__PLANTILLAS_SEG[String(p.segmento||'').toLowerCase().trim() + '|' + String(p.estado_pipeline||'').toLowerCase().trim()] = p; });
   window.__PIPELINE_DATA_LOADED = true;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// PANTALLA DE CONFIGURACIÓN (rol ADMIN) — ejecutivos + plantillas (11 + 55)
+// ════════════════════════════════════════════════════════════════════════════
+var CFG_ETAPAS = [
+  ['no-contactado','No contactado'], ['contactado','Contactado'],
+  ['seguimiento-1','Seguimiento 1'], ['seguimiento-2','Seguimiento 2'],
+  ['llamada','Llamada'], ['email','Email'], ['reunion','Reunión'],
+  ['cotizacion-entregada','Cotización entregada'],
+  ['seguimiento-cotizacion-1','Seguimiento cotización 1'],
+  ['seguimiento-cotizacion-2','Seguimiento cotización 2'], ['ganado','Ganado']
+];
+var CFG_SEGMENTOS = ["Colegios","Centros de rehabilitación","Hogares de ancianos","Distribuidores y ortopedias","Teletón, Mutuales y Clínicas"];
+
+async function cargarConfig(){
+  var body = document.getElementById('cfg-body');
+  if(!body) return;
+  if(ROL !== 'admin'){ body.innerHTML = '<div style="padding:30px;color:var(--subtle);">Solo el administrador puede ver esta sección.</div>'; return; }
+  body.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando configuración…</div>';
+  await cargarPipelineData();
+  body.innerHTML = renderConfigEjecutivos() + '<div style="height:28px"></div>' + renderConfigPlantillas();
+  cfgTab('generica');
+}
+
+function _cfgInput(id, val, ph){
+  return '<input id="'+id+'" value="'+esc(val||'')+'" placeholder="'+esc(ph||'')+'" style="padding:8px 10px;border:1px solid var(--oct-border, #e3e3ea);border-radius:8px;font-size:13px;font-family:var(--font-sans);width:100%;box-sizing:border-box;">';
+}
+
+function renderConfigEjecutivos(){
+  var ejs = window.__EJECUTIVOS || [];
+  var rows = ejs.map(function(e){
+    var segOpts = CFG_SEGMENTOS.map(function(s){
+      return '<option value="'+esc(s)+'"'+(String(e.segmento||'').toLowerCase().trim()===s.toLowerCase()?' selected':'')+'>'+esc(s)+'</option>';
+    }).join('');
+    var noMatch = CFG_SEGMENTOS.map(function(s){return s.toLowerCase();}).indexOf(String(e.segmento||'').toLowerCase().trim()) < 0 && e.segmento;
+    if(noMatch) segOpts = '<option value="'+esc(e.segmento)+'" selected>'+esc(e.segmento)+' (actual)</option>' + segOpts;
+    return '<div style="display:grid;grid-template-columns:1.1fr 1.1fr 1.4fr 1.1fr 1.4fr auto auto;gap:8px;align-items:center;padding:10px 0;border-top:1px solid var(--oct-border,#eee);">' +
+      _cfgInput('ej-nom-'+e.id, e.nombre, 'Nombre') +
+      _cfgInput('ej-cargo-'+e.id, e.cargo, 'Cargo') +
+      _cfgInput('ej-email-'+e.id, e.email, 'Email') +
+      _cfgInput('ej-wa-'+e.id, e.whatsapp, '+56 9 ...') +
+      '<select id="ej-seg-'+e.id+'" style="padding:8px 10px;border:1px solid var(--oct-border,#e3e3ea);border-radius:8px;font-size:13px;font-family:var(--font-sans);">'+segOpts+'</select>' +
+      '<label style="font-size:12px;color:var(--subtle);display:inline-flex;align-items:center;gap:4px;white-space:nowrap;"><input type="checkbox" id="ej-act-'+e.id+'" '+(String(e.activo).toLowerCase()!=='false'?'checked':'')+'> activo</label>' +
+      '<button class="v2-btn call" style="white-space:nowrap;" onclick="guardarEjecutivoConfig(\''+esc(e.id)+'\')">Guardar</button>' +
+    '</div>';
+  }).join('');
+  return '<div class="v2-block" style="background:#fff;border:1px solid var(--oct-border,#eee);border-radius:16px;padding:20px 24px;">' +
+    '<div class="v2-block-head"><span class="v2-block-label" style="font-size:13px;color:var(--oct-navy,#001A60);font-weight:800;letter-spacing:0;">Ejecutivos</span>' +
+    '<span class="v2-block-aside">El segmento determina qué set de plantillas usa cada uno</span></div>' +
+    (rows || '<div style="color:var(--subtle);padding:12px 0;">No hay ejecutivos cargados todavía.</div>') +
+    '<div style="margin-top:18px;padding-top:16px;border-top:1px dashed var(--oct-divider,#ccc);">' +
+      '<div style="font-size:12px;color:var(--subtle);margin-bottom:8px;">¿Rotaron los rubros? Reasigna contactos a su ejecutivo según el nombre de la institución (puedes revisar antes de aplicar).</div>' +
+      '<button class="v2-btn mail" onclick="previewReasignar()">Revisar reasignación por rubro</button>' +
+      '<div id="cfg-reasignar" style="margin-top:12px;"></div>' +
+    '</div>' +
+  '</div>';
+}
+
+async function guardarEjecutivoConfig(id){
+  var g = function(p){ var el=document.getElementById(p+id); return el?el.value:''; };
+  var actEl = document.getElementById('ej-act-'+id);
+  var payload = { solicitante: USUARIO, id: id, nombre: g('ej-nom-'), cargo: g('ej-cargo-'),
+    email: g('ej-email-'), whatsapp: g('ej-wa-'), segmento: document.getElementById('ej-seg-'+id).value,
+    activo: actEl ? actEl.checked : true };
+  var r = await fetchAPI('crm_guardar_ejecutivo', null, payload);
+  if(r && r.ok){ toastCfg('Ejecutivo guardado'); try{ localStorage.removeItem('crm_pipeline_data_v1'); }catch(e){} await cargarPipelineData(); }
+  else alert('Error: ' + ((r && r.error) || 'desconocido'));
+}
+
+function renderConfigPlantillas(){
+  var tabs = [['generica','Genéricas (fallback)']].concat(CFG_SEGMENTOS.map(function(s){ return [s, s]; }));
+  var tabBtns = tabs.map(function(t){
+    return '<button class="cfg-tab" data-tab="'+esc(t[0])+'" onclick="cfgTab(this.dataset.tab)" ' +
+      'style="padding:7px 14px;border-radius:999px;border:1px solid var(--oct-divider,#ccc);background:#fff;cursor:pointer;font-family:var(--font-sans);font-size:12.5px;font-weight:600;color:var(--subtle);">'+esc(t[1])+'</button>';
+  }).join('');
+  return '<div class="v2-block" style="background:#fff;border:1px solid var(--oct-border,#eee);border-radius:16px;padding:20px 24px;">' +
+    '<div class="v2-block-head"><span class="v2-block-label" style="font-size:13px;color:var(--oct-navy,#001A60);font-weight:800;letter-spacing:0;">Plantillas de mensajes</span>' +
+    '<span class="v2-block-aside">11 genéricas + 55 segmentadas · editables sin tocar código</span></div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;">'+tabBtns+'</div>' +
+    '<div id="cfg-pl-content"></div>' +
+  '</div>';
+}
+
+function _cfgPrefix(tab, estado){ return 'pl-' + (tab==='generica' ? 'gen' : ('s'+CFG_SEGMENTOS.indexOf(tab))) + '-' + estado; }
+
+function cfgTab(tab){
+  document.querySelectorAll('.cfg-tab').forEach(function(b){
+    var on = b.dataset.tab === tab;
+    b.style.background = on ? 'var(--oct-ltblue,#D6EEFF)' : '#fff';
+    b.style.color = on ? 'var(--oct-navy,#001A60)' : 'var(--subtle)';
+    b.style.borderColor = on ? 'var(--oct-navy,#001A60)' : 'var(--oct-divider,#ccc)';
+  });
+  var cont = document.getElementById('cfg-pl-content');
+  if(cont) cont.innerHTML = renderConfigPlantillasTab(tab);
+}
+
+function renderConfigPlantillasTab(tab){
+  var esGen = tab === 'generica';
+  return CFG_ETAPAS.map(function(et){
+    var key = et[0], label = et[1];
+    var src = esGen ? (window.__PLANTILLAS_PIPE||{})[key]
+                    : (window.__PLANTILLAS_SEG||{})[tab.toLowerCase()+'|'+key];
+    src = src || {};
+    var pre = _cfgPrefix(tab, key);
+    var vacia = !String(src.mensaje_whatsapp||'').trim() && !String(src.email_cuerpo||'').trim();
+    return '<details style="border:1px solid var(--oct-border,#eee);border-radius:10px;margin-bottom:8px;overflow:hidden;">' +
+      '<summary style="cursor:pointer;padding:11px 14px;list-style:none;display:flex;justify-content:space-between;align-items:center;background:var(--oct-bg,#f9fafb);">' +
+        '<span style="font-weight:700;font-size:13px;color:var(--oct-navy,#001A60);">'+esc(label)+'</span>' +
+        '<span style="font-size:11px;color:'+(vacia?'#b45309':'#059669')+';">'+(vacia?'sin contenido (usa genérica)':'configurada')+'</span>' +
+      '</summary>' +
+      '<div style="padding:14px;display:flex;flex-direction:column;gap:10px;">' +
+        '<div><label style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:.4px;">WhatsApp</label>' +
+          '<textarea id="'+pre+'-wa" rows="3" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--oct-border,#e3e3ea);border-radius:8px;font-family:var(--font-sans);font-size:13px;resize:vertical;">'+esc(src.mensaje_whatsapp||'')+'</textarea></div>' +
+        '<div><label style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:.4px;">Asunto email</label>' +
+          _cfgInput(pre+'-asu', src.email_asunto, 'Asunto del correo') + '</div>' +
+        '<div><label style="font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:.4px;">Cuerpo email</label>' +
+          '<textarea id="'+pre+'-cue" rows="7" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--oct-border,#e3e3ea);border-radius:8px;font-family:var(--font-sans);font-size:13px;resize:vertical;line-height:1.5;">'+esc(src.email_cuerpo||'')+'</textarea></div>' +
+        '<div style="display:flex;justify-content:flex-end;"><button class="v2-btn call" onclick="guardarPlantillaConfig(\''+esc(tab).replace(/'/g,"\\'")+'\',\''+key+'\')">Guardar plantilla</button></div>' +
+      '</div>' +
+    '</details>';
+  }).join('');
+}
+
+async function guardarPlantillaConfig(tab, estado){
+  var pre = _cfgPrefix(tab, estado);
+  var wa = (document.getElementById(pre+'-wa')||{}).value || '';
+  var asu = (document.getElementById(pre+'-asu')||{}).value || '';
+  var cue = (document.getElementById(pre+'-cue')||{}).value || '';
+  var accion, payload;
+  if(tab === 'generica'){
+    accion = 'crm_guardar_plantilla_pipeline';
+    payload = { solicitante: USUARIO, estado_pipeline: estado, mensaje_whatsapp: wa, email_asunto: asu, email_cuerpo: cue };
+  } else {
+    accion = 'crm_guardar_plantilla_segmentada';
+    payload = { solicitante: USUARIO, segmento: tab, estado_pipeline: estado, mensaje_whatsapp: wa, email_asunto: asu, email_cuerpo: cue };
+  }
+  var r = await fetchAPI(accion, null, payload);
+  if(r && r.ok){ toastCfg('Plantilla guardada'); try{ localStorage.removeItem('crm_pipeline_data_v1'); }catch(e){} await cargarPipelineData(); }
+  else alert('Error: ' + ((r && r.error) || 'desconocido'));
+}
+
+async function previewReasignar(){
+  var cont = document.getElementById('cfg-reasignar');
+  if(cont) cont.innerHTML = '<div style="color:var(--subtle);font-size:12px;">Calculando…</div>';
+  var r = await fetchAPI('crm_reasignar_por_rubro', null, { solicitante: USUARIO, aplicar: false });
+  if(!r || !r.ok){ if(cont) cont.innerHTML = '<div style="color:#b91c1c;">Error: '+esc((r&&r.error)||'')+'</div>'; return; }
+  if(!r.total){ if(cont) cont.innerHTML = '<div style="color:#059669;font-size:13px;">Todo coherente: ningún contacto necesita reasignación por rubro.</div>'; return; }
+  var filas = (r.cambios||[]).slice(0,50).map(function(c){
+    return '<div style="display:flex;gap:10px;font-size:12px;padding:5px 0;border-top:1px solid var(--oct-border,#eee);"><span style="flex:1;">'+esc(c.institucion||c.nombre)+'</span><span style="color:var(--subtle);">'+esc(c.actual)+' → <b style="color:var(--oct-navy,#001A60);">'+esc(c.propuesto)+'</b></span></div>';
+  }).join('');
+  if(cont) cont.innerHTML =
+    '<div style="border:1px solid #F5C77B;background:var(--oct-cream,#FFF4EA);border-radius:10px;padding:14px;">' +
+      '<div style="font-weight:700;color:var(--oct-navy,#001A60);margin-bottom:8px;">'+r.total+' contacto(s) cambiarían de ejecutivo</div>' +
+      filas + (r.total>50?'<div style="font-size:11px;color:var(--subtle);margin-top:6px;">…y '+(r.total-50)+' más</div>':'') +
+      '<button class="v2-btn call" style="margin-top:12px;" onclick="aplicarReasignar('+r.total+')">Aplicar reasignación</button>' +
+    '</div>';
+}
+
+async function aplicarReasignar(total){
+  if(!confirm('Vas a reasignar '+total+' contacto(s) a su ejecutivo según el rubro de la institución. ¿Continuar?')) return;
+  var r = await fetchAPI('crm_reasignar_por_rubro', null, { solicitante: USUARIO, aplicar: true });
+  if(r && r.ok){ toastCfg('Reasignados '+(r.total||0)+' contactos'); try{ localStorage.removeItem('crm_cache_contactos_v2_'+USUARIO); CACHE.vMis=null; CACHE.vTodos=null; }catch(e){} var cc=document.getElementById('cfg-reasignar'); if(cc) cc.innerHTML='<div style="color:#059669;">Listo: '+(r.total||0)+' contactos reasignados.</div>'; }
+  else alert('Error: ' + ((r && r.error) || 'desconocido'));
+}
+
+function toastCfg(msg){
+  var t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--oct-navy,#001A60);color:#fff;padding:11px 20px;border-radius:999px;font-family:var(--font-sans);font-size:13px;font-weight:700;z-index:99999;box-shadow:0 4px 16px rgba(0,26,96,.25);';
+  document.body.appendChild(t);
+  setTimeout(function(){ t.style.transition='opacity .4s'; t.style.opacity='0'; setTimeout(function(){ t.remove(); }, 400); }, 1800);
 }
 
 function filtrarLista(view, q){

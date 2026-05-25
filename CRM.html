@@ -609,7 +609,7 @@ input,select,textarea{font-family:inherit; font-size:14px;}
   border-bottom:1px dashed var(--smoke);
 }
 .funnel-row:last-child{ border-bottom:none; }
-.funnel-lbl{ flex:0 0 130px; font-size:12.5px; font-weight:700; color:var(--ink); }
+.funnel-lbl{ flex:0 0 160px; font-size:12.5px; font-weight:700; color:var(--ink); line-height:1.25; }
 .funnel-bar-wrap{ flex:1; height:18px; background:var(--paper); border-radius:9px; overflow:hidden; position:relative; }
 .funnel-bar{
   height:100%; border-radius:9px;
@@ -3055,6 +3055,22 @@ function _bucketDeContacto(c){
   for(const b of PIPELINE_BUCKETS){ if(b.match(pe)) return b.key; }
   return 'porCont';
 }
+
+// Embudo de 11 etapas para el dashboard (coloreado por grupo del pipeline).
+// Usa grupoPipeline() para clasificar — NO toca PIPELINE_BUCKETS (que alimenta los filtros).
+const FUNNEL_ETAPAS = [
+  { key:'no-contactado',             label:'No contactado',           color:'#6B7280' },
+  { key:'contactado',                label:'Contactado',              color:'#06B3FD' },
+  { key:'seguimiento-1',             label:'Seguimiento 1',           color:'#06B3FD' },
+  { key:'seguimiento-2',             label:'Seguimiento 2',           color:'#06B3FD' },
+  { key:'llamada',                   label:'Llamada',                 color:'#06B3FD' },
+  { key:'email',                     label:'Email',                   color:'#06B3FD' },
+  { key:'reunion',                   label:'Reunión',                 color:'#06B3FD' },
+  { key:'cotizacion-entregada',      label:'Cotización entregada',    color:'#FF7E00' },
+  { key:'seguimiento-cotizacion-1',  label:'Seguimiento cotización 1',color:'#FF7E00' },
+  { key:'seguimiento-cotizacion-2',  label:'Seguimiento cotización 2',color:'#FF7E00' },
+  { key:'ganado',                    label:'Ganado',                  color:'#059669' }
+];
 let SELECTED_ID = null;
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -4826,24 +4842,26 @@ async function cargarFunnelDashboard(){
     etiquetaTotal = ' (tuyos)';
   }
 
-  const buckets = PIPELINE_BUCKETS;
+  const buckets = FUNNEL_ETAPAS;
   const counts = {};
   buckets.forEach(b => counts[b.key] = 0);
-  propios.forEach(c => { counts[_bucketDeContacto(c)]++; });
-  const total = Object.values(counts).reduce((a,b)=>a+b, 0);
-  totalEl.textContent = total + etiquetaTotal;
-  const max = Math.max(1, ...Object.values(counts));
-  // Guardar agrupación para que se pueda abrir el detalle al click
   window.__FUNNEL_DATA = {};
   buckets.forEach(b => { window.__FUNNEL_DATA[b.key] = []; });
-  propios.forEach(c => { window.__FUNNEL_DATA[_bucketDeContacto(c)].push(c); });
+  propios.forEach(c => {
+    const k = grupoPipeline(c.ultimo_estado || c.pipeline_estado || '').key;
+    if(counts[k] === undefined) return; // 'perdido' u otros fuera de las 11 etapas no se grafican
+    counts[k]++; window.__FUNNEL_DATA[k].push(c);
+  });
+  const total = propios.length;
+  totalEl.textContent = total + etiquetaTotal;
+  const max = Math.max(1, ...Object.values(counts));
   container.innerHTML = buckets.map(b => {
     const n = counts[b.key];
     const pct = total ? Math.round(n*100/total) : 0;
     const w = max ? Math.max(4, Math.round(n*100/max)) : 4;
     return '<div class="funnel-row" style="cursor:pointer;" onclick="verDetalleFunnel(\'' + b.key + '\',\'' + esc(b.label) + '\')" title="Click para ver los ' + n + ' contactos">' +
       '<div class="funnel-lbl">' + b.label + '</div>' +
-      '<div class="funnel-bar-wrap"><div class="funnel-bar ' + b.cls + '" style="width:' + w + '%;">' + (n > 0 ? n : '') + '</div></div>' +
+      '<div class="funnel-bar-wrap"><div class="funnel-bar" style="width:' + w + '%;background:' + b.color + ';color:#fff;">' + (n > 0 ? n : '') + '</div></div>' +
       '<div class="funnel-count">' + n + '</div>' +
       '<div class="funnel-pct">' + pct + '%</div>' +
     '</div>';
@@ -5410,7 +5428,12 @@ function renderTarjetaV2(c, view){
   var ownerHtml = mio && !verEjecAdmin
     ? '<span class="v2-owner"><span class="v2-owner-dot"></span>Asignado a ti</span>'
     : '<span class="v2-owner' + (verEjecAdmin?' admin':'') + '"><span class="v2-owner-dot"' + (verEjecAdmin?' style="background:var(--v2-navy)"':'') + '></span>Ejecutivo: <strong>' + esc(ownerNm || 'Sin asignar') + '</strong></span>';
-  var metaTxt = (c.cant_cotizaciones > 1) ? (c.cant_cotizaciones + ' cotizaciones') : (c.num_cotizacion || c.numero_cotizacion || c.sub_categoria || '');
+  var metaTxt;
+  if((view==='vCerrar' || view==='vOlvidados') && typeof c._diasInactivo === 'number'){
+    metaTxt = c._diasInactivo===9999 ? 'sin fecha' : (c._diasInactivo===0 ? 'hoy' : (c._diasInactivo===1 ? 'ayer' : 'hace ' + c._diasInactivo + ' días'));
+  } else {
+    metaTxt = (c.cant_cotizaciones > 1) ? (c.cant_cotizaciones + ' cotizaciones') : (c.num_cotizacion || c.numero_cotizacion || c.sub_categoria || '');
+  }
   var metaHtml = metaTxt ? '<span class="v2-metapill">' + esc(String(metaTxt)) + '</span>' : '';
 
   return '<article class="v2-card" onclick="abrirFichaModal(\'' + esc(c.id) + '\')">' +
@@ -6165,34 +6188,8 @@ function renderListaCerrar(){
       '</div>';
     return;
   }
-  container.innerHTML = '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(310px, 1fr)); gap:12px;">' +
-    lista.map(c => {
-      const estado = c.ultimo_estado || c.pipeline_estado || 'Cotizado';
-      const badge = pipelineBadgeHTML(estado);
-      const dias = c._diasInactivo;
-      const urgencia = dias >= 60 ? 'ruby' : dias >= 30 ? 'gold' : 'jade';
-      const colorUrg = urgencia === 'ruby' ? 'var(--ruby-dk)' : urgencia === 'gold' ? 'var(--gold-deep)' : 'var(--jade-dk)';
-      const bgUrg = urgencia === 'ruby' ? 'var(--ruby-lt)' : urgencia === 'gold' ? 'var(--gold-soft)' : 'var(--jade-lt)';
-      const textoDias = dias === 9999 ? 'sin fecha' : (dias === 0 ? 'hoy' : dias === 1 ? 'ayer' : 'hace ' + dias + ' d');
-      const ownerNm = ownerLabel(c);
-      const verEjec = esActuandoComoAdmin() && ownerNm && ownerNm !== 'Sin asignar';
-      const ownerLine = verEjec
-        ? '<div class="cc-owner-line admin-view" style="color:var(--text-1) !important;font-weight:700;font-size:12.5px;margin-top:6px;"><span class="ow-dot" style="background:var(--text-1);"></span>Ejecutivo: ' + esc(ownerNm) + '</div>'
-        : '';
-      return '<div class="contact-card" onclick="abrirFichaModal(\'' + esc(c.id) + '\')">' +
-        '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">' +
-          '<div style="flex:1;min-width:0;">' +
-            '<div class="cc-name">' + esc(c.nombre || c.institucion || '(sin nombre)') + '</div>' +
-            '<div class="cc-inst">' + esc(c.institucion || '') + (c.cargo ? ' · ' + esc(c.cargo) : '') + '</div>' +
-          '</div>' +
-          '<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:12px;background:' + bgUrg + ';color:' + colorUrg + ';font-size:11.5px;font-weight:800;letter-spacing:.3px;white-space:nowrap;">' + textoDias + '</span>' +
-        '</div>' +
-        '<div class="cc-meta">' + badge +
-          (c.cant_cotizaciones ? '<span class="category-label" title="Cotizaciones registradas"><span class="category-dot" style="background:var(--gold-deep);"></span>' + c.cant_cotizaciones + ' cot</span>' : '') +
-        '</div>' +
-        ownerLine +
-      '</div>';
-    }).join('') + '</div>';
+  container.innerHTML = '<div class="v2-grid">' +
+    lista.map(c => renderTarjetaV2(c, 'vCerrar')).join('') + '</div>';
 }
 
 async function cargarOlvidados(){
@@ -6240,28 +6237,8 @@ function renderListaOlvidados(){
       '</div>';
     return;
   }
-  container.innerHTML = '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(310px, 1fr)); gap:12px;">' +
-    lista.map(c => {
-      const estado = c.ultimo_estado || c.pipeline_estado || 'Contactado';
-      const badge = pipelineBadgeHTML(estado);
-      const dias = c._diasInactivo;
-      const ownerNm = ownerLabel(c);
-      const verEjec = esActuandoComoAdmin() && ownerNm && ownerNm !== 'Sin asignar';
-      const ownerLine = verEjec
-        ? '<div class="cc-owner-line admin-view" style="color:var(--text-1) !important;font-weight:700;font-size:12.5px;margin-top:6px;"><span class="ow-dot" style="background:var(--text-1);"></span>Ejecutivo: ' + esc(ownerNm) + '</div>'
-        : '';
-      return '<div class="contact-card" onclick="abrirFichaModal(\'' + esc(c.id) + '\')">' +
-        '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">' +
-          '<div style="flex:1;min-width:0;">' +
-            '<div class="cc-name">' + esc(c.nombre || c.institucion || '(sin nombre)') + '</div>' +
-            '<div class="cc-inst">' + esc(c.institucion || '') + (c.cargo ? ' · ' + esc(c.cargo) : '') + '</div>' +
-          '</div>' +
-          '<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:12px;background:var(--ruby-lt);color:var(--ruby-dk);font-size:11.5px;font-weight:800;white-space:nowrap;">hace ' + dias + ' d</span>' +
-        '</div>' +
-        '<div class="cc-meta">' + badge + '</div>' +
-        ownerLine +
-      '</div>';
-    }).join('') + '</div>';
+  container.innerHTML = '<div class="v2-grid">' +
+    lista.map(c => renderTarjetaV2(c, 'vOlvidados')).join('') + '</div>';
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -6637,22 +6614,31 @@ function renderHistorialAgrupado(tl, contacto){
         ? productos.split(/[\r\n]+|;|•/).map(p => p.trim()).filter(p => p.length > 2)
         : [];
 
-      html += '<details style="background:white;border:1px solid var(--oct-border);border-radius:12px;padding:0;margin-bottom:10px;overflow:hidden;">' +
-        '<summary style="cursor:pointer;padding:14px 18px;list-style:none;background:var(--oct-bg);border-left:4px solid var(--oct-orange);">' +
-          '<div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;">' +
-            '<div>' +
-              '<div style="font-size:15px;font-weight:800;color:var(--ink);font-family:Montserrat,sans-serif;letter-spacing:.3px;">' + esc(num || 'COTIZACIÓN') + '</div>' +
-              '<div style="font-size:11.5px;color:var(--gold-dk);margin-top:2px;">' + esc(formatFecha(co.fecha)) + ' · por ' + esc(co.ejecutivo || '—') + '</div>' +
+      // Estado → clase de status v2 (entregada azul / ganada verde / vencida roja / borrador gris)
+      const _estL = String(estado).toLowerCase();
+      const _stCls = (_estL.indexOf('ganad') >= 0 || _estL.indexOf('acept') >= 0 || _estL.indexOf('cerrad') >= 0) ? 'ganada'
+                   : (_estL.indexOf('vencid') >= 0 || _estL.indexOf('perdid') >= 0 || _estL.indexOf('rechaz') >= 0) ? 'vencida'
+                   : (_estL.indexOf('borrador') >= 0) ? 'borrador' : 'entregada';
+      html += '<details class="v2-quote" style="margin-bottom:10px;">' +
+        '<summary class="v2-quote-sum">' +
+          '<div class="v2-quote-main">' +
+            '<div class="v2-quote-numrow">' +
+              '<span class="v2-quote-num">' + esc(num || 'COTIZACIÓN') + '</span>' +
+              '<span class="v2-qstatus ' + _stCls + '">' + esc(estado) + '</span>' +
+              (segs.length ? '<span class="v2-qstatus" style="background:var(--oct-cream,#FFF4EA);color:#854F0B;">' + segs.length + ' seguim.</span>' : '') +
             '</div>' +
-            '<div style="display:flex;gap:10px;align-items:center;">' +
-              (montoStr ? '<span style="font-size:15px;font-weight:800;color:var(--gold-dk);">' + esc(montoStr) + '</span>' : '') +
-              '<span style="background:var(--purple-dk);color:white;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;">' + esc(estado) + '</span>' +
-              (segs.length ? '<span style="background:var(--amber);color:white;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;">' + segs.length + ' seguim.</span>' : '<span style="color:var(--mist);font-size:11px;font-style:italic;">sin seguim.</span>') +
-              '<span style="color:var(--gold-dk);font-weight:700;font-size:14px;">▾</span>' +
+            '<div class="v2-quote-metarow">' +
+              '<span class="v2-quote-mi">' + esc(formatFecha(co.fecha)) + '</span>' +
+              '<span class="v2-quote-mi">por ' + esc(co.ejecutivo || '—') + '</span>' +
+              (tieneProductos ? '<span class="v2-quote-mi">' + listaProd.length + ' productos</span>' : '') +
             '</div>' +
           '</div>' +
+          '<div class="v2-quote-aside">' +
+            (montoStr ? '<span class="v2-quote-total">' + esc(montoStr) + '</span>' : '') +
+            '<span class="v2-quote-chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>' +
+          '</div>' +
         '</summary>' +
-        '<div style="padding:14px 18px;background:white;">' +
+        '<div class="v2-quote-det" style="background:#fff;">' +
 
           // === DESGLOSE DE COSTOS ===
           '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:14px;">' +
@@ -8453,50 +8439,8 @@ async function cargarCuentas(){
     : '<div style="margin-bottom:14px;color:var(--subtle);font-size:13.5px;"><b>' + empresas.length + '</b> empresas asignadas a ti.</div>';
 
   cont.innerHTML = titulo +
-    '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">' +
-    empresas.map(c => {
-      const owner = esOwner(c);
-      const ownerNm = String(c.ejecutivo_asignado || '').trim();
-      const estado = c.ultimo_estado || c.pipeline_estado || 'Contactado';
-      const badge = pipelineBadgeHTML(estado);
-      const esGanado = String(estado).toLowerCase().indexOf('ganad') >= 0 || String(estado).toLowerCase().indexOf('cerrad') >= 0;
-      // El ícono $ aparece SIEMPRE que el estado indique que hay cotización en juego
-      // (Cotizado, En gestión, En seguimiento, Ganado). No depende del booleano backend.
-      const pipeEstado = String(estado).toLowerCase();
-      const hayCotizacion = pipeEstado.indexOf('cotizad') >= 0 ||
-                             pipeEstado.indexOf('gesti') >= 0 ||
-                             pipeEstado.indexOf('seguim') >= 0 ||
-                             pipeEstado.indexOf('ganad') >= 0;
-      const iconoCot = (hayCotizacion && !esGanado)
-        ? '<span title="Contacto cotizado' + (c.cant_cotizaciones > 1 ? ' (' + c.cant_cotizaciones + ' cotizaciones)' : '') + '" style="display:inline-flex;align-items:center;gap:4px;flex-shrink:0;">' +
-            '<span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg, var(--st-ganado-gradient-from), var(--st-ganado-gradient-to));color:white;box-shadow:0 2px 6px rgba(201,153,53,0.45);">' +
-              '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' +
-            '</span>' +
-            (c.cant_cotizaciones > 1 ? '<span style="font-size:11.5px;font-weight:700;color:var(--gold-deep);">' + c.cant_cotizaciones + '</span>' : '') +
-          '</span>'
-        : '';
-      const categoria = c.sub_categoria
-        ? '<span class="category-label"><span class="category-dot"></span>' + esc(c.sub_categoria) + '</span>'
-        : '<span class="category-label sin"><span class="category-dot"></span>Sin categoría</span>';
-      return '<div class="contact-card' + (esGanado ? ' row--ganado' : '') + '" onclick="abrirFichaModal(\'' + esc(c.id) + '\')">' +
-        '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">' +
-          '<div style="flex:1;min-width:0;">' +
-            '<div class="cc-name">' + esc(c.institucion || '(sin nombre)') + '</div>' +
-            '<div class="cc-inst">' + (c.ciudad ? esc(c.ciudad) : '') + '</div>' +
-          '</div>' +
-          iconoCot +
-        '</div>' +
-        '<div class="cc-meta">' +
-          badge +
-          categoria +
-        '</div>' +
-        ((ROL === 'admin' && MODO_VISTA === 'admin' && ownerNm)
-          ? '<div class="cc-owner-line admin-view" style="color:var(--text-1) !important;font-weight:700;font-size:12.5px;margin-top:6px;"><span class="ow-dot" style="background:var(--text-1);"></span>Ejecutivo: ' + esc(ownerNm) + '</div>'
-          : '<div class="cc-owner-line' + (owner ? ' mine' : '') + '"><span class="ow-dot"></span>' +
-            (owner ? 'Asignada a ti' : (ownerNm ? 'Asignada a ' + esc(ownerNm) : 'Sin asignar')) +
-            '</div>') +
-      '</div>';
-    }).join('') + '</div>';
+    '<div class="v2-grid">' +
+    empresas.map(c => renderTarjetaV2(c, 'vCuentas')).join('') + '</div>';
 }
 
 function abrirModalCuenta(){ abrirModalNuevaEmpresa(); }

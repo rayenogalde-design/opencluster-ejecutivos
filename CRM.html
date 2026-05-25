@@ -3465,13 +3465,16 @@ function goView(id){
 // DASHBOARD
 // ════════════════════════════════════════════════════════════════════════════
 // Asignaciones de campaña OpenCluster Chile (mayo 2026)
+// Asignación de segmentos VIGENTE (rotación mayo 2026). Coincide con CRM Ejecutivos.segmento.
 const CAMPANA_ASIG = {
-  'William Marin':   { titulo: 'Hogares de ancianos · Casas de reposo · Residencias asistidas',  detalle: 'Centros de cuidado y residencia de adultos mayores en todas sus modalidades.' },
-  'William':         { titulo: 'Hogares de ancianos · Casas de reposo · Residencias asistidas',  detalle: 'Centros de cuidado y residencia de adultos mayores en todas sus modalidades.' },
-  'Roberto':         { titulo: 'Ortopedias · Centros de ayudas técnicas',                         detalle: 'Distribuidores y tiendas especializadas en productos ortopédicos, movilidad y rehabilitación básica.' },
-  'Germán':          { titulo: 'Centros de rehabilitación física y neurológica privados',         detalle: 'Kinesiología, rehabilitación post-ACV, terapia ocupacional, recuperación funcional.' },
-  'German':          { titulo: 'Centros de rehabilitación física y neurológica privados',         detalle: 'Kinesiología, rehabilitación post-ACV, terapia ocupacional, recuperación funcional.' },
-  'Maximiliano':     { titulo: 'Colegios particulares de Chile',                                   detalle: 'Colegios privados, bilingües, internacionales y particulares pagados/subvencionados de gestión privada.' }
+  'William Marin':   { titulo: 'Colegios · Escuelas con PIE · Jardines infantiles',              detalle: 'Escuelas regulares con Programa de Integración Escolar, particulares subvencionadas, escuelas especiales y jardines infantiles.' },
+  'William':         { titulo: 'Colegios · Escuelas con PIE · Jardines infantiles',              detalle: 'Escuelas regulares con Programa de Integración Escolar, particulares subvencionadas, escuelas especiales y jardines infantiles.' },
+  'Germán':          { titulo: 'Centros de rehabilitación física y neurológica',                 detalle: 'Kinesiología, rehabilitación post-ACV, terapia ocupacional, recuperación funcional.' },
+  'German':          { titulo: 'Centros de rehabilitación física y neurológica',                 detalle: 'Kinesiología, rehabilitación post-ACV, terapia ocupacional, recuperación funcional.' },
+  'Rayen Ogalde':    { titulo: 'Hogares de ancianos · Residencias · Lugares de acogida',         detalle: 'Hogares de adulto mayor, casas de reposo, residencias para tercera edad y lugares de acogida.' },
+  'Rayen':           { titulo: 'Hogares de ancianos · Residencias · Lugares de acogida',         detalle: 'Hogares de adulto mayor, casas de reposo, residencias para tercera edad y lugares de acogida.' },
+  'Roberto':         { titulo: 'Distribuidores y ortopedias',                                     detalle: 'Distribuidores y tiendas especializadas en productos ortopédicos, movilidad y ayudas técnicas.' },
+  'Maximiliano':     { titulo: 'Teletón · Mutuales · Clínicas',                                   detalle: 'Teletón, mutuales de seguridad (ACHS, IST) y clínicas privadas. Foco institucional y partnership a largo plazo.' }
 };
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -3926,9 +3929,21 @@ const SUGERENCIAS_POR_SEGMENTO = {
     { id:'colchon-cic-basico', razon:'Mutuales: colchón clínico básico para hospital del trabajador en pacientes sin riesgo de úlceras.' }
   ]
 };
-// Alias
-SUGERENCIAS_POR_SEGMENTO['William Marin'] = SUGERENCIAS_POR_SEGMENTO['William'];
-SUGERENCIAS_POR_SEGMENTO['German'] = SUGERENCIAS_POR_SEGMENTO['Germán'];
+// ── Rotación de segmentos (mayo 2026) ──
+// El contenido de cada lista NO cambia; cambia QUIÉN la recibe. Reasignamos por ejecutivo:
+//   William → Colegios · Rayen → Hogares de ancianos · Maximiliano → Teletón/Mutuales/Clínicas
+//   (Germán y Roberto sin cambio). Las listas internas conservan su nombre histórico.
+(function(){
+  var hogares  = SUGERENCIAS_POR_SEGMENTO['William'];       // lista geriátrica (hogares de ancianos)
+  var colegios = SUGERENCIAS_POR_SEGMENTO['Maximiliano'];   // lista escolar (colegios)
+  var teleton  = SUGERENCIAS_POR_SEGMENTO['Rayen Ogalde'];  // lista institucional (Teletón/Mutuales/Clínicas)
+  SUGERENCIAS_POR_SEGMENTO['William']       = colegios;
+  SUGERENCIAS_POR_SEGMENTO['William Marin'] = colegios;
+  SUGERENCIAS_POR_SEGMENTO['Maximiliano']   = teleton;
+  SUGERENCIAS_POR_SEGMENTO['Rayen Ogalde']  = hogares;
+  SUGERENCIAS_POR_SEGMENTO['Rayen']         = hogares;
+  SUGERENCIAS_POR_SEGMENTO['German']        = SUGERENCIAS_POR_SEGMENTO['Germán'];
+})();
 
 function pintarProductosSugeridos(){
   const box = document.getElementById('dshProductos');
@@ -4190,7 +4205,7 @@ function pintarBannerCampana(){
     }
     // Sin drill-down: vista normal de administradora con tabla de segmentos colapsable
     const filas = Object.entries(CAMPANA_ASIG)
-      .filter(([k]) => !['William'].includes(k) && k !== 'German') // canónicos solo
+      .filter(([k]) => ['William','German','Rayen'].indexOf(k) < 0) // canónicos solo (sin duplicados cortos)
       .map(([nm, a]) => '<div style="display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-top:1px solid rgba(91,33,182,.1);">' +
         '<div style="flex:0 0 130px;font-weight:700;color:var(--purple-dk);">' + esc(nm) + '</div>' +
         '<div style="flex:1;font-size:13px;color:var(--ink);"><b>' + esc(a.titulo) + '</b><div style="color:var(--subtle);font-size:12px;margin-top:1px;">' + esc(a.detalle) + '</div></div>' +

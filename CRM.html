@@ -5322,9 +5322,12 @@ var V2_SVG = {
 function cleanPhone(raw){
   var num = String(raw==null?'':raw).replace(/\D/g,'');
   if(!num) return '';
-  if(num.indexOf('56')===0) return '+'+num;
-  if(num.length===8||num.length===9) return '+56'+num;
-  return '+'+num;
+  // Regla Chile: móviles SIEMPRE como +569XXXXXXXX (Zadarma/WhatsApp lo exigen así)
+  if(num.indexOf('569')===0) return '+'+num;                    // ya +569XXXXXXXX
+  if(num.indexOf('56')===0)  return '+'+num;                    // ya con código país (fijo u otro)
+  if(num.length===9 && num.charAt(0)==='9') return '+56'+num;   // 9XXXXXXXX → +569XXXXXXXX
+  if(num.length===8) return '+569'+num;                         // móvil sin el 9 → +569XXXXXXXX
+  return '+'+num;                                               // internacional (+1 829..., etc.)
 }
 function cleanWhatsApp(raw){ return cleanPhone(raw).replace(/^\+/,''); }
 

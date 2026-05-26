@@ -4227,19 +4227,23 @@ function renderEjecutivoCard(name, empresas, productos){
 }
 
 function renderXimenaCard(count){
-  var g='#9CA3AF';
-  return '<article style="background:#fff;border:1px solid var(--oct-border,#eee);border-radius:12px;overflow:hidden;font-family:var(--font-sans);">' +
+  var g='#64748B'; // slate — Ximena no trabaja por segmento (atiende personas)
+  return '<article onclick="cambiarDrillDown(\'Ximena Romero\')" style="background:#fff;border:1px solid var(--oct-border,#eee);border-radius:12px;overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s;font-family:var(--font-sans);" onmouseover="this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 4px 12px rgba(0,26,96,0.08)\'" onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\'">' +
     '<div style="height:3px;background:'+g+';"></div>' +
-    '<div style="padding:16px 18px;display:flex;align-items:center;gap:12px;position:relative;">' +
+    '<div style="padding:16px 18px;display:flex;align-items:center;gap:12px;">' +
       '<div style="width:48px;height:48px;border-radius:50%;background:'+g+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;flex-shrink:0;">XR</div>' +
-      '<div style="flex:1;min-width:0;"><div style="font-size:16px;font-weight:800;color:var(--oct-navy,#001A60);">Ximena Romero</div><div style="font-size:11px;color:var(--subtle);">Sin segmento asignado</div></div>' +
-      '<span style="position:absolute;top:12px;right:14px;font-size:10px;font-weight:700;color:'+g+';background:#F3F4F6;padding:3px 9px;border-radius:999px;">Sin asignaciones</span>' +
+      '<div style="flex:1;min-width:0;"><div style="font-size:16px;font-weight:800;color:var(--oct-navy,#001A60);">Ximena Romero</div><div style="font-size:11px;color:var(--subtle);">Ejecutiva de Ventas y Comunicaciones</div></div>' +
+    '</div>' +
+    '<div style="margin:0 18px;background:#F9FAFB;border-radius:8px;padding:12px 14px;">' +
+      '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--subtle);margin-bottom:6px;">Atiende</div>' +
+      '<span style="display:inline-block;font-size:11px;padding:3px 10px;border-radius:999px;color:'+g+';border:0.5px solid '+g+';background:#fff;">Personas (no instituciones)</span>' +
+      '<div style="font-size:12px;color:var(--subtle);margin-top:6px;">Trabaja contactos individuales, no por segmento institucional.</div>' +
     '</div>' +
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:14px 18px;">' +
-      '<div><div style="font-size:28px;font-weight:800;color:'+g+';line-height:1;">'+count+'</div><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--subtle);margin-top:3px;">Empresas</div></div>' +
-      '<div><div style="font-size:28px;font-weight:800;color:'+g+';line-height:1;">0</div><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--subtle);margin-top:3px;">Productos</div></div>' +
+      '<div><div style="font-size:28px;font-weight:800;color:var(--oct-navy,#001A60);line-height:1;">'+count+'</div><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--subtle);margin-top:3px;">Contactos</div></div>' +
+      '<div><div style="font-size:28px;font-weight:800;color:'+g+';line-height:1;">—</div><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--subtle);margin-top:3px;">Sin segmento</div></div>' +
     '</div>' +
-    '<div style="border-top:1px solid var(--oct-border,#eee);padding:10px 18px;"><span onclick="goView(\'vConfig\')" style="font-size:12.5px;font-weight:700;color:'+g+';cursor:pointer;">Asignar segmento +</span></div>' +
+    '<div style="border-top:1px solid var(--oct-border,#eee);padding:10px 18px;"><span style="font-size:12.5px;font-weight:700;color:'+g+';">Ver dashboard de Ximena →</span></div>' +
   '</article>';
 }
 
@@ -4329,7 +4333,7 @@ async function pintarBannerCampana(){
       '<div style="margin-bottom:20px;">' +
         '<div style="margin-bottom:14px;">' +
           '<h2 style="font-size:18px;font-weight:800;color:var(--oct-navy,#001A60);margin:0;letter-spacing:-.01em;">Equipo OpenCluster — Campaña Chile 2026</h2>' +
-          '<div style="font-size:12.5px;color:var(--subtle);margin-top:2px;">5 ejecutivos · cada uno atiende su segmento exclusivamente, sin cruces</div>' +
+          '<div style="font-size:12.5px;color:var(--subtle);margin-top:2px;">5 ejecutivos por segmento (sin cruces) + Ximena, que atiende personas</div>' +
         '</div>' +
         '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;">' + _cards + _ximena + '</div>' +
       '</div>';
@@ -5402,6 +5406,102 @@ function construirLinksContacto(c, g){
   return { tel:telLink, wa:waLink, mail:mailLink, hasTel:!!tel, hasMail:!!c.email };
 }
 
+// ── Selector de mensaje con preview (WhatsApp / Gmail) ──
+// En vez de abrir directo con el mensaje de la etapa actual, deja elegir la
+// plantilla (por etapa), ver el preview y editarlo antes de abrir el canal.
+function _buscarContactoCache(id){
+  var c = null;
+  ['vMis','vTodos','vSinCat','vCerrar','vOlvidados','vKanban','vCuentas'].forEach(function(v){
+    if(!c && CACHE[v]) c = CACHE[v].find(function(x){ return String(x.id) === String(id); });
+  });
+  return c;
+}
+function resolverMensaje(c, stageKey){
+  var ej = ejecutivoDeContacto(c);
+  var seg = (ej && ej.segmento) ? String(ej.segmento).toLowerCase().trim() : '';
+  var pl = null;
+  if(seg){ var sp = (window.__PLANTILLAS_SEG||{})[seg + '|' + stageKey]; if(sp && (String(sp.mensaje_whatsapp||'').trim() || String(sp.email_cuerpo||'').trim())) pl = sp; }
+  if(!pl) pl = (window.__PLANTILLAS_PIPE||{})[stageKey];
+  var repl = function(s){
+    return String(s||'')
+      .replace(/\{nombre_contacto\}/g, c.nombre || c.institucion || '')
+      .replace(/\{institucion\}/g, c.institucion || '')
+      .replace(/\{nombre_ejecutivo\}/g, (ej && ej.nombre) || USUARIO || '')
+      .replace(/\{cargo_ejecutivo\}/g, (ej && ej.cargo) || '')
+      .replace(/\{email_ejecutivo\}/g, (ej && ej.email) || '')
+      .replace(/\{wapp_ejecutivo\}/g, (ej && ej.whatsapp) || '')
+      .replace(/\{numero_cotizacion\}/g, c.num_cotizacion || c.numero_cotizacion || '')
+      .replace(/\{monto_cotizacion\}/g, c.monto_cotizacion || '')
+      .replace(/\{fecha_cotizacion\}/g, c.fecha_cotizacion || '')
+      .replace(/\{dias_desde_cotizacion\}/g, c.dias_desde_cotizacion || '');
+  };
+  return { wa: pl ? repl(pl.mensaje_whatsapp) : '', asunto: pl ? repl(pl.email_asunto) : '', cuerpo: pl ? repl(pl.email_cuerpo) : '' };
+}
+async function abrirSelectorMensaje(contactoId, canal){
+  var c = _buscarContactoCache(contactoId);
+  if(!c){ try { var l = await _cargarContactosCrudo(); c = (l||[]).find(function(x){ return String(x.id) === String(contactoId); }); } catch(e){} }
+  if(!c){ alert('Contacto no encontrado.'); return; }
+  if(canal === 'whatsapp' && !String(c.telefono||'').trim()){ alert('Este contacto no tiene teléfono registrado.'); return; }
+  if(canal === 'email' && !String(c.email||'').trim()){ alert('Este contacto no tiene email registrado.'); return; }
+  window.__SEL_MSG = { contacto: c, canal: canal };
+  var ov = document.getElementById('selMsgOverlay'); if(ov) ov.remove();
+  ov = document.createElement('div'); ov.id = 'selMsgOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;';
+  ov.onclick = function(e){ if(e.target === ov) ov.remove(); };
+  document.body.appendChild(ov);
+  var etapaActual = grupoPipeline(c.ultimo_estado || c.pipeline_estado || '').key;
+  var opts = CFG_ETAPAS.map(function(et){ return '<option value="'+et[0]+'"'+(et[0]===etapaActual?' selected':'')+'>'+esc(et[1])+'</option>'; }).join('');
+  var esWa = canal === 'whatsapp';
+  ov.innerHTML =
+    '<div style="background:#fff;border-radius:14px;max-width:640px;width:100%;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 12px 48px rgba(0,0,0,0.28);font-family:var(--font-sans);">' +
+      '<div style="padding:16px 22px;border-bottom:1px solid var(--oct-border,#eee);display:flex;justify-content:space-between;align-items:center;gap:12px;">' +
+        '<div><div style="font-size:18px;font-weight:800;color:var(--oct-navy,#001A60);">' + (esWa ? 'Enviar WhatsApp' : 'Enviar correo') + '</div>' +
+        '<div style="font-size:12.5px;color:var(--subtle);margin-top:2px;">Para: <b>' + esc(c.nombre || c.institucion) + '</b> · ' + esc(esWa ? c.telefono : c.email) + '</div></div>' +
+        '<button onclick="document.getElementById(\'selMsgOverlay\').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--subtle);line-height:1;">×</button>' +
+      '</div>' +
+      '<div style="overflow-y:auto;padding:18px 22px;flex:1;">' +
+        '<label style="display:block;font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">Plantilla (etapa del pipeline)</label>' +
+        '<select id="selMsgEtapa" onchange="_selMsgRellenar()" style="width:100%;padding:9px 12px;border:1px solid var(--oct-border,#ddd);border-radius:8px;font-size:14px;font-family:var(--font-sans);margin-bottom:14px;">' + opts + '</select>' +
+        (esWa
+          ? '<label style="display:block;font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">Mensaje</label>' +
+            '<textarea id="selMsgWa" rows="8" style="width:100%;box-sizing:border-box;padding:11px;border:1px solid var(--oct-border,#ddd);border-radius:8px;font-size:13.5px;font-family:var(--font-sans);line-height:1.5;resize:vertical;"></textarea>'
+          : '<label style="display:block;font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">Asunto</label>' +
+            '<input id="selMsgAsunto" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--oct-border,#ddd);border-radius:8px;font-size:14px;font-family:var(--font-sans);margin-bottom:14px;">' +
+            '<label style="display:block;font-size:11px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">Cuerpo</label>' +
+            '<textarea id="selMsgCuerpo" rows="10" style="width:100%;box-sizing:border-box;padding:11px;border:1px solid var(--oct-border,#ddd);border-radius:8px;font-size:13.5px;font-family:var(--font-sans);line-height:1.5;resize:vertical;"></textarea>') +
+        '<div style="font-size:11.5px;color:var(--subtle);margin-top:8px;">Podés editar el texto antes de enviar. Las variables ya están reemplazadas.</div>' +
+      '</div>' +
+      '<div style="padding:14px 22px;border-top:1px solid var(--oct-border,#eee);display:flex;justify-content:flex-end;gap:10px;">' +
+        '<button onclick="document.getElementById(\'selMsgOverlay\').remove()" style="padding:9px 18px;background:#fff;border:1px solid var(--oct-divider,#ccc);border-radius:8px;font-weight:600;cursor:pointer;font-family:var(--font-sans);">Cancelar</button>' +
+        '<button onclick="_lanzarMensaje()" style="padding:9px 22px;background:' + (esWa ? '#25D366' : 'var(--oct-navy,#001A60)') + ';color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-family:var(--font-sans);">' + (esWa ? 'Abrir WhatsApp' : 'Abrir en Gmail') + '</button>' +
+      '</div>' +
+    '</div>';
+  _selMsgRellenar();
+}
+function _selMsgRellenar(){
+  var ctx = window.__SEL_MSG; if(!ctx) return;
+  var sel = document.getElementById('selMsgEtapa'); if(!sel) return;
+  var m = resolverMensaje(ctx.contacto, sel.value);
+  if(ctx.canal === 'whatsapp'){ var t = document.getElementById('selMsgWa'); if(t) t.value = m.wa || ''; }
+  else { var a = document.getElementById('selMsgAsunto'); if(a) a.value = m.asunto || ''; var b = document.getElementById('selMsgCuerpo'); if(b) b.value = m.cuerpo || ''; }
+}
+function _lanzarMensaje(){
+  var ctx = window.__SEL_MSG; if(!ctx) return;
+  var c = ctx.contacto;
+  if(ctx.canal === 'whatsapp'){
+    var num = cleanWhatsApp(c.telefono);
+    var txt = (document.getElementById('selMsgWa')||{}).value || '';
+    window.open('https://wa.me/' + num + (txt ? '?text=' + encodeURIComponent(txt) : ''), '_blank', 'noopener');
+  } else {
+    var asunto = (document.getElementById('selMsgAsunto')||{}).value || '';
+    var cuerpo = (document.getElementById('selMsgCuerpo')||{}).value || '';
+    var url = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(c.email) + '&su=' + encodeURIComponent(asunto) + '&body=' + encodeURIComponent(cuerpo);
+    window.open(url, '_blank', 'noopener');
+    try { fetchAPI('crm_agregar_interaccion', null, { contacto_id:c.id, ejecutivo:USUARIO, tipo:'email', medio:'email', origen:'CRM', asunto:asunto, notas:'Correo enviado desde CRM con plantilla' }); } catch(e){}
+  }
+  var ov = document.getElementById('selMsgOverlay'); if(ov) ov.remove();
+}
+
 // Tarjeta de contacto v2 — patrón validado (REFERENCIA_Tarjetas_Contacto_v2.html).
 // Self-contained: recibe el contacto y la vista, computa todo internamente.
 function renderTarjetaV2(c, view){
@@ -5460,10 +5560,10 @@ function renderTarjetaV2(c, view){
       ? '<a href="' + L.tel + '" class="v2-btn call" onclick="event.stopPropagation()">' + V2_SVG.phone + 'Llamar</a>'
       : '<span class="v2-btn call disabled">' + V2_SVG.phone + 'Llamar</span>') +
     (L.hasTel
-      ? '<a href="' + L.wa + '" target="_blank" rel="noopener" class="v2-btn wa" onclick="event.stopPropagation()">' + V2_SVG.wa + 'WhatsApp</a>'
+      ? '<button class="v2-btn wa" onclick="event.stopPropagation(); abrirSelectorMensaje(\'' + esc(c.id) + '\',\'whatsapp\')">' + V2_SVG.wa + 'WhatsApp</button>'
       : '<span class="v2-btn wa disabled">' + V2_SVG.wa + 'WhatsApp</span>') +
     (L.hasMail
-      ? '<a href="' + L.mail + '" class="v2-btn mail" onclick="event.stopPropagation()" title="Enviar correo (Gmail)">' + V2_SVG.gmail + '</a>'
+      ? '<button class="v2-btn mail" onclick="event.stopPropagation(); abrirSelectorMensaje(\'' + esc(c.id) + '\',\'email\')" title="Enviar correo (Gmail)">' + V2_SVG.gmail + '</button>'
       : '<span class="v2-btn mail disabled" title="Sin email registrado">' + V2_SVG.gmail + '</span>') +
   '</div>';
 
@@ -6454,8 +6554,8 @@ function renderFicha(container, data){
         '</div>' +
         '<div class="v2-detail-actions">' +
           (LF.hasTel ? '<a href="' + LF.tel + '" class="v2-btn call">' + V2_SVG.phone + 'Llamar</a>' : '<span class="v2-btn call disabled">' + V2_SVG.phone + 'Llamar</span>') +
-          (LF.hasTel ? '<a href="' + LF.wa + '" target="_blank" rel="noopener" class="v2-btn wa">' + V2_SVG.wa + 'WhatsApp</a>' : '<span class="v2-btn wa disabled">' + V2_SVG.wa + 'WhatsApp</span>') +
-          (LF.hasMail ? '<a href="' + LF.mail + '" class="v2-btn mail" title="Enviar correo (Gmail)">' + V2_SVG.gmail + '</a>' : '') +
+          (LF.hasTel ? '<button class="v2-btn wa" onclick="abrirSelectorMensaje(\'' + esc(c.id) + '\',\'whatsapp\')">' + V2_SVG.wa + 'WhatsApp</button>' : '<span class="v2-btn wa disabled">' + V2_SVG.wa + 'WhatsApp</span>') +
+          (LF.hasMail ? '<button class="v2-btn mail" onclick="abrirSelectorMensaje(\'' + esc(c.id) + '\',\'email\')" title="Enviar correo (Gmail)">' + V2_SVG.gmail + '</button>' : '<span class="v2-btn mail disabled" title="Sin email">' + V2_SVG.gmail + '</span>') +
         '</div>' +
       '</div>' +
       '<div class="v2-detail-divider"></div>' +
@@ -6484,8 +6584,8 @@ function renderFicha(container, data){
       '<div class="v2-block-head">' + icoUser + '<span class="v2-block-label">DATOS DE CONTACTO</span><span class="v2-block-aside">toca para contactar</span></div>' +
       '<div class="v2-cpills" style="max-width:460px;">' +
         (LF.hasTel ? '<a href="' + LF.tel + '" class="v2-cpill phone"><span class="v2-cpill-icon">' + icoPhone + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">Llamar</span><span class="v2-cpill-value">' + esc(c.telefono) + '</span></span></a>' : '') +
-        (LF.hasTel ? '<a href="' + LF.wa + '" target="_blank" rel="noopener" class="v2-cpill wa"><span class="v2-cpill-icon">' + icoWaFill + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">WhatsApp</span><span class="v2-cpill-value">' + esc(c.telefono) + '</span></span></a>' : '') +
-        (LF.hasMail ? '<a href="' + LF.mail + '" class="v2-cpill email"><span class="v2-cpill-icon">' + V2_SVG.gmail + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">Gmail</span><span class="v2-cpill-value">' + esc(c.email) + '</span></span></a>' : '') +
+        (LF.hasTel ? '<div onclick="abrirSelectorMensaje(\'' + esc(c.id) + '\',\'whatsapp\')" class="v2-cpill wa" style="cursor:pointer;"><span class="v2-cpill-icon">' + icoWaFill + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">WhatsApp</span><span class="v2-cpill-value">' + esc(c.telefono) + '</span></span></div>' : '') +
+        (LF.hasMail ? '<div onclick="abrirSelectorMensaje(\'' + esc(c.id) + '\',\'email\')" class="v2-cpill email" style="cursor:pointer;"><span class="v2-cpill-icon">' + V2_SVG.gmail + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">Gmail</span><span class="v2-cpill-value">' + esc(c.email) + '</span></span></div>' : '') +
         (dir ? '<div class="v2-cpill static"><span class="v2-cpill-icon">' + icoPin + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">Dirección</span><span class="v2-cpill-value">' + esc(dir) + '</span></span></div>' : '') +
       '</div>' +
     '</div>';

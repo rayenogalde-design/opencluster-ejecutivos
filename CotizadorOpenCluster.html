@@ -1828,76 +1828,81 @@ const DISTANCIAS = {
 // Furgón = categoría camioneta/liviano | Camión = 2 ejes
 // Tablas de peajes antiguas eliminadas — usar PEAJES_CAMION_2026
 // ── Peajes reales 2026 para CAMIÓN (2 ejes) por destino desde Belloto ──────────
-// Fuente: MOP/Concesionarias, tarifas enero 2026
-// Valores = suma de peajes troncales IDA que el camión debe pagar en ruta principal
+// Fuente: afiches oficiales MOP 2026 (concesiones.mop.gob.cl), camión/bus 2 ejes.
+// Metodología: suma de plazas troncales que cruza el camión saliendo de Belloto,
+//   con TARIFA PUNTA donde la plaza la diferencia (Ruta 68, Ruta 60, Ruta 78 y el
+//   tramo Aconcagua de la Ruta 5 Norte) y tarifa plana en el resto.
+// Criterio: max(valor anterior, real 2026) — nunca se baja una tarifa.
+// Norte: al norte de Caldera la Ruta 5 es LIBERADA (peaje tope ~$67.000).
+// Valores = IDA (el cálculo los multiplica ×2 para ida y vuelta).
+// (*) Pendientes de confirmar enrutamiento (se dejó valor previo): Ruta 60 (Los
+//     Andes/San Felipe), Talagante/Isla de Maipo/Melipilla, Tiltil, La Ligua/Cabildo/Petorca.
 const PEAJES_CAMION_2026 = {
   // ── LOCAL V REGIÓN (sin peajes o mínimos) ──
   "belloto-quilpue":0,"belloto-villa alemana":0,"belloto-valparaiso":1800,
   "belloto-viña del mar":1500,"belloto-vina del mar":1500,"belloto-quillota":700,
   "belloto-la calera":1100,"belloto-limache":0,"belloto-olmue":0,
   "belloto-concon":1500,"belloto-nogales":1100,"belloto-hijuelas":900,
-  // ── HACIA SANTIAGO (Ruta 68) — camión paga ~$8.800 troncal ──
-  "belloto-santiago":8800,"belloto-maipu":9200,"belloto-puente alto":9600,
-  "belloto-san bernardo":9400,"belloto-quilicura":8800,"belloto-las condes":9000,
-  "belloto-providencia":8900,"belloto-nunoa":8900,"belloto-la florida":9300,
-  "belloto-penalolen":9300,"belloto-macul":8900,"belloto-estacion central":8800,
-  "belloto-pudahuel":8600,"belloto-cerrillos":8800,"belloto-vitacura":9000,
-  "belloto-lo barnechea":9100,"belloto-lampa":8800,"belloto-colina":9200,
-  "belloto-buin":10000,"belloto-paine":10400,"belloto-talagante":8200,
-  "belloto-isla de maipo":8200,"belloto-melipilla":7800,"belloto-curacavi":4800,
+  // ── HACIA SANTIAGO (Ruta 68 punta: Zapata + Lo Prado = $14.400) ──
+  "belloto-santiago":14400,"belloto-maipu":14400,"belloto-puente alto":14400,
+  "belloto-san bernardo":14400,"belloto-quilicura":14400,"belloto-las condes":14400,
+  "belloto-providencia":14400,"belloto-nunoa":14400,"belloto-la florida":14400,
+  "belloto-penalolen":14400,"belloto-macul":14400,"belloto-estacion central":14400,
+  "belloto-pudahuel":14400,"belloto-cerrillos":14400,"belloto-vitacura":14400,
+  "belloto-lo barnechea":14400,"belloto-lampa":17300,"belloto-colina":17300,
+  "belloto-buin":15500,"belloto-paine":15500,"belloto-talagante":8200,
+  "belloto-isla de maipo":8200,"belloto-melipilla":7800,"belloto-curacavi":7200,
   "belloto-tiltil":5200,
-  // ── HACIA LOS ANDES / SAN FELIPE (Ruta 60CH) ──
+  // ── HACIA LOS ANDES / SAN FELIPE (Ruta 60CH) (*) pendiente confirmar ruteo ──
   "belloto-los andes":4200,"belloto-san felipe":3400,"belloto-llaillay":2900,
   "belloto-putaendo":3800,
-  // ── SAN ANTONIO / LITORAL (Ruta 68 + 78) ──
-  "belloto-san antonio":5200,"belloto-casablanca":3600,"belloto-cartagena":5600,
-  "belloto-el tabo":6000,"belloto-algarrobo":5200,"belloto-el quisco":5600,
-  "belloto-santo domingo":6200,"belloto-cabildo":4400,"belloto-petorca":4800,
-  "belloto-la ligua":4800,"belloto-zapallar":4400,"belloto-papudo":4800,
+  // ── SAN ANTONIO / LITORAL (Litoral Central F-90 punta / F-94) ──
+  "belloto-san antonio":8000,"belloto-casablanca":3600,"belloto-cartagena":8000,
+  "belloto-el tabo":6500,"belloto-algarrobo":5800,"belloto-el quisco":6500,
+  "belloto-santo domingo":8500,"belloto-cabildo":5000,"belloto-petorca":5500,
+  "belloto-la ligua":5000,"belloto-zapallar":4400,"belloto-papudo":4800,
   "belloto-quintero":1800,"belloto-puchuncavi":2000,
-  // ── RUTA 5 NORTE — camión acumula peajes Lampa+LasVegas+Pichidangui+troncales ──
-  // Lampa: $1.600 | Las Vegas: $5.000 | Pichidangui: $7.800 (camión 2 ejes 2026)
-  "belloto-los vilos":14400,  // Lampa+LasVegas+Pichidangui
-  "belloto-la serena":28600,"belloto-serena":28600,  // +2 troncales Ruta del Elqui ~$7.300c/u
-  "belloto-coquimbo":28600,"belloto-ovalle":22000,"belloto-illapel":16000,
-  "belloto-vicuna":30000,"belloto-vicuña":30000,"belloto-la higuera":29000,
-  "belloto-andacollo":29000,"belloto-monte patria":23000,"belloto-salamanca":17000,
-  "belloto-combarbala":20000,"belloto-punitaqui":23000,"belloto-rio hurtado":24000,
-  "belloto-tongoy":27000,"belloto-guanaqueros":27000,
-  // ── ATACAMA (Ruta 5 Norte continúa) ──
-  "belloto-copiapo":42000,"belloto-copiapó":42000,"belloto-vallenar":36000,
-  "belloto-chanaral":46000,"belloto-diego de almagro":47000,"belloto-caldera":44000,
-  "belloto-tierra amarilla":42500,"belloto-huasco":37000,"belloto-freirina":37500,
-  "belloto-totoral":38000,"belloto-domeyko":39000,"belloto-bahia inglesa":44500,
-  "belloto-el salvador":48000,"belloto-potrerillos":48000,
-  // ── ANTOFAGASTA ──
-  "belloto-antofagasta":62000,"belloto-calama":62000,"belloto-tocopilla":52000,
-  "belloto-mejillones":54000,"belloto-taltal":50000,"belloto-san pedro de atacama":65000,
-  "belloto-maria elena":58000,"belloto-baquedano":57000,
+  // ── RUTA 5 NORTE (El Melón+Pichidangui PUNTA $9.400 c/u; troncales norte planos) ──
+  "belloto-los vilos":18800,
+  "belloto-la serena":34000,"belloto-serena":34000,
+  "belloto-coquimbo":34000,"belloto-ovalle":34000,"belloto-illapel":26000,
+  "belloto-vicuna":36000,"belloto-vicuña":36000,"belloto-la higuera":34000,
+  "belloto-andacollo":34000,"belloto-monte patria":34000,"belloto-salamanca":26000,
+  "belloto-combarbala":30000,"belloto-punitaqui":34000,"belloto-rio hurtado":34000,
+  "belloto-tongoy":34000,"belloto-guanaqueros":34000,
+  // ── ATACAMA ──
+  "belloto-copiapo":62000,"belloto-copiapó":62000,"belloto-vallenar":52800,
+  "belloto-chanaral":67000,"belloto-diego de almagro":67000,"belloto-caldera":67000,
+  "belloto-tierra amarilla":62000,"belloto-huasco":53000,"belloto-freirina":53000,
+  "belloto-totoral":58000,"belloto-domeyko":52800,"belloto-bahia inglesa":67000,
+  "belloto-el salvador":67000,"belloto-potrerillos":67000,
+  // ── ANTOFAGASTA (liberada al norte de Caldera, peaje tope ~$67.000) ──
+  "belloto-antofagasta":67000,"belloto-calama":67000,"belloto-tocopilla":67000,
+  "belloto-mejillones":67000,"belloto-taltal":67000,"belloto-san pedro de atacama":67000,
+  "belloto-maria elena":67000,"belloto-baquedano":67000,
   // ── TARAPACÁ ──
-  "belloto-iquique":65000,"belloto-alto hospicio":65000,"belloto-pozo almonte":62000,
-  "belloto-pica":63000,
-  // ── ARICA Y PARINACOTA ──
+  "belloto-iquique":67000,"belloto-alto hospicio":67000,"belloto-pozo almonte":67000,
+  "belloto-pica":67000,
+  // ── ARICA Y PARINACOTA (real ~$67.000; se mantiene valor previo mayor) ──
   "belloto-arica":72000,"belloto-putre":72000,
-  // ── RUTA 5 SUR — peajes troncales camión 2026 ──
-  // O'Higgins: Acceso Sur + troncales (~$6.700+$6.200 auto equiv, camión ~$12.000+)
-  "belloto-rancagua":18000,"belloto-graneros":17000,"belloto-mostazal":16000,
-  "belloto-requinoa":19000,"belloto-san fernando":21000,"belloto-rengo":20000,
-  "belloto-santa cruz":22000,"belloto-pichilemu":22500,"belloto-machali":18500,
-  "belloto-peumo":21500,"belloto-chimbarongo":21500,"belloto-nancagua":22000,
-  "belloto-codegua":17500,"belloto-coltauco":20000,"belloto-san vicente":21000,
+  // ── RUTA 5 SUR (Ruta 68 punta $14.400 + plazas troncales planas) ──
+  "belloto-rancagua":22400,"belloto-graneros":22400,"belloto-mostazal":22400,
+  "belloto-requinoa":22400,"belloto-san fernando":22400,"belloto-rengo":22400,
+  "belloto-santa cruz":23000,"belloto-pichilemu":23000,"belloto-machali":22400,
+  "belloto-peumo":22400,"belloto-chimbarongo":22400,"belloto-nancagua":23000,
+  "belloto-codegua":22400,"belloto-coltauco":22400,"belloto-san vicente":22400,
   // ── MAULE ──
-  "belloto-curico":24000,"belloto-talca":30000,"belloto-linares":36000,
-  "belloto-constitucion":33000,"belloto-cauquenes":38000,"belloto-parral":37000,
-  "belloto-san javier":32000,"belloto-molina":26000,"belloto-longavi":36500,
-  "belloto-retiro":37000,"belloto-hualane":28000,"belloto-romeral":26000,
-  "belloto-sagrada familia":27000,"belloto-rauco":26000,"belloto-teno":25000,
-  "belloto-maule":31000,"belloto-villa alegre":33000,"belloto-yerbas buenas":33500,
-  // ── ÑUBLE ──
+  "belloto-curico":29300,"belloto-talca":35200,"belloto-linares":36000,
+  "belloto-constitucion":35200,"belloto-cauquenes":41100,"belloto-parral":41100,
+  "belloto-san javier":35200,"belloto-molina":29300,"belloto-longavi":41100,
+  "belloto-retiro":41100,"belloto-hualane":32000,"belloto-romeral":29300,
+  "belloto-sagrada familia":29300,"belloto-rauco":29300,"belloto-teno":29300,
+  "belloto-maule":35200,"belloto-villa alegre":35200,"belloto-yerbas buenas":35200,
+  // ── ÑUBLE (real ~$41.100; se mantiene valor previo mayor) ──
   "belloto-chillan":42000,"belloto-san carlos":44000,"belloto-quirihue":45000,
   "belloto-bulnes":43000,"belloto-yungay":46000,"belloto-coihueco":43500,
   "belloto-chillan viejo":42500,
-  // ── BIOBÍO ──
+  // ── BIOBÍO (real ~$47.200; se mantiene valor previo mayor) ──
   "belloto-concepcion":52000,"belloto-talcahuano":52500,"belloto-hualpen":52500,
   "belloto-coronel":53500,"belloto-lota":54000,"belloto-chiguayante":52000,
   "belloto-los angeles":56000,"belloto-lebu":60000,"belloto-arauco":58000,
@@ -1908,23 +1913,23 @@ const PEAJES_CAMION_2026 = {
   "belloto-cañete":59000,"belloto-contulmo":60000,"belloto-tirua":62000,
   "belloto-curanilahue":61000,"belloto-los alamos":61500,"belloto-cabrero":54000,
   "belloto-negrete":56000,"belloto-mininco":56000,
-  // ── ARAUCANÍA ──
+  // ── ARAUCANÍA (real ~$53-66k; se mantiene valor previo mayor) ──
   "belloto-temuco":64000,"belloto-lautaro":65000,"belloto-angol":60000,
   "belloto-victoria":63000,"belloto-pucon":70000,"belloto-villarrica":69000,
   "belloto-pitrufquen":66000,"belloto-nueva imperial":66500,"belloto-carahue":67000,
   "belloto-traiguen":63000,"belloto-collipulli":62500,"belloto-curacautin":66000,
-  "belloto-freire":65500,"belloto-padre las casas":64500,
+  "belloto-freire":66000,"belloto-padre las casas":64500,
   // ── LOS RÍOS ──
-  "belloto-valdivia":74000,"belloto-la union":76000,"belloto-rio bueno":77000,
-  "belloto-panguipulli":75000,"belloto-futrono":78000,"belloto-lanco":74500,
+  "belloto-valdivia":74000,"belloto-la union":79100,"belloto-rio bueno":79100,
+  "belloto-panguipulli":75000,"belloto-futrono":79000,"belloto-lanco":74500,
   // ── LOS LAGOS ──
   "belloto-osorno":82000,"belloto-puerto montt":92000,"belloto-castro":104000,
   "belloto-ancud":100000,"belloto-quellon":112000,"belloto-puerto varas":94000,
   "belloto-frutillar":90000,"belloto-llanquihue":90000,"belloto-calbuco":95000,
-  // ── AYSÉN Y MAGALLANES ──
+  // ── AYSÉN Y MAGALLANES (no son peajes Ruta 5; incluyen ferry/Argentina) ──
   "belloto-coyhaique":92000,"belloto-coihaique":92000,"belloto-puerto aysen":92000,
   "belloto-punta arenas":92000,"belloto-puerto natales":92000,
-  "default":8800
+  "default":14400
 };
 
 function getPeaje(orig, dest) {

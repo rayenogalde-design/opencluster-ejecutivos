@@ -353,10 +353,11 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
 
 /* Tarjeta cliente */
 .pclient-card {
-  display:grid;
-  grid-template-columns:1fr 1fr 1fr;
-  /* dense permite que cells de span variable encajen sin huecos */
-  grid-auto-flow:row dense;
+  /* Flujo libre: las celdas flotan una al lado de otra y se empacan
+     las que quepan por línea (sin medida fija). flex-grow llena la fila
+     para que el cuadro quede prolijo. */
+  display:flex;
+  flex-wrap:wrap;
   gap:0;
   border:1.5px solid var(--ltblue);
   border-radius:8px;
@@ -365,16 +366,18 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
   background:white;
 }
 .pclient-cell {
+  /* se dimensiona a su contenido y crece para llenar la línea */
+  flex:1 1 auto;
+  min-width:max-content;
   padding:5px 10px;
   border-right:1px solid var(--ltblue);
   border-bottom:1px solid var(--ltblue);
   background:white;
   box-sizing:border-box;
-  min-width:0;
 }
-/* Cells que ocupan más de una columna cuando el contenido es largo (emails, instituciones). */
-.pclient-cell.wide { grid-column:span 2; }
-.pclient-cell.full { grid-column:1 / -1; }
+/* Valor extremadamente largo: toma la línea completa y hace wrap prolijo
+   dentro de su celda, sin reventar el ancho del cuadro. */
+.pclient-cell.full { flex-basis:100%; min-width:0; }
 .pclient-label {
   font-size:6.5pt; font-weight:700; text-transform:uppercase;
   letter-spacing:0.4px; color:var(--sky); margin-bottom:1px; display:block;
@@ -382,10 +385,11 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
 .pclient-value {
   font-size:9pt; color:#1a2535; font-weight:700; line-height:1.3;
   display:block;
-  /* break-word es más prolijo que anywhere: solo quiebra dentro de la palabra
-     si no hay otra opción (la mayoría de los casos rompen en espacios/puntos). */
-  white-space:normal; overflow-wrap:break-word; word-break:break-word;
+  /* por defecto en una sola línea para que la celda mida lo justo */
+  white-space:nowrap;
 }
+/* solo los valores muy largos hacen wrap (dentro de su celda full) */
+.pclient-value.wrap { white-space:normal; overflow-wrap:break-word; word-break:break-word; }
 
 /* ── TABLE ── */
 .ptbl { width:100%; border-collapse:collapse; font-size:10pt; margin-bottom:10px; }
@@ -3352,19 +3356,14 @@ function upd() {
     <div class="pclient-card">
       ${clientFields.map(f=>{
         const isInst = f.label === "Institución/Empresa";
-        // Cells con texto largo ocupan más columnas para evitar quiebres feos.
-        // Email y dirección son los típicos largos sin espacios para hacer wrap.
+        // Flujo libre: cada campo flota a su ancho de contenido. Solo los
+        // valores muy largos (que no caben ni en su propia celda) toman la
+        // línea completa y hacen wrap, para no reventar el ancho del cuadro.
         const len = String(f.val || "").length;
-        let cellMod = "";
-        if(f.label === "Email" || f.label === "Dirección" || isInst) {
-          if(len > 50) cellMod = " full";
-          else if(len > 24) cellMod = " wide";
-        } else if(len > 35) {
-          cellMod = " wide";
-        }
-        return `<div class="pclient-cell${cellMod}">
+        const isLong = len > 46;
+        return `<div class="pclient-cell${isLong ? " full" : ""}">
           <span class="pclient-label">${f.label}</span>
-          <span class="pclient-value${isInst ? " inst" : ""}">${f.val}</span>
+          <span class="pclient-value${isInst ? " inst" : ""}${isLong ? " wrap" : ""}">${f.val}</span>
         </div>`;
       }).join("")}
     </div>

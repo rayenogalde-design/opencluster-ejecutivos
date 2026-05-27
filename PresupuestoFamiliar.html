@@ -723,8 +723,8 @@
     <div class="modal-handle"></div>
     <div class="modal-title" id="expenseModalTitle">Nuevo <em>gasto</em></div>
     <div class="form-group">
-      <label class="form-label">Monto en US$</label>
-      <input type="number" inputmode="decimal" step="0.01" class="form-input amount" id="expAmount" placeholder="0.00" oninput="updateExpenseDop()">
+      <label class="form-label">Monto en RD$</label>
+      <input type="number" inputmode="decimal" step="1" class="form-input amount" id="expAmount" placeholder="0" oninput="updateExpenseDop()">
       <div class="form-amount-dop" id="expAmountDop"></div>
     </div>
     <div class="form-group">
@@ -882,7 +882,7 @@
       <div style="font-size:11px;color:var(--muted);margin-top:6px;font-style:italic">Pesos dominicanos por dólar</div>
     </div>
     <div class="settings-group">
-      <div class="settings-group-title">Presupuesto por categoría (US$)</div>
+      <div class="settings-group-title">Presupuesto por categoría (RD$)</div>
       <div id="budgetEditList"></div>
       <div class="budget-total" id="budgetTotalDisplay">
         <span class="label">Total</span>
@@ -907,16 +907,16 @@ const DEFAULT_STATE = {
     { id: 'german', name: 'Germán', emoji: '👨' },
   ],
   categories: [
-    { id: 'vivienda',    name: 'Vivienda',           emoji: '🏠', budget: 250 },
-    { id: 'super',       name: 'Supermercado',       emoji: '🛒', budget: 500 },
-    { id: 'vegetales',   name: 'Vegetales',          emoji: '🥬', budget: 80 },
-    { id: 'carne',       name: 'Carne',              emoji: '🥩', budget: 80 },
-    { id: 'gasolina',    name: 'Gasolina',           emoji: '⛽', budget: 100 },
-    { id: 'inethogar',   name: 'Internet casa',      emoji: '📡', budget: 25 },
-    { id: 'inetryan',    name: 'Internet móvil Ryan',emoji: '📱', budget: 25 },
-    { id: 'entret',      name: 'Entretención',       emoji: '🎬', budget: 60 },
-    { id: 'obra',        name: 'Aporte obra mundial',emoji: '🤝', budget: 40 },
-    { id: 'limpieza',    name: 'Limpieza hogar',     emoji: '🧹', budget: 40 },
+    { id: 'vivienda',    name: 'Vivienda',           emoji: '🏠', budget: 15000 },
+    { id: 'super',       name: 'Supermercado',       emoji: '🛒', budget: 30000 },
+    { id: 'vegetales',   name: 'Vegetales',          emoji: '🥬', budget: 5000 },
+    { id: 'carne',       name: 'Carne',              emoji: '🥩', budget: 5000 },
+    { id: 'gasolina',    name: 'Gasolina',           emoji: '⛽', budget: 6000 },
+    { id: 'inethogar',   name: 'Internet casa',      emoji: '📡', budget: 1500 },
+    { id: 'inetryan',    name: 'Internet móvil Ryan',emoji: '📱', budget: 1500 },
+    { id: 'entret',      name: 'Entretención',       emoji: '🎬', budget: 3500 },
+    { id: 'obra',        name: 'Aporte obra mundial',emoji: '🤝', budget: 2500 },
+    { id: 'limpieza',    name: 'Limpieza hogar',     emoji: '🧹', budget: 2500 },
   ],
   goals: [
     { id: 'chile',    name: 'Viaje a Chile',           emoji: '🇨🇱', target: 3000,  deadline: '2026-12-31' },
@@ -983,6 +983,12 @@ async function saveState() {
   catch (e) { console.error('Error guardando:', e); }
 }
 
+// ── Conversión USD ↔ DOP ──
+// Gastos y presupuesto se guardan en PESOS (RD$). Ingresos y metas en DÓLARES (US$).
+const usdToDop = (usd) => usd * state.exchangeRate;
+const dopToUsd = (dop) => state.exchangeRate ? dop / state.exchangeRate : 0;
+
+// US$ — cifra grande (solo metas de ahorro)
 const fmtUSD = (n) => {
   const v = Math.abs(n);
   const formatted = v.toLocaleString('en-US', { minimumFractionDigits: v < 100 && v > 0 ? 2 : 0, maximumFractionDigits: 2 });
@@ -992,7 +998,11 @@ const fmtUSDShort = (n) => {
   const v = Math.abs(n);
   return (n < 0 ? '-$' : '$') + v.toLocaleString('en-US', { maximumFractionDigits: 0 });
 };
-const fmtDOP = (n) => 'RD$ ' + Math.round(n * state.exchangeRate).toLocaleString('en-US');
+// RD$ — moneda principal, cifra grande. Recibe un monto YA en pesos.
+const fmtDOP = (dop) => (dop < 0 ? '-RD$ ' : 'RD$ ') + Math.round(Math.abs(dop)).toLocaleString('en-US');
+// Referencias chiquitas
+const refUSD = (dop) => '≈ US$ ' + Math.round(Math.abs(dopToUsd(dop))).toLocaleString('en-US'); // de un monto en pesos
+const refDOP = (usd) => '≈ RD$ ' + Math.round(Math.abs(usdToDop(usd))).toLocaleString('en-US'); // de un monto en dólares
 const fmtDate = (iso) => {
   const d = new Date(iso + 'T00:00:00');
   return d.getDate() + ' ' + MONTHS[d.getMonth()].slice(0,3);
@@ -1034,17 +1044,18 @@ function renderHeader() {
 }
 
 function renderIncome() {
-  const total = totalIncome();
-  document.getElementById('incTotal').innerHTML = `<span class="currency">$</span>${total.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
-  document.getElementById('incDop').textContent = '≈ ' + fmtDOP(total);
+  const totalUsd = totalIncome();            // guardado en US$
+  const totalDop = usdToDop(totalUsd);
+  document.getElementById('incTotal').innerHTML = `<span class="currency">RD$</span>${Math.round(totalDop).toLocaleString('en-US')}`;
+  document.getElementById('incDop').textContent = '≈ ' + fmtUSDShort(totalUsd);
   const peopleEl = document.getElementById('incPeople');
   peopleEl.innerHTML = state.people.map(p => {
-    const amt = getPersonIncome(p.id);
+    const amtUsd = getPersonIncome(p.id);
     return `
       <div class="person-tile">
         <div class="person-name">${p.emoji} ${p.name}</div>
-        <div class="person-amount">${fmtUSDShort(amt)}</div>
-        <div class="person-dop">${fmtDOP(amt)}</div>
+        <div class="person-amount">${fmtDOP(usdToDop(amtUsd))}</div>
+        <div class="person-dop">${fmtUSDShort(amtUsd)}</div>
       </div>`;
   }).join('');
 }
@@ -1055,13 +1066,13 @@ function renderSummary() {
   const remaining = budget - spent;
   const pct = budget > 0 ? (spent / budget) * 100 : 0;
   const remEl = document.getElementById('sumRemaining');
-  remEl.innerHTML = `<span class="currency">${remaining < 0 ? '-$' : '$'}</span>${Math.abs(remaining).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+  remEl.innerHTML = `<span class="currency">${remaining < 0 ? '-RD$' : 'RD$'}</span>${Math.round(Math.abs(remaining)).toLocaleString('en-US')}`;
   remEl.classList.toggle('over', remaining < 0);
-  document.getElementById('sumRemainingDop').textContent = '≈ ' + fmtDOP(remaining);
-  document.getElementById('sumSpent').textContent = fmtUSDShort(spent);
-  document.getElementById('sumSpentDop').textContent = fmtDOP(spent);
-  document.getElementById('sumBudget').textContent = fmtUSDShort(budget);
-  document.getElementById('sumBudgetDop').textContent = fmtDOP(budget);
+  document.getElementById('sumRemainingDop').textContent = refUSD(remaining);
+  document.getElementById('sumSpent').textContent = fmtDOP(spent);
+  document.getElementById('sumSpentDop').textContent = refUSD(spent);
+  document.getElementById('sumBudget').textContent = fmtDOP(budget);
+  document.getElementById('sumBudgetDop').textContent = refUSD(budget);
   const fill = document.getElementById('sumBarFill');
   fill.style.width = Math.min(pct, 100) + '%';
   fill.classList.toggle('warn', pct >= 80 && pct < 100);
@@ -1069,39 +1080,40 @@ function renderSummary() {
 }
 
 function renderSavingsHighlight() {
-  const income = totalIncome();
-  const spent = totalSpent();
-  const budget = totalBudget();
+  const incomeUsd = totalIncome();           // US$
+  const incomeDop = usdToDop(incomeUsd);
+  const spent = totalSpent();                // RD$
+  const budget = totalBudget();              // RD$
   const card = document.getElementById('savingsHighlight');
 
-  if (income === 0) {
+  if (incomeUsd === 0) {
     document.getElementById('savingsLabel').textContent = 'Para ahorrar este mes';
-    document.getElementById('savingsAmount').innerHTML = `<span class="currency">$</span>—`;
+    document.getElementById('savingsAmount').innerHTML = `<span class="currency">RD$</span>—`;
     document.getElementById('savingsDop').textContent = 'Aún sin ingresos registrados';
     document.getElementById('savingsNote').textContent = 'Toca + en Ingresos para empezar';
     card.classList.remove('deficit');
     return;
   }
 
-  const realSaving = income - spent;
-  const idealSaving = income - budget;
+  const realSaving = incomeDop - spent;      // RD$
+  const idealSaving = incomeDop - budget;    // RD$
   const isDeficit = realSaving < 0;
   card.classList.toggle('deficit', isDeficit);
 
   document.getElementById('savingsLabel').textContent = isDeficit ? 'Déficit del mes' : 'Para ahorrar este mes';
-  document.getElementById('savingsAmount').innerHTML = `<span class="currency">${isDeficit ? '-$' : '$'}</span>${Math.abs(realSaving).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
-  document.getElementById('savingsDop').textContent = '≈ ' + fmtDOP(Math.abs(realSaving));
+  document.getElementById('savingsAmount').innerHTML = `<span class="currency">${isDeficit ? '-RD$' : 'RD$'}</span>${Math.round(Math.abs(realSaving)).toLocaleString('en-US')}`;
+  document.getElementById('savingsDop').textContent = refUSD(realSaving);
 
   let note;
   if (isDeficit) {
-    note = `Gastaste ${fmtUSDShort(-realSaving)} más de lo que recibiste`;
+    note = `Gastaste ${fmtDOP(-realSaving)} más de lo que recibiste`;
   } else if (idealSaving >= 0 && spent < budget) {
     const diff = realSaving - idealSaving;
     note = diff > 0
-      ? `Ahorras ${fmtUSDShort(diff)} extra por gastar menos del presupuesto`
+      ? `Ahorras ${fmtDOP(diff)} extra por gastar menos del presupuesto`
       : `Ingresos − gastos del mes`;
   } else {
-    note = `Ingresos ${fmtUSDShort(income)} − gastos ${fmtUSDShort(spent)}`;
+    note = `Ingresos ${fmtDOP(incomeDop)} − gastos ${fmtDOP(spent)}`;
   }
   document.getElementById('savingsNote').textContent = note;
 }
@@ -1120,16 +1132,16 @@ function renderCategories() {
         <div class="cat-row-1">
           <div class="cat-name"><span class="cat-emoji">${cat.emoji}</span>${cat.name}</div>
           <div class="cat-amount ${isOver ? 'over' : isZero ? 'zero' : ''}">
-            <div class="remaining">${isOver ? '<span class="neg">-</span>$' : '$'}${Math.abs(remaining).toLocaleString('en-US', { maximumFractionDigits: 0 })}</div>
-            <div class="dop">${fmtDOP(Math.abs(remaining))}</div>
+            <div class="remaining">${isOver ? '<span class="neg">-</span>RD$ ' : 'RD$ '}${Math.round(Math.abs(remaining)).toLocaleString('en-US')}</div>
+            <div class="dop">${refUSD(remaining)}</div>
           </div>
         </div>
         <div class="cat-bar">
           <div class="cat-bar-fill ${isOver ? 'over' : isWarn ? 'warn' : ''}" style="width:${Math.min(pct, 100)}%"></div>
         </div>
         <div class="cat-row-2">
-          <span>Gastado <span class="spent-value">${fmtUSDShort(spent)}</span></span>
-          <span>de ${fmtUSDShort(cat.budget)}</span>
+          <span>Gastado <span class="spent-value">${fmtDOP(spent)}</span></span>
+          <span>de ${fmtDOP(cat.budget)}</span>
         </div>
       </div>`;
   }).join('');
@@ -1150,7 +1162,10 @@ function renderGoals() {
           <div class="goal-emoji">${goal.emoji}</div>
         </div>
         <div class="goal-amounts">
-          <div class="goal-current">${fmtUSD(current)}</div>
+          <div>
+            <div class="goal-current">${fmtUSD(current)}</div>
+            <div class="goal-target" style="margin-top:2px">${refDOP(current)}</div>
+          </div>
           <div class="goal-target">de ${fmtUSDShort(goal.target)}</div>
         </div>
         <div class="goal-bar">
@@ -1198,8 +1213,8 @@ function renderMovementList() {
               </div>
               <div class="expense-right">
                 <div>
-                  <div class="expense-amount">−${fmtUSD(item.amount).replace('-', '')}</div>
-                  <div class="expense-dop">${fmtDOP(item.amount)}</div>
+                  <div class="expense-amount">−${fmtDOP(item.amount)}</div>
+                  <div class="expense-dop">${refUSD(item.amount)}</div>
                 </div>
                 <button class="expense-del" onclick="event.stopPropagation(); deleteExpense('${item.id}')" aria-label="Eliminar">✕</button>
               </div>
@@ -1214,8 +1229,8 @@ function renderMovementList() {
               </div>
               <div class="expense-right">
                 <div>
-                  <div class="expense-amount income">+${fmtUSD(item.amount).replace('-', '')}</div>
-                  <div class="expense-dop">${fmtDOP(item.amount)}</div>
+                  <div class="expense-amount income">+${fmtDOP(usdToDop(item.amount))}</div>
+                  <div class="expense-dop">${fmtUSDShort(item.amount)}</div>
                 </div>
                 <button class="expense-del" onclick="event.stopPropagation(); deleteIncome('${item.id}')" aria-label="Eliminar">✕</button>
               </div>
@@ -1274,8 +1289,8 @@ function openExpenseModal(prefillCategory = null) {
 }
 
 function updateExpenseDop() {
-  const amt = parseFloat(document.getElementById('expAmount').value) || 0;
-  document.getElementById('expAmountDop').textContent = amt > 0 ? '≈ ' + fmtDOP(amt) : '';
+  const amt = parseFloat(document.getElementById('expAmount').value) || 0;  // RD$
+  document.getElementById('expAmountDop').textContent = amt > 0 ? refUSD(amt) : '';
 }
 
 async function saveExpense() {
@@ -1326,8 +1341,8 @@ function openIncomeModal() {
 }
 
 function updateIncomeDop() {
-  const amt = parseFloat(document.getElementById('incAmount').value) || 0;
-  document.getElementById('incAmountDop').textContent = amt > 0 ? '≈ ' + fmtDOP(amt) : '';
+  const amt = parseFloat(document.getElementById('incAmount').value) || 0;  // US$
+  document.getElementById('incAmountDop').textContent = amt > 0 ? refDOP(amt) : '';
 }
 
 async function saveIncome() {
@@ -1368,9 +1383,9 @@ function openIncomeList() {
 }
 
 function renderIncomeList() {
-  const total = totalIncome();
-  document.getElementById('incListTotal').textContent = fmtUSD(total);
-  document.getElementById('incListDop').textContent = '≈ ' + fmtDOP(total);
+  const total = totalIncome();               // US$
+  document.getElementById('incListTotal').textContent = fmtDOP(usdToDop(total));
+  document.getElementById('incListDop').textContent = '≈ ' + fmtUSDShort(total);
   const incomes = getMonthIncomes();
   const container = document.getElementById('incListContainer');
   if (incomes.length === 0) {
@@ -1389,8 +1404,8 @@ function renderIncomeList() {
             </div>
             <div class="expense-right">
               <div>
-                <div class="expense-amount income">+${fmtUSD(i.amount).replace('-', '')}</div>
-                <div class="expense-dop">${fmtDOP(i.amount)}</div>
+                <div class="expense-amount income">+${fmtDOP(usdToDop(i.amount))}</div>
+                <div class="expense-dop">${fmtUSDShort(i.amount)}</div>
               </div>
               <button class="expense-del" onclick="event.stopPropagation(); deleteIncome('${i.id}')" aria-label="Eliminar">✕</button>
             </div>
@@ -1416,11 +1431,11 @@ function renderCategoryDetail(catId) {
   const remaining = cat.budget - spent;
   document.getElementById('detailTitle').innerHTML = `${cat.emoji} <em>${cat.name}</em>`;
   const remEl = document.getElementById('detailRemaining');
-  remEl.textContent = (remaining < 0 ? '-$' : '$') + Math.abs(remaining).toLocaleString('en-US', { maximumFractionDigits: 2 });
+  remEl.textContent = fmtDOP(remaining);
   remEl.classList.toggle('over', remaining < 0);
-  document.getElementById('detailRemainingDop').textContent = '≈ ' + fmtDOP(Math.abs(remaining));
-  document.getElementById('detailBudget').textContent = fmtUSDShort(cat.budget);
-  document.getElementById('detailSpent').textContent = fmtUSDShort(spent);
+  document.getElementById('detailRemainingDop').textContent = refUSD(remaining);
+  document.getElementById('detailBudget').textContent = fmtDOP(cat.budget);
+  document.getElementById('detailSpent').textContent = fmtDOP(spent);
   const expenses = getCategoryExpenses(catId);
   const expContainer = document.getElementById('detailExpenses');
   if (expenses.length === 0) {
@@ -1436,8 +1451,8 @@ function renderCategoryDetail(catId) {
             </div>
             <div class="expense-right">
               <div>
-                <div class="expense-amount">${fmtUSD(e.amount)}</div>
-                <div class="expense-dop">${fmtDOP(e.amount)}</div>
+                <div class="expense-amount">${fmtDOP(e.amount)}</div>
+                <div class="expense-dop">${refUSD(e.amount)}</div>
               </div>
               <button class="expense-del" onclick="event.stopPropagation(); deleteExpense('${e.id}')" aria-label="Eliminar">✕</button>
             </div>
@@ -1463,8 +1478,8 @@ function openSavings(goalId = null) {
 }
 
 function updateSavingsDop() {
-  const amt = parseFloat(document.getElementById('savAmount').value) || 0;
-  document.getElementById('savAmountDop').textContent = amt > 0 ? '≈ ' + fmtDOP(amt) : '';
+  const amt = parseFloat(document.getElementById('savAmount').value) || 0;  // US$
+  document.getElementById('savAmountDop').textContent = amt > 0 ? refDOP(amt) : '';
 }
 
 async function saveSaving() {
@@ -1496,7 +1511,7 @@ function renderGoalDetail(goalId) {
   const remaining = Math.max(0, goal.target - current);
   document.getElementById('goalDetailTitle').innerHTML = `${goal.emoji} <em>${goal.name}</em>`;
   document.getElementById('goalDetailCurrent').textContent = fmtUSD(current);
-  document.getElementById('goalDetailCurrentDop').textContent = '≈ ' + fmtDOP(current);
+  document.getElementById('goalDetailCurrentDop').textContent = refDOP(current);
   document.getElementById('goalDetailTarget').textContent = fmtUSDShort(goal.target);
   document.getElementById('goalDetailRemaining').textContent = fmtUSDShort(remaining);
   const contribs = getGoalContributions(goalId);
@@ -1515,7 +1530,7 @@ function renderGoalDetail(goalId) {
             <div class="expense-right">
               <div>
                 <div class="expense-amount gold">${fmtUSD(c.amount)}</div>
-                <div class="expense-dop">${fmtDOP(c.amount)}</div>
+                <div class="expense-dop">${refDOP(c.amount)}</div>
               </div>
               <button class="expense-del" onclick="event.stopPropagation(); deleteContribution('${c.id}')" aria-label="Eliminar">✕</button>
             </div>
@@ -1554,8 +1569,9 @@ function updateBudgetTotal() {
   let total = 0;
   inputs.forEach(i => total += parseFloat(i.value) || 0);
   const totalEl = document.getElementById('budgetTotalDisplay');
-  totalEl.querySelector('.value').textContent = fmtUSDShort(total) + ' / mes';
-  totalEl.classList.toggle('over', total > 1200);
+  totalEl.querySelector('.value').textContent = fmtDOP(total) + ' / mes';
+  const incomeDop = usdToDop(totalIncome());
+  totalEl.classList.toggle('over', incomeDop > 0 && total > incomeDop);
 }
 
 async function saveSettings() {

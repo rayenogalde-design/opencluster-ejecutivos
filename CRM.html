@@ -3205,6 +3205,15 @@ function cargarFiltrosLS(){
 function guardarFiltrosLS(){
   try { localStorage.setItem(_keyFiltros(), JSON.stringify(FILTROS_AVANZADOS)); } catch(e){}
 }
+// Limpia TODOS los filtros (avanzados + búsqueda) de una vista y re-renderiza.
+function limpiarFiltrosAvanzados(view){
+  FILTROS_AVANZADOS[view] = { agenda:'', estado:'', segmento:'', etiqueta:'' };
+  guardarFiltrosLS();
+  if (typeof FILTROS === 'object' && FILTROS) FILTROS[view] = '';
+  const inp = document.getElementById(view === 'vMis' ? 'searchMis' : 'searchTodos');
+  if(inp) inp.value = '';
+  try { renderLista(view); } catch(e){}
+}
 // Alias retrocompat
 const FILTROS_ESTADO = new Proxy({}, {
   get(_, k){ return FILTROS_AVANZADOS[k] ? FILTROS_AVANZADOS[k].estado : ''; },
@@ -5603,12 +5612,26 @@ function renderLista(view){
     const hoy = new Date(); hoy.setHours(0,0,0,0);
     lista = lista.filter(c => _matchAgenda(c, f.agenda, hoy));
   }
+  // Banner de filtros activos. CLAVE: un filtro avanzado pegado (se guarda en localStorage)
+  // hacía que Rayen viera "solo N contactos" sin darse cuenta. Esto lo hace visible y limpiable.
+  const _fAct = [];
+  if(f.estado)   _fAct.push('estado: ' + f.estado);
+  if(f.segmento) _fAct.push('segmento: ' + f.segmento);
+  if(f.etiqueta) _fAct.push('etiqueta: ' + f.etiqueta);
+  if(f.agenda)   _fAct.push('agenda: ' + f.agenda);
+  if(q)          _fAct.push('búsqueda: "' + q + '"');
+  const bannerFiltros = _fAct.length
+    ? '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:var(--oct-cream,#FFF4EA);border:1px solid #F5C77B;border-radius:10px;padding:10px 14px;margin-bottom:12px;">' +
+        '<div style="font-size:12.5px;color:#92400e;line-height:1.45;"><b>Filtros activos:</b> ' + esc(_fAct.join(' · ')) + ' — puede que estés viendo solo una parte de tus contactos.</div>' +
+        '<button onclick="limpiarFiltrosAvanzados(\'' + view + '\')" style="padding:7px 14px;border-radius:8px;border:none;background:var(--purple-dk);color:#fff;font-weight:700;font-size:12px;cursor:pointer;font-family:var(--font-sans);white-space:nowrap;">Limpiar filtros y ver todos</button>' +
+      '</div>'
+    : '';
   // Actualizar contador visible con la cuenta filtrada
   const cntEl = document.getElementById(view === 'vMis' ? 'cntMis' : 'cntTodos');
   if(cntEl) cntEl.textContent = lista.length;
   if(!lista.length){
     const hayFiltroActivo = !!(f.estado || f.segmento || f.etiqueta || f.agenda);
-    container.innerHTML = '<div class="loading-state" style="padding:30px 20px;">' +
+    container.innerHTML = bannerFiltros + '<div class="loading-state" style="padding:30px 20px;">' +
       (q ? 'Ningún contacto coincide con "' + esc(q) + '"' : (hayFiltroActivo ? 'No hay contactos con esos filtros' : 'No hay contactos todavía')) +
       '</div>';
     return;
@@ -5624,7 +5647,7 @@ function renderLista(view){
   const hayMas = lista.length > limite;
 
   // Grid de cards v2 con modal al click — solo las primeras N (resto lazy con "Ver más")
-  container.innerHTML = '<div class="v2-grid">' +
+  container.innerHTML = bannerFiltros + '<div class="v2-grid">' +
     visibles.map(c => renderTarjetaV2(c, view)).join('') + '</div>' +
     (hayMas
       ? '<div style="text-align:center;margin:16px 0 8px;">' +
@@ -7563,11 +7586,24 @@ async function abrirModalEditarContacto(id){
   document.getElementById('edCiudad').value = c.ciudad || '';
   document.getElementById('edRegion').value = c.region || '';
   document.getElementById('edEjecutivoAsignado').value = c.ejecutivo_asignado || '';
-  document.getElementById('edTipoCategoria').value = c.tipo_categoria || '';
+  const edCat = document.getElementById('edTipoCategoria');
+  edCat.value = c.tipo_categoria || '';
+  // Si la categoría guardada no está en el select, la agregamos para NO perderla al guardar.
+  if (c.tipo_categoria && edCat.value !== c.tipo_categoria) {
+    edCat.insertAdjacentHTML('beforeend', '<option value="' + esc(c.tipo_categoria) + '">' + esc(c.tipo_categoria) + '</option>');
+    edCat.value = c.tipo_categoria;
+  }
   actualizarSubcatsEdicion();
   // Esperar un tick para que se llenen las options antes de setear el valor
   setTimeout(() => {
-    document.getElementById('edSubCategoria').value = c.sub_categoria || '';
+    const sub = document.getElementById('edSubCategoria');
+    sub.value = c.sub_categoria || '';
+    // Si la subcategoría guardada no está entre las opciones, la inyectamos para preservarla
+    // (antes quedaba vacía y al guardar borraba subcat + ejecutivo del contacto).
+    if (c.sub_categoria && sub.value !== c.sub_categoria) {
+      sub.insertAdjacentHTML('beforeend', '<option value="' + esc(c.sub_categoria) + '">' + esc(c.sub_categoria) + '</option>');
+      sub.value = c.sub_categoria;
+    }
   }, 50);
   // Mapear estados legacy (Lead, vacío) a "Por contactar" en el select
   {
@@ -9152,14 +9188,14 @@ async function cargarDuplicados(){
       '</div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">' +
         '<button class="btn" onclick="rechazarFusion(\'' + esc(a.id) + '\',\'' + esc(b.id) + '\')" style="background:white;">No son duplicados</button>' +
-        '<button class="btn" onclick="fusionarDuplicados(\'' + esc(a.id) + '\',\'' + esc(b.id) + '\',\'a\')" style="background:#dbe4f5;color:#3a4d75;border-color:#9bb0d4;">Fusionar (mantener A)</button>' +
-        '<button class="btn primary" onclick="fusionarDuplicados(\'' + esc(a.id) + '\',\'' + esc(b.id) + '\',\'b\')">Fusionar (mantener B)</button>' +
+        '<button class="btn" onclick="fusionarParDuplicado(\'' + esc(a.id) + '\',\'' + esc(b.id) + '\',\'a\')" style="background:#dbe4f5;color:#3a4d75;border-color:#9bb0d4;">Fusionar (mantener A)</button>' +
+        '<button class="btn primary" onclick="fusionarParDuplicado(\'' + esc(a.id) + '\',\'' + esc(b.id) + '\',\'b\')">Fusionar (mantener B)</button>' +
       '</div>' +
     '</div>';
   }).join('');
 }
 
-async function fusionarDuplicados(idA, idB, mantener){
+async function fusionarParDuplicado(idA, idB, mantener){
   if (!confirm('Confirmá la fusión. Los datos no marcados se perderán.')) return;
   const r = await fetchAPI('crm_fusionar', null, { id_a: idA, id_b: idB, mantener: mantener, solicitante: USUARIO });
   if (!r || !r.ok) { alert('Error: ' + ((r && r.error) || 'desconocido')); return; }

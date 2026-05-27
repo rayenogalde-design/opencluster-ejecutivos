@@ -2624,6 +2624,21 @@ body{
           </select>
         </div>
       </div>
+      <div class="fld-row single">
+        <div class="fld"><label>¿Cómo hiciste el primer contacto? <span style="color:var(--ruby);">*</span></label>
+          <select id="nc-medio">
+            <option value="">— Elegir cómo lo contactaste —</option>
+            <option value="Llamada">Llamada telefónica</option>
+            <option value="Email">Email</option>
+            <option value="WhatsApp">WhatsApp</option>
+            <option value="Visita">Visita</option>
+            <option value="Reunion">Reunión</option>
+            <option value="Webinar">Webinar o evento</option>
+            <option value="Referido">Referido</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+      </div>
       <div class="fld-row">
         <div class="fld"><label>Categoría</label>
           <select id="nc-tipo-categoria" onchange="actualizarSubcatsNuevo()">
@@ -7608,6 +7623,7 @@ function abrirModalNuevoContacto(opts){
   document.getElementById('nc-tipo-categoria').value = '';
   document.getElementById('nc-sub-categoria').innerHTML = '<option value="">— Selecciona categoría primero —</option>';
   document.getElementById('nc-pipeline').value = 'Contactado';
+  const ncMedio = document.getElementById('nc-medio'); if(ncMedio) ncMedio.value = '';
   document.getElementById('nc-dup-warning').style.display = 'none';
   document.getElementById('nc-dup-warning').innerHTML = '';
   document.getElementById('nc-btn-guardar').textContent = 'Guardar contacto';
@@ -7686,6 +7702,7 @@ async function guardarNuevoContacto(forzar){
     sub_categoria: document.getElementById('nc-sub-categoria').value,
     pipeline_estado: document.getElementById('nc-pipeline').value,
     notas_publicas: document.getElementById('nc-notas').value.trim(),
+    medio_primer_contacto: document.getElementById('nc-medio').value,
     solicitante: USUARIO
   };
   if (forzar === true) data.confirmar_crear_aunque_haya_duplicados = true;
@@ -7707,6 +7724,11 @@ async function guardarNuevoContacto(forzar){
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)){
     alert('El email no tiene un formato válido (debe contener @ y dominio).');
     document.getElementById('nc-email').focus();
+    return;
+  }
+  if(!data.medio_primer_contacto){
+    alert('Indica cómo hiciste el primer contacto (llamada, email, WhatsApp...).\n\nEs obligatorio: así sabemos cómo está trabajando cada ejecutivo.');
+    document.getElementById('nc-medio').focus();
     return;
   }
   if (esInstitucion && !data.institucion){

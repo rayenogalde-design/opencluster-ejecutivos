@@ -9238,19 +9238,30 @@ async function cargarDuplicados(){
     const b = d.b || d.contacto_b || {};
     const motivo = d.motivo || d.razon || 'Mismo email/teléfono';
     function colCard(c, lado){
-      return '<div style="flex:1;background:#fafafa;border:1px solid var(--border-subtle);border-radius:9px;padding:12px 14px;">' +
-        '<div style="font-size:10.5px;font-weight:800;color:var(--purple-dk);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;">' + lado + '</div>' +
+      const pipe = String(c.pipeline_estado || '').trim();
+      const notas = String(c.notas_publicas || '').trim();
+      const etis = String(c.etiquetas || '').trim();
+      const lugar = [c.ciudad, c.region].filter(Boolean).join(', ');
+      return '<div style="flex:1;min-width:240px;background:#fafafa;border:1px solid var(--border-subtle);border-radius:9px;padding:12px 14px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;">' +
+          '<div style="font-size:10.5px;font-weight:800;color:var(--purple-dk);letter-spacing:.5px;text-transform:uppercase;">' + lado + '</div>' +
+          (pipe ? '<span style="font-size:10.5px;font-weight:700;background:var(--ltblue,#d6eeff);color:var(--navy,#001a60);padding:2px 9px;border-radius:999px;">' + esc(pipe) + '</span>' : '') +
+        '</div>' +
         '<div style="font-family:var(--font-serif);font-size:16px;font-weight:600;color:var(--text-1);">' + esc(c.nombre || c.institucion || '(sin nombre)') + '</div>' +
         (c.institucion ? '<div style="font-size:13px;color:var(--text-2);margin-top:2px;">' + esc(c.institucion) + '</div>' : '') +
         (c.cargo ? '<div style="font-size:12px;color:var(--text-3);margin-top:2px;">' + esc(c.cargo) + '</div>' : '') +
         '<div style="border-top:1px dashed var(--border-soft);margin-top:9px;padding-top:9px;display:flex;flex-direction:column;gap:3px;font-size:12.5px;">' +
-          (c.email ? '<div><b>Email:</b> ' + esc(c.email) + '</div>' : '') +
-          (c.telefono ? '<div><b>Tel:</b> ' + esc(c.telefono) + '</div>' : '') +
-          (c.ciudad ? '<div><b>Ciudad:</b> ' + esc(c.ciudad) + '</div>' : '') +
-          (c.sub_categoria ? '<div><b>Segmento:</b> ' + esc(c.sub_categoria) + '</div>' : '') +
-          (c.ejecutivo_asignado ? '<div><b>Asignado:</b> ' + esc(c.ejecutivo_asignado) + '</div>' : '') +
-          (c.fecha_creacion ? '<div style="color:var(--subtle);font-size:11.5px;margin-top:3px;">Creado: ' + esc(String(c.fecha_creacion).substring(0,10)) + '</div>' : '') +
+          (c.email ? '<div><b>Email:</b> ' + esc(c.email) + '</div>' : '<div style="color:var(--mist);">Sin email</div>') +
+          (c.telefono ? '<div><b>Tel:</b> ' + esc(c.telefono) + '</div>' : '<div style="color:var(--mist);">Sin teléfono</div>') +
+          (lugar ? '<div><b>Ciudad:</b> ' + esc(lugar) + '</div>' : '') +
+          (c.sub_categoria ? '<div><b>Segmento:</b> ' + esc(c.sub_categoria) + '</div>' : '<div style="color:var(--mist);">Sin segmento</div>') +
+          (c.ejecutivo_asignado ? '<div><b>Asignado:</b> ' + esc(c.ejecutivo_asignado) + '</div>' : '<div style="color:var(--mist);">Sin ejecutivo</div>') +
+          (etis ? '<div><b>Etiquetas:</b> ' + esc(etis) + '</div>' : '') +
+          (notas ? '<div style="margin-top:2px;"><b>Notas:</b> <span style="color:var(--text-2);">' + esc(notas.substring(0,180)) + (notas.length > 180 ? '…' : '') + '</span></div>' : '') +
+          (c.fecha_creacion ? '<div style="color:var(--subtle);font-size:11.5px;margin-top:3px;">Creado: ' + esc(String(c.fecha_creacion).substring(0,10)) + (c.ejecutivo_creador ? ' por ' + esc(c.ejecutivo_creador) : '') + '</div>' : '') +
+          (c.ultima_actualizacion ? '<div style="color:var(--subtle);font-size:11.5px;">Últ. actividad: ' + esc(String(c.ultima_actualizacion).substring(0,10)) + '</div>' : '') +
         '</div>' +
+        '<button onclick="abrirFichaModal(\'' + esc(String(c.id)) + '\')" style="margin-top:10px;width:100%;background:#fff;border:1px solid var(--purple-lt,#d4c5ec);color:var(--purple-dk,#5b21b6);border-radius:7px;padding:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font-sans);">Ver ficha completa (interacciones y cotizaciones) →</button>' +
       '</div>';
     }
     return '<div class="card" style="margin-bottom:14px;padding:16px;">' +

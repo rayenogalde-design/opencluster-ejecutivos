@@ -91,6 +91,24 @@
     font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em;
     color: var(--muted); margin-top: 2px; font-weight: 500;
   }
+  /* Barra de tipo de cambio del mes */
+  .rate-bar {
+    display: flex; align-items: center; justify-content: center; gap: 9px;
+    margin: 10px auto 0; max-width: 720px; padding: 8px 16px; cursor: pointer;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 999px; box-shadow: var(--shadow-sm); transition: background 0.2s;
+  }
+  .rate-bar:active { background: var(--bg-2); }
+  .rate-bar .rate-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em;
+    color: var(--muted); font-weight: 600;
+  }
+  .rate-bar .rate-value {
+    font-family: var(--serif); font-style: italic; font-size: 17px;
+    color: var(--accent); font-variant-numeric: tabular-nums;
+  }
+  .rate-bar svg { width: 14px; height: 14px; color: var(--muted-2); }
+
   main { padding: 8px 20px 20px; max-width: 720px; margin: 0 auto; }
 
   /* Income card */
@@ -654,6 +672,11 @@
     </div>
     <button class="month-nav" onclick="changeMonth(1)" aria-label="Siguiente mes">›</button>
   </div>
+  <div class="rate-bar" onclick="openRateModal()" role="button" tabindex="0" title="Cambiar el tipo de cambio de este mes">
+    <span class="rate-label">Cambio del mes</span>
+    <span class="rate-value" id="rateValue">RD$ —</span>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+  </div>
 </header>
 
 <main>
@@ -869,20 +892,40 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="rateModal" onclick="if(event.target===this) closeModal('rateModal')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Tipo de <em>cambio</em></div>
+    <div class="form-group">
+      <label class="form-label" id="rateModalMonth">Mes</label>
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-family:var(--serif);font-style:italic;font-size:22px;color:var(--muted);white-space:nowrap">1 US$ =</span>
+        <input type="number" inputmode="decimal" step="0.01" class="form-input amount" id="rateInput" placeholder="58.50" style="flex:1" oninput="updateRatePreview()">
+      </div>
+      <div class="form-amount-dop" id="ratePreview"></div>
+    </div>
+    <div style="font-size:11.5px;color:var(--muted);font-style:italic;margin-top:-4px">Pesos dominicanos por dólar. Aplica solo a este mes; el presupuesto fijo en US$ se recalcula a RD$ con esta tasa.</div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('rateModal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveRate()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="settingsModal" onclick="if(event.target===this) closeModal('settingsModal')">
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title"><em>Ajustes</em></div>
     <div class="settings-group">
-      <div class="settings-group-title">Tipo de cambio</div>
+      <div class="settings-group-title">Tipo de cambio por defecto</div>
       <div class="budget-row">
-        <label>1 USD =</label>
+        <label>1 US$ =</label>
         <input type="number" step="0.01" id="setExchange">
       </div>
-      <div style="font-size:11px;color:var(--muted);margin-top:6px;font-style:italic">Pesos dominicanos por dólar</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;font-style:italic">Pesos por dólar para meses sin tasa propia. La tasa de cada mes se ajusta arriba, bajo el mes.</div>
     </div>
     <div class="settings-group">
-      <div class="settings-group-title">Presupuesto por categoría (RD$)</div>
+      <div class="settings-group-title">Presupuesto por categoría — US$ fijo</div>
       <div id="budgetEditList"></div>
       <div class="budget-total" id="budgetTotalDisplay">
         <span class="label">Total</span>
@@ -901,22 +944,24 @@
 
 <script>
 const DEFAULT_STATE = {
-  exchangeRate: 58.50,
+  exchangeRate: 58.50,       // tipo de cambio por defecto (semilla para meses sin uno propio)
+  monthlyRates: {},          // tipo de cambio elegido por mes: { 'YYYY-MM': tasa }
   people: [
     { id: 'rayen',  name: 'Rayen',  emoji: '👩' },
     { id: 'german', name: 'Germán', emoji: '👨' },
   ],
+  // budget = monto FIJO en US$ por ítem. Se convierte a RD$ con la tasa del mes.
   categories: [
-    { id: 'vivienda',    name: 'Vivienda',           emoji: '🏠', budget: 15000 },
-    { id: 'super',       name: 'Supermercado',       emoji: '🛒', budget: 30000 },
-    { id: 'vegetales',   name: 'Vegetales',          emoji: '🥬', budget: 5000 },
-    { id: 'carne',       name: 'Carne',              emoji: '🥩', budget: 5000 },
-    { id: 'gasolina',    name: 'Gasolina',           emoji: '⛽', budget: 6000 },
-    { id: 'inethogar',   name: 'Internet casa',      emoji: '📡', budget: 1500 },
-    { id: 'inetryan',    name: 'Internet móvil Ryan',emoji: '📱', budget: 1500 },
-    { id: 'entret',      name: 'Entretención',       emoji: '🎬', budget: 3500 },
-    { id: 'obra',        name: 'Aporte obra mundial',emoji: '🤝', budget: 2500 },
-    { id: 'limpieza',    name: 'Limpieza hogar',     emoji: '🧹', budget: 2500 },
+    { id: 'vivienda',    name: 'Vivienda',           emoji: '🏠', budget: 250 },
+    { id: 'super',       name: 'Supermercado',       emoji: '🛒', budget: 500 },
+    { id: 'vegetales',   name: 'Vegetales',          emoji: '🥬', budget: 80 },
+    { id: 'carne',       name: 'Carne',              emoji: '🥩', budget: 80 },
+    { id: 'gasolina',    name: 'Gasolina',           emoji: '⛽', budget: 100 },
+    { id: 'inethogar',   name: 'Internet casa',      emoji: '📡', budget: 25 },
+    { id: 'inetryan',    name: 'Internet móvil Ryan',emoji: '📱', budget: 25 },
+    { id: 'entret',      name: 'Entretención',       emoji: '🎬', budget: 60 },
+    { id: 'obra',        name: 'Aporte obra mundial',emoji: '🤝', budget: 40 },
+    { id: 'limpieza',    name: 'Limpieza hogar',     emoji: '🧹', budget: 40 },
   ],
   goals: [
     { id: 'chile',    name: 'Viaje a Chile',           emoji: '🇨🇱', target: 3000,  deadline: '2026-12-31' },
@@ -963,6 +1008,7 @@ async function loadState() {
       const parsed = JSON.parse(r.value);
       state = {
         exchangeRate: parsed.exchangeRate ?? DEFAULT_STATE.exchangeRate,
+        monthlyRates: parsed.monthlyRates ?? {},
         people: parsed.people ?? DEFAULT_STATE.people,
         categories: parsed.categories ?? DEFAULT_STATE.categories,
         goals: parsed.goals ?? DEFAULT_STATE.goals,
@@ -983,10 +1029,18 @@ async function saveState() {
   catch (e) { console.error('Error guardando:', e); }
 }
 
-// ── Conversión USD ↔ DOP ──
-// Gastos y presupuesto se guardan en PESOS (RD$). Ingresos y metas en DÓLARES (US$).
-const usdToDop = (usd) => usd * state.exchangeRate;
-const dopToUsd = (dop) => state.exchangeRate ? dop / state.exchangeRate : 0;
+// ── Tipo de cambio POR MES ──
+// El presupuesto por ítem y los ingresos/metas son fijos en US$. Cada mes se
+// convierten a RD$ con el tipo de cambio elegido para ese mes (o el de por defecto).
+function monthKey() { return currentYear + '-' + String(currentMonth + 1).padStart(2, '0'); }
+function getRate() {
+  if (!state) return 1;
+  const r = state.monthlyRates ? state.monthlyRates[monthKey()] : null;
+  return (r && r > 0) ? r : state.exchangeRate;
+}
+// ── Conversión USD ↔ DOP (al tipo de cambio del mes mostrado) ──
+const usdToDop = (usd) => usd * getRate();
+const dopToUsd = (dop) => { const r = getRate(); return r ? dop / r : 0; };
 
 // US$ — cifra grande (solo metas de ahorro)
 const fmtUSD = (n) => {
@@ -1061,8 +1115,8 @@ function renderIncome() {
 }
 
 function renderSummary() {
-  const budget = totalBudget();
-  const spent = totalSpent();
+  const budget = usdToDop(totalBudget());    // presupuesto fijo US$ → RD$ del mes
+  const spent = totalSpent();                // RD$
   const remaining = budget - spent;
   const pct = budget > 0 ? (spent / budget) * 100 : 0;
   const remEl = document.getElementById('sumRemaining');
@@ -1083,7 +1137,7 @@ function renderSavingsHighlight() {
   const incomeUsd = totalIncome();           // US$
   const incomeDop = usdToDop(incomeUsd);
   const spent = totalSpent();                // RD$
-  const budget = totalBudget();              // RD$
+  const budget = usdToDop(totalBudget());    // presupuesto fijo US$ → RD$ del mes
   const card = document.getElementById('savingsHighlight');
 
   if (incomeUsd === 0) {
@@ -1121,9 +1175,10 @@ function renderSavingsHighlight() {
 function renderCategories() {
   const container = document.getElementById('categoriesList');
   container.innerHTML = state.categories.map(cat => {
-    const spent = getCategorySpent(cat.id);
-    const remaining = cat.budget - spent;
-    const pct = cat.budget > 0 ? (spent / cat.budget) * 100 : 0;
+    const spent = getCategorySpent(cat.id);        // RD$
+    const budgetDop = usdToDop(cat.budget);        // US$ fijo → RD$ del mes
+    const remaining = budgetDop - spent;
+    const pct = budgetDop > 0 ? (spent / budgetDop) * 100 : 0;
     const isOver = remaining < 0;
     const isWarn = pct >= 80 && pct < 100;
     const isZero = spent === 0;
@@ -1141,7 +1196,7 @@ function renderCategories() {
         </div>
         <div class="cat-row-2">
           <span>Gastado <span class="spent-value">${fmtDOP(spent)}</span></span>
-          <span>de ${fmtDOP(cat.budget)}</span>
+          <span>de ${fmtDOP(budgetDop)}</span>
         </div>
       </div>`;
   }).join('');
@@ -1240,8 +1295,42 @@ function renderMovementList() {
     </div>`;
 }
 
+function renderRateBar() {
+  const el = document.getElementById('rateValue');
+  if (el) el.textContent = 'RD$ ' + getRate().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function openRateModal() {
+  document.getElementById('rateModalMonth').textContent = 'Tipo de cambio · ' + MONTHS[currentMonth] + ' ' + currentYear;
+  document.getElementById('rateInput').value = getRate();
+  updateRatePreview();
+  document.getElementById('rateModal').classList.add('active');
+  setTimeout(() => document.getElementById('rateInput').focus(), 300);
+}
+
+function updateRatePreview() {
+  const r = parseFloat(document.getElementById('rateInput').value) || 0;
+  const budgetUsd = totalBudget();
+  const el = document.getElementById('ratePreview');
+  el.textContent = r > 0
+    ? 'Presupuesto ' + fmtUSDShort(budgetUsd) + ' ≈ RD$ ' + Math.round(budgetUsd * r).toLocaleString('en-US')
+    : '';
+}
+
+async function saveRate() {
+  const r = parseFloat(document.getElementById('rateInput').value);
+  if (!r || r <= 0) { alert('Ingresa un tipo de cambio válido'); return; }
+  if (!state.monthlyRates) state.monthlyRates = {};
+  state.monthlyRates[monthKey()] = r;
+  state.exchangeRate = r;   // el más reciente queda como semilla para meses nuevos
+  await saveState();
+  closeModal('rateModal');
+  renderAll();
+}
+
 function renderAll() {
   renderHeader();
+  renderRateBar();
   renderIncome();
   renderSummary();
   renderSavingsHighlight();
@@ -1427,14 +1516,15 @@ function openCategoryDetail(catId) {
 
 function renderCategoryDetail(catId) {
   const cat = state.categories.find(c => c.id === catId);
-  const spent = getCategorySpent(catId);
-  const remaining = cat.budget - spent;
+  const spent = getCategorySpent(catId);          // RD$
+  const budgetDop = usdToDop(cat.budget);          // US$ fijo → RD$ del mes
+  const remaining = budgetDop - spent;
   document.getElementById('detailTitle').innerHTML = `${cat.emoji} <em>${cat.name}</em>`;
   const remEl = document.getElementById('detailRemaining');
   remEl.textContent = fmtDOP(remaining);
   remEl.classList.toggle('over', remaining < 0);
   document.getElementById('detailRemainingDop').textContent = refUSD(remaining);
-  document.getElementById('detailBudget').textContent = fmtDOP(cat.budget);
+  document.getElementById('detailBudget').textContent = fmtDOP(budgetDop);
   document.getElementById('detailSpent').textContent = fmtDOP(spent);
   const expenses = getCategoryExpenses(catId);
   const expContainer = document.getElementById('detailExpenses');
@@ -1569,9 +1659,9 @@ function updateBudgetTotal() {
   let total = 0;
   inputs.forEach(i => total += parseFloat(i.value) || 0);
   const totalEl = document.getElementById('budgetTotalDisplay');
-  totalEl.querySelector('.value').textContent = fmtDOP(total) + ' / mes';
-  const incomeDop = usdToDop(totalIncome());
-  totalEl.classList.toggle('over', incomeDop > 0 && total > incomeDop);
+  totalEl.querySelector('.value').textContent = fmtUSDShort(total) + ' ' + refDOP(total) + ' / mes';
+  const incomeUsd = totalIncome();
+  totalEl.classList.toggle('over', incomeUsd > 0 && total > incomeUsd);
 }
 
 async function saveSettings() {
@@ -1608,7 +1698,7 @@ function printMonth() {
   const now = new Date();
   const fecha = now.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
   document.getElementById('printFooter').textContent =
-    `Reporte de ${MONTHS[currentMonth]} ${currentYear} — generado el ${fecha} — tipo de cambio RD$${state.exchangeRate.toFixed(2)}`;
+    `Reporte de ${MONTHS[currentMonth]} ${currentYear} — generado el ${fecha} — tipo de cambio RD$${getRate().toFixed(2)}`;
   // Slight delay so render finishes
   setTimeout(() => window.print(), 100);
 }

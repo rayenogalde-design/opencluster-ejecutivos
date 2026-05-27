@@ -1896,6 +1896,40 @@ const state = {
 
 const STORAGE_KEY = 'opencluster_academy_outreach_v1';
 
+/* ─── Sync de progreso con el backend ACADEMIA_API (panel admin de Rayen) ───
+   Mientras ACADEMIA_API esté vacío, pushProgress() no hace nada (modo solo-local).
+   Pegar aquí la URL /exec del Web App cuando esté desplegado. */
+const ACADEMIA_API = '';
+const COURSE_ID = 'Outreach por email';
+
+function getEjecutivo() {
+  try { return localStorage.getItem('oc_central_user') || ''; } catch (e) { return ''; }
+}
+
+function pushProgress() {
+  if (!ACADEMIA_API) return;            // backend aún no configurado → solo localStorage
+  var ejecutivo = getEjecutivo();
+  if (!ejecutivo) return;               // entró sin login de la Central → no se puede atribuir
+  var total = COURSE.modules.length;
+  var completados = state.completedModules.size;
+  var pct = total ? Math.round(completados / total * 100) : 0;
+  var payload = {
+    ejecutivo: ejecutivo,
+    curso: COURSE_ID,
+    modulos_completados: completados,
+    total_modulos: total,
+    pct: pct,
+    modulos_idx: Array.from(state.completedModules).sort(function(a, b){ return a - b; }).join(',')
+  };
+  try {
+    fetch(ACADEMIA_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    }).catch(function(){});
+  } catch (e) {}
+}
+
 function saveState() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -2474,6 +2508,7 @@ function navNext() {
   } else {
     state.completedModules.add(state.moduleIdx);
     saveState();
+    pushProgress();
     state.screenIdx = mod.screens.length;
     render();
   }

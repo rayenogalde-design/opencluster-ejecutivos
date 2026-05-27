@@ -7876,6 +7876,27 @@ function toast(msg, color){
 // MODAL DE FICHA (al hacer click en una card de empresa o contacto)
 // Muestra la ficha completa con timeline sin cambiar de vista.
 // ════════════════════════════════════════════════════════════════════════════
+// Ficha básica de respaldo: si el render completo falla por datos raros (típico en
+// contactos duplicados creados por cotización), igual mostramos algo usable en vez
+// de dejar el modal colgado en el spinner ("no abre nunca").
+function _fichaFallback(data){
+  const c = (data && data.contacto) || {};
+  const tl = (data && data.timeline) || [];
+  const fila = (l,v)=> v ? '<div style="font-size:13px;margin-bottom:3px;"><b>'+esc(l)+':</b> '+esc(String(v))+'</div>' : '';
+  const fdate = f => esc(String(f==null?'':f).replace('T',' ').substring(0,16));
+  const items = tl.map(ev=>'<div style="border-left:3px solid var(--sky,#06b3fd);background:#fff;border:1px solid var(--smoke,#eee);border-radius:8px;padding:9px 12px;margin-bottom:6px;"><div style="font-size:11px;color:var(--subtle);">'+fdate(ev.fecha)+' · '+esc(String(ev.origen||ev.tipo||'').toUpperCase())+'</div><div style="font-size:13px;font-weight:600;">'+esc(ev.titulo||ev.medio||'')+'</div>'+(ev.detalle?'<div style="font-size:12px;color:var(--subtle);margin-top:2px;">'+esc(String(ev.detalle).substring(0,200))+'</div>':'')+'</div>').join('') || '<div style="color:var(--subtle);padding:10px 0;">Sin actividad registrada.</div>';
+  return '<div style="padding:6px 2px;">'+
+    '<h2 style="font-size:19px;margin:0 0 4px;color:var(--navy,#001a60);">'+esc(c.nombre||c.institucion||'Contacto')+'</h2>'+
+    (c.institucion?'<div style="color:var(--subtle);margin-bottom:10px;">'+esc(c.institucion)+(c.cargo?' · '+esc(c.cargo):'')+'</div>':'')+
+    fila('Email',c.email)+fila('Teléfono',c.telefono)+fila('Ciudad',[c.ciudad,c.region].filter(Boolean).join(', '))+fila('Segmento',c.sub_categoria)+fila('Estado',c.pipeline_estado)+fila('Asignado',c.ejecutivo_asignado)+fila('Notas',c.notas_publicas)+
+    '<h3 style="font-size:13px;margin:16px 0 8px;color:var(--navy,#001a60);text-transform:uppercase;letter-spacing:.05em;">Actividad (interacciones y cotizaciones)</h3>'+items+
+  '</div>';
+}
+function _renderFichaSafe(body, data){
+  try { renderFicha(body, data); }
+  catch(e){ try{ console.error('[CRM] renderFicha falló, usando fallback:', e); }catch(_){} body.innerHTML = _fichaFallback(data); }
+}
+
 async function abrirFichaModal(id){
   const modal = document.getElementById('modalFichaContacto');
   const body = document.getElementById('fc-body');
@@ -7894,7 +7915,7 @@ async function abrirFichaModal(id){
   } catch(e){}
 
   if(cacheado){
-    renderFicha(body, cacheado);
+    _renderFichaSafe(body, cacheado);
     const c = cacheado.contacto || {};
     document.getElementById('fc-titulo').textContent = c.nombre || c.institucion || 'Ficha';
     // Refrescar en background sin bloquear
@@ -7904,7 +7925,7 @@ async function abrirFichaModal(id){
           try { localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: r })); } catch(e){}
           // Solo re-render si la ficha sigue abierta para este contacto
           if(modal.classList.contains('show') && document.getElementById('fc-titulo').textContent === (r.contacto && (r.contacto.nombre || r.contacto.institucion) || 'Ficha')){
-            renderFicha(body, r);
+            _renderFichaSafe(body, r);
           }
         }
       }).catch(e => {});
@@ -7928,7 +7949,7 @@ async function abrirFichaModal(id){
     return;
   }
   try { localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: r })); } catch(e){}
-  renderFicha(body, r);
+  _renderFichaSafe(body, r);
   const c = r.contacto || {};
   document.getElementById('fc-titulo').textContent = c.nombre || c.institucion || 'Ficha';
 }

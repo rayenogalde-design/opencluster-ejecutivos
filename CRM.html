@@ -3273,10 +3273,21 @@ function esEmpresa(c){
 // (huérfanos) van a la pestaña Categorizar Urgente.
 function esOwner(c){
   if (!c) return false;
-  const asign = String(c.ejecutivo_asignado || '');
+  // Match tolerante: nombre completo vs corto, en cualquier dirección, sin acentos.
+  // (Antes era igualdad exacta → un contacto asignado a "William Marín" no le aparecía
+  //  a "William" en Mis Contactos, solo en Todos.)
+  const norm = s => String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+  const asign = norm(c.ejecutivo_asignado);
   if (!asign) return false;
-  const corto = (USUARIO || '').split(' ')[0];
-  return asign === USUARIO || asign === corto;
+  const u = norm(USUARIO);
+  if (!u) return false;
+  const uFirst = u.split(' ')[0];
+  if (asign === u) return true;
+  if (uFirst && asign === uFirst) return true;
+  if (asign.indexOf(u) >= 0) return true;
+  if (uFirst && asign.indexOf(uFirst) >= 0) return true;
+  if (u.indexOf(asign) >= 0) return true;
+  return false;
 }
 
 // ¿Puedo editar este contacto? Admin (Rayen) puede todo. Ejecutivos solo lo suyo.

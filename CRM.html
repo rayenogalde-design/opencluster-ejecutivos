@@ -9818,20 +9818,22 @@ function renderActividadEquipo(){
   const sub = document.getElementById('actSubtitulo');
   if(sub) sub.textContent = (d.periodo && d.periodo.label ? d.periodo.label : '') + ' · qué hizo cada ejecutivo y cómo lo hizo';
 
-  const kpi = (color,ico,valor,label)=>(
-    '<div style="background:#fff;border:1px solid var(--oct-border,#eee);border-top:3px solid '+color+';border-radius:12px;padding:16px 18px;">'+
+  const kpi = (color,ico,valor,label,tipo,ganada)=>{
+    const arg = "'"+tipo+"'"+(ganada?',true':'');
+    return '<article onclick="abrirActKpi('+arg+')" style="background:#fff;border:1px solid var(--oct-border,#eee);border-top:3px solid '+color+';border-radius:12px;padding:16px 18px;cursor:pointer;transition:transform .15s,box-shadow .15s;" onmouseover="this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 4px 12px rgba(0,26,96,0.08)\'" onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\'">'+
       '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><span style="display:inline-flex;">'+actIcon(ico,color,16)+'</span>'+
       '<span style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--subtle);">'+esc(label)+'</span></div>'+
       '<div style="font-size:30px;font-weight:800;color:var(--oct-navy,#001A60);line-height:1;letter-spacing:-.03em;">'+(valor||0)+'</div>'+
-    '</div>'
-  );
+      '<div style="font-size:10.5px;color:'+color+';font-weight:700;margin-top:7px;">Ver detalle →</div>'+
+    '</article>';
+  };
   const kpis =
-    kpi('#06B3FD', actMedioMeta('llamadas').ico, eq.llamadas, 'Llamadas') +
-    kpi('#7C3AED', actMedioMeta('emails').ico, eq.emails, 'Emails') +
-    kpi('#059669', actMedioMeta('whatsapp').ico, eq.whatsapp, 'WhatsApp') +
-    kpi('#FF7E00', '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>', eq.contactos_nuevos, 'Contactos nuevos') +
-    kpi('#0891B2', '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>', eq.cambios_estado, 'Cambios de estado') +
-    kpi('#16A34A', '<path d="M20 6 9 17l-5-5"/>', eq.ganadas, 'Ventas ganadas');
+    kpi('#06B3FD', actMedioMeta('llamadas').ico, eq.llamadas, 'Llamadas', 'llamadas') +
+    kpi('#7C3AED', actMedioMeta('emails').ico, eq.emails, 'Emails', 'emails') +
+    kpi('#059669', actMedioMeta('whatsapp').ico, eq.whatsapp, 'WhatsApp', 'whatsapp') +
+    kpi('#FF7E00', '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>', eq.contactos_nuevos, 'Contactos nuevos', 'contacto_nuevo') +
+    kpi('#0891B2', '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>', eq.cambios_estado, 'Cambios de estado', 'cambio_estado') +
+    kpi('#16A34A', '<path d="M20 6 9 17l-5-5"/>', eq.ganadas, 'Ventas ganadas', 'cotizacion', true);
 
   const cards = (d.ejecutivos||[]).map(actCardEjecutivo).join('');
 
@@ -9879,8 +9881,8 @@ function abrirActEjecutivo(nombre){
 
   const sec = (valor,label,color)=>('<div style="background:#fff;border:1px solid var(--oct-border,#eee);border-radius:10px;padding:14px 16px;"><div style="font-size:24px;font-weight:800;color:'+(color||'var(--oct-navy,#001A60)')+';line-height:1;">'+(valor||0)+'</div><div style="font-size:11px;color:var(--subtle);margin-top:4px;">'+esc(label)+'</div></div>');
 
-  const feed = e.feed || [];
-  const feedHtml = feed.length ? feed.map(actFeedRow).join('') :
+  const feed = ((ACT_DATA && ACT_DATA.eventos) || []).filter(ev=>ev.ejecutivo===nombre).slice(0,60);
+  const feedHtml = feed.length ? feed.map(ev=>actFeedRow(ev,false)).join('') :
     '<div style="padding:26px;text-align:center;color:var(--subtle);font-size:13px;">Sin actividad registrada en este período.</div>';
 
   document.getElementById('actBody').innerHTML =
@@ -9900,19 +9902,52 @@ function abrirActEjecutivo(nombre){
     '<div style="background:#fff;border:1px solid var(--oct-border,#eee);border-radius:12px;overflow:hidden;">'+feedHtml+'</div>';
 }
 
-function actFeedRow(f){
+function actFeedRow(f, showEjec){
   let meta;
   if(f.tipo==='contacto_nuevo') meta={ label:'Contacto nuevo', color:'#FF7E00', ico:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>' };
   else if(f.tipo==='cambio_estado') meta={ label:'Cambio de estado', color:'#0891B2', ico:'<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>' };
+  else if(f.tipo==='cotizacion') meta = f.ganada
+      ? { label:'Venta ganada', color:'#16A34A', ico:'<path d="M20 6 9 17l-5-5"/>' }
+      : { label:'Cotización', color:'#D97706', ico:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/>' };
   else { const mm=actMedioMeta(f.tipo); meta={ label:mm.label, color:mm.color, ico:mm.ico }; }
+  const ejecLine = showEjec && f.ejecutivo
+    ? '<span style="font-size:11px;font-weight:700;color:'+(actEjecMeta(f.ejecutivo).color||'#64748B')+';">'+esc(actEjecMeta(f.ejecutivo).full||f.ejecutivo)+'</span> · '
+    : '';
   return '<div style="display:flex;align-items:flex-start;gap:11px;padding:11px 15px;border-bottom:1px solid var(--smoke,#F1F5F9);">'+
     '<span style="width:30px;height:30px;border-radius:8px;background:#F9FAFB;border:1px solid var(--oct-border,#eee);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">'+actIcon(meta.ico,meta.color,15)+'</span>'+
     '<div style="flex:1;min-width:0;">'+
-      '<div style="font-size:13px;color:var(--oct-navy,#001A60);"><b>'+esc(meta.label)+'</b>'+(f.contacto?(' · '+esc(f.contacto)):'')+'</div>'+
+      '<div style="font-size:13px;color:var(--oct-navy,#001A60);">'+ejecLine+'<b>'+esc(meta.label)+'</b>'+(f.contacto?(' · '+esc(f.contacto)):'')+'</div>'+
       (f.texto?'<div style="font-size:12px;color:var(--subtle);margin-top:2px;">'+esc(String(f.texto).substring(0,120))+'</div>':'')+
     '</div>'+
     '<span style="font-size:11px;color:var(--subtle);white-space:nowrap;flex-shrink:0;">'+esc(f.fecha||'')+'</span>'+
   '</div>';
+}
+
+function abrirActKpi(tipo, soloGanadas){
+  const d = ACT_DATA; if(!d){ cargarActividadEquipo(); return; }
+  let evs = (d.eventos || []).filter(ev=>ev.tipo===tipo);
+  if(soloGanadas) evs = evs.filter(ev=>ev.ganada);
+  const titulos = {
+    llamadas:'Llamadas', emails:'Emails', whatsapp:'WhatsApp',
+    contacto_nuevo:'Contactos nuevos', cambio_estado:'Cambios de estado',
+    cotizacion: soloGanadas ? 'Ventas ganadas' : 'Cotizaciones'
+  };
+  const colores = {
+    llamadas:'#06B3FD', emails:'#7C3AED', whatsapp:'#059669',
+    contacto_nuevo:'#FF7E00', cambio_estado:'#0891B2', cotizacion: soloGanadas?'#16A34A':'#D97706'
+  };
+  const titulo = titulos[tipo] || 'Detalle';
+  const color = colores[tipo] || 'var(--navy,#001A60)';
+  const periodoLabel = (d.periodo && d.periodo.label) ? d.periodo.label : '';
+  const lista = evs.length ? evs.map(ev=>actFeedRow(ev,true)).join('') :
+    '<div style="padding:26px;text-align:center;color:var(--subtle);font-size:13px;">Nadie registró '+esc(titulo.toLowerCase())+' en este período.</div>';
+  document.getElementById('actBody').innerHTML =
+    '<button onclick="cargarActividadEquipo()" style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #E3E8EF;border-radius:8px;padding:8px 13px;font-size:12.5px;font-weight:700;color:var(--subtle);cursor:pointer;margin-bottom:16px;font-family:var(--font-sans);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Volver al equipo</button>'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;background:#fff;border:1px solid var(--oct-border,#eee);border-radius:14px;border-top:4px solid '+color+';padding:18px 20px;margin-bottom:16px;flex-wrap:wrap;">'+
+      '<div><div style="font-size:20px;font-weight:800;color:var(--oct-navy,#001A60);letter-spacing:-.02em;">'+esc(titulo)+'</div><div style="font-size:12px;color:var(--subtle);">'+esc(periodoLabel)+' · todo el equipo</div></div>'+
+      '<div style="text-align:right;"><div style="font-size:30px;font-weight:800;color:'+color+';line-height:1;">'+evs.length+'</div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--subtle);">en total</div></div>'+
+    '</div>'+
+    '<div style="background:#fff;border:1px solid var(--oct-border,#eee);border-radius:12px;overflow:hidden;">'+lista+'</div>';
 }
 
 async function cargarAuditoria(){

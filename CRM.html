@@ -3314,6 +3314,42 @@ function mostrarBannerDeploy(){
     '</div>';
 }
 
+// ── Recordatorio mensual del diésel (solo Rayen) ──────────────────────────────
+// Aparece al comienzo de cada mes en el CRM y se mantiene hasta que Rayen lo marca
+// como hecho. El estado se guarda por mes en localStorage (clave = "YYYY-MM").
+function mesActualKey(){
+  const a = new Date();
+  return a.getFullYear() + '-' + String(a.getMonth() + 1).padStart(2, '0');
+}
+function mostrarRecordatorioDiesel(){
+  if (ROL !== 'admin') return;                       // solo Rayen
+  const host = document.getElementById('deployBanner');
+  if (!host) return;
+  const mesKey = mesActualKey();
+  let cerrado = '';
+  try { cerrado = localStorage.getItem('crm_recordatorio_diesel') || ''; } catch(e){}
+  if (cerrado === mesKey) return;                    // ya lo marcó hecho este mes
+  if (document.getElementById('recordatorioDieselBanner')) return;
+  const html =
+    '<div id="recordatorioDieselBanner" style="background:#fff7ed;border:1px solid #fed7aa;border-left:4px solid #FF7E00;border-radius:12px;padding:16px 18px;margin-bottom:20px;display:flex;align-items:flex-start;gap:14px;font-family:var(--font-sans);">' +
+      '<div style="flex-shrink:0;width:36px;height:36px;border-radius:8px;background:#FF7E00;color:#fff;display:flex;align-items:center;justify-content:center;">' +
+        '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 22h12V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2z"/><path d="M15 9h2a2 2 0 0 1 2 2v6a1.5 1.5 0 0 1-3 0v-4"/><line x1="6" y1="8" x2="12" y2="8"/></svg>' +
+      '</div>' +
+      '<div style="flex:1;min-width:0;">' +
+        '<div style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#FF7E00;margin-bottom:3px;">Recordatorio mensual</div>' +
+        '<div style="font-size:15px;font-weight:700;color:var(--oct-navy,#001a60);">Actualizar el valor del diésel en el cotizador</div>' +
+        '<div style="font-size:13px;color:var(--oct-text-soft,#5b6472);margin-top:4px;line-height:1.45;">Toca revisar el precio del diésel (lo usa el cotizador para calcular la logística propia). Para actualizarlo, abre Claude y dile a un agente <b>«actualicemos el valor del diésel»</b> con la cifra que corresponda.</div>' +
+      '</div>' +
+      '<button onclick="cerrarRecordatorioDiesel()" style="flex-shrink:0;background:#FF7E00;color:#fff;border:none;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font-sans);white-space:nowrap;">Ya lo actualicé</button>' +
+    '</div>';
+  host.insertAdjacentHTML('beforeend', html);
+}
+function cerrarRecordatorioDiesel(){
+  try { localStorage.setItem('crm_recordatorio_diesel', mesActualKey()); } catch(e){}
+  const b = document.getElementById('recordatorioDieselBanner');
+  if (b) b.remove();
+}
+
 // Lista de acciones write: SIEMPRE van por POST aunque el caller las llame con params
 const ACCIONES_POST = [
   'crm_crear_contacto','crm_editar_contacto','crm_eliminar_contacto',
@@ -3463,6 +3499,7 @@ function initApp(user){
   document.getElementById('tbAvatar').textContent = avatarLetras(user);
   aplicarVisibilidadPorRol();
   mostrarBannerDeploy();
+  mostrarRecordatorioDiesel();
   setSaludo();
   cargarFiltrosLS();
   goView('vDashboard');

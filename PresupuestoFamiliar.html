@@ -562,16 +562,20 @@
 
   /* Indicador de sincronización con la nube */
   .sync-indicator {
-    position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
+    position: fixed; top: 18px; left: 50%; transform: translateX(-50%);
     background: var(--ink); color: var(--surface);
-    padding: 6px 14px; border-radius: 999px;
-    font-size: 11px; font-weight: 500; letter-spacing: 0.04em;
+    padding: 12px 26px; border-radius: 999px;
+    font-size: 15px; font-weight: 600; letter-spacing: 0.02em;
     font-family: var(--sans);
-    opacity: 0; transition: opacity 0.25s; pointer-events: none;
-    z-index: 250; box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+    opacity: 0; transition: opacity 0.25s, transform 0.25s;
+    pointer-events: none;
+    z-index: 250; box-shadow: 0 8px 28px rgba(0,0,0,0.28);
   }
-  .sync-indicator.show { opacity: 0.92; }
+  .sync-indicator.show { opacity: 0.96; }
   .sync-indicator.error { background: var(--spend); }
+  @media (max-width: 480px) {
+    .sync-indicator { font-size: 14px; padding: 11px 22px; top: 14px; }
+  }
 
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -1106,6 +1110,7 @@ function showSync(text, opts) {
 // Refresca el estado desde la nube (para ver lo que el otro anotó)
 async function refreshFromCloud(silent) {
   if (document.querySelector('.modal-overlay.active')) return;   // no interrumpir si hay modal abierto
+  if (_saving) return;                                            // no interferir con una grabación en curso
   try {
     state = await CLOUD.getAll();
     renderAll();
@@ -1478,15 +1483,27 @@ async function saveRate() {
   if (_saving) return;
   const r = parseFloat(document.getElementById('rateInput').value);
   if (!r || r <= 0) { alert('Ingresa un tipo de cambio válido'); return; }
+  // OPTIMISTIC
+  const key = monthKey();
+  const prevMonth = state.monthlyRates ? state.monthlyRates[key] : undefined;
+  const prevDefault = state.exchangeRate;
+  if (!state.monthlyRates) state.monthlyRates = {};
+  state.monthlyRates[key] = r;
+  state.exchangeRate = r;
+  closeModal('rateModal');
+  renderAll();
   setSaving(true);
   showSync('Guardando…', { sticky: true });
   try {
-    state = await CLOUD.setRate({ monthKey: monthKey(), rate: r, alsoDefault: true });
-    closeModal('rateModal');
+    state = await CLOUD.setRate({ monthKey: key, rate: r, alsoDefault: true });
     renderAll();
     showSync('Guardado');
   } catch (e) {
-    showSync('Error', { error: true });
+    if (prevMonth === undefined) delete state.monthlyRates[key];
+    else state.monthlyRates[key] = prevMonth;
+    state.exchangeRate = prevDefault;
+    renderAll();
+    showSync('No se guardó', { error: true });
     alert('No se pudo guardar: ' + e.message);
   } finally {
     setSaving(false);
@@ -1586,23 +1603,32 @@ async function saveExpense() {
     category = 'cat' + Date.now().toString(36);
     newCat = { id: category, name, emoji: '🏷️', budget: newBudget };
   }
+  const expense = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    date, category, amount, description: desc,
+  };
+  // OPTIMISTIC: aplicar local y mostrar al instante
+  if (newCat) state.categories.push(newCat);
+  state.expenses.push(expense);
+  const ed = new Date(date + 'T00:00:00');
+  currentMonth = ed.getMonth();
+  currentYear = ed.getFullYear();
+  closeModal('expenseModal');
+  renderAll();
+  // Sincronización en background
   setSaving(true);
   showSync('Guardando…', { sticky: true });
   try {
-    if (newCat) state = await CLOUD.addCategory(newCat);
-    const expense = {
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-      date, category, amount, description: desc,
-    };
+    if (newCat) await CLOUD.addCategory(newCat);
     state = await CLOUD.addExpense(expense);
-    const ed = new Date(date + 'T00:00:00');
-    currentMonth = ed.getMonth();
-    currentYear = ed.getFullYear();
-    closeModal('expenseModal');
     renderAll();
     showSync('Guardado');
   } catch (e) {
-    showSync('Error al guardar', { error: true });
+    // Revertir el optimista
+    state.expenses = state.expenses.filter(x => x.id !== expense.id);
+    if (newCat) state.categories = state.categories.filter(c => c.id !== newCat.id);
+    renderAll();
+    showSync('No se guardó', { error: true });
     alert('No se pudo guardar: ' + e.message);
   } finally {
     setSaving(false);
@@ -1612,17 +1638,23 @@ async function saveExpense() {
 async function deleteExpense(id) {
   if (_saving) return;
   if (!confirm('¿Eliminar este gasto?')) return;
+  const removed = state.expenses.find(e => e.id === id);
+  // OPTIMISTIC
+  state.expenses = state.expenses.filter(e => e.id !== id);
+  if (document.getElementById('detailModal').classList.contains('active') && currentDetailCategoryId) {
+    renderCategoryDetail(currentDetailCategoryId);
+  }
+  renderAll();
   setSaving(true);
   showSync('Eliminando…', { sticky: true });
   try {
     state = await CLOUD.deleteExpense(id);
-    if (document.getElementById('detailModal').classList.contains('active') && currentDetailCategoryId) {
-      renderCategoryDetail(currentDetailCategoryId);
-    }
     renderAll();
     showSync('Eliminado');
   } catch (e) {
-    showSync('Error', { error: true });
+    if (removed) state.expenses.push(removed);
+    renderAll();
+    showSync('No se eliminó', { error: true });
     alert('No se pudo eliminar: ' + e.message);
   } finally {
     setSaving(false);
@@ -1660,25 +1692,30 @@ async function saveIncome() {
   const date = document.getElementById('incDate').value;
   if (!amount || amount <= 0) { alert('Ingresa un monto válido'); return; }
   if (!date) { alert('Selecciona una fecha'); return; }
+  const income = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    date, personId, amount, description: desc,
+  };
+  // OPTIMISTIC
+  state.incomes.push(income);
+  const ed = new Date(date + 'T00:00:00');
+  currentMonth = ed.getMonth();
+  currentYear = ed.getFullYear();
+  closeModal('incomeModal');
+  if (document.getElementById('incomeListModal').classList.contains('active')) renderIncomeList();
+  renderAll();
   setSaving(true);
   showSync('Guardando…', { sticky: true });
   try {
-    const income = {
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-      date, personId, amount, description: desc,
-    };
     state = await CLOUD.addIncome(income);
-    const ed = new Date(date + 'T00:00:00');
-    currentMonth = ed.getMonth();
-    currentYear = ed.getFullYear();
-    closeModal('incomeModal');
-    if (document.getElementById('incomeListModal').classList.contains('active')) {
-      renderIncomeList();
-    }
+    if (document.getElementById('incomeListModal').classList.contains('active')) renderIncomeList();
     renderAll();
     showSync('Guardado');
   } catch (e) {
-    showSync('Error al guardar', { error: true });
+    state.incomes = state.incomes.filter(x => x.id !== income.id);
+    if (document.getElementById('incomeListModal').classList.contains('active')) renderIncomeList();
+    renderAll();
+    showSync('No se guardó', { error: true });
     alert('No se pudo guardar: ' + e.message);
   } finally {
     setSaving(false);
@@ -1688,17 +1725,23 @@ async function saveIncome() {
 async function deleteIncome(id) {
   if (_saving) return;
   if (!confirm('¿Eliminar este ingreso?')) return;
+  const removed = state.incomes.find(i => i.id === id);
+  // OPTIMISTIC
+  state.incomes = state.incomes.filter(i => i.id !== id);
+  if (document.getElementById('incomeListModal').classList.contains('active')) renderIncomeList();
+  renderAll();
   setSaving(true);
   showSync('Eliminando…', { sticky: true });
   try {
     state = await CLOUD.deleteIncome(id);
-    if (document.getElementById('incomeListModal').classList.contains('active')) {
-      renderIncomeList();
-    }
+    if (document.getElementById('incomeListModal').classList.contains('active')) renderIncomeList();
     renderAll();
     showSync('Eliminado');
   } catch (e) {
-    showSync('Error', { error: true });
+    if (removed) state.incomes.push(removed);
+    if (document.getElementById('incomeListModal').classList.contains('active')) renderIncomeList();
+    renderAll();
+    showSync('No se eliminó', { error: true });
     alert('No se pudo eliminar: ' + e.message);
   } finally {
     setSaving(false);
@@ -1817,22 +1860,27 @@ async function saveSaving() {
   const goalId = document.getElementById('savGoal').value;
   const date = document.getElementById('savDate').value;
   if (!amount || amount <= 0) { alert('Ingresa un monto válido'); return; }
+  const contribution = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    date, goalId, amount,
+  };
+  // OPTIMISTIC
+  state.contributions.push(contribution);
+  closeModal('savingsModal');
+  if (document.getElementById('goalModal').classList.contains('active') && currentGoalId) renderGoalDetail(currentGoalId);
+  renderAll();
   setSaving(true);
   showSync('Guardando…', { sticky: true });
   try {
-    const contribution = {
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-      date, goalId, amount,
-    };
     state = await CLOUD.addContribution(contribution);
-    closeModal('savingsModal');
-    if (document.getElementById('goalModal').classList.contains('active') && currentGoalId) {
-      renderGoalDetail(currentGoalId);
-    }
+    if (document.getElementById('goalModal').classList.contains('active') && currentGoalId) renderGoalDetail(currentGoalId);
     renderAll();
     showSync('Guardado');
   } catch (e) {
-    showSync('Error al guardar', { error: true });
+    state.contributions = state.contributions.filter(x => x.id !== contribution.id);
+    if (document.getElementById('goalModal').classList.contains('active') && currentGoalId) renderGoalDetail(currentGoalId);
+    renderAll();
+    showSync('No se guardó', { error: true });
     alert('No se pudo guardar: ' + e.message);
   } finally {
     setSaving(false);
@@ -1909,6 +1957,11 @@ function renderGoalDetail(goalId) {
 async function deleteContribution(id) {
   if (_saving) return;
   if (!confirm('¿Eliminar este ahorro?')) return;
+  const removed = state.contributions.find(c => c.id === id);
+  // OPTIMISTIC
+  state.contributions = state.contributions.filter(c => c.id !== id);
+  if (currentGoalId) renderGoalDetail(currentGoalId);
+  renderAll();
   setSaving(true);
   showSync('Eliminando…', { sticky: true });
   try {
@@ -1917,7 +1970,10 @@ async function deleteContribution(id) {
     renderAll();
     showSync('Eliminado');
   } catch (e) {
-    showSync('Error', { error: true });
+    if (removed) state.contributions.push(removed);
+    if (currentGoalId) renderGoalDetail(currentGoalId);
+    renderAll();
+    showSync('No se eliminó', { error: true });
     alert('No se pudo eliminar: ' + e.message);
   } finally {
     setSaving(false);
@@ -1958,6 +2014,14 @@ async function saveSettings() {
   document.querySelectorAll('#budgetEditList input').forEach(input => {
     budgets[input.dataset.id] = parseFloat(input.value) || 0;
   });
+  // OPTIMISTIC: snapshot + aplicar local
+  const prevRate = state.exchangeRate;
+  const prevBudgets = {};
+  state.categories.forEach(c => { prevBudgets[c.id] = c.budget; });
+  if (newRate > 0) state.exchangeRate = newRate;
+  state.categories.forEach(c => { if (c.id in budgets) c.budget = budgets[c.id]; });
+  closeModal('settingsModal');
+  renderAll();
   setSaving(true);
   showSync('Guardando…', { sticky: true });
   try {
@@ -1965,11 +2029,14 @@ async function saveSettings() {
       defaultRate: (newRate > 0 ? newRate : undefined),
       budgets
     });
-    closeModal('settingsModal');
     renderAll();
     showSync('Guardado');
   } catch (e) {
-    showSync('Error', { error: true });
+    // Revertir
+    state.exchangeRate = prevRate;
+    state.categories.forEach(c => { if (c.id in prevBudgets) c.budget = prevBudgets[c.id]; });
+    renderAll();
+    showSync('No se guardó', { error: true });
     alert('No se pudo guardar: ' + e.message);
   } finally {
     setSaving(false);

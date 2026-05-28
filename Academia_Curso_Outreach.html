@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Academia OpenCluster · El arte del outreach por email</title>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
+<!-- Integración opcional con el pipeline (CRM). Archivo mantenido por Claude Code.
+     Si no existe, el curso usa el caso de ejemplo (modo laboratorio). No rompe nada. -->
+<script src="./pipeline-integration.js" onerror="window.__ocPipelineMissing=true;"></script>
+<script src="./progress-integration.js" onerror="window.__ocProgressMissing=true;"></script>
 <style>
 /* ─────────────────────────────────────────────────────────────
    VARIABLES (DESIGN_SYSTEM de OpenCluster)
@@ -1286,10 +1290,6 @@ input, textarea {
     <button class="btn btn-primary" id="btnNext" onclick="navNext()">Continuar →</button>
   </div>
 </div>
-
-<!-- Integración con CRM (solo lectura). Si el archivo falta o falla,
-     el curso cae a modo laboratorio sin error. -->
-<script src="./pipeline-integration.js"></script>
 
 <!-- ═════════════════════════════════════════════════════════════
      SCRIPT
@@ -3633,6 +3633,19 @@ function navNext() {
   } else {
     state.completedModules.add(state.moduleIdx);
     saveState();
+    // Punto de extensión de progreso (lo implementa progress-integration.js, opcional).
+    // Reporta al panel admin. Si no existe el archivo, el curso funciona igual sin reportar.
+    try {
+      if (window.OpenClusterProgress && typeof window.OpenClusterProgress.onModuleComplete === 'function') {
+        window.OpenClusterProgress.onModuleComplete({
+          curso: 'outreach',
+          moduloId: mod.id,
+          moduloTitulo: mod.title,
+          completados: state.completedModules.size,
+          total: COURSE.modules.length
+        });
+      }
+    } catch (e) { /* el reporte de progreso nunca debe romper el curso */ }
     state.screenIdx = mod.screens.length;
     render();
   }

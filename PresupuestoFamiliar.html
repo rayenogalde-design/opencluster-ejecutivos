@@ -1079,16 +1079,28 @@ async function loadState() {
   state = await CLOUD.getAll();
 }
 
-// Indicador visual de sincronización
+// Indicador visual de sincronización + candado anti-doble-clic
 let _syncTimer;
-function showSync(text, isError) {
+let _saving = false;
+function setSaving(b) {
+  _saving = b;
+  document.querySelectorAll('.btn-primary').forEach(btn => {
+    btn.disabled = b;
+    btn.style.opacity = b ? '0.55' : '';
+    btn.style.cursor = b ? 'wait' : '';
+  });
+}
+function showSync(text, opts) {
+  opts = opts || {};
   const el = document.getElementById('syncIndicator');
   if (!el) return;
   el.textContent = text;
   el.classList.add('show');
-  el.classList.toggle('error', !!isError);
+  el.classList.toggle('error', !!opts.error);
   clearTimeout(_syncTimer);
-  _syncTimer = setTimeout(() => el.classList.remove('show'), 1400);
+  if (!opts.sticky) {
+    _syncTimer = setTimeout(() => el.classList.remove('show'), 1400);
+  }
 }
 
 // Refresca el estado desde la nube (para ver lo que el otro anotó)
@@ -1463,17 +1475,21 @@ function updateRatePreview() {
 }
 
 async function saveRate() {
+  if (_saving) return;
   const r = parseFloat(document.getElementById('rateInput').value);
   if (!r || r <= 0) { alert('Ingresa un tipo de cambio válido'); return; }
+  setSaving(true);
+  showSync('Guardando…', { sticky: true });
   try {
-    showSync('Guardando…');
     state = await CLOUD.setRate({ monthKey: monthKey(), rate: r, alsoDefault: true });
     closeModal('rateModal');
     renderAll();
     showSync('Guardado');
   } catch (e) {
-    showSync('Error', true);
+    showSync('Error', { error: true });
     alert('No se pudo guardar: ' + e.message);
+  } finally {
+    setSaving(false);
   }
 }
 
@@ -1555,21 +1571,25 @@ function updateExpenseDop() {
 }
 
 async function saveExpense() {
+  if (_saving) return;
   const amount = parseFloat(document.getElementById('expAmount').value);
   let category = document.getElementById('expCategory').value;
   const desc = document.getElementById('expDesc').value.trim();
   const date = document.getElementById('expDate').value;
   if (!amount || amount <= 0) { alert('Ingresa un monto válido'); return; }
   if (!date) { alert('Selecciona una fecha'); return; }
+  let newCat = null;
+  if (category === '__new__') {
+    const name = document.getElementById('newCatName').value.trim();
+    if (!name) { alert('Escribe el nombre de la categoría nueva'); return; }
+    const newBudget = parseFloat(document.getElementById('newCatBudget').value) || 0;
+    category = 'cat' + Date.now().toString(36);
+    newCat = { id: category, name, emoji: '🏷️', budget: newBudget };
+  }
+  setSaving(true);
+  showSync('Guardando…', { sticky: true });
   try {
-    showSync('Guardando…');
-    if (category === '__new__') {
-      const name = document.getElementById('newCatName').value.trim();
-      if (!name) { alert('Escribe el nombre de la categoría nueva'); showSync('', false); return; }
-      const newBudget = parseFloat(document.getElementById('newCatBudget').value) || 0;
-      category = 'cat' + Date.now().toString(36);
-      state = await CLOUD.addCategory({ id: category, name, emoji: '🏷️', budget: newBudget });
-    }
+    if (newCat) state = await CLOUD.addCategory(newCat);
     const expense = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
       date, category, amount, description: desc,
@@ -1582,15 +1602,19 @@ async function saveExpense() {
     renderAll();
     showSync('Guardado');
   } catch (e) {
-    showSync('Error al guardar', true);
+    showSync('Error al guardar', { error: true });
     alert('No se pudo guardar: ' + e.message);
+  } finally {
+    setSaving(false);
   }
 }
 
 async function deleteExpense(id) {
+  if (_saving) return;
   if (!confirm('¿Eliminar este gasto?')) return;
+  setSaving(true);
+  showSync('Eliminando…', { sticky: true });
   try {
-    showSync('Eliminando…');
     state = await CLOUD.deleteExpense(id);
     if (document.getElementById('detailModal').classList.contains('active') && currentDetailCategoryId) {
       renderCategoryDetail(currentDetailCategoryId);
@@ -1598,8 +1622,10 @@ async function deleteExpense(id) {
     renderAll();
     showSync('Eliminado');
   } catch (e) {
-    showSync('Error', true);
+    showSync('Error', { error: true });
     alert('No se pudo eliminar: ' + e.message);
+  } finally {
+    setSaving(false);
   }
 }
 
@@ -1627,14 +1653,16 @@ function updateIncomeDop() {
 }
 
 async function saveIncome() {
+  if (_saving) return;
   const amount = parseFloat(document.getElementById('incAmount').value);
   const personId = document.getElementById('incPerson').value;
   const desc = document.getElementById('incDesc').value.trim();
   const date = document.getElementById('incDate').value;
   if (!amount || amount <= 0) { alert('Ingresa un monto válido'); return; }
   if (!date) { alert('Selecciona una fecha'); return; }
+  setSaving(true);
+  showSync('Guardando…', { sticky: true });
   try {
-    showSync('Guardando…');
     const income = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
       date, personId, amount, description: desc,
@@ -1650,15 +1678,19 @@ async function saveIncome() {
     renderAll();
     showSync('Guardado');
   } catch (e) {
-    showSync('Error al guardar', true);
+    showSync('Error al guardar', { error: true });
     alert('No se pudo guardar: ' + e.message);
+  } finally {
+    setSaving(false);
   }
 }
 
 async function deleteIncome(id) {
+  if (_saving) return;
   if (!confirm('¿Eliminar este ingreso?')) return;
+  setSaving(true);
+  showSync('Eliminando…', { sticky: true });
   try {
-    showSync('Eliminando…');
     state = await CLOUD.deleteIncome(id);
     if (document.getElementById('incomeListModal').classList.contains('active')) {
       renderIncomeList();
@@ -1666,8 +1698,10 @@ async function deleteIncome(id) {
     renderAll();
     showSync('Eliminado');
   } catch (e) {
-    showSync('Error', true);
+    showSync('Error', { error: true });
     alert('No se pudo eliminar: ' + e.message);
+  } finally {
+    setSaving(false);
   }
 }
 
@@ -1778,12 +1812,14 @@ function updateSavingsDop() {
 }
 
 async function saveSaving() {
+  if (_saving) return;
   const amount = parseFloat(document.getElementById('savAmount').value);
   const goalId = document.getElementById('savGoal').value;
   const date = document.getElementById('savDate').value;
   if (!amount || amount <= 0) { alert('Ingresa un monto válido'); return; }
+  setSaving(true);
+  showSync('Guardando…', { sticky: true });
   try {
-    showSync('Guardando…');
     const contribution = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
       date, goalId, amount,
@@ -1796,8 +1832,10 @@ async function saveSaving() {
     renderAll();
     showSync('Guardado');
   } catch (e) {
-    showSync('Error al guardar', true);
+    showSync('Error al guardar', { error: true });
     alert('No se pudo guardar: ' + e.message);
+  } finally {
+    setSaving(false);
   }
 }
 
@@ -1869,16 +1907,20 @@ function renderGoalDetail(goalId) {
 }
 
 async function deleteContribution(id) {
+  if (_saving) return;
   if (!confirm('¿Eliminar este ahorro?')) return;
+  setSaving(true);
+  showSync('Eliminando…', { sticky: true });
   try {
-    showSync('Eliminando…');
     state = await CLOUD.deleteContribution(id);
     if (currentGoalId) renderGoalDetail(currentGoalId);
     renderAll();
     showSync('Eliminado');
   } catch (e) {
-    showSync('Error', true);
+    showSync('Error', { error: true });
     alert('No se pudo eliminar: ' + e.message);
+  } finally {
+    setSaving(false);
   }
 }
 
@@ -1910,13 +1952,15 @@ function updateBudgetTotal() {
 }
 
 async function saveSettings() {
+  if (_saving) return;
   const newRate = parseFloat(document.getElementById('setExchange').value);
   const budgets = {};
   document.querySelectorAll('#budgetEditList input').forEach(input => {
     budgets[input.dataset.id] = parseFloat(input.value) || 0;
   });
+  setSaving(true);
+  showSync('Guardando…', { sticky: true });
   try {
-    showSync('Guardando…');
     state = await CLOUD.updateSettings({
       defaultRate: (newRate > 0 ? newRate : undefined),
       budgets
@@ -1925,23 +1969,29 @@ async function saveSettings() {
     renderAll();
     showSync('Guardado');
   } catch (e) {
-    showSync('Error', true);
+    showSync('Error', { error: true });
     alert('No se pudo guardar: ' + e.message);
+  } finally {
+    setSaving(false);
   }
 }
 
 async function resetAllData() {
+  if (_saving) return;
   if (!confirm('¿Borrar TODOS los datos? Esta acción no se puede deshacer.')) return;
   if (!confirm('¿Estás segura? Se perderán todos los gastos, ingresos y ahorros — TAMBIÉN para Germán.')) return;
+  setSaving(true);
+  showSync('Reiniciando…', { sticky: true });
   try {
-    showSync('Reiniciando…');
     state = await CLOUD.reset();
     closeModal('settingsModal');
     renderAll();
     showSync('Reiniciado');
   } catch (e) {
-    showSync('Error', true);
+    showSync('Error', { error: true });
     alert('No se pudo reiniciar: ' + e.message);
+  } finally {
+    setSaving(false);
   }
 }
 

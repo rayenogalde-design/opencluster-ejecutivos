@@ -743,7 +743,7 @@
 
   <div class="section-header">
     <div class="section-title">metas de <em>ahorro</em></div>
-    <button class="section-action" onclick="openSavings()">+ aporte</button>
+    <button class="section-action" onclick="openSavings()">+ ahorro extra</button>
   </div>
   <div class="goals" id="goalsList"></div>
 
@@ -858,7 +858,7 @@
 <div class="modal-overlay" id="savingsModal" onclick="if(event.target===this) closeModal('savingsModal')">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title">Aporte a <em class="gold">ahorro</em></div>
+    <div class="modal-title">Nuevo <em class="gold">ahorro</em></div>
     <div class="form-group">
       <label class="form-label">Meta</label>
       <select class="form-select" id="savGoal"></select>
@@ -928,7 +928,7 @@
     <div id="goalContributions"></div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('goalModal')">Cerrar</button>
-      <button class="btn btn-primary gold" onclick="addContributionToGoal()">+ Aporte</button>
+      <button class="btn btn-primary gold" onclick="addContributionToGoal()">+ Ahorro extra</button>
     </div>
   </div>
 </div>
@@ -1004,7 +1004,7 @@ const DEFAULT_STATE = {
     { id: 'obra',        name: 'Aporte obra mundial',emoji: '🤝', budget: 40 },
     { id: 'limpieza',    name: 'Limpieza hogar',     emoji: '🧹', budget: 40 },
   ],
-  // Metas y sobres de ahorro. alloc = regla de aporte automático mensual:
+  // Metas y sobres de ahorro. alloc = regla de ahorro automático mensual:
   //   { mode:'fixed', usd:N } → aparta N US$ cada mes (sobre)
   //   { mode:'percent', pct:N } → toma N% del sobrante después de los sobres fijos (meta grande)
   goals: [
@@ -1151,7 +1151,7 @@ function getCategoryExpenses(catId) {
 function getPersonIncome(personId) {
   return state.incomes.filter(i => i.personId === personId && isInCurrentMonth(i.date)).reduce((s, i) => s + i.amount, 0);
 }
-// ── Ahorro: aporte automático del plan ──
+// ── Ahorro automático del plan ──
 // Cada mes con ingresos/gastos genera un reparto automático:
 //   1) sobre = ingresos − gastos (en US$, con la tasa de ese mes)
 //   2) se apartan primero los sobres fijos (Ropa/Médico/Residencia)
@@ -1767,7 +1767,7 @@ function renderGoalDetail(goalId) {
   document.getElementById('goalDetailCurrent').textContent = fmtUSD(current);
   document.getElementById('goalDetailCurrentDop').textContent = refDOP(current);
   if (isFixed) {
-    document.getElementById('goalDetailTargetLabel').textContent = 'Aporte fijo';
+    document.getElementById('goalDetailTargetLabel').textContent = 'Ahorro fijo';
     document.getElementById('goalDetailTarget').textContent = fmtUSDShort(goal.alloc.usd) + '/mes';
     document.getElementById('goalDetailRemainingLabel').textContent = 'Del plan';
     document.getElementById('goalDetailRemaining').textContent = fmtUSDShort(auto);
@@ -1779,9 +1779,9 @@ function renderGoalDetail(goalId) {
     document.getElementById('goalDetailRemaining').textContent = fmtUSDShort(remaining);
   }
   const ruleTxt = isFixed
-    ? `Aporte automático: ${fmtUSDShort(goal.alloc.usd)} fijo cada mes`
+    ? `Ahorro automático: ${fmtUSDShort(goal.alloc.usd)} fijo cada mes`
     : (goal.alloc && goal.alloc.mode === 'percent'
-        ? `Aporte automático: ${goal.alloc.pct}% de lo que sobra (ingresos − gastos − sobres fijos)`
+        ? `Ahorro automático: ${goal.alloc.pct}% de lo que sobra (ingresos − gastos − sobres fijos)`
         : 'Sin regla automática');
   const contribs = getGoalContributions(goalId);
   const container = document.getElementById('goalContributions');
@@ -1792,18 +1792,18 @@ function renderGoalDetail(goalId) {
         <span>Automático acumulado</span><strong style="color:var(--accent);font-family:var(--serif)">${fmtUSD(auto)}</strong>
       </div>
       ${manual > 0 ? `<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:4px">
-        <span>Aportes manuales extra</span><strong style="color:var(--gold);font-family:var(--serif)">${fmtUSD(manual)}</strong>
+        <span>Ahorros manuales extra</span><strong style="color:var(--gold);font-family:var(--serif)">${fmtUSD(manual)}</strong>
       </div>` : ''}
     </div>`;
   if (contribs.length === 0) {
-    container.innerHTML = head + `<div class="empty"><p>Sin aportes manuales extra</p></div>`;
+    container.innerHTML = head + `<div class="empty"><p>Sin ahorros manuales extra</p></div>`;
   } else {
     container.innerHTML = head + `
       <div class="expense-list" style="margin-bottom: 8px">
         ${contribs.map(c => `
           <div class="expense-item">
             <div class="expense-info">
-              <div class="expense-desc">Aporte manual</div>
+              <div class="expense-desc">Ahorro manual</div>
               <div class="expense-meta">${fmtDate(c.date)}</div>
             </div>
             <div class="expense-right">
@@ -1819,7 +1819,7 @@ function renderGoalDetail(goalId) {
 }
 
 async function deleteContribution(id) {
-  if (!confirm('¿Eliminar este aporte?')) return;
+  if (!confirm('¿Eliminar este ahorro?')) return;
   state.contributions = state.contributions.filter(c => c.id !== id);
   await saveState();
   if (currentGoalId) renderGoalDetail(currentGoalId);
@@ -1869,7 +1869,7 @@ async function saveSettings() {
 
 async function resetAllData() {
   if (!confirm('¿Borrar TODOS los datos? Esta acción no se puede deshacer.')) return;
-  if (!confirm('¿Estás segura? Se perderán todos los gastos, ingresos y aportes.')) return;
+  if (!confirm('¿Estás segura? Se perderán todos los gastos, ingresos y ahorros.')) return;
   state = JSON.parse(JSON.stringify(DEFAULT_STATE));
   await saveState();
   closeModal('settingsModal');

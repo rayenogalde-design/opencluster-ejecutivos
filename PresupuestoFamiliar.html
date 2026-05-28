@@ -560,6 +560,19 @@
   .loading.hidden { opacity: 0; pointer-events: none; }
   .loading-text { font-family: var(--serif); font-style: italic; color: var(--muted); font-size: 18px; }
 
+  /* Indicador de sincronización con la nube */
+  .sync-indicator {
+    position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
+    background: var(--ink); color: var(--surface);
+    padding: 6px 14px; border-radius: 999px;
+    font-size: 11px; font-weight: 500; letter-spacing: 0.04em;
+    font-family: var(--sans);
+    opacity: 0; transition: opacity 0.25s; pointer-events: none;
+    z-index: 250; box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+  }
+  .sync-indicator.show { opacity: 0.92; }
+  .sync-indicator.error { background: var(--spend); }
+
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 999px; }
@@ -671,7 +684,8 @@
 </head>
 <body>
 
-<div class="loading" id="loading"><div class="loading-text">Cargando…</div></div>
+<div class="loading" id="loading"><div class="loading-text">Conectando…</div></div>
+<div class="sync-indicator" id="syncIndicator"></div>
 
 <header class="header">
   <div class="brand">
@@ -1031,88 +1045,70 @@ let currentTab = 'all';
 
 const MONTHS = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 
-// Storage abstraction: uses Claude's window.storage when available,
-// otherwise falls back to browser localStorage (so it works as a standalone file on the phone)
-const storage = {
-  async get(key) {
-    if (typeof window !== 'undefined' && window.storage && typeof window.storage.get === 'function') {
-      try { return await window.storage.get(key); } catch(e) { /* fall through */ }
-    }
-    const v = localStorage.getItem(key);
-    return v !== null ? { value: v } : null;
+// ── Cloud backend (Google Apps Script + Google Sheet compartida) ──
+// Todos los cambios pasan por aquí, así Rayen y Germán ven los mismos datos en vivo.
+const CLOUD = {
+  url: 'https://script.google.com/macros/s/AKfycbxOGdyWFQUSyQ6jQPKsYXsVXc1yOYyDCc9rqOaBbNYL7MYn7LEiUhS2xcF04cePDATLtA/exec',
+  pw:  'rg2026familia',
+  async _post(payload) {
+    payload.pw = this.pw;
+    const res = await fetch(this.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload),
+      redirect: 'follow'
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Error del servidor');
+    return data;
   },
-  async set(key, value) {
-    if (typeof window !== 'undefined' && window.storage && typeof window.storage.set === 'function') {
-      try { return await window.storage.set(key, value); } catch(e) { /* fall through */ }
-    }
-    localStorage.setItem(key, value);
-    return { value };
-  }
+  async getAll()                       { return (await this._post({ action:'getAll' })).state; },
+  async addExpense(expense)            { return (await this._post({ action:'addExpense', expense })).state; },
+  async deleteExpense(id)              { return (await this._post({ action:'deleteExpense', id })).state; },
+  async addIncome(income)              { return (await this._post({ action:'addIncome', income })).state; },
+  async deleteIncome(id)               { return (await this._post({ action:'deleteIncome', id })).state; },
+  async addContribution(contribution)  { return (await this._post({ action:'addContribution', contribution })).state; },
+  async deleteContribution(id)         { return (await this._post({ action:'deleteContribution', id })).state; },
+  async addCategory(category)          { return (await this._post({ action:'addCategory', category })).state; },
+  async updateSettings(payload)        { return (await this._post(Object.assign({ action:'updateSettings' }, payload))).state; },
+  async setRate(payload)               { return (await this._post(Object.assign({ action:'setRate' }, payload))).state; },
+  async reset()                        { return (await this._post({ action:'reset' })).state; },
 };
 
 async function loadState() {
+  state = await CLOUD.getAll();
+}
+
+// Indicador visual de sincronización
+let _syncTimer;
+function showSync(text, isError) {
+  const el = document.getElementById('syncIndicator');
+  if (!el) return;
+  el.textContent = text;
+  el.classList.add('show');
+  el.classList.toggle('error', !!isError);
+  clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(() => el.classList.remove('show'), 1400);
+}
+
+// Refresca el estado desde la nube (para ver lo que el otro anotó)
+async function refreshFromCloud(silent) {
+  if (document.querySelector('.modal-overlay.active')) return;   // no interrumpir si hay modal abierto
   try {
-    const r = await storage.get('budgetData');
-    if (r && r.value) {
-      const parsed = JSON.parse(r.value);
-      state = {
-        exchangeRate: parsed.exchangeRate ?? DEFAULT_STATE.exchangeRate,
-        monthlyRates: parsed.monthlyRates ?? {},
-        people: parsed.people ?? DEFAULT_STATE.people,
-        categories: parsed.categories ?? DEFAULT_STATE.categories,
-        goals: parsed.goals ?? DEFAULT_STATE.goals,
-        expenses: parsed.expenses ?? [],
-        incomes: parsed.incomes ?? [],
-        contributions: parsed.contributions ?? [],
-      };
-    } else {
-      state = JSON.parse(JSON.stringify(DEFAULT_STATE));
-    }
-  } catch (e) {
-    state = JSON.parse(JSON.stringify(DEFAULT_STATE));
-  }
-  migrateCategories();
-  migrateSavings();
+    state = await CLOUD.getAll();
+    renderAll();
+    if (!silent) showSync('Actualizado');
+  } catch (e) { /* silencioso para no molestar */ }
 }
 
-// Asegura que las categorías nuevas existan en instalaciones antiguas (sin tocar las que ya tienes).
-function migrateCategories() {
-  if (!state || !Array.isArray(state.categories)) return;
-  const ensure = [
-    { id: 'chary', name: 'Aporte a Chary', emoji: '💝', budget: 60 },
-    { id: 'otros', name: 'Imprevistos',    emoji: '🧾', budget: 40 },
-  ];
-  ensure.forEach(c => {
-    if (!state.categories.find(x => x.id === c.id)) {
-      state.categories.push(JSON.parse(JSON.stringify(c)));
-    }
+function startAutoRefresh() {
+  setInterval(() => {
+    if (document.visibilityState !== 'visible') return;
+    refreshFromCloud(true);
+  }, 30000);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') refreshFromCloud(true);
   });
-}
-
-// Asegura que las metas viejas tengan su alloc y que existan los sobres nuevos.
-function migrateSavings() {
-  if (!state) return;
-  if (!Array.isArray(state.goals) || !state.goals.length) {
-    state.goals = JSON.parse(JSON.stringify(DEFAULT_STATE.goals));
-    return;
-  }
-  const allocDefaults = {
-    chile:   { mode:'percent', pct:20 },
-    crucero: { mode:'percent', pct:20 },
-    tierra:  { mode:'percent', pct:50 },
-  };
-  state.goals.forEach(g => { if (!g.alloc && allocDefaults[g.id]) g.alloc = allocDefaults[g.id]; });
-  ['ropa', 'medico', 'residencia'].forEach(id => {
-    if (!state.goals.find(g => g.id === id)) {
-      const seed = DEFAULT_STATE.goals.find(g => g.id === id);
-      if (seed) state.goals.push(JSON.parse(JSON.stringify(seed)));
-    }
-  });
-}
-
-async function saveState() {
-  try { await storage.set('budgetData', JSON.stringify(state)); }
-  catch (e) { console.error('Error guardando:', e); }
 }
 
 // ── Tipo de cambio POR MES ──
@@ -1469,12 +1465,16 @@ function updateRatePreview() {
 async function saveRate() {
   const r = parseFloat(document.getElementById('rateInput').value);
   if (!r || r <= 0) { alert('Ingresa un tipo de cambio válido'); return; }
-  if (!state.monthlyRates) state.monthlyRates = {};
-  state.monthlyRates[monthKey()] = r;
-  state.exchangeRate = r;   // el más reciente queda como semilla para meses nuevos
-  await saveState();
-  closeModal('rateModal');
-  renderAll();
+  try {
+    showSync('Guardando…');
+    state = await CLOUD.setRate({ monthKey: monthKey(), rate: r, alsoDefault: true });
+    closeModal('rateModal');
+    renderAll();
+    showSync('Guardado');
+  } catch (e) {
+    showSync('Error', true);
+    alert('No se pudo guardar: ' + e.message);
+  }
 }
 
 function renderKpiFinal() {
@@ -1561,33 +1561,46 @@ async function saveExpense() {
   const date = document.getElementById('expDate').value;
   if (!amount || amount <= 0) { alert('Ingresa un monto válido'); return; }
   if (!date) { alert('Selecciona una fecha'); return; }
-  if (category === '__new__') {
-    const name = document.getElementById('newCatName').value.trim();
-    if (!name) { alert('Escribe el nombre de la categoría nueva'); return; }
-    const newBudget = parseFloat(document.getElementById('newCatBudget').value) || 0;  // US$ fijo
-    category = 'cat' + Date.now().toString(36);
-    state.categories.push({ id: category, name, emoji: '🏷️', budget: newBudget });
+  try {
+    showSync('Guardando…');
+    if (category === '__new__') {
+      const name = document.getElementById('newCatName').value.trim();
+      if (!name) { alert('Escribe el nombre de la categoría nueva'); showSync('', false); return; }
+      const newBudget = parseFloat(document.getElementById('newCatBudget').value) || 0;
+      category = 'cat' + Date.now().toString(36);
+      state = await CLOUD.addCategory({ id: category, name, emoji: '🏷️', budget: newBudget });
+    }
+    const expense = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      date, category, amount, description: desc,
+    };
+    state = await CLOUD.addExpense(expense);
+    const ed = new Date(date + 'T00:00:00');
+    currentMonth = ed.getMonth();
+    currentYear = ed.getFullYear();
+    closeModal('expenseModal');
+    renderAll();
+    showSync('Guardado');
+  } catch (e) {
+    showSync('Error al guardar', true);
+    alert('No se pudo guardar: ' + e.message);
   }
-  state.expenses.push({
-    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-    date, category, amount, description: desc,
-  });
-  const ed = new Date(date + 'T00:00:00');
-  currentMonth = ed.getMonth();
-  currentYear = ed.getFullYear();
-  await saveState();
-  closeModal('expenseModal');
-  renderAll();
 }
 
 async function deleteExpense(id) {
   if (!confirm('¿Eliminar este gasto?')) return;
-  state.expenses = state.expenses.filter(e => e.id !== id);
-  await saveState();
-  if (document.getElementById('detailModal').classList.contains('active') && currentDetailCategoryId) {
-    renderCategoryDetail(currentDetailCategoryId);
+  try {
+    showSync('Eliminando…');
+    state = await CLOUD.deleteExpense(id);
+    if (document.getElementById('detailModal').classList.contains('active') && currentDetailCategoryId) {
+      renderCategoryDetail(currentDetailCategoryId);
+    }
+    renderAll();
+    showSync('Eliminado');
+  } catch (e) {
+    showSync('Error', true);
+    alert('No se pudo eliminar: ' + e.message);
   }
-  renderAll();
 }
 
 function openIncomeModal() {
@@ -1620,29 +1633,42 @@ async function saveIncome() {
   const date = document.getElementById('incDate').value;
   if (!amount || amount <= 0) { alert('Ingresa un monto válido'); return; }
   if (!date) { alert('Selecciona una fecha'); return; }
-  state.incomes.push({
-    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-    date, personId, amount, description: desc,
-  });
-  const ed = new Date(date + 'T00:00:00');
-  currentMonth = ed.getMonth();
-  currentYear = ed.getFullYear();
-  await saveState();
-  closeModal('incomeModal');
-  if (document.getElementById('incomeListModal').classList.contains('active')) {
-    renderIncomeList();
+  try {
+    showSync('Guardando…');
+    const income = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      date, personId, amount, description: desc,
+    };
+    state = await CLOUD.addIncome(income);
+    const ed = new Date(date + 'T00:00:00');
+    currentMonth = ed.getMonth();
+    currentYear = ed.getFullYear();
+    closeModal('incomeModal');
+    if (document.getElementById('incomeListModal').classList.contains('active')) {
+      renderIncomeList();
+    }
+    renderAll();
+    showSync('Guardado');
+  } catch (e) {
+    showSync('Error al guardar', true);
+    alert('No se pudo guardar: ' + e.message);
   }
-  renderAll();
 }
 
 async function deleteIncome(id) {
   if (!confirm('¿Eliminar este ingreso?')) return;
-  state.incomes = state.incomes.filter(i => i.id !== id);
-  await saveState();
-  if (document.getElementById('incomeListModal').classList.contains('active')) {
-    renderIncomeList();
+  try {
+    showSync('Eliminando…');
+    state = await CLOUD.deleteIncome(id);
+    if (document.getElementById('incomeListModal').classList.contains('active')) {
+      renderIncomeList();
+    }
+    renderAll();
+    showSync('Eliminado');
+  } catch (e) {
+    showSync('Error', true);
+    alert('No se pudo eliminar: ' + e.message);
   }
-  renderAll();
 }
 
 function openIncomeList() {
@@ -1756,16 +1782,23 @@ async function saveSaving() {
   const goalId = document.getElementById('savGoal').value;
   const date = document.getElementById('savDate').value;
   if (!amount || amount <= 0) { alert('Ingresa un monto válido'); return; }
-  state.contributions.push({
-    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-    date, goalId, amount,
-  });
-  await saveState();
-  closeModal('savingsModal');
-  if (document.getElementById('goalModal').classList.contains('active') && currentGoalId) {
-    renderGoalDetail(currentGoalId);
+  try {
+    showSync('Guardando…');
+    const contribution = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      date, goalId, amount,
+    };
+    state = await CLOUD.addContribution(contribution);
+    closeModal('savingsModal');
+    if (document.getElementById('goalModal').classList.contains('active') && currentGoalId) {
+      renderGoalDetail(currentGoalId);
+    }
+    renderAll();
+    showSync('Guardado');
+  } catch (e) {
+    showSync('Error al guardar', true);
+    alert('No se pudo guardar: ' + e.message);
   }
-  renderAll();
 }
 
 function openGoalDetail(goalId) {
@@ -1837,10 +1870,16 @@ function renderGoalDetail(goalId) {
 
 async function deleteContribution(id) {
   if (!confirm('¿Eliminar este ahorro?')) return;
-  state.contributions = state.contributions.filter(c => c.id !== id);
-  await saveState();
-  if (currentGoalId) renderGoalDetail(currentGoalId);
-  renderAll();
+  try {
+    showSync('Eliminando…');
+    state = await CLOUD.deleteContribution(id);
+    if (currentGoalId) renderGoalDetail(currentGoalId);
+    renderAll();
+    showSync('Eliminado');
+  } catch (e) {
+    showSync('Error', true);
+    alert('No se pudo eliminar: ' + e.message);
+  }
 }
 
 function addContributionToGoal() {
@@ -1872,25 +1911,38 @@ function updateBudgetTotal() {
 
 async function saveSettings() {
   const newRate = parseFloat(document.getElementById('setExchange').value);
-  if (newRate > 0) state.exchangeRate = newRate;
+  const budgets = {};
   document.querySelectorAll('#budgetEditList input').forEach(input => {
-    const id = input.dataset.id;
-    const val = parseFloat(input.value) || 0;
-    const cat = state.categories.find(c => c.id === id);
-    if (cat) cat.budget = val;
+    budgets[input.dataset.id] = parseFloat(input.value) || 0;
   });
-  await saveState();
-  closeModal('settingsModal');
-  renderAll();
+  try {
+    showSync('Guardando…');
+    state = await CLOUD.updateSettings({
+      defaultRate: (newRate > 0 ? newRate : undefined),
+      budgets
+    });
+    closeModal('settingsModal');
+    renderAll();
+    showSync('Guardado');
+  } catch (e) {
+    showSync('Error', true);
+    alert('No se pudo guardar: ' + e.message);
+  }
 }
 
 async function resetAllData() {
   if (!confirm('¿Borrar TODOS los datos? Esta acción no se puede deshacer.')) return;
-  if (!confirm('¿Estás segura? Se perderán todos los gastos, ingresos y ahorros.')) return;
-  state = JSON.parse(JSON.stringify(DEFAULT_STATE));
-  await saveState();
-  closeModal('settingsModal');
-  renderAll();
+  if (!confirm('¿Estás segura? Se perderán todos los gastos, ingresos y ahorros — TAMBIÉN para Germán.')) return;
+  try {
+    showSync('Reiniciando…');
+    state = await CLOUD.reset();
+    closeModal('settingsModal');
+    renderAll();
+    showSync('Reiniciado');
+  } catch (e) {
+    showSync('Error', true);
+    alert('No se pudo reiniciar: ' + e.message);
+  }
 }
 
 function closeModal(id) {
@@ -1910,9 +1962,20 @@ function printMonth() {
 }
 
 (async function init() {
-  await loadState();
-  renderAll();
-  setTimeout(() => document.getElementById('loading').classList.add('hidden'), 100);
+  try {
+    await loadState();
+    renderAll();
+    setTimeout(() => document.getElementById('loading').classList.add('hidden'), 100);
+    startAutoRefresh();
+  } catch (e) {
+    const loading = document.getElementById('loading');
+    loading.innerHTML =
+      '<div style="text-align:center;padding:30px;max-width:340px">' +
+      '<div class="loading-text" style="margin-bottom:14px">No se pudo conectar a la nube.</div>' +
+      '<div style="font-size:12px;color:var(--spend);margin-bottom:14px">' + (e.message || e) + '</div>' +
+      '<div style="font-size:11px;color:var(--muted)">Revisa tu conexión a internet y recarga la página.</div>' +
+      '</div>';
+  }
 })();
 </script>
 

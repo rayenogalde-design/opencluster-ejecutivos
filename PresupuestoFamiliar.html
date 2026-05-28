@@ -917,11 +917,11 @@
     </div>
     <div class="detail-stats">
       <div class="detail-stat">
-        <div class="label">Objetivo</div>
+        <div class="label" id="goalDetailTargetLabel">Objetivo</div>
         <div class="value" id="goalDetailTarget">$0</div>
       </div>
       <div class="detail-stat">
-        <div class="label">Faltan</div>
+        <div class="label" id="goalDetailRemainingLabel">Faltan</div>
         <div class="value" id="goalDetailRemaining">$0</div>
       </div>
     </div>
@@ -1004,10 +1004,16 @@ const DEFAULT_STATE = {
     { id: 'obra',        name: 'Aporte obra mundial',emoji: '🤝', budget: 40 },
     { id: 'limpieza',    name: 'Limpieza hogar',     emoji: '🧹', budget: 40 },
   ],
+  // Metas y sobres de ahorro. alloc = regla de aporte automático mensual:
+  //   { mode:'fixed', usd:N } → aparta N US$ cada mes (sobre)
+  //   { mode:'percent', pct:N } → toma N% del sobrante después de los sobres fijos (meta grande)
   goals: [
-    { id: 'chile',    name: 'Viaje a Chile',           emoji: '🇨🇱', target: 3000,  deadline: '2026-12-31' },
-    { id: 'crucero',  name: 'Crucero por el Mediterráneo', emoji: '🛳️', target: 5000,  deadline: '2027-05-31' },
-    { id: 'tierra',   name: 'Compra de tierra',        emoji: '🌱', target: 10000, deadline: '2027-12-31' },
+    { id: 'chile',    name: 'Viaje a Chile',               emoji: '🇨🇱', target: 3000,  deadline: '2026-12-31', alloc: { mode:'percent', pct:20 } },
+    { id: 'crucero',  name: 'Crucero por el Mediterráneo', emoji: '🛳️', target: 5000,  deadline: '2027-05-31', alloc: { mode:'percent', pct:20 } },
+    { id: 'tierra',   name: 'Compra de tierra',            emoji: '🌱', target: 10000, deadline: '2027-12-31', alloc: { mode:'percent', pct:50 } },
+    { id: 'ropa',       name: 'Ropa',             emoji: '👕', alloc: { mode:'fixed', usd:40 } },
+    { id: 'medico',     name: 'Médico',           emoji: '🩺', alloc: { mode:'fixed', usd:60 } },
+    { id: 'residencia', name: 'Residencia Anual', emoji: '🏡', alloc: { mode:'fixed', usd:40 } },
   ],
   expenses: [],
   incomes: [],
@@ -1063,6 +1069,28 @@ async function loadState() {
   } catch (e) {
     state = JSON.parse(JSON.stringify(DEFAULT_STATE));
   }
+  migrateSavings();
+}
+
+// Asegura que las metas viejas tengan su alloc y que existan los sobres nuevos.
+function migrateSavings() {
+  if (!state) return;
+  if (!Array.isArray(state.goals) || !state.goals.length) {
+    state.goals = JSON.parse(JSON.stringify(DEFAULT_STATE.goals));
+    return;
+  }
+  const allocDefaults = {
+    chile:   { mode:'percent', pct:20 },
+    crucero: { mode:'percent', pct:20 },
+    tierra:  { mode:'percent', pct:50 },
+  };
+  state.goals.forEach(g => { if (!g.alloc && allocDefaults[g.id]) g.alloc = allocDefaults[g.id]; });
+  ['ropa', 'medico', 'residencia'].forEach(id => {
+    if (!state.goals.find(g => g.id === id)) {
+      const seed = DEFAULT_STATE.goals.find(g => g.id === id);
+      if (seed) state.goals.push(JSON.parse(JSON.stringify(seed)));
+    }
+  });
 }
 
 async function saveState() {
@@ -1123,8 +1151,48 @@ function getCategoryExpenses(catId) {
 function getPersonIncome(personId) {
   return state.incomes.filter(i => i.personId === personId && isInCurrentMonth(i.date)).reduce((s, i) => s + i.amount, 0);
 }
+// ── Ahorro: aporte automático del plan ──
+// Cada mes con ingresos/gastos genera un reparto automático:
+//   1) sobre = ingresos − gastos (en US$, con la tasa de ese mes)
+//   2) se apartan primero los sobres fijos (Ropa/Médico/Residencia)
+//   3) del resto, las metas grandes toman su porcentaje
+function rateForKey(key) {
+  const r = state.monthlyRates ? state.monthlyRates[key] : null;
+  return (r && r > 0) ? r : state.exchangeRate;
+}
+function savingsActiveMonths() {
+  const set = new Set();
+  state.incomes.forEach(i => set.add(i.date.slice(0,7)));
+  state.expenses.forEach(e => set.add(e.date.slice(0,7)));
+  return Array.from(set);
+}
+function monthSurplusUsd(key) {
+  const incUsd = state.incomes.filter(i => i.date.slice(0,7) === key).reduce((s,i) => s + i.amount, 0);
+  const expDop = state.expenses.filter(e => e.date.slice(0,7) === key).reduce((s,e) => s + e.amount, 0);
+  const rate = rateForKey(key);
+  const expUsd = rate ? expDop / rate : 0;
+  return incUsd - expUsd;
+}
+function monthAlloc(key) {
+  const surplus = Math.max(0, monthSurplusUsd(key));
+  const fixedGoals = state.goals.filter(g => g.alloc && g.alloc.mode === 'fixed');
+  const pctGoals   = state.goals.filter(g => g.alloc && g.alloc.mode === 'percent');
+  const fixedTotal = fixedGoals.reduce((s,g) => s + (g.alloc.usd || 0), 0);
+  const fixedScale = (fixedTotal > 0 && surplus < fixedTotal) ? surplus / fixedTotal : 1;
+  const out = {};
+  fixedGoals.forEach(g => { out[g.id] = (g.alloc.usd || 0) * fixedScale; });
+  const resto = Math.max(0, surplus - fixedTotal);
+  pctGoals.forEach(g => { out[g.id] = resto * ((g.alloc.pct || 0) / 100); });
+  return out;
+}
+function autoSavedForGoal(goalId) {
+  return savingsActiveMonths().reduce((sum, key) => sum + (monthAlloc(key)[goalId] || 0), 0);
+}
+function manualSavedForGoal(goalId) {
+  return state.contributions.filter(c => c.goalId === goalId).reduce((s,c) => s + c.amount, 0);
+}
 function getGoalAmount(goalId) {
-  return state.contributions.filter(c => c.goalId === goalId).reduce((s, c) => s + c.amount, 0);
+  return autoSavedForGoal(goalId) + manualSavedForGoal(goalId);
 }
 function getGoalContributions(goalId) {
   return state.contributions.filter(c => c.goalId === goalId).sort((a, b) => b.date.localeCompare(a.date));
@@ -1245,12 +1313,35 @@ function renderCategories() {
 
 function renderGoals() {
   const container = document.getElementById('goalsList');
+  const allocThis = monthAlloc(monthKey());
   container.innerHTML = state.goals.map(goal => {
     const current = getGoalAmount(goal.id);
+    const thisMonth = allocThis[goal.id] || 0;
+    const isFixed = goal.alloc && goal.alloc.mode === 'fixed';
+    if (isFixed) {
+      // Sobre de ahorro fijo (sin meta de monto, recurrente)
+      return `
+        <div class="goal-card" onclick="openGoalDetail('${goal.id}')">
+          <div class="goal-header">
+            <div class="goal-title">${goal.name}</div>
+            <div class="goal-emoji">${goal.emoji}</div>
+          </div>
+          <div class="goal-amounts">
+            <div>
+              <div class="goal-current">${fmtUSD(current)}</div>
+              <div class="goal-target" style="margin-top:2px">${refDOP(current)}</div>
+            </div>
+            <div class="goal-target">acumulado</div>
+          </div>
+          <div class="goal-meta">
+            <span class="goal-progress">${fmtUSDShort(goal.alloc.usd)}/mes · fijo</span>
+            <span>este mes +${fmtUSDShort(thisMonth)}</span>
+          </div>
+        </div>`;
+    }
+    // Meta grande con target y % del sobrante
     const pct = goal.target > 0 ? (current / goal.target) * 100 : 0;
-    const dl = new Date(goal.deadline + 'T00:00:00');
-    const months = Math.max(0, Math.round((dl - new Date()) / (1000 * 60 * 60 * 24 * 30)));
-    const dlText = months > 12 ? `${Math.round(months/12*10)/10} años` : `${months} meses`;
+    const pctRule = goal.alloc && goal.alloc.mode === 'percent' ? `${goal.alloc.pct}% del sobrante` : '';
     return `
       <div class="goal-card" onclick="openGoalDetail('${goal.id}')">
         <div class="goal-header">
@@ -1268,8 +1359,8 @@ function renderGoals() {
           <div class="goal-bar-fill" style="width:${Math.min(pct, 100)}%"></div>
         </div>
         <div class="goal-meta">
-          <span class="goal-progress">${pct.toFixed(0)}% completado</span>
-          <span>en ${dlText}</span>
+          <span class="goal-progress">${pct.toFixed(0)}% · ${pctRule}</span>
+          <span>este mes +${fmtUSDShort(thisMonth)}</span>
         </div>
       </div>`;
   }).join('');
@@ -1668,24 +1759,51 @@ function openGoalDetail(goalId) {
 
 function renderGoalDetail(goalId) {
   const goal = state.goals.find(g => g.id === goalId);
-  const current = getGoalAmount(goalId);
-  const remaining = Math.max(0, goal.target - current);
+  const auto = autoSavedForGoal(goalId);
+  const manual = manualSavedForGoal(goalId);
+  const current = auto + manual;
+  const isFixed = goal.alloc && goal.alloc.mode === 'fixed';
   document.getElementById('goalDetailTitle').innerHTML = `${goal.emoji} <em>${goal.name}</em>`;
   document.getElementById('goalDetailCurrent').textContent = fmtUSD(current);
   document.getElementById('goalDetailCurrentDop').textContent = refDOP(current);
-  document.getElementById('goalDetailTarget').textContent = fmtUSDShort(goal.target);
-  document.getElementById('goalDetailRemaining').textContent = fmtUSDShort(remaining);
+  if (isFixed) {
+    document.getElementById('goalDetailTargetLabel').textContent = 'Aporte fijo';
+    document.getElementById('goalDetailTarget').textContent = fmtUSDShort(goal.alloc.usd) + '/mes';
+    document.getElementById('goalDetailRemainingLabel').textContent = 'Del plan';
+    document.getElementById('goalDetailRemaining').textContent = fmtUSDShort(auto);
+  } else {
+    const remaining = Math.max(0, goal.target - current);
+    document.getElementById('goalDetailTargetLabel').textContent = 'Objetivo';
+    document.getElementById('goalDetailTarget').textContent = fmtUSDShort(goal.target);
+    document.getElementById('goalDetailRemainingLabel').textContent = 'Faltan';
+    document.getElementById('goalDetailRemaining').textContent = fmtUSDShort(remaining);
+  }
+  const ruleTxt = isFixed
+    ? `Aporte automático: ${fmtUSDShort(goal.alloc.usd)} fijo cada mes`
+    : (goal.alloc && goal.alloc.mode === 'percent'
+        ? `Aporte automático: ${goal.alloc.pct}% de lo que sobra (ingresos − gastos − sobres fijos)`
+        : 'Sin regla automática');
   const contribs = getGoalContributions(goalId);
   const container = document.getElementById('goalContributions');
+  const head = `
+    <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:12px">
+      <div style="font-size:11px;color:var(--muted);font-style:italic;margin-bottom:6px">${ruleTxt}</div>
+      <div style="display:flex;justify-content:space-between;font-size:13px">
+        <span>Automático acumulado</span><strong style="color:var(--accent);font-family:var(--serif)">${fmtUSD(auto)}</strong>
+      </div>
+      ${manual > 0 ? `<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:4px">
+        <span>Aportes manuales extra</span><strong style="color:var(--gold);font-family:var(--serif)">${fmtUSD(manual)}</strong>
+      </div>` : ''}
+    </div>`;
   if (contribs.length === 0) {
-    container.innerHTML = `<div class="empty"><p>Aún no hay aportes</p></div>`;
+    container.innerHTML = head + `<div class="empty"><p>Sin aportes manuales extra</p></div>`;
   } else {
-    container.innerHTML = `
+    container.innerHTML = head + `
       <div class="expense-list" style="margin-bottom: 8px">
         ${contribs.map(c => `
           <div class="expense-item">
             <div class="expense-info">
-              <div class="expense-desc">Aporte</div>
+              <div class="expense-desc">Aporte manual</div>
               <div class="expense-meta">${fmtDate(c.date)}</div>
             </div>
             <div class="expense-right">

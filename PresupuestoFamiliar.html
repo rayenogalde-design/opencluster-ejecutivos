@@ -1003,6 +1003,8 @@ const DEFAULT_STATE = {
     { id: 'entret',      name: 'Entretención',       emoji: '🎬', budget: 60 },
     { id: 'obra',        name: 'Aporte obra mundial',emoji: '🤝', budget: 40 },
     { id: 'limpieza',    name: 'Limpieza hogar',     emoji: '🧹', budget: 40 },
+    { id: 'chary',       name: 'Aporte a Chary',     emoji: '💝', budget: 60 },
+    { id: 'otros',       name: 'Imprevistos',        emoji: '🧾', budget: 40 },
   ],
   // Metas y sobres de ahorro. alloc = regla de ahorro automático mensual:
   //   { mode:'fixed', usd:N } → aparta N US$ cada mes (sobre)
@@ -1069,7 +1071,22 @@ async function loadState() {
   } catch (e) {
     state = JSON.parse(JSON.stringify(DEFAULT_STATE));
   }
+  migrateCategories();
   migrateSavings();
+}
+
+// Asegura que las categorías nuevas existan en instalaciones antiguas (sin tocar las que ya tienes).
+function migrateCategories() {
+  if (!state || !Array.isArray(state.categories)) return;
+  const ensure = [
+    { id: 'chary', name: 'Aporte a Chary', emoji: '💝', budget: 60 },
+    { id: 'otros', name: 'Imprevistos',    emoji: '🧾', budget: 40 },
+  ];
+  ensure.forEach(c => {
+    if (!state.categories.find(x => x.id === c.id)) {
+      state.categories.push(JSON.parse(JSON.stringify(c)));
+    }
+  });
 }
 
 // Asegura que las metas viejas tengan su alloc y que existan los sobres nuevos.

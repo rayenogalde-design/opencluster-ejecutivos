@@ -3465,6 +3465,7 @@ const ACCIONES_POST = [
   'crm_crear_reunion','crm_crear_seguimiento',
   'crm_actualizar_etiquetas','crm_toggle_favorito','crm_actualizar_proxima','crm_snooze_contacto',
   'crm_iniciar_cadencia','crm_avanzar_cadencia','crm_pausar_cadencia',
+  'crm_set_pipeline','crm_reasignar_contacto',
   'crm_importar_csv','crm_reasignar_contactos',
   'crm_marcar_notif_leida','crm_crear_notificacion',
   'crm_fusionar','crm_asignar_ejecutivo_cuenta','crm_crear_cuenta','crm_editar_cuenta',
@@ -6170,6 +6171,87 @@ function toastToques(n){
   } catch(e){}
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// GESTIÓN RÁPIDA DESDE LA FICHA — cambio de estado sin abrir el modal grande +
+// (solo admin) reasignar el ejecutivo / "Trabajar como mío". Permite a Rayen
+// trabajar cualquier contacto como si fuera suyo. Usa crm_set_pipeline y
+// crm_reasignar_contacto (ya vivos en el backend, no dependen del redeploy).
+// ════════════════════════════════════════════════════════════════════════════
+const _GEST_ESTADOS = ['Por contactar','Contactado','Reunión','Cotizado','Seguimiento','Llamada','Cerrado / Ganado','Perdido'];
+function _gestEstadoOpcion(raw){
+  const n = s => String(s||'').toLowerCase();
+  const exact = _GEST_ESTADOS.find(e => n(e) === n(raw));
+  if(exact) return exact;
+  const pe = n(raw);
+  if(pe.indexOf('ganad')>=0 || pe.indexOf('cerrad')>=0) return 'Cerrado / Ganado';
+  if(pe.indexOf('cotiz')>=0 || pe.indexOf('gesti')>=0) return 'Cotizado';
+  if(pe.indexOf('reuni')>=0) return 'Reunión';
+  if(pe.indexOf('seguim')>=0) return 'Seguimiento';
+  if(pe.indexOf('llamad')>=0) return 'Llamada';
+  if(pe.indexOf('perdid')>=0 || pe.indexOf('rechaz')>=0) return 'Perdido';
+  if(pe.indexOf('contact')>=0) return 'Contactado';
+  return 'Por contactar';
+}
+function gestionContactoBar(c){
+  const editable = (typeof puedeEditar==='function') ? puedeEditar(c) : (ROL==='admin');
+  if(!editable) return '';
+  const id = esc(c.id);
+  const n = s => String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+  const selStyle = 'padding:7px 10px;border:1px solid var(--v2-divider,#d8dbe6);border-radius:8px;font-size:13px;font-weight:600;color:var(--v2-navy,#001A60);background:#fff;cursor:pointer;font-family:inherit;min-width:170px;';
+  const lblStyle = 'display:block;font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--v2-text-soft,#5A6478);text-transform:uppercase;margin-bottom:4px;';
+  const curOpt = _gestEstadoOpcion(c.ultimo_estado || c.pipeline_estado || '');
+  const estSel = '<select onchange="cambiarEstadoFicha(\''+id+'\', this.value)" style="'+selStyle+'">' +
+    _GEST_ESTADOS.map(e => '<option'+(e===curOpt?' selected':'')+'>'+esc(e)+'</option>').join('') + '</select>';
+  let adminBox = '';
+  if(ROL === 'admin'){
+    const dueno = String(c.ejecutivo_asignado||'').trim();
+    const ejs = (window.__EJECUTIVOS||[]).map(e => String(e.nombre||'').trim()).filter(Boolean);
+    const lista = ejs.length ? ejs : ['Rayen','William','Germán','Roberto','Maximiliano','Ximena'];
+    const opts = '<option value="">Sin asignar</option>' +
+      lista.map(nom => '<option'+(n(nom)===n(dueno)?' selected':'')+'>'+esc(nom)+'</option>').join('');
+    const ejSel = '<select onchange="reasignarContactoFicha(\''+id+'\', this.value)" style="'+selStyle+'">'+opts+'</select>';
+    const yaMia = (typeof esOwner==='function') && esOwner(c);
+    const btnMio = yaMia ? '' : '<button class="btn primary" style="align-self:flex-end;" onclick="trabajarComoMio(\''+id+'\')">Trabajar como mío</button>';
+    adminBox = '<div><label style="'+lblStyle+'">Ejecutivo (admin)</label>'+ejSel+'</div>' + btnMio;
+  }
+  return '<div class="v2-block" style="margin-bottom:18px;border-left:3px solid var(--v2-sky,#06B3FD);padding-left:14px;">' +
+    '<div class="v2-block-head"><span class="v2-block-label">GESTIÓN RÁPIDA</span></div>' +
+    '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;margin-top:8px;">' +
+      '<div><label style="'+lblStyle+'">Estado del pipeline</label>'+estSel+'</div>' + adminBox +
+    '</div>' +
+  '</div>';
+}
+function _gestBustCaches(id){
+  try { localStorage.removeItem('crm_perfil_' + id + '_' + MODO_VISTA); } catch(e){}
+}
+async function cambiarEstadoFicha(id, estado){
+  const r = await fetchAPI('crm_set_pipeline', null, { id, pipeline_estado: estado, solicitante: USUARIO });
+  if(!r || !r.ok){ alert('No se pudo cambiar el estado: ' + ((r&&r.error)||'')); return; }
+  _cadActualizar(id, c => { c.pipeline_estado = estado; c.ultimo_estado = estado; });
+  _gestBustCaches(id);
+  if(typeof toastCfg==='function') toastCfg('Estado actualizado: ' + estado);
+  const vAct = document.querySelector('.view.act');
+  if(vAct && (vAct.id==='vMis'||vAct.id==='vTodos') && typeof renderLista==='function') renderLista(vAct.id);
+  refrescarBannerFicha(id);
+  if(typeof abrirFichaModal==='function') abrirFichaModal(id);
+  if(typeof pintarToquesHoy==='function') pintarToquesHoy();
+}
+async function reasignarContactoFicha(id, ejec){
+  const r = await fetchAPI('crm_reasignar_contacto', null, { id, ejecutivo_nuevo: ejec, solicitante: USUARIO });
+  if(!r || !r.ok){ alert('No se pudo reasignar: ' + ((r&&r.error)||'')); return; }
+  _cadActualizar(id, c => { c.ejecutivo_asignado = ejec; });
+  // El cambio de dueño mueve el contacto entre Mis/Todos: forzamos re-derivar esas listas.
+  try { CACHE.vMis = null; CACHE.vCerrar = null; CACHE.vOlvidados = null; } catch(e){}
+  _gestBustCaches(id);
+  if(typeof toastCfg==='function') toastCfg(ejec ? ('Reasignado a ' + ejec) : 'Asignación quitada');
+  if(typeof abrirFichaModal==='function') abrirFichaModal(id);
+  if(typeof pintarToquesHoy==='function') pintarToquesHoy();
+}
+async function trabajarComoMio(id){
+  const mio = String(USUARIO||'').trim().split(' ')[0] || USUARIO;   // primer nombre (regla ejecutivos solo nombres)
+  return reasignarContactoFicha(id, mio);
+}
+
 function renderTarjetaV2(c, view){
   view = view || 'vTodos';
   var estadoRaw = c.ultimo_estado || c.pipeline_estado || 'Contactado';
@@ -7263,7 +7345,7 @@ function renderFicha(container, data){
       '</div>' +
     '</div>';
 
-  container.innerHTML = headerV2 + adminBtns + cadenciaBannerFicha(c, editable) + pillsDatos + renderHistorialAgrupado(tl, c);
+  container.innerHTML = headerV2 + adminBtns + gestionContactoBar(c) + cadenciaBannerFicha(c, editable) + pillsDatos + renderHistorialAgrupado(tl, c);
 }
 
 // Extrae número de cotización del texto de notas/detalle (ej: "Cot OC26-3541-AT · $6.899.989")

@@ -29,7 +29,8 @@
   // título (no por slug), así que mantener consistencia evita filas
   // duplicadas para un mismo curso. Al sumar cursos nuevos: añadir aquí.
   var COURSE_TITLES = {
-    'outreach': 'Outreach por email'
+    'outreach': 'Outreach por email',
+    'discovery': 'Discovery telefónico'
   };
 
   window.OpenClusterProgress = {

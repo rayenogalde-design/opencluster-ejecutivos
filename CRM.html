@@ -3296,6 +3296,9 @@ let SELECTED_ID = null;
 // HELPERS
 // ════════════════════════════════════════════════════════════════════════════
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+// Normaliza texto para BÚSQUEDA: minúsculas + sin acentos (á→a, ñ→n, ü→u).
+// Así "allende" matchea "Allende", "garcia" matchea "García", etc.
+function _busqNorm(s){ return String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
 
 // ¿Este registro es una EMPRESA (sin persona, solo institución)?
 // Estos van a la pestaña "Empresas / Cuentas", no a Contactos.
@@ -5642,16 +5645,16 @@ function renderLista(view){
   const container = document.getElementById(view === 'vMis' ? 'listMis' : 'listTodos');
   const cacheCompleto = CACHE[view] || [];
   // 1. Aplicar búsqueda
-  const q = (FILTROS[view] || '').toLowerCase().trim();
+  const q = _busqNorm(FILTROS[view] || '').trim();
   let lista = !q ? cacheCompleto.slice() : cacheCompleto.filter(c =>
-    (String(c.nombre||'')).toLowerCase().includes(q) ||
-    (String(c.institucion||'')).toLowerCase().includes(q) ||
-    (String(c.cargo||'')).toLowerCase().includes(q) ||
-    (String(c.email||'')).toLowerCase().includes(q) ||
-    (String(c.ciudad||'')).toLowerCase().includes(q) ||
-    (String(c.telefono||'')).toLowerCase().includes(q) ||
-    (String(c.sub_categoria||'')).toLowerCase().includes(q) ||
-    (String(c.etiquetas||'')).toLowerCase().includes(q)
+    _busqNorm(c.nombre).includes(q) ||
+    _busqNorm(c.institucion).includes(q) ||
+    _busqNorm(c.cargo).includes(q) ||
+    _busqNorm(c.email).includes(q) ||
+    _busqNorm(c.ciudad).includes(q) ||
+    _busqNorm(c.telefono).includes(q) ||
+    _busqNorm(c.sub_categoria).includes(q) ||
+    _busqNorm(c.etiquetas).includes(q)
   );
   // 2. Pintar filtros — sus conteos reflejan la lista YA filtrada por búsqueda
   // (así si el chip dice "Colegio regular 5" significa que ESOS 5 también matchean tu búsqueda)
@@ -7087,14 +7090,14 @@ function filtrarPorCerrar(q){
 }
 function renderListaCerrar(){
   const container = document.getElementById('listCerrar');
-  const q = (FILTROS.vCerrar || '').toLowerCase().trim();
+  const q = _busqNorm(FILTROS.vCerrar || '').trim();
   let lista = CACHE.vCerrar || [];
   if(q){
     lista = lista.filter(c =>
-      (c.nombre||'').toLowerCase().includes(q) ||
-      (c.institucion||'').toLowerCase().includes(q) ||
-      (c.email||'').toLowerCase().includes(q) ||
-      (c.ultimo_num_cot||'').toLowerCase().includes(q)
+      _busqNorm(c.nombre).includes(q) ||
+      _busqNorm(c.institucion).includes(q) ||
+      _busqNorm(c.email).includes(q) ||
+      _busqNorm(c.ultimo_num_cot).includes(q)
     );
   }
   if(!lista.length){
@@ -7137,13 +7140,13 @@ function filtrarOlvidados(q){
 }
 function renderListaOlvidados(){
   const container = document.getElementById('listOlvidados');
-  const q = (FILTROS.vOlvidados || '').toLowerCase().trim();
+  const q = _busqNorm(FILTROS.vOlvidados || '').trim();
   let lista = CACHE.vOlvidados || [];
   if(q){
     lista = lista.filter(c =>
-      (c.nombre||'').toLowerCase().includes(q) ||
-      (c.institucion||'').toLowerCase().includes(q) ||
-      (c.email||'').toLowerCase().includes(q)
+      _busqNorm(c.nombre).includes(q) ||
+      _busqNorm(c.institucion).includes(q) ||
+      _busqNorm(c.email).includes(q)
     );
   }
   if(!lista.length){
@@ -7193,14 +7196,14 @@ async function cargarKanban(){
 
 function renderKanban(){
   const board = document.getElementById('kanbanBoard');
-  const q = (FILTROS.vKanban || '').toLowerCase().trim();
+  const q = _busqNorm(FILTROS.vKanban || '').trim();
   board.innerHTML = KANBAN_COLS.map(col => {
     let cards = KANBAN_DATA[col.key] || [];
     if(q){
       cards = cards.filter(c =>
-        (c.nombre||'').toLowerCase().includes(q) ||
-        (c.institucion||'').toLowerCase().includes(q) ||
-        (c.email||'').toLowerCase().includes(q)
+        _busqNorm(c.nombre).includes(q) ||
+        _busqNorm(c.institucion).includes(q) ||
+        _busqNorm(c.email).includes(q)
       );
     }
     return '<div class="kanban-col" data-col="' + esc(col.key) + '" ' +

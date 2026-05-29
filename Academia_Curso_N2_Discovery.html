@@ -3463,10 +3463,6 @@ function copyEmailToClipboard() {
      (regla dura). El renderer filtra esos campos por si la IA se desvía.
    ═════════════════════════════════════════════════════════════ */
 
-const AI_STATE = {
-  busy: {}, // ejercicioKey -> bool, evita doble click durante una llamada
-};
-
 const AI_FORBIDDEN_TERMS = /\b(tu energ[ií]a|tu tono emocional|tu emoci[óo]n|tu sonrisa|sonr[íi]e (m[áa]s|menos)|m[áa]s c[áa]lid[oa]|m[áa]s asertiv[oa]|tu prosodia|tu entonaci[óo]n|tu intensidad|m[áa]s expresiv[oa])\b/gi;
 
 function aiFilterTextDeOpinionDeVoz(t) {
@@ -3550,19 +3546,66 @@ function aiRenderFeedback(r) {
 }
 
 /* Llamada wrapper para evaluate con render automático y manejo de estado */
+const AI_STATE = {
+  busy: {},          // key -> bool, evita doble click durante una llamada
+  cooldownUntil: {}, // key -> timestamp ms hasta cuándo el botón Reintentar queda bloqueado
+  cooldownTimers: {} // key -> interval id (para refrescar el contador visible)
+};
+
+const AI_COOLDOWN_MS = 5000;
+const AI_STRIKE_LIMIT = 3;
+
+function aiIsModuleInReplay() {
+  // Replay = el ejecutivo ya completó este módulo antes y volvió a entrar a repasar.
+  // En replay el feedback IA es opcional.
+  return state.completedModules instanceof Set ? state.completedModules.has(state.moduleIdx) : false;
+}
+
+function aiStartCooldown(key) {
+  AI_STATE.cooldownUntil[key] = Date.now() + AI_COOLDOWN_MS;
+  if (AI_STATE.cooldownTimers[key]) clearInterval(AI_STATE.cooldownTimers[key]);
+  AI_STATE.cooldownTimers[key] = setInterval(() => {
+    if (Date.now() >= AI_STATE.cooldownUntil[key]) {
+      clearInterval(AI_STATE.cooldownTimers[key]);
+      delete AI_STATE.cooldownTimers[key];
+      delete AI_STATE.cooldownUntil[key];
+      render();
+    } else {
+      // refresca solo el botón de cooldown sin re-renderizar todo
+      const btn = document.getElementById('aiRetryBtn-' + key);
+      if (btn) {
+        const restante = Math.ceil((AI_STATE.cooldownUntil[key] - Date.now()) / 1000);
+        btn.innerHTML = `Reintentar en ${restante}…`;
+      }
+    }
+  }, 250);
+}
+
+function aiCooldownRemaining(key) {
+  const until = AI_STATE.cooldownUntil[key];
+  if (!until) return 0;
+  const left = until - Date.now();
+  return left > 0 ? Math.ceil(left / 1000) : 0;
+}
+
 async function aiPedirFeedback(ejercicioId, textoUsuario, loaderTexto, loaderHint) {
   const key = `${state.moduleIdx}-${state.screenIdx}`;
-  if (AI_STATE.busy[key]) return; // doble click guard
+  if (AI_STATE.busy[key]) return;
+  if (aiCooldownRemaining(key) > 0) return; // bloqueado por cooldown
+
+  state.selections[key] = state.selections[key] || {};
+  const sel = state.selections[key];
+  sel.aiFailCount = sel.aiFailCount || 0;
+
   if (window.__ocAIMissing || !window.OpenClusterAI || typeof window.OpenClusterAI.evaluate !== 'function') {
-    state.selections[key] = state.selections[key] || {};
-    state.selections[key].aiResult = 'unavailable';
+    sel.aiResult = 'unavailable';
     saveState();
     render();
     return;
   }
+
   AI_STATE.busy[key] = true;
-  state.selections[key] = state.selections[key] || {};
-  state.selections[key].aiLoading = { texto: loaderTexto, hint: loaderHint };
+  sel.aiLoading = { texto: loaderTexto, hint: loaderHint };
   render();
 
   const contexto = getActiveContact ? getActiveContact() : null;
@@ -3573,13 +3616,19 @@ async function aiPedirFeedback(ejercicioId, textoUsuario, loaderTexto, loaderHin
       texto: textoUsuario,
       contexto: contexto
     });
-  } catch (e) {
-    resultado = null;
-  }
+  } catch (e) { resultado = null; }
 
   AI_STATE.busy[key] = false;
-  state.selections[key].aiLoading = null;
-  state.selections[key].aiResult = resultado || 'error';
+  sel.aiLoading = null;
+
+  if (resultado) {
+    sel.aiResult = resultado;
+    sel.aiFailCount = 0; // reset al éxito
+  } else {
+    sel.aiResult = 'error';
+    sel.aiFailCount += 1;
+    aiStartCooldown(key);
+  }
   saveState();
   render();
 }
@@ -3589,9 +3638,29 @@ function aiResetFeedback() {
   if (state.selections[key]) {
     state.selections[key].aiResult = null;
     state.selections[key].aiLoading = null;
+    // NOTA: no resetea aiAccepted ni aiFailCount — son trazas persistentes.
     saveState();
     render();
   }
+}
+
+function aiAceptarFeedback() {
+  // El ejecutivo confirma "Entendido, avanzar" — esto es el gate de avance.
+  const key = `${state.moduleIdx}-${state.screenIdx}`;
+  if (!state.selections[key] || !state.selections[key].aiResult) return;
+  state.selections[key].aiAccepted = true;
+  saveState();
+  render();
+}
+
+function aiSaltarPorStrikes() {
+  // Salvaguarda: solo se activa si aiFailCount >= AI_STRIKE_LIMIT.
+  const key = `${state.moduleIdx}-${state.screenIdx}`;
+  const sel = state.selections[key];
+  if (!sel || (sel.aiFailCount || 0) < AI_STRIKE_LIMIT) return;
+  sel.aiSkippedByStrikes = true;
+  saveState();
+  render();
 }
 
 /* Render del bloque IA después del feedback estructural (Pattern A) */
@@ -3611,25 +3680,60 @@ function aiRenderBloqueParaPracticeEmail(ejercicioId, textoUsuario, opciones) {
   if (sel.aiResult === 'unavailable') {
     return `<div class="ai-error">
       <div style="flex-shrink:0; width:18px; height:18px; border-radius:50%; background:var(--oct-text-mute); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:11px;">i</div>
-      <div style="flex:1;"><strong>Coaching de IA no disponible</strong><div style="margin-top:6px; font-size:12px; color:var(--oct-text-soft);">Tu respuesta ya pasó las verificaciones del ejercicio. Puedes avanzar.</div></div>
+      <div style="flex:1;"><strong>Coaching de IA no disponible en este entorno</strong><div style="margin-top:6px; font-size:12px; color:var(--oct-text-soft);">El servicio de IA no está cargado. Puedes avanzar de todas formas.</div></div>
     </div>`;
   }
 
+  const inReplay = aiIsModuleInReplay();
+
   if (sel.aiResult === 'error') {
-    return aiRenderError(reintentoMsg, `aiPedirFeedback('${ejercicioId}', getPracticeText(), ${JSON.stringify(loaderTexto)}, ${JSON.stringify(loaderHint)})`);
+    return aiRenderErrorObligatorio(key, ejercicioId, loaderTexto, loaderHint, sel.aiFailCount || 0, reintentoMsg);
   }
 
   if (sel.aiResult && typeof sel.aiResult === 'object') {
+    if (sel.aiAccepted || inReplay) {
+      // Ya aceptado (o en replay) — solo muestra el feedback con opción de pedir otra lectura
+      return aiRenderFeedback(sel.aiResult) +
+        `<div class="ai-actions">
+          <button class="btn-ai-ghost" onclick="aiResetFeedback()">Pedir otra lectura</button>
+          ${inReplay && !sel.aiAccepted ? '<span style="font-size:11.5px; color:var(--oct-text-mute); align-self:center;">Modo repaso — feedback opcional.</span>' : ''}
+        </div>`;
+    }
+    // Feedback recibido pero no aceptado todavía → gate explícito
     return aiRenderFeedback(sel.aiResult) +
-      `<div class="ai-actions">
+      `<div class="ai-actions" style="margin-top:14px;">
+        <button class="btn-ai-primary" onclick="aiAceptarFeedback()">Entendido, avanzar</button>
         <button class="btn-ai-ghost" onclick="aiResetFeedback()">Pedir otra lectura</button>
-      </div>`;
+      </div>
+      <div style="font-size:11.5px; color:var(--oct-text-mute); margin-top:6px;">Lee el feedback y pulsa "Entendido, avanzar" para habilitar el botón de continuar.</div>`;
   }
 
+  // Estado inicial: aún no pedió feedback
+  const obligatorio = !inReplay;
   return `<div class="ai-actions" style="margin-top:8px;">
     <button class="btn-ai-secondary" onclick="aiPedirFeedback('${ejercicioId}', getPracticeText(), ${JSON.stringify(loaderTexto)}, ${JSON.stringify(loaderHint)})">${btnTexto}</button>
-    <span style="font-size:11.5px; color:var(--oct-text-mute); align-self:center;">Opcional. Es coaching, no afecta tu progreso.</span>
+    <span style="font-size:11.5px; color:var(--oct-text-mute); align-self:center;">${obligatorio ? 'Obligatorio para avanzar.' : 'Modo repaso — opcional.'}</span>
   </div>`;
+}
+
+/* Render del error con contador de strikes + cooldown + salvaguarda al 3er fallo */
+function aiRenderErrorObligatorio(key, ejercicioId, loaderTexto, loaderHint, failCount, customMsg) {
+  const cooldown = aiCooldownRemaining(key);
+  const reachedLimit = failCount >= AI_STRIKE_LIMIT;
+  const retryCall = `aiPedirFeedback('${ejercicioId}', getPracticeText(), ${JSON.stringify(loaderTexto)}, ${JSON.stringify(loaderHint)})`;
+  let inner = `<div class="ai-error">
+    <div style="flex-shrink:0; width:18px; height:18px; border-radius:50%; background:var(--amber); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:11px;">!</div>
+    <div style="flex:1;">
+      <strong>${reachedLimit ? 'No se pudo conectar a la IA tras 3 intentos.' : (customMsg || 'La IA no respondió esta vez.')}</strong>
+      <div style="margin-top:6px; font-size:12px; color:var(--oct-text-soft);">${reachedLimit ? 'Avanza por ahora; te recomendamos volver a hacer este ejercicio cuando el servicio esté disponible.' : 'Tu trabajo no se perdió. Intenta de nuevo en unos segundos.'}</div>
+      <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+        <button id="aiRetryBtn-${key}" class="btn-ai-secondary" ${cooldown > 0 ? 'disabled' : ''} onclick="${retryCall}">${cooldown > 0 ? 'Reintentar en ' + cooldown + '…' : 'Reintentar'}</button>
+        ${reachedLimit ? `<button class="btn-ai-ghost" onclick="aiSaltarPorStrikes()">Saltar (no se pudo conectar a la IA)</button>` : ''}
+        <span style="font-size:11.5px; color:var(--oct-text-mute);">Intentos fallidos: ${failCount} / ${AI_STRIKE_LIMIT}</span>
+      </div>
+    </div>
+  </div>`;
+  return inner;
 }
 
 /* Helper para que aiPedirFeedback recupere el texto sin volver a inyectarlo */
@@ -4174,36 +4278,33 @@ function renderPracticeRoleplayChat(mod, screen) {
   // Input o estado final
   let inputHtml = '';
   if (!sel.rpEnded && !sel.rpLoading) {
+    const turnosEjecutivo = sel.rpMessages.filter(m => m.rol === 'ejecutivo').length;
+    const escapeVisible = turnosEjecutivo >= 6;
     inputHtml = `<div class="rp-input-wrap">
       <textarea class="rp-input" id="rpInput" placeholder="${screen.inputPlaceholder || 'Escribe tu respuesta…'}" rows="1" oninput="this.style.height='auto'; this.style.height=Math.min(120,this.scrollHeight)+'px';"></textarea>
       <button class="btn-ai-primary" onclick="rpEnviarTurno()">Enviar</button>
     </div>
-    <div style="font-size:11px; color:var(--oct-text-mute); margin-top:6px;">Cada respuesta de ${screen.personajeNombre || 'la IA'} tarda 5-7 s. Mantén tus turnos breves, como en una llamada real.</div>`;
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; flex-wrap:wrap; gap:8px;">
+      <span style="font-size:11px; color:var(--oct-text-mute);">Cada respuesta de ${screen.personajeNombre || 'la IA'} tarda 5-7 s. Mantén tus turnos breves.</span>
+      ${escapeVisible ? `<button class="btn-ai-ghost" style="font-size:11.5px; padding:5px 10px;" onclick="rpTerminarManual()">Terminar y evaluar →</button>` : ''}
+    </div>`;
   }
 
   // Errores y acciones post-cierre
   if (sel.rpError) {
-    inputHtml = aiRenderError('La línea se cayó. Patricia no respondió esta vez.', 'rpReintentarUltimoTurno()');
+    inputHtml = aiRenderError(`La línea se cayó. ${screen.personajeNombre || 'La IA'} no respondió esta vez.`, 'rpReintentarUltimoTurno()');
   }
 
   let finalHtml = '';
   if (sel.rpEnded) {
+    const motivo = sel.rpEndManual
+      ? 'Terminaste la conversación manualmente.'
+      : (screen.personajeNombre || 'La IA') + ' ' + (sel.rpEndReason === 'paso' ? 'decidió pasarte con el decisor.' : (sel.rpEndReason === 'mensaje' ? 'ofreció tomar mensaje.' : 'cerró la llamada.'));
     finalHtml = `<div style="margin-top:14px; padding:14px 18px; background:var(--oct-cream); border:1px solid var(--amber-border); border-radius:12px;">
       <strong style="color:var(--oct-text);">La conversación terminó.</strong>
-      <div style="margin-top:6px; font-size:13px; color:var(--oct-text-soft);">Patricia ${sel.rpEndReason === 'paso' ? 'decidió pasarte con el decisor.' : (sel.rpEndReason === 'mensaje' ? 'ofreció tomar mensaje.' : 'cerró la llamada.')}</div>
+      <div style="margin-top:6px; font-size:13px; color:var(--oct-text-soft);">${motivo}</div>
     </div>`;
-    if (!sel.rpFinalReady && !sel.rpEvalLoading && !sel.rpSkippedEval) {
-      finalHtml += `<div class="ai-actions" style="margin-top:12px;">
-        <button class="btn-ai-secondary" onclick="rpPedirEvaluacionFinal()">Ver evaluación de la IA</button>
-        <button class="btn-ai-ghost" onclick="rpSaltarEvaluacion()">Saltar evaluación</button>
-      </div>`;
-    } else if (sel.rpEvalLoading) {
-      finalHtml += aiRenderLoader('La IA está evaluando toda la conversación…', 'Repasando los 5 criterios de Patricia. ~7-10 segundos.');
-    } else if (sel.rpFinalReady && sel.rpFinalResult) {
-      finalHtml += aiRenderFeedback(sel.rpFinalResult);
-    } else if (sel.rpFinalReady && !sel.rpFinalResult) {
-      finalHtml += aiRenderError('La evaluación final falló. Puedes revisar la conversación arriba.', 'rpPedirEvaluacionFinal()');
-    }
+    finalHtml += rpRenderEvalFinal(sel, screen, 'discovery-m2-filtro');
   }
 
   return `
@@ -4307,11 +4408,15 @@ async function rpPedirEvaluacionFinal() {
   const key = `${state.moduleIdx}-${state.screenIdx}`;
   const sel = state.selections[key];
   if (!sel || !sel.rpEnded) return;
+  if (aiCooldownRemaining(key) > 0) return;
   const mod = COURSE.modules[state.moduleIdx];
   const screen = mod.screens[state.screenIdx];
+
+  sel.rpEvalFailCount = sel.rpEvalFailCount || 0;
+
   if (window.__ocAIMissing || !window.OpenClusterAI || typeof window.OpenClusterAI.evaluate !== 'function') {
     sel.rpFinalReady = true;
-    sel.rpFinalResult = null;
+    sel.rpFinalResult = 'unavailable';
     saveState();
     render();
     return;
@@ -4321,7 +4426,6 @@ async function rpPedirEvaluacionFinal() {
   saveState();
   render();
 
-  // Pasamos el transcript completo como texto, formateado para que la IA lo lea como una conversación.
   const transcript = sel.rpMessages.map(m => `${m.rol === 'persona' ? (screen.personajeNombre || 'PERSONAJE') : 'EJECUTIVO'}: ${m.texto}`).join('\n');
   const contexto = getActiveContact ? getActiveContact() : null;
 
@@ -4337,17 +4441,97 @@ async function rpPedirEvaluacionFinal() {
   sel.rpEvalLoading = false;
   sel.rpFinalReady = true;
   sel.rpFinalResult = resultado;
+  if (!resultado) {
+    sel.rpEvalFailCount += 1;
+    aiStartCooldown(key);
+  } else {
+    sel.rpEvalFailCount = 0;
+  }
   saveState();
   render();
 }
 
-function rpSaltarEvaluacion() {
+function rpAceptarEvalFinal() {
+  const key = `${state.moduleIdx}-${state.screenIdx}`;
+  const sel = state.selections[key];
+  if (!sel || !sel.rpFinalResult || typeof sel.rpFinalResult !== 'object') return;
+  sel.rpFinalAccepted = true;
+  saveState();
+  render();
+}
+
+function rpSaltarEvalFinalPorStrikes() {
   const key = `${state.moduleIdx}-${state.screenIdx}`;
   const sel = state.selections[key];
   if (!sel) return;
-  sel.rpSkippedEval = true;
+  if ((sel.rpEvalFailCount || 0) < AI_STRIKE_LIMIT) return;
+  sel.rpSkippedByStrikes = true;
   saveState();
   render();
+}
+
+function rpTerminarManual() {
+  const key = `${state.moduleIdx}-${state.screenIdx}`;
+  const sel = state.selections[key];
+  if (!sel || sel.rpEnded) return;
+  sel.rpEnded = true;
+  sel.rpEndManual = true;
+  sel.rpEndReason = 'manual';
+  saveState();
+  render();
+}
+
+// Render compartido del bloque de evaluación final (usado por chat y voz)
+function rpRenderEvalFinal(sel, screen, _ignored) {
+  const inReplay = aiIsModuleInReplay();
+  // Estado inicial: aún no se pidió evaluación
+  if (!sel.rpFinalReady && !sel.rpEvalLoading) {
+    return `<div class="ai-actions" style="margin-top:12px;">
+      <button class="btn-ai-secondary" onclick="rpPedirEvaluacionFinal()">Ver evaluación de la IA</button>
+      <span style="font-size:11.5px; color:var(--oct-text-mute); align-self:center;">${inReplay ? 'Modo repaso — opcional.' : 'Obligatorio para avanzar.'}</span>
+    </div>`;
+  }
+  if (sel.rpEvalLoading) {
+    return aiRenderLoader('La IA está evaluando toda la conversación…', 'Repasando los criterios del ejercicio. ~7-12 segundos.');
+  }
+  // Servicio no disponible
+  if (sel.rpFinalResult === 'unavailable') {
+    return `<div class="ai-error">
+      <div style="flex-shrink:0; width:18px; height:18px; border-radius:50%; background:var(--oct-text-mute); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:11px;">i</div>
+      <div style="flex:1;"><strong>Coaching de IA no disponible en este entorno.</strong><div style="margin-top:6px; font-size:12px; color:var(--oct-text-soft);">Puedes avanzar de todas formas.</div></div>
+    </div>`;
+  }
+  // Error en la última llamada
+  if (sel.rpFinalReady && !sel.rpFinalResult) {
+    const failCount = sel.rpEvalFailCount || 0;
+    const reached = failCount >= AI_STRIKE_LIMIT;
+    const key = `${state.moduleIdx}-${state.screenIdx}`;
+    const cooldown = aiCooldownRemaining(key);
+    return `<div class="ai-error">
+      <div style="flex-shrink:0; width:18px; height:18px; border-radius:50%; background:var(--amber); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:11px;">!</div>
+      <div style="flex:1;">
+        <strong>${reached ? 'No se pudo conectar a la IA tras 3 intentos.' : 'La evaluación final falló.'}</strong>
+        <div style="margin-top:6px; font-size:12px; color:var(--oct-text-soft);">${reached ? 'Avanza por ahora; te recomendamos volver a hacer este ejercicio cuando el servicio esté disponible.' : 'Tu conversación quedó arriba intacta. Intenta de nuevo.'}</div>
+        <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+          <button id="aiRetryBtn-${key}" class="btn-ai-secondary" ${cooldown > 0 ? 'disabled' : ''} onclick="rpPedirEvaluacionFinal()">${cooldown > 0 ? 'Reintentar en ' + cooldown + '…' : 'Reintentar'}</button>
+          ${reached ? `<button class="btn-ai-ghost" onclick="rpSaltarEvalFinalPorStrikes()">Saltar (no se pudo conectar a la IA)</button>` : ''}
+          <span style="font-size:11.5px; color:var(--oct-text-mute);">Intentos fallidos: ${failCount} / ${AI_STRIKE_LIMIT}</span>
+        </div>
+      </div>
+    </div>`;
+  }
+  // Tenemos resultado objeto
+  if (sel.rpFinalResult && typeof sel.rpFinalResult === 'object') {
+    const feedbackHtml = aiRenderFeedback(sel.rpFinalResult);
+    if (sel.rpFinalAccepted || inReplay) {
+      return feedbackHtml + `<div class="ai-actions" style="margin-top:12px;"><span style="font-size:11.5px; color:var(--oct-text-mute); align-self:center;">${inReplay && !sel.rpFinalAccepted ? 'Modo repaso — feedback recibido.' : 'Feedback aceptado.'}</span></div>`;
+    }
+    return feedbackHtml + `<div class="ai-actions" style="margin-top:14px;">
+      <button class="btn-ai-primary" onclick="rpAceptarEvalFinal()">Entendido, avanzar</button>
+    </div>
+    <div style="font-size:11.5px; color:var(--oct-text-mute); margin-top:6px;">Lee el feedback y pulsa "Entendido, avanzar" para habilitar el botón de continuar.</div>`;
+  }
+  return '';
 }
 
 /* ═════════════════════════════════════════════════════════════
@@ -4429,20 +4613,22 @@ function renderPracticeRoleplayVoz(mod, screen) {
 
   let finalHtml = '';
   if (sel.rpEnded) {
+    const motivo = sel.rpEndManual ? 'Terminaste la llamada manualmente.' : 'El decisor cerró la llamada.';
     finalHtml = `<div style="margin-top:14px; padding:14px 18px; background:var(--oct-cream); border:1px solid var(--amber-border); border-radius:12px;">
       <strong style="color:var(--oct-text);">La llamada terminó.</strong>
+      <div style="margin-top:6px; font-size:13px; color:var(--oct-text-soft);">${motivo}</div>
     </div>`;
-    if (!sel.rpFinalReady && !sel.rpEvalLoading && !sel.rpSkippedEval) {
-      finalHtml += `<div class="ai-actions" style="margin-top:12px;">
-        <button class="btn-ai-secondary" onclick="rpPedirEvaluacionFinal()">Ver evaluación de la IA</button>
-        <button class="btn-ai-ghost" onclick="rpSaltarEvaluacion()">Saltar evaluación</button>
+    finalHtml += rpRenderEvalFinal(sel, screen, 'discovery-m7-cierre');
+  }
+
+  // Botón escape "Terminar y evaluar" después de 6 turnos del ejecutivo (también en voz)
+  let escapeButton = '';
+  if (!sel.rpEnded) {
+    const turnosEjecutivo = sel.rpMessages.filter(m => m.rol === 'ejecutivo').length;
+    if (turnosEjecutivo >= 6) {
+      escapeButton = `<div style="display:flex; justify-content:flex-end; margin-top:6px;">
+        <button class="btn-ai-ghost" style="font-size:11.5px; padding:5px 10px;" onclick="rpTerminarManual()">Terminar y evaluar →</button>
       </div>`;
-    } else if (sel.rpEvalLoading) {
-      finalHtml += aiRenderLoader('La IA está evaluando la llamada completa…', 'Repasando los criterios del cierre del discovery. ~8-12 segundos.');
-    } else if (sel.rpFinalReady && sel.rpFinalResult) {
-      finalHtml += aiRenderFeedback(sel.rpFinalResult);
-    } else if (sel.rpFinalReady && !sel.rpFinalResult) {
-      finalHtml += aiRenderError('La evaluación final falló.', 'rpPedirEvaluacionFinal()');
     }
   }
 
@@ -4452,6 +4638,7 @@ function renderPracticeRoleplayVoz(mod, screen) {
     ${toggleBar}
     <div class="rp-chat" id="rpChat">${msgsHtml}${typingHtml}</div>
     ${inputHtml}
+    ${escapeButton}
     ${finalHtml}`;
 }
 
@@ -4737,9 +4924,61 @@ function renderVozChecklistItem(id, label, val) {
 function renderVozBloque2(sel, screen) {
   if (sel.vozBloque2Loading) return aiRenderLoader('La IA está evaluando el contenido de tu grabación…', 'Solo el contenido. NO opina sobre voz, tono ni energía. ~5-10 segundos.');
   if (sel.vozBloque2Result === 'unavailable') return `<div class="ai-error" style="background:#fff;"><div style="flex-shrink:0; width:18px; height:18px; border-radius:50%; background:var(--oct-text-mute); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:11px;">i</div><div style="flex:1;"><strong>Evaluación de contenido no disponible.</strong><div style="margin-top:6px; font-size:12px; color:var(--oct-text-soft);">Continúa con los otros dos bloques.</div></div></div>`;
-  if (sel.vozBloque2Result === 'error') return aiRenderError('No se pudo evaluar el contenido.', 'vozPedirBloque2()');
-  if (sel.vozBloque2Result && typeof sel.vozBloque2Result === 'object') return aiRenderFeedback(sel.vozBloque2Result);
-  return `<div class="ai-actions"><button class="btn-ai-secondary" onclick="vozPedirBloque2()">Pedir evaluación del contenido</button></div>`;
+
+  const inReplay = aiIsModuleInReplay();
+
+  if (sel.vozBloque2Result === 'error') {
+    const failCount = sel.vozBloque2FailCount || 0;
+    const reached = failCount >= AI_STRIKE_LIMIT;
+    const key = `${state.moduleIdx}-${state.screenIdx}`;
+    const cooldown = aiCooldownRemaining(key);
+    return `<div class="ai-error" style="background:#fff;">
+      <div style="flex-shrink:0; width:18px; height:18px; border-radius:50%; background:var(--amber); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:11px;">!</div>
+      <div style="flex:1;">
+        <strong>${reached ? 'No se pudo conectar a la IA tras 3 intentos.' : 'No se pudo evaluar el contenido.'}</strong>
+        <div style="margin-top:6px; font-size:12px; color:var(--oct-text-soft);">${reached ? 'Avanza por ahora; te recomendamos volver a hacer este ejercicio cuando el servicio esté disponible.' : 'Intenta de nuevo en unos segundos.'}</div>
+        <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+          <button id="aiRetryBtn-${key}" class="btn-ai-secondary" ${cooldown > 0 ? 'disabled' : ''} onclick="vozPedirBloque2()">${cooldown > 0 ? 'Reintentar en ' + cooldown + '…' : 'Reintentar'}</button>
+          ${reached ? `<button class="btn-ai-ghost" onclick="vozSaltarBloque2PorStrikes()">Saltar (no se pudo conectar a la IA)</button>` : ''}
+          <span style="font-size:11.5px; color:var(--oct-text-mute);">Intentos fallidos: ${failCount} / ${AI_STRIKE_LIMIT}</span>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  if (sel.vozBloque2Result && typeof sel.vozBloque2Result === 'object') {
+    const feedbackHtml = aiRenderFeedback(sel.vozBloque2Result);
+    if (sel.vozBloque2Accepted || inReplay) {
+      return feedbackHtml;
+    }
+    return feedbackHtml + `<div class="ai-actions" style="margin-top:14px;">
+      <button class="btn-ai-primary" onclick="vozAceptarBloque2()">Entendido, avanzar</button>
+    </div>`;
+  }
+
+  return `<div class="ai-actions">
+    <button class="btn-ai-secondary" onclick="vozPedirBloque2()">Pedir evaluación del contenido</button>
+    <span style="font-size:11.5px; color:var(--oct-text-mute); align-self:center;">${inReplay ? 'Modo repaso — opcional.' : 'Obligatorio para avanzar.'}</span>
+  </div>`;
+}
+
+function vozAceptarBloque2() {
+  const key = `${state.moduleIdx}-${state.screenIdx}`;
+  const sel = state.selections[key];
+  if (!sel || !sel.vozBloque2Result || typeof sel.vozBloque2Result !== 'object') return;
+  sel.vozBloque2Accepted = true;
+  saveState();
+  render();
+}
+
+function vozSaltarBloque2PorStrikes() {
+  const key = `${state.moduleIdx}-${state.screenIdx}`;
+  const sel = state.selections[key];
+  if (!sel) return;
+  if ((sel.vozBloque2FailCount || 0) < AI_STRIKE_LIMIT) return;
+  sel.vozBloque2SkippedByStrikes = true;
+  saveState();
+  render();
 }
 
 let __ocVozRec = null;
@@ -4843,6 +5082,8 @@ async function vozPedirBloque2() {
   const key = `${state.moduleIdx}-${state.screenIdx}`;
   const sel = state.selections[key];
   if (!sel || !sel.vozTranscript) return;
+  if (aiCooldownRemaining(key) > 0) return;
+  sel.vozBloque2FailCount = sel.vozBloque2FailCount || 0;
   if (window.__ocAIMissing || !window.OpenClusterAI || typeof window.OpenClusterAI.evaluate !== 'function') {
     sel.vozBloque2Result = 'unavailable';
     saveState();
@@ -4862,7 +5103,14 @@ async function vozPedirBloque2() {
     });
   } catch (e) { r = null; }
   sel.vozBloque2Loading = false;
-  sel.vozBloque2Result = r || 'error';
+  if (r) {
+    sel.vozBloque2Result = r;
+    sel.vozBloque2FailCount = 0;
+  } else {
+    sel.vozBloque2Result = 'error';
+    sel.vozBloque2FailCount += 1;
+    aiStartCooldown(key);
+  }
   saveState();
   render();
 }
@@ -5084,6 +5332,21 @@ function navNext() {
    ═════════════════════════════════════════════════════════════ */
 function isExerciseCorrect(screen, sel) {
   if (!sel) return false;
+
+  // Helper: ¿ya cumplió el gate de IA para los ejercicios que tienen aiEjercicioId?
+  // El gate se cumple si:
+  //  - aceptó el feedback con "Entendido, avanzar" (aiAccepted), o
+  //  - estamos en replay (módulo ya completado antes), o
+  //  - hubo 3+ fallos consecutivos y usó el salvavidas (aiSkippedByStrikes), o
+  //  - el servicio de IA no está cargado en el entorno (aiResult === 'unavailable').
+  function aiGateOk() {
+    if (!screen.aiEjercicioId) return true; // ejercicios sin IA: no aplica
+    if (aiIsModuleInReplay()) return true;
+    if (sel.aiSkippedByStrikes) return true;
+    if (sel.aiResult === 'unavailable') return true;
+    return !!sel.aiAccepted;
+  }
+
   if (screen.type === 'quiz_single' || screen.type === 'quiz_multi') {
     if (!sel.validated) return false;
     const correctIdxs = screen.options.map((o, i) => o.correct ? i : -1).filter(i => i >= 0);
@@ -5091,16 +5354,28 @@ function isExerciseCorrect(screen, sel) {
   }
   if (screen.type === 'practice_subject' || screen.type === 'practice_email') {
     if (!sel.validated) return false;
-    if (!screen.validations) return false; // dynamicContact aún no materializado
-    return screen.validations.every(v => v.test(sel.text || ''));
+    if (!screen.validations) return false;
+    const structuralOk = screen.validations.every(v => v.test(sel.text || ''));
+    if (!structuralOk) return false;
+    return aiGateOk();
   }
   if (screen.type === 'practice_roleplay_chat' || screen.type === 'practice_roleplay_voz') {
-    // Correcto cuando el roleplay terminó Y se mostró la evaluación final (o el ejecutivo la pidió saltar).
-    return !!(sel.rpEnded && (sel.rpFinalReady || sel.rpSkippedEval));
+    // Para roleplays: hay que terminar la conversación Y aceptar la evaluación final
+    // (o saltarla por strikes, o estar en replay, o no tener IA disponible).
+    if (!sel.rpEnded) return false;
+    if (aiIsModuleInReplay()) return true;
+    if (sel.rpSkippedByStrikes) return true;
+    if (sel.rpFinalResult === 'unavailable') return true;
+    return !!sel.rpFinalAccepted;
   }
   if (screen.type === 'practice_voz_bloques') {
-    // Correcto cuando se grabó al menos una vez y se completó el checklist de autoevaluación.
-    return !!(sel.vozGrabado && sel.vozChecklistCompleto);
+    // Bloques 1 y 3 mantienen su propia regla; el bloque 2 (IA) es obligatorio aceptarlo
+    // salvo replay/strikes/no disponible.
+    if (!sel.vozGrabado || !sel.vozChecklistCompleto) return false;
+    if (aiIsModuleInReplay()) return true;
+    if (sel.vozBloque2SkippedByStrikes) return true;
+    if (sel.vozBloque2Result === 'unavailable') return true;
+    return !!sel.vozBloque2Accepted;
   }
   return false;
 }
@@ -5183,21 +5458,35 @@ function updateFooterNav(mod, screen) {
       btnNext.disabled = false;
       btnNext.innerHTML = 'Validar correo';
     } else if (!isExerciseCorrect(screen, sel)) {
-      btnNext.disabled = false;
-      btnNext.innerHTML = '↻ Corregir y volver a validar';
+      // Distinguir: ¿falta arreglar estructura, o falta el gate IA?
+      const structuralOk = screen.validations && screen.validations.every(v => v.test(sel.text || ''));
+      if (!structuralOk) {
+        btnNext.disabled = false;
+        btnNext.innerHTML = '↻ Corregir y volver a validar';
+      } else if (screen.aiEjercicioId && !sel.aiAccepted && !sel.aiSkippedByStrikes && sel.aiResult !== 'unavailable' && !aiIsModuleInReplay()) {
+        btnNext.disabled = true;
+        btnNext.title = 'Pide y lee el feedback de la IA para avanzar.';
+        btnNext.innerHTML = sel.aiResult ? 'Pulsa "Entendido" para avanzar' : 'Pide el feedback de la IA';
+      } else {
+        btnNext.disabled = false;
+        btnNext.innerHTML = '↻ Corregir y volver a validar';
+      }
     } else {
       btnNext.disabled = false;
+      btnNext.title = '';
       btnNext.innerHTML = 'Continuar →';
     }
   } else if (screen.type === 'practice_roleplay_chat' || screen.type === 'practice_roleplay_voz') {
     if (!sel || !sel.rpEnded) {
       btnNext.disabled = true;
       btnNext.innerHTML = 'Termina la conversación primero';
-    } else if (!sel.rpFinalReady && !sel.rpSkippedEval) {
+    } else if (!isExerciseCorrect(screen, sel)) {
       btnNext.disabled = true;
-      btnNext.innerHTML = 'Ve la evaluación o sáltala para avanzar';
+      btnNext.title = 'Pide y lee el feedback de la IA para avanzar.';
+      btnNext.innerHTML = sel.rpFinalResult && typeof sel.rpFinalResult === 'object' ? 'Pulsa "Entendido" para avanzar' : 'Pide la evaluación de la IA';
     } else {
       btnNext.disabled = false;
+      btnNext.title = '';
       btnNext.innerHTML = 'Continuar →';
     }
   } else if (screen.type === 'practice_voz_bloques') {
@@ -5207,8 +5496,13 @@ function updateFooterNav(mod, screen) {
     } else if (!sel.vozChecklistCompleto) {
       btnNext.disabled = true;
       btnNext.innerHTML = 'Completa la autoevaluación';
+    } else if (!isExerciseCorrect(screen, sel)) {
+      btnNext.disabled = true;
+      btnNext.title = 'Pide y lee el feedback de la IA para avanzar.';
+      btnNext.innerHTML = sel.vozBloque2Result && typeof sel.vozBloque2Result === 'object' ? 'Pulsa "Entendido" para avanzar' : 'Pide la evaluación de contenido';
     } else {
       btnNext.disabled = false;
+      btnNext.title = '';
       btnNext.innerHTML = 'Continuar →';
     }
   }

@@ -7363,10 +7363,17 @@ function renderFicha(container, data){
   // controles de arriba (Editar / Nueva interacción / Gestión rápida / Cadencia) SIEMPRE
   // se rendericen — antes un crash del timeline tiraba TODA la ficha al fallback sin botones.
   let histHtml;
-  try { histHtml = renderHistorialAgrupado(tl, c); }
-  catch(err){
-    try { console.error('[CRM] renderHistorialAgrupado falló, historial simple:', err); } catch(_e){}
-    histHtml = _timelineFallback(tl);
+  if(data.timelineLoading){
+    // Pintado instantáneo desde el cache del listado: mostramos los datos ya y el historial
+    // (cotizaciones/interacciones, que requieren leer varias hojas) se completa al llegar crm_perfil.
+    histHtml = '<div class="v2-block"><div class="v2-block-head"><span class="v2-block-label">ACTIVIDAD (INTERACCIONES Y COTIZACIONES)</span></div>' +
+      '<div class="loading-state" style="padding:22px;"><div class="spinner"></div>Cargando historial…</div></div>';
+  } else {
+    try { histHtml = renderHistorialAgrupado(tl, c); }
+    catch(err){
+      try { console.error('[CRM] renderHistorialAgrupado falló, historial simple:', err); } catch(_e){}
+      histHtml = _timelineFallback(tl);
+    }
   }
   container.innerHTML = headerV2 + adminBtns + gestionContactoBar(c) + cadenciaBannerFicha(c, editable) + pillsDatos + histHtml;
 }
@@ -8277,11 +8284,12 @@ function _renderFichaSafe(body, data){
 async function abrirFichaModal(id, forzar){
   const modal = document.getElementById('modalFichaContacto');
   const body = document.getElementById('fc-body');
+  const titulo = document.getElementById('fc-titulo');
   modal.classList.add('show');
+  // Token de apertura: si la usuaria abre otra ficha mientras esta carga, descartamos la respuesta
+  // vieja (antes una carga lenta del contacto anterior pisaba la nueva → "se queda pegado en el anterior").
+  window.__FICHA_OPEN_ID = id;
 
-  // Stale-while-revalidate: pintar instantáneo con cache local si existe, refrescar en background.
-  // forzar=true (tras guardar interacción / cambiar estado / reasignar): salta el cache local Y
-  // pide al backend con forzar (busta su cache de 90s) para mostrar el cambio recién hecho.
   const cacheKey = 'crm_perfil_' + id + '_' + MODO_VISTA;
   let cacheado = null;
   if(forzar){ try { localStorage.removeItem(cacheKey); } catch(e){} }
@@ -8289,49 +8297,47 @@ async function abrirFichaModal(id, forzar){
     const raw = localStorage.getItem(cacheKey);
     if(raw){
       const parsed = JSON.parse(raw);
-      // 15 min TTL — perfiles cambian poco entre clicks
-      if(parsed && parsed.ts && (Date.now() - parsed.ts) < 900000) cacheado = parsed.data;
+      if(parsed && parsed.ts && (Date.now() - parsed.ts) < 900000) cacheado = parsed.data;  // 15 min TTL
     }
   } catch(e){}
 
+  // 1) PINTADO INSTANTÁNEO — nunca dejar los datos del contacto anterior a la vista.
+  //    Prioridad: perfil completo cacheado > contacto del listado (parcial, historial cargando) > spinner.
+  const cachedContacto = (typeof _cadCacheFind === 'function') ? _cadCacheFind(id) : null;
   if(cacheado){
+    if(titulo) titulo.textContent = (cacheado.contacto && (cacheado.contacto.nombre || cacheado.contacto.institucion)) || 'Ficha';
     _renderFichaSafe(body, cacheado);
-    const c = cacheado.contacto || {};
-    document.getElementById('fc-titulo').textContent = c.nombre || c.institucion || 'Ficha';
-    // Refrescar en background sin bloquear
-    fetchAPI('crm_perfil', { id: id, solicitante: USUARIO, modo_vista: MODO_VISTA, forzar: true })
-      .then(r => {
-        if(r && r.ok){
-          try { localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: r })); } catch(e){}
-          // Solo re-render si la ficha sigue abierta para este contacto
-          if(modal.classList.contains('show') && document.getElementById('fc-titulo').textContent === (r.contacto && (r.contacto.nombre || r.contacto.institucion) || 'Ficha')){
-            _renderFichaSafe(body, r);
-          }
-        }
-      }).catch(e => {});
-    return;
+  } else if(cachedContacto){
+    if(titulo) titulo.textContent = cachedContacto.nombre || cachedContacto.institucion || 'Ficha';
+    _renderFichaSafe(body, { contacto: cachedContacto, timeline: [], timelineLoading: true });
+  } else {
+    if(titulo) titulo.textContent = 'Cargando…';
+    body.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando ficha…</div>';
   }
 
-  body.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando ficha…</div>';
+  // 2) TRAER EL PERFIL COMPLETO. Sin forzar = usa el cache de 90s del backend (rápido).
+  //    (Antes el refresco en background SIEMPRE iba con forzar:true → recalculaba todo el server
+  //     en cada apertura, leyendo varias hojas = muy lento.)
   let r = await fetchAPI('crm_perfil', { id: id, solicitante: USUARIO, modo_vista: MODO_VISTA, forzar: !!forzar });
-  // Reintento ante fallo de red transitorio (Apps Script a veces rechaza la 1ª request / arranque en frío)
   let _intentos = 0;
   while((!r || !r.ok) && _intentos < 2 && /fetch|network|failed|http|timeout/i.test(String((r && r.error) || ''))){
     _intentos++;
-    if(!modal.classList.contains('show')) return; // el usuario cerró la ficha
-    body.innerHTML = '<div class="loading-state"><div class="spinner"></div>Reintentando… (' + _intentos + ')</div>';
+    if(window.__FICHA_OPEN_ID !== id || !modal.classList.contains('show')) return;
     await new Promise(res => setTimeout(res, 700));
     r = await fetchAPI('crm_perfil', { id: id, solicitante: USUARIO, modo_vista: MODO_VISTA, forzar: !!forzar });
   }
+  // Descartar si la usuaria ya cambió de ficha o la cerró.
+  if(window.__FICHA_OPEN_ID !== id || !modal.classList.contains('show')) return;
   if(!r || !r.ok){
+    // Si ya pintamos algo (cache o parcial), lo dejamos; solo falló el historial.
+    if(cacheado || cachedContacto) return;
     body.innerHTML = '<div class="error-state"><b>No se pudo cargar la ficha.</b><div style="font-size:12px;color:var(--subtle);margin-top:4px;">' + esc((r && r.error) || 'desconocido') + '</div>' +
       '<button class="btn primary" style="margin-top:12px;" onclick="abrirFichaModal(\'' + esc(id) + '\')">Reintentar</button></div>';
     return;
   }
   try { localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data: r })); } catch(e){}
   _renderFichaSafe(body, r);
-  const c = r.contacto || {};
-  document.getElementById('fc-titulo').textContent = c.nombre || c.institucion || 'Ficha';
+  if(titulo) titulo.textContent = (r.contacto && (r.contacto.nombre || r.contacto.institucion)) || 'Ficha';
 }
 
 function cerrarFichaModal(){

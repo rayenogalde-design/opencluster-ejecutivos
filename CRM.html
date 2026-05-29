@@ -3248,6 +3248,11 @@ function limpiarFiltrosAvanzados(view){
   if(inp) inp.value = '';
   try { renderLista(view); } catch(e){}
 }
+// Quita UN solo filtro avanzado (chip × del banner) y re-renderiza.
+function quitarFiltroAvanzado(view, campo){
+  if(FILTROS_AVANZADOS[view]){ FILTROS_AVANZADOS[view][campo] = ''; guardarFiltrosLS(); }
+  try { renderLista(view); } catch(e){}
+}
 // Alias retrocompat
 const FILTROS_ESTADO = new Proxy({}, {
   get(_, k){ return FILTROS_AVANZADOS[k] ? FILTROS_AVANZADOS[k].estado : ''; },
@@ -5662,15 +5667,24 @@ function renderLista(view){
   }
   // Banner de filtros activos. CLAVE: un filtro avanzado pegado (se guarda en localStorage)
   // hacía que Rayen viera "solo N contactos" sin darse cuenta. Esto lo hace visible y limpiable.
-  const _fAct = [];
-  if(f.estado)   _fAct.push('estado: ' + f.estado);
-  if(f.segmento) _fAct.push('segmento: ' + f.segmento);
-  if(f.etiqueta) _fAct.push('etiqueta: ' + f.etiqueta);
-  if(f.agenda)   _fAct.push('agenda: ' + f.agenda);
-  if(q)          _fAct.push('búsqueda: "' + q + '"');
-  const bannerFiltros = _fAct.length
+  // Cada filtro activo se muestra como un CHIP removible (×) — así un filtro pegado
+  // (ej. segmento que quedó guardado en el navegador) SIEMPRE es visible y se puede
+  // quitar uno por uno, aunque su dropdown no se esté renderizando porque la búsqueda dio 0.
+  const _fChips = [];
+  if(f.estado)   _fChips.push(['estado', 'estado: ' + f.estado]);
+  if(f.segmento) _fChips.push(['segmento', 'segmento: ' + f.segmento]);
+  if(f.etiqueta) _fChips.push(['etiqueta', 'etiqueta: ' + f.etiqueta]);
+  if(f.agenda)   _fChips.push(['agenda', 'agenda: ' + f.agenda]);
+  const _hayChips = _fChips.length || q;
+  const _chipHtml = _fChips.map(([campo, txt]) =>
+    '<span style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #F5C77B;border-radius:999px;padding:3px 6px 3px 11px;font-size:12px;color:#92400e;font-weight:600;">' +
+      esc(txt) +
+      '<button onclick="quitarFiltroAvanzado(\'' + view + '\',\'' + campo + '\')" title="Quitar este filtro" style="border:none;background:#F5C77B;color:#7a4a06;border-radius:999px;width:17px;height:17px;line-height:1;cursor:pointer;font-size:12px;font-weight:800;padding:0;display:inline-flex;align-items:center;justify-content:center;">×</button>' +
+    '</span>'
+  ).join('') + (q ? '<span style="display:inline-flex;align-items:center;background:#fff;border:1px solid #F5C77B;border-radius:999px;padding:3px 11px;font-size:12px;color:#92400e;font-weight:600;">búsqueda: "' + esc(q) + '"</span>' : '');
+  const bannerFiltros = _hayChips
     ? '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:var(--oct-cream,#FFF4EA);border:1px solid #F5C77B;border-radius:10px;padding:10px 14px;margin-bottom:12px;">' +
-        '<div style="font-size:12.5px;color:#92400e;line-height:1.45;"><b>Filtros activos:</b> ' + esc(_fAct.join(' · ')) + ' — puede que estés viendo solo una parte de tus contactos.</div>' +
+        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;color:#92400e;"><b>Filtros activos:</b> ' + _chipHtml + '</div>' +
         '<button onclick="limpiarFiltrosAvanzados(\'' + view + '\')" style="padding:7px 14px;border-radius:8px;border:none;background:var(--purple-dk);color:#fff;font-weight:700;font-size:12px;cursor:pointer;font-family:var(--font-sans);white-space:nowrap;">Limpiar filtros y ver todos</button>' +
       '</div>'
     : '';

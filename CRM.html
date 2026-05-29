@@ -7345,7 +7345,33 @@ function renderFicha(container, data){
       '</div>' +
     '</div>';
 
-  container.innerHTML = headerV2 + adminBtns + gestionContactoBar(c) + cadenciaBannerFicha(c, editable) + pillsDatos + renderHistorialAgrupado(tl, c);
+  // El historial (cotizaciones) puede reventar con datos raros. Lo aislamos para que los
+  // controles de arriba (Editar / Nueva interacción / Gestión rápida / Cadencia) SIEMPRE
+  // se rendericen — antes un crash del timeline tiraba TODA la ficha al fallback sin botones.
+  let histHtml;
+  try { histHtml = renderHistorialAgrupado(tl, c); }
+  catch(err){
+    try { console.error('[CRM] renderHistorialAgrupado falló, historial simple:', err); } catch(_e){}
+    histHtml = _timelineFallback(tl);
+  }
+  container.innerHTML = headerV2 + adminBtns + gestionContactoBar(c) + cadenciaBannerFicha(c, editable) + pillsDatos + histHtml;
+}
+
+// Historial simple de respaldo: si el render rico de cotizaciones falla, igual mostramos
+// la actividad en una lista plana usable (no dejamos a la ejecutiva sin ver la cotización).
+function _timelineFallback(tl){
+  const items = (tl || []).map(ev => {
+    const fecha = esc(String(ev.fecha == null ? '' : ev.fecha).replace('T', ' ').substring(0, 16));
+    const tipo = esc(String(ev.origen || ev.tipo || '').toUpperCase());
+    const tit = esc(ev.titulo || ev.medio || '');
+    const det = ev.detalle ? '<div style="font-size:12px;color:var(--subtle);margin-top:2px;">' + esc(String(ev.detalle).substring(0, 240)) + '</div>' : '';
+    return '<div style="border-left:3px solid var(--sky,#06b3fd);background:#fff;border:1px solid var(--smoke,#eee);border-radius:8px;padding:9px 12px;margin-bottom:6px;">' +
+      '<div style="font-size:11px;color:var(--subtle);">' + fecha + (tipo ? ' · ' + tipo : '') + '</div>' +
+      '<div style="font-size:13px;font-weight:600;">' + tit + '</div>' + det +
+    '</div>';
+  }).join('') || '<div style="color:var(--subtle);padding:10px 0;">Sin actividad registrada.</div>';
+  return '<div class="v2-block"><div class="v2-block-head"><span class="v2-block-label">ACTIVIDAD (INTERACCIONES Y COTIZACIONES)</span></div>' +
+    '<div style="margin-top:10px;">' + items + '</div></div>';
 }
 
 // Extrae número de cotización del texto de notas/detalle (ej: "Cot OC26-3541-AT · $6.899.989")
@@ -7386,6 +7412,10 @@ function esReunion(ev){
 function renderHistorialAgrupado(tl, contacto){
   contacto = contacto || {};
   window.__CONTACTO_ACTIVO = contacto;
+  // ¿Puede el usuario actual editar/eliminar interacciones de este contacto?
+  // (Antes esto usaba `editable` y `c`, que NO existen en este scope → ReferenceError
+  //  que tiraba TODA la ficha al fallback sin botones en cuanto había una "otra" interacción.)
+  const _histEditable = (typeof puedeEditar === 'function') ? puedeEditar(contacto) : true;
   if (!tl || !tl.length) {
     return '<div style="padding:30px;text-align:center;color:var(--mist);background:var(--paper);border-radius:10px;border:1px dashed var(--smoke);">Sin actividad registrada todavía.</div>';
   }
@@ -7670,10 +7700,10 @@ function renderHistorialAgrupado(tl, contacto){
         '</div>' +
         '<div style="font-size:13px;font-weight:600;color:var(--ink);">' + esc(ev.titulo || '') + '</div>' +
         (ev.detalle ? '<div style="font-size:12px;color:var(--subtle);margin-top:3px;">' + esc(ev.detalle) + '</div>' : '') +
-        (editable && ev.ref_id
+        (_histEditable && ev.ref_id
           ? '<div style="display:flex;gap:8px;margin-top:8px;">' +
-              '<button onclick="editarInteraccion(\'' + esc(String(ev.ref_id)) + '\',\'' + esc(String(c.id)) + '\')" style="background:none;border:1px solid var(--smoke);border-radius:6px;padding:4px 11px;font-size:11.5px;color:var(--subtle);cursor:pointer;font-family:var(--font-sans);">Editar</button>' +
-              '<button onclick="eliminarInteraccion(\'' + esc(String(ev.ref_id)) + '\',\'' + esc(String(c.id)) + '\')" style="background:none;border:1px solid var(--ruby-lt,#f0dce0);border-radius:6px;padding:4px 11px;font-size:11.5px;color:var(--ruby,#b85060);cursor:pointer;font-family:var(--font-sans);">Eliminar</button>' +
+              '<button onclick="editarInteraccion(\'' + esc(String(ev.ref_id)) + '\',\'' + esc(String(contacto.id || '')) + '\')" style="background:none;border:1px solid var(--smoke);border-radius:6px;padding:4px 11px;font-size:11.5px;color:var(--subtle);cursor:pointer;font-family:var(--font-sans);">Editar</button>' +
+              '<button onclick="eliminarInteraccion(\'' + esc(String(ev.ref_id)) + '\',\'' + esc(String(contacto.id || '')) + '\')" style="background:none;border:1px solid var(--ruby-lt,#f0dce0);border-radius:6px;padding:4px 11px;font-size:11.5px;color:var(--ruby,#b85060);cursor:pointer;font-family:var(--font-sans);">Eliminar</button>' +
             '</div>'
           : '') +
       '</div>';

@@ -1706,6 +1706,38 @@ body{
 .v2-next-date{ font-size:11px; color:var(--v2-text-soft); margin-top:4px; font-weight:400; display:inline-flex; align-items:center; gap:4px; }
 .v2-next-date.overdue{ color:#DC2626; font-weight:500; }
 .v2-next.empty .v2-next-label,.v2-next.empty .v2-next-content{ color:var(--v2-text-soft); }
+/* Cadencia de outreach — chip + botón Hecho dentro de la tarjeta */
+.v2-cad-row{ display:flex; align-items:center; gap:8px; margin-top:8px; }
+.v2-cad-chip{ display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:700; color:var(--v2-navy);
+  background:#fff; border:0.5px solid var(--v2-hl-border); border-radius:999px; padding:3px 9px; white-space:nowrap; }
+.v2-cad-chip svg{ flex:none; }
+.v2-cad-done{ margin-left:auto; font-family:inherit; font-size:11px; font-weight:700; cursor:pointer;
+  background:#059669; color:#fff; border:none; border-radius:7px; padding:4px 11px; display:inline-flex; align-items:center; gap:5px; transition:filter .15s; }
+.v2-cad-done:hover{ filter:brightness(0.94); } .v2-cad-done:disabled{ opacity:.55; cursor:default; }
+/* Tile "Toques de hoy" del dashboard */
+.toques-card{ background:#fff; border:1px solid var(--v2-divider,#E6E8EF); border-radius:14px; padding:18px 20px; margin-bottom:18px; box-shadow:var(--shadow-sm); }
+.toques-hd{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+.toques-hd h3{ font-size:15px; font-weight:800; color:var(--v2-navy,#001A60); margin:0; letter-spacing:-0.01em; }
+.toques-hd .toques-sum{ margin-left:auto; display:flex; gap:8px; }
+.toques-pill{ font-size:11.5px; font-weight:700; padding:4px 11px; border-radius:999px; }
+.toques-pill.atr{ background:#FEE2E2; color:#B91C1C; }
+.toques-pill.hoy{ background:#E0F2FE; color:#0369A1; }
+.toques-item{ display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid var(--v2-divider,#EEF0F5); }
+.toques-item:first-of-type{ border-top:none; }
+.toques-ico{ width:30px; height:30px; flex:none; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#fff; }
+.toques-ico.Email{ background:#06B3FD; } .toques-ico.Llamada{ background:#7C3AED; }
+.toques-ico.LinkedIn{ background:#0A66C2; } .toques-ico.WhatsApp{ background:#25D366; }
+.toques-info{ flex:1; min-width:0; }
+.toques-nom{ font-size:13.5px; font-weight:700; color:var(--v2-navy,#001A60); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; }
+.toques-desc{ font-size:11.5px; color:var(--v2-text-soft,#5A6478); margin-top:2px; }
+.toques-desc .atr{ color:#B91C1C; font-weight:700; }
+.toques-acc{ display:flex; gap:7px; flex:none; }
+.toques-btn{ font-family:inherit; font-size:11.5px; font-weight:700; cursor:pointer; border-radius:8px; padding:6px 12px; border:none; transition:filter .15s; }
+.toques-btn.done{ background:#059669; color:#fff; } .toques-btn.done:hover{ filter:brightness(0.94); }
+.toques-btn.snooze{ background:#F1F2F6; color:#5A6478; } .toques-btn.snooze:hover{ filter:brightness(0.97); }
+.toques-btn:disabled{ opacity:.55; cursor:default; }
+.toques-empty{ font-size:13px; color:var(--v2-text-soft,#5A6478); padding:6px 0; }
+.toques-more{ font-size:12px; color:var(--v2-text-soft,#5A6478); margin-top:10px; }
 .v2-tags{ display:flex; flex-wrap:wrap; gap:6px; }
 .v2-pill{ background:#fff; color:var(--v2-hl-text); font-size:11px; padding:4px 10px; border-radius:999px; border:0.5px solid var(--v2-hl-border); white-space:nowrap; }
 .v2-pill.cat{ color:var(--v2-text-soft); border-color:var(--v2-divider); }
@@ -2009,6 +2041,7 @@ body{
       <div class="side-tab act" data-view="vDashboard" onclick="goView('vDashboard')">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
         Dashboard
+        <span class="badge" id="badgeToques" style="display:none;background:var(--gold,#E8A33D);">0</span>
       </div>
       <div class="side-tab" data-view="vTareas" id="navTareas" onclick="goView('vTareas')">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
@@ -2124,6 +2157,7 @@ body{
           <h1 id="dshSaludo">Bienvenido</h1>
           <p id="dshFecha">—</p>
         </div>
+        <div id="dshToquesHoy"></div>
         <div id="scriptBanner"></div>
         <div id="dshCampana"></div>
         <div id="dshProductosCampanaCard"></div>
@@ -3430,6 +3464,7 @@ const ACCIONES_POST = [
   'crm_crear_tarea','crm_editar_tarea','crm_completar_tarea','crm_eliminar_tarea',
   'crm_crear_reunion','crm_crear_seguimiento',
   'crm_actualizar_etiquetas','crm_toggle_favorito','crm_actualizar_proxima','crm_snooze_contacto',
+  'crm_iniciar_cadencia','crm_avanzar_cadencia','crm_pausar_cadencia',
   'crm_importar_csv','crm_reasignar_contactos',
   'crm_marcar_notif_leida','crm_crear_notificacion',
   'crm_fusionar','crm_asignar_ejecutivo_cuenta','crm_crear_cuenta','crm_editar_cuenta',
@@ -4998,6 +5033,7 @@ async function cargarDashboard(){
   pintarTarjetaProductosCampana();
   pintarBannerListaPartida();
   pintarProductosSugeridos();
+  pintarToquesHoy();
 
   // Token único de esta carga — descartamos respuestas de fetches anteriores
   const miToken = ++window.__DASH_FETCH_TOKEN;
@@ -5927,6 +5963,213 @@ function _lanzarMensaje(){
 
 // Tarjeta de contacto v2 — patrón validado (REFERENCIA_Tarjetas_Contacto_v2.html).
 // Self-contained: recibe el contacto y la vista, computa todo internamente.
+// ════════════════════════════════════════════════════════════════════════════
+// CADENCIA DE OUTREACH (frontend) — espejo del motor del Apps Script.
+// Combo Academia "5 toques en 3 semanas" (prospección) + secuencia post-cotización.
+// El backend escribe proxima_accion/nota_proxima; acá mostramos toque + canal y
+// damos el botón "Hecho" que avanza la cadencia. Aviso: tile en dashboard + toast.
+// ════════════════════════════════════════════════════════════════════════════
+const CADENCIAS = {
+  prospeccion: { nombre:'Prospección', pasos:[
+    { dia:0,  canal:'Email',    desc:'Cold email principal — arranque' },
+    { dia:2,  canal:'LinkedIn', desc:'Conexión en LinkedIn (sin mensaje o breve)' },
+    { dia:4,  canal:'Email',    desc:'Follow-up 1 — nuevo ángulo' },
+    { dia:7,  canal:'Llamada',  desc:'Llamada (Zadarma) — menciona el correo' },
+    { dia:12, canal:'Email',    desc:'Follow-up 2 — caso, dato o recurso' },
+    { dia:21, canal:'Email',    desc:'Break-up — email de cierre' }
+  ]},
+  cotizacion: { nombre:'Post-cotización', pasos:[
+    { dia:0,  canal:'Email',    desc:'Cotización enviada' },
+    { dia:3,  canal:'Email',    desc:'Seguimiento 1 — ¿dudas sobre la propuesta?' },
+    { dia:7,  canal:'Llamada',  desc:'Llamada — resolver objeciones' },
+    { dia:14, canal:'Email',    desc:'Seguimiento 2 — cierre / próximos pasos' }
+  ]}
+};
+const CAD_ICONOS = {
+  Email:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>',
+  Llamada:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',
+  LinkedIn:'<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM2.4 9h5.16v12.5H2.4V9zm7.7 0h4.95v1.71h.07c.69-1.3 2.38-2.67 4.9-2.67 5.24 0 6.2 3.45 6.2 7.93v8.53h-5.16v-7.56c0-1.8-.03-4.12-2.51-4.12-2.51 0-2.9 1.96-2.9 3.99v7.69H10.1V9z"/></svg>',
+  WhatsApp:'<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.16-.17.2-.35.22-.64.07-.3-.15-1.26-.46-2.39-1.48-.88-.79-1.48-1.76-1.65-2.06-.17-.3-.02-.46.13-.6.13-.14.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.6-.92-2.2-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48 0 1.46 1.06 2.88 1.21 3.07.15.2 2.1 3.2 5.08 4.49.71.3 1.26.49 1.69.62.71.23 1.36.2 1.87.12.57-.08 1.76-.72 2-1.41.25-.7.25-1.29.18-1.41-.08-.13-.27-.2-.57-.35z"/></svg>'
+};
+const CAD_CHECK = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+function cadCanalIco(canal){ return CAD_ICONOS[canal] || CAD_ICONOS.Email; }
+
+// Devuelve {tipo, toque, total, paso, nombre} si hay cadencia activa con toque pendiente; {pausada:true} si en pausa; null si no aplica.
+function cadenciaDe(c){
+  const tipo = c && c.cadencia_tipo ? String(c.cadencia_tipo) : '';
+  if(!tipo || !CADENCIAS[tipo]) return null;
+  if(String(c.cadencia_pausada||'').toLowerCase() === 'true') return { tipo, pausada:true, nombre:CADENCIAS[tipo].nombre, paso:null };
+  const pasos = CADENCIAS[tipo].pasos;
+  let toque = parseInt(c.cadencia_toque, 10); if(isNaN(toque)) toque = 0;
+  if(toque >= pasos.length) return null;
+  return { tipo, toque, total:pasos.length, paso:pasos[toque], nombre:CADENCIAS[tipo].nombre };
+}
+
+// Recalcula la fecha del toque pendiente (YMD) desde cadencia_inicio + offset del paso.
+function _cadComputeProxima(c){
+  const cad = cadenciaDe(c); if(!cad || !cad.paso || !c.cadencia_inicio) return '';
+  const ini = new Date(String(c.cadencia_inicio).substring(0,10)); if(isNaN(ini.getTime())) return '';
+  const d = new Date(ini.getFullYear(), ini.getMonth(), ini.getDate() + cad.paso.dia);
+  const mm = String(d.getMonth()+1).padStart(2,'0'); const dd = String(d.getDate()).padStart(2,'0');
+  return d.getFullYear() + '-' + mm + '-' + dd;
+}
+
+// Actualiza el objeto contacto en TODOS los caches (memoria + LS) sin refetch.
+function _cadActualizar(id, mut){
+  const apply = c => { if(c) mut(c); };
+  ['vMis','vTodos','vCerrar','vOlvidados','vCuentas'].forEach(v => { if(CACHE[v]) apply(CACHE[v].find(x => String(x.id)===String(id))); });
+  try {
+    const k = 'crm_cache_contactos_v2_' + USUARIO;
+    const raw = localStorage.getItem(k);
+    if(raw){ const p = JSON.parse(raw); if(p && Array.isArray(p.contactos)){ apply(p.contactos.find(x => String(x.id)===String(id))); localStorage.setItem(k, JSON.stringify(p)); } }
+  } catch(e){}
+}
+function _cadDesdeResp(c, r){
+  if(r.fin || !r.tipo){ c.cadencia_tipo=''; c.cadencia_toque=''; c.cadencia_pausada=''; c.proxima_accion=''; c.nota_proxima=''; }
+  else { c.cadencia_tipo=r.tipo; c.cadencia_toque=r.toque; c.cadencia_pausada=''; c.proxima_accion=r.proxima||''; c.nota_proxima=r.nota||''; }
+}
+function _cadCacheFind(id){
+  let c=null; ['vMis','vTodos','vCerrar','vOlvidados','vCuentas'].forEach(v => { if(!c && CACHE[v]) c = CACHE[v].find(x => String(x.id)===String(id)); });
+  return c;
+}
+
+function _cadPostRefrescar(id){
+  const vAct = document.querySelector('.view.act');
+  if(vAct && (vAct.id==='vMis' || vAct.id==='vTodos') && typeof renderLista==='function') renderLista(vAct.id);
+  refrescarBannerFicha(id);
+  pintarToquesHoy();
+}
+
+async function cadenciaHecho(id, btn){
+  if(btn){ btn.disabled = true; btn.textContent = '…'; }
+  const r = await fetchAPI('crm_avanzar_cadencia', null, { id, solicitante: USUARIO });
+  if(!r || !r.ok){ if(btn){ btn.disabled=false; btn.textContent='Hecho'; } alert('No se pudo registrar el toque. Intenta de nuevo.'); return; }
+  _cadActualizar(id, c => _cadDesdeResp(c, r));
+  if(typeof toastCfg==='function') toastCfg(r.fin ? 'Cadencia completada' : 'Listo · siguiente toque agendado');
+  _cadPostRefrescar(id);
+}
+async function cadenciaIniciar(id, tipo){
+  const r = await fetchAPI('crm_iniciar_cadencia', null, { id, tipo: tipo||'prospeccion', solicitante: USUARIO });
+  if(!r || !r.ok){ alert('No se pudo iniciar la cadencia.'); return; }
+  _cadActualizar(id, c => _cadDesdeResp(c, r));
+  if(typeof toastCfg==='function') toastCfg('Cadencia iniciada');
+  _cadPostRefrescar(id);
+}
+async function cadenciaPausar(id, pausar){
+  const r = await fetchAPI('crm_pausar_cadencia', null, { id, pausar: !!pausar, solicitante: USUARIO });
+  if(!r || !r.ok){ alert('No se pudo actualizar la cadencia.'); return; }
+  _cadActualizar(id, c => {
+    if(pausar){ c.cadencia_pausada='true'; c.proxima_accion=''; c.nota_proxima='Cadencia en pausa'; }
+    else { c.cadencia_pausada=''; c.proxima_accion=_cadComputeProxima(c); const cad=cadenciaDe(c); c.nota_proxima = (cad && cad.paso) ? ('Toque '+(cad.toque+1)+'/'+cad.total+' · '+cad.paso.canal+' · '+cad.paso.desc) : ''; }
+  });
+  if(typeof toastCfg==='function') toastCfg(pausar ? 'Cadencia en pausa' : 'Cadencia reanudada');
+  _cadPostRefrescar(id);
+}
+
+// ── Banner de cadencia en la ficha del contacto ──
+function _cadBannerInner(c, editable){
+  const id = esc(c.id);
+  const tipoActivo = c.cadencia_tipo ? String(c.cadencia_tipo) : '';
+  const pausada = String(c.cadencia_pausada||'').toLowerCase()==='true';
+  const wrap = (inner, color) => '<div class="v2-block" style="margin-bottom:22px;border-left:3px solid '+color+';padding-left:14px;">'+inner+'</div>';
+  if(tipoActivo && CADENCIAS[tipoActivo]){
+    const nombre = esc(CADENCIAS[tipoActivo].nombre).toUpperCase();
+    if(pausada){
+      return wrap('<div class="v2-block-head"><span class="v2-block-label">CADENCIA · '+nombre+'</span></div>'+
+        '<div style="font-size:13px;color:var(--v2-text-soft);margin:6px 0 10px;">En pausa. Reanúdala para volver a recibir los recordatorios de toques.</div>'+
+        (editable ? '<button class="btn" onclick="cadenciaPausar(\''+id+'\', false)">Reanudar cadencia</button>' : ''), '#94a3b8');
+    }
+    const cad = cadenciaDe(c);
+    let detalle, acciones='';
+    if(cad && cad.paso){
+      const f = c.proxima_accion ? new Date(c.proxima_accion) : null;
+      const fTxt = (f && !isNaN(f.getTime())) ? (' · vence '+f.toLocaleDateString('es-CL',{day:'2-digit',month:'short'})) : '';
+      detalle = 'Toque '+(cad.toque+1)+'/'+cad.total+' · '+esc(cad.paso.canal)+' · '+esc(cad.paso.desc)+fTxt;
+      if(editable) acciones = '<div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn primary" onclick="cadenciaHecho(\''+id+'\', this)">Marcar toque hecho</button><button class="btn" onclick="cadenciaPausar(\''+id+'\', true)">Pausar</button></div>';
+    } else { detalle = 'Cadencia completada.'; }
+    return wrap('<div class="v2-block-head"><span class="v2-block-label">CADENCIA · '+nombre+'</span></div>'+
+      '<div style="font-size:13px;color:var(--v2-hl-text,#1f2937);margin:6px 0 10px;font-weight:600;">'+detalle+'</div>'+acciones, '#06B3FD');
+  }
+  if(!editable) return '';
+  return wrap('<div class="v2-block-head"><span class="v2-block-label">CADENCIA DE SEGUIMIENTO</span></div>'+
+    '<div style="font-size:13px;color:var(--v2-text-soft);margin:6px 0 10px;">Sin cadencia activa.</div>'+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn primary" onclick="cadenciaIniciar(\''+id+'\',\'prospeccion\')">Iniciar prospección (5 toques)</button>'+
+    '<button class="btn" onclick="cadenciaIniciar(\''+id+'\',\'cotizacion\')">Iniciar post-cotización</button></div>', '#cbd5e1');
+}
+function cadenciaBannerFicha(c, editable){ return '<div id="cadBannerFicha">'+_cadBannerInner(c, editable)+'</div>'; }
+function refrescarBannerFicha(id){
+  const el = document.getElementById('cadBannerFicha'); if(!el) return;
+  const c = _cadCacheFind(id); if(!c) return;
+  el.innerHTML = _cadBannerInner(c, (typeof puedeEditar==='function') ? puedeEditar(c) : true);
+}
+
+// ── Tile "Toques de hoy" del dashboard + badge + toast de entrada ──
+async function pintarToquesHoy(){
+  const cont = document.getElementById('dshToquesHoy');
+  if(!cont) return;
+  let lista;
+  try { lista = await _cargarContactosBase(); } catch(e){ lista = CACHE.vTodos || []; }
+  if(!Array.isArray(lista)) lista = [];
+  if(typeof esActuandoComoAdmin==='function' && !esActuandoComoAdmin()) lista = lista.filter(esOwner);
+  const hoy0 = new Date(); hoy0.setHours(0,0,0,0);
+  const items = [];
+  lista.forEach(c => {
+    const cad = cadenciaDe(c);
+    if(!cad || !cad.paso || !c.proxima_accion) return;
+    const pa = new Date(c.proxima_accion); if(isNaN(pa.getTime())) return;
+    pa.setHours(0,0,0,0);
+    const diff = Math.round((pa - hoy0)/86400000);
+    if(diff > 0) return;                      // futuro: no es de hoy ni atrasado
+    items.push({ c, cad, diff });
+  });
+  items.sort((a,b) => a.diff - b.diff);
+  const atrasados = items.filter(i => i.diff < 0).length;
+  const deHoy = items.filter(i => i.diff === 0).length;
+  const badge = document.getElementById('badgeToques');
+  if(badge){ badge.textContent = items.length; badge.style.display = items.length>0 ? 'inline-flex' : 'none'; }
+  if(!items.length){ cont.innerHTML = ''; return; }
+  // Toast de entrada (una vez por sesión) si hay toques atrasados
+  if(atrasados>0 && !window.__TOQUES_TOAST){ window.__TOQUES_TOAST = true; toastToques(atrasados); }
+  const MAX = 8;
+  const filas = items.slice(0, MAX).map(it => {
+    const c = it.c, cad = it.cad, canal = cad.paso.canal;
+    const nom = esc(c.nombre || c.institucion || '(sin nombre)');
+    const cuando = it.diff < 0 ? '<span class="atr">Atrasado '+Math.abs(it.diff)+'d</span> · ' : '';
+    return '<div class="toques-item">' +
+      '<div class="toques-ico '+esc(canal)+'">'+cadCanalIco(canal)+'</div>' +
+      '<div class="toques-info">' +
+        '<div class="toques-nom" onclick="abrirFichaModal(\''+esc(c.id)+'\')">'+nom+'</div>' +
+        '<div class="toques-desc">'+cuando+'Toque '+(cad.toque+1)+'/'+cad.total+' · '+esc(canal)+' · '+esc(cad.paso.desc)+'</div>' +
+      '</div>' +
+      '<div class="toques-acc">' +
+        '<button class="toques-btn done" onclick="cadenciaHecho(\''+esc(c.id)+'\', this)">'+CAD_CHECK+' Hecho</button>' +
+        '<button class="toques-btn snooze" onclick="abrirDatePicker(\''+esc(c.id)+'\', this)" title="Posponer / reprogramar">Posponer</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  const sobra = items.length > MAX ? '<div class="toques-more">y '+(items.length-MAX)+' toque(s) más — revisa Mis Contactos.</div>' : '';
+  cont.innerHTML = '<div class="toques-card">' +
+    '<div class="toques-hd">' +
+      '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>' +
+      '<h3>Toques de hoy</h3>' +
+      '<div class="toques-sum">' +
+        (atrasados ? '<span class="toques-pill atr">'+atrasados+' atrasado'+(atrasados>1?'s':'')+'</span>' : '') +
+        (deHoy ? '<span class="toques-pill hoy">'+deHoy+' hoy</span>' : '') +
+      '</div>' +
+    '</div>' + filas + sobra +
+  '</div>';
+}
+function toastToques(n){
+  try {
+    const t = document.createElement('div');
+    t.style.cssText = 'position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:99999;background:#B91C1C;color:#fff;padding:12px 18px;border-radius:11px;font-weight:700;font-size:13.5px;box-shadow:0 8px 24px rgba(0,0,0,.22);cursor:pointer;display:flex;align-items:center;gap:9px;font-family:inherit;max-width:90vw;';
+    t.innerHTML = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> Tienes '+n+' toque'+(n>1?'s':'')+' de cadencia atrasado'+(n>1?'s':'')+' — toca para verlos';
+    t.onclick = () => { try{ goView('vDashboard'); }catch(e){} const el=document.getElementById('dshToquesHoy'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); t.remove(); };
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.transition='opacity .4s'; t.style.opacity='0'; setTimeout(()=>t.remove(), 420); }, 6500);
+  } catch(e){}
+}
+
 function renderTarjetaV2(c, view){
   view = view || 'vTodos';
   var estadoRaw = c.ultimo_estado || c.pipeline_estado || 'Contactado';
@@ -5962,10 +6205,16 @@ function renderTarjetaV2(c, view){
   // Próxima acción (clicable → date picker inline)
   var dp = 'event.stopPropagation(); abrirDatePicker(\'' + esc(c.id) + '\', this)';
   var nextLabelIcon = snoozed ? V2_SVG.clock : V2_SVG.bell;
+  var cad = cadenciaDe(c);
+  var cadRow = (cad && cad.paso)
+    ? '<div class="v2-cad-row"><span class="v2-cad-chip">' + cadCanalIco(cad.paso.canal) + 'Toque ' + (cad.toque+1) + '/' + cad.total + ' · ' + esc(cad.paso.canal) + '</span>' +
+        '<button class="v2-cad-done" onclick="event.stopPropagation(); cadenciaHecho(\'' + esc(c.id) + '\', this)">' + CAD_CHECK + 'Hecho</button></div>'
+    : '';
   var nextBlock = '<div class="v2-next' + (snoozed?' snooze':'') + (proxEmpty?' empty':'') + '" onclick="' + dp + '">' +
     '<div class="v2-next-label">' + nextLabelIcon + (proxEmpty ? 'PRÓXIMA ACCIÓN' : esc(proxLabel)) + '</div>' +
     '<div class="v2-next-content">' + esc(proxContent) + '</div>' +
     '<div class="v2-next-date' + (atrasado?' overdue':'') + '">' + V2_SVG.clock + esc(proxDate) + '</div>' +
+    cadRow +
   '</div>';
 
   // Pills: sub_categoría + etiquetas + monto
@@ -6593,6 +6842,7 @@ async function dpGuardar(){
   if(vActual && typeof renderLista === 'function' && (vActual.id === 'vMis' || vActual.id === 'vTodos')){
     renderLista(vActual.id);
   }
+  if(typeof pintarToquesHoy === 'function') pintarToquesHoy();
 }
 async function dpQuitar(){
   const pop = _dpAbierto; if(!pop) return;
@@ -7013,7 +7263,7 @@ function renderFicha(container, data){
       '</div>' +
     '</div>';
 
-  container.innerHTML = headerV2 + adminBtns + pillsDatos + renderHistorialAgrupado(tl, c);
+  container.innerHTML = headerV2 + adminBtns + cadenciaBannerFicha(c, editable) + pillsDatos + renderHistorialAgrupado(tl, c);
 }
 
 // Extrae número de cotización del texto de notas/detalle (ej: "Cot OC26-3541-AT · $6.899.989")

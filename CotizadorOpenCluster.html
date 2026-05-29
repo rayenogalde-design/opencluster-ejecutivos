@@ -5341,6 +5341,14 @@ function abrirModalCrearContactoCotizador(nombrePreLlenado){
   document.getElementById("ncc-telefono").value = "";
   document.getElementById("ncc-ciudad").value = "";
   document.getElementById("ncc-region").value = "";
+  // Ejecutivo a cargo: por defecto el del perfil del cotizador (primer nombre), si calza con la lista.
+  try {
+    const selEj = document.getElementById("ncc-ejecutivo");
+    const perfil = (getEjecutivoActual() || "").trim().split(/\s+/)[0];
+    const norm = s => String(s||"").toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    const op = Array.from(selEj.options).find(o => norm(o.value) === norm(perfil));
+    selEj.value = op ? op.value : "Rayen";
+  } catch(e){}
   document.getElementById("ncc-tipo-persona").checked = true;
   document.getElementById("ncc-error").style.display = "none";
   document.getElementById("ncc-btn-guardar").disabled = false;
@@ -5377,6 +5385,7 @@ async function guardarNuevoContactoCotizador(){
     telefono: document.getElementById("ncc-telefono").value.trim(),
     ciudad: document.getElementById("ncc-ciudad").value.trim(),
     region: document.getElementById("ncc-region").value,
+    ejecutivo_asignado: document.getElementById("ncc-ejecutivo").value,
     tipo_contacto: esInst ? "Institución" : "Persona Natural",
     pipeline_estado: "Cotizado"
   };
@@ -5661,6 +5670,19 @@ const COMUNAS_CHILE = [
             <option>Los Ríos</option><option>Los Lagos</option><option>Aysén</option><option>Magallanes</option>
           </select>
         </div>
+      </div>
+
+      <div style="margin-top:12px;">
+        <label style="font-size:11px;font-weight:700;color:#1a1208;display:block;margin-bottom:4px;">Ejecutivo a cargo <span style="color:#e74c3c;">*</span></label>
+        <select id="ncc-ejecutivo" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;background:white;">
+          <option value="Rayen">Rayen</option>
+          <option value="William">William</option>
+          <option value="Germán">Germán</option>
+          <option value="Roberto">Roberto</option>
+          <option value="Maximiliano">Maximiliano</option>
+          <option value="Ximena">Ximena</option>
+        </select>
+        <div style="font-size:11px;color:#7a5a20;margin-top:3px;">Quién queda como dueño del contacto en el CRM. Por defecto, tú.</div>
       </div>
 
       <div id="ncc-error" style="display:none;background:#fee2e2;border:1px solid #ef4444;color:#7a1818;border-radius:8px;padding:10px 13px;margin-top:10px;font-size:13px;font-weight:600;"></div>

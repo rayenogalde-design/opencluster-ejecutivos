@@ -9637,6 +9637,7 @@ async function cargarDuplicados(){
   const r = await fetchAPI('crm_duplicados_pendientes', { solicitante: USUARIO });
   if(!r.ok){ cont.innerHTML = '<div class="error-state">' + esc(r.error || '') + '</div>'; return; }
   const lista = r.duplicados || [];
+  window.__DUP_DATA = lista;   // guardamos el par para la Fusión inteligente (los onclick solo pasan ids)
   document.getElementById('badgeDup').textContent = lista.length;
   document.getElementById('badgeDup').style.display = lista.length ? '' : 'none';
   if(!lista.length){
@@ -9685,8 +9686,7 @@ async function cargarDuplicados(){
       '</div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">' +
         '<button class="btn" onclick="rechazarFusion(\'' + esc(a.id) + '\',\'' + esc(b.id) + '\')" style="background:white;">No son duplicados</button>' +
-        '<button class="btn" onclick="fusionarParDuplicado(\'' + esc(a.id) + '\',\'' + esc(b.id) + '\',\'a\')" style="background:#dbe4f5;color:#3a4d75;border-color:#9bb0d4;">Fusionar (mantener A)</button>' +
-        '<button class="btn primary" onclick="fusionarParDuplicado(\'' + esc(a.id) + '\',\'' + esc(b.id) + '\',\'b\')">Fusionar (mantener B)</button>' +
+        '<button class="btn primary" onclick="abrirFusionInteligente(\'' + esc(a.id) + '\',\'' + esc(b.id) + '\')">Fusionar (elegir datos)</button>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -9705,6 +9705,107 @@ async function fusionarParDuplicado(idA, idB, mantener){
 async function rechazarFusion(idA, idB){
   const r = await fetchAPI('crm_rechazar_fusion', null, { id_a: idA, id_b: idB, solicitante: USUARIO });
   if (!r || !r.ok) { alert('Error: ' + ((r && r.error) || 'desconocido')); return; }
+  await cargarDuplicados();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// FUSIÓN INTELIGENTE — combina dos fichas eligiendo el dato de cada campo.
+// La actividad (reuniones, cotizaciones, interacciones) de AMBAS se mueve a la
+// ficha resultante (lo hace el backend crm_fusionar, que ya acepta `resultado`).
+// ════════════════════════════════════════════════════════════════════════════
+const FUS_CAMPOS = [
+  ['nombre','Nombre'], ['institucion','Institución'], ['cargo','Cargo'],
+  ['email','Email'], ['telefono','Teléfono'], ['ciudad','Ciudad'], ['region','Región'],
+  ['tipo_categoria','Categoría'], ['sub_categoria','Segmento'],
+  ['ejecutivo_asignado','Ejecutivo'], ['pipeline_estado','Estado'], ['notas_publicas','Notas']
+];
+function _fusUnionEtiquetas(a, b){
+  const arr = (String(a||'') + ',' + String(b||'')).split(',').map(s => s.trim()).filter(Boolean);
+  const vistas = {}, out = [];
+  arr.forEach(t => { const k = t.toLowerCase(); if(!vistas[k]){ vistas[k] = 1; out.push(t); } });
+  return out.join(', ');
+}
+function _fusRow(field, label, aVal, bVal){
+  aVal = String(aVal == null ? '' : aVal).trim();
+  bVal = String(bVal == null ? '' : bVal).trim();
+  if(!aVal && !bVal) return '';
+  const conflict = aVal && bVal && aVal !== bVal;
+  let right;
+  if(!conflict){
+    right = '<div style="font-size:13px;color:var(--text-1);padding-top:3px;">' + esc(aVal || bVal) + '</div>';
+  } else {
+    const opt = (lado, val, lbl, col) => '<label style="display:flex;gap:7px;align-items:flex-start;cursor:pointer;padding:7px 10px;border:1px solid var(--border-subtle,#e2e8f0);border-radius:8px;flex:1;min-width:160px;">' +
+      '<input type="radio" name="fus-' + field + '" value="' + lado + '"' + (lado==='a'?' checked':'') + ' style="margin-top:2px;">' +
+      '<span><span style="font-size:10px;font-weight:800;color:' + col + ';text-transform:uppercase;">' + lbl + '</span><br><span style="font-size:13px;color:var(--text-1);">' + esc(val) + '</span></span></label>';
+    let extra = '';
+    if(field === 'notas_publicas'){
+      extra = '<label style="display:flex;gap:7px;align-items:flex-start;cursor:pointer;padding:7px 10px;border:1px solid var(--border-subtle,#e2e8f0);border-radius:8px;flex:1;min-width:160px;">' +
+        '<input type="radio" name="fus-' + field + '" value="ambas" style="margin-top:2px;">' +
+        '<span><span style="font-size:10px;font-weight:800;color:#0f766e;text-transform:uppercase;">Las dos</span><br><span style="font-size:13px;color:var(--text-1);">' + esc(aVal + ' · ' + bVal) + '</span></span></label>';
+    }
+    right = '<div style="display:flex;gap:8px;flex-wrap:wrap;">' + opt('a', aVal, 'A', '#3a4d75') + opt('b', bVal, 'B', '#5b21b6') + extra + '</div>';
+  }
+  return '<div style="display:grid;grid-template-columns:108px 1fr;gap:12px;align-items:start;padding:10px 0;border-top:1px solid var(--border-soft,#eef0f5);">' +
+    '<div style="font-size:11.5px;font-weight:700;color:var(--text-3,#5a6478);text-transform:uppercase;letter-spacing:.3px;padding-top:4px;">' + esc(label) + (conflict ? ' <span style="color:#d97706;" title="Hay dos valores distintos — elige uno">●</span>' : '') + '</div>' +
+    right + '</div>';
+}
+function abrirFusionInteligente(idA, idB){
+  const par = (window.__DUP_DATA || []).find(d => String((d.a||d.contacto_a||{}).id) === String(idA) && String((d.b||d.contacto_b||{}).id) === String(idB));
+  if(!par){ alert('No encontré los datos del par. Recarga la vista de duplicados.'); return; }
+  const a = par.a || par.contacto_a || {}, b = par.b || par.contacto_b || {};
+  window.__FUS_PAIR = { idA, idB, a, b };
+  const rows = FUS_CAMPOS.map(([f, l]) => _fusRow(f, l, a[f], b[f])).join('');
+  const conflictos = FUS_CAMPOS.filter(([f]) => { const av=String(a[f]||'').trim(), bv=String(b[f]||'').trim(); return av && bv && av!==bv; }).length;
+  const etiUnion = _fusUnionEtiquetas(a.etiquetas, b.etiquetas);
+  let ov = document.getElementById('fusOverlay');
+  if(ov) ov.remove();
+  ov = document.createElement('div');
+  ov.id = 'fusOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px;';
+  ov.innerHTML = '<div style="background:#fff;border-radius:14px;max-width:680px;width:100%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(15,23,42,.3);">' +
+      '<div style="padding:16px 22px;border-bottom:1px solid #e6e8ef;display:flex;justify-content:space-between;align-items:center;">' +
+        '<h2 style="margin:0;font-size:18px;font-weight:800;color:var(--navy,#001a60);">Fusión inteligente</h2>' +
+        '<button onclick="cerrarFusionInteligente()" style="border:none;background:none;font-size:22px;cursor:pointer;color:#94a3b8;line-height:1;">×</button>' +
+      '</div>' +
+      '<div style="padding:14px 22px;overflow-y:auto;">' +
+        '<div style="font-size:12.5px;color:var(--text-2,#475569);background:#f0f9ff;border:1px solid #bae6fd;border-radius:9px;padding:10px 13px;margin-bottom:6px;">' +
+          'Las <b>reuniones, cotizaciones e interacciones de ambas</b> se combinan solas. Acá solo eliges el dato cuando hay diferencias' +
+          (conflictos ? ' (<b style="color:#d97706;">' + conflictos + ' campo' + (conflictos>1?'s':'') + ' en conflicto ●</b>)' : ' — <b>no hay conflictos</b>') + '.' +
+        '</div>' +
+        rows +
+        (etiUnion ? '<div style="display:grid;grid-template-columns:108px 1fr;gap:12px;padding:10px 0;border-top:1px solid var(--border-soft,#eef0f5);"><div style="font-size:11.5px;font-weight:700;color:var(--text-3,#5a6478);text-transform:uppercase;">Etiquetas</div><div style="font-size:13px;color:var(--text-1);padding-top:3px;">' + esc(etiUnion) + ' <span style="color:#0f766e;font-size:11px;font-weight:700;">(se juntan las de ambas)</span></div></div>' : '') +
+      '</div>' +
+      '<div style="padding:14px 22px;border-top:1px solid #e6e8ef;display:flex;justify-content:flex-end;gap:10px;background:#fcfcfd;border-radius:0 0 14px 14px;">' +
+        '<button class="btn" onclick="cerrarFusionInteligente()" style="background:#fff;">Cancelar</button>' +
+        '<button class="btn primary" id="fus-btn" onclick="confirmarFusionInteligente()">Fusionar las dos en una</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(ov);
+  ov.addEventListener('click', e => { if(e.target === ov) cerrarFusionInteligente(); });
+}
+function cerrarFusionInteligente(){ const ov = document.getElementById('fusOverlay'); if(ov) ov.remove(); }
+async function confirmarFusionInteligente(){
+  const P = window.__FUS_PAIR; if(!P) return;
+  const a = P.a, b = P.b, resultado = {};
+  FUS_CAMPOS.forEach(([f]) => {
+    const av = String(a[f] == null ? '' : a[f]).trim(), bv = String(b[f] == null ? '' : b[f]).trim();
+    if(!av && !bv) return;
+    if(av && bv && av !== bv){
+      const sel = (document.querySelector('input[name="fus-' + f + '"]:checked') || {}).value || 'a';
+      resultado[f] = sel === 'b' ? bv : (sel === 'ambas' ? (av + ' · ' + bv) : av);
+    } else {
+      resultado[f] = av || bv;
+    }
+  });
+  resultado.etiquetas = _fusUnionEtiquetas(a.etiquetas, b.etiquetas);
+  const btn = document.getElementById('fus-btn');
+  if(btn){ btn.disabled = true; btn.textContent = 'Fusionando…'; }
+  const r = await fetchAPI('crm_fusionar', null, { id_a: P.idA, id_b: P.idB, resultado: resultado, solicitante: USUARIO });
+  if(!r || !r.ok){ alert('Error: ' + ((r && r.error) || 'desconocido')); if(btn){ btn.disabled = false; btn.textContent = 'Fusionar las dos en una'; } return; }
+  try { localStorage.removeItem('crm_cache_contactos_v2_' + USUARIO); } catch(e){}
+  CACHE.vMis = null; CACHE.vTodos = null;
+  cerrarFusionInteligente();
+  if(typeof toastCfg === 'function') toastCfg('Contactos fusionados en uno');
   await cargarDuplicados();
 }
 

@@ -3299,6 +3299,16 @@ function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&
 // Normaliza texto para BÚSQUEDA: minúsculas + sin acentos (á→a, ñ→n, ü→u).
 // Así "allende" matchea "Allende", "garcia" matchea "García", etc.
 function _busqNorm(s){ return String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+// Formatea un campo de cotización que puede ser monto O texto:
+// - vacío → ''  · ya trae "$" → tal cual (evita "$$17.091")  · texto ("Transporte", "Envío gratuito") → tal cual
+// - número puro ("176.471") → le antepone "$"
+function _money(v){
+  var s = String(v == null ? '' : v).trim();
+  if(!s) return '';
+  if(s.indexOf('$') >= 0) return s;
+  if(/^[\d.,]+$/.test(s)) return '$' + s;
+  return s;
+}
 
 // ¿Este registro es una EMPRESA (sin persona, solo institución)?
 // Estos van a la pestaña "Empresas / Cuentas", no a Contactos.
@@ -7601,11 +7611,11 @@ function renderHistorialAgrupado(tl, contacto){
 
           // === DESGLOSE DE COSTOS ===
           '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:14px;">' +
-            (co.neto       ? '<div style="background:var(--paper);border:1px solid var(--smoke);border-radius:7px;padding:8px 11px;"><div style="font-size:10px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.4px;">Neto productos</div><div style="font-size:13px;font-weight:700;color:var(--ink);margin-top:2px;">$' + esc(co.neto) + '</div></div>' : '') +
-            (co.total_iva  ? '<div style="background:var(--paper);border:1px solid var(--smoke);border-radius:7px;padding:8px 11px;"><div style="font-size:10px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.4px;">Total c/IVA productos</div><div style="font-size:13px;font-weight:700;color:var(--ink);margin-top:2px;">$' + esc(co.total_iva) + '</div></div>' : '') +
-            (co.transporte ? '<div style="background:var(--paper);border:1px solid var(--smoke);border-radius:7px;padding:8px 11px;"><div style="font-size:10px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.4px;">Transporte</div><div style="font-size:13px;font-weight:700;color:var(--ink);margin-top:2px;">$' + esc(co.transporte) + '</div></div>' : '') +
-            (co.extras     ? '<div style="background:var(--paper);border:1px solid var(--smoke);border-radius:7px;padding:8px 11px;"><div style="font-size:10px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.4px;">Extras</div><div style="font-size:13px;font-weight:700;color:var(--ink);margin-top:2px;">$' + esc(co.extras) + '</div></div>' : '') +
-            (co.total      ? '<div style="background:linear-gradient(135deg, var(--gold-lt), #faf3df);border:1px solid var(--gold);border-radius:7px;padding:8px 11px;"><div style="font-size:10px;font-weight:700;color:var(--gold-dk);text-transform:uppercase;letter-spacing:.4px;">Total cotización</div><div style="font-size:14px;font-weight:800;color:var(--gold-dk);margin-top:2px;">$' + esc(co.total) + '</div></div>' : '') +
+            (co.neto       ? '<div style="background:var(--paper);border:1px solid var(--smoke);border-radius:7px;padding:8px 11px;"><div style="font-size:10px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.4px;">Neto productos</div><div style="font-size:13px;font-weight:700;color:var(--ink);margin-top:2px;">' + esc(_money(co.neto)) + '</div></div>' : '') +
+            (co.total_iva  ? '<div style="background:var(--paper);border:1px solid var(--smoke);border-radius:7px;padding:8px 11px;"><div style="font-size:10px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.4px;">Total c/IVA productos</div><div style="font-size:13px;font-weight:700;color:var(--ink);margin-top:2px;">' + esc(_money(co.total_iva)) + '</div></div>' : '') +
+            (co.transporte ? '<div style="background:var(--paper);border:1px solid var(--smoke);border-radius:7px;padding:8px 11px;"><div style="font-size:10px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.4px;">Transporte</div><div style="font-size:13px;font-weight:700;color:var(--ink);margin-top:2px;">' + esc(_money(co.transporte)) + '</div></div>' : '') +
+            (co.extras     ? '<div style="background:var(--paper);border:1px solid var(--smoke);border-radius:7px;padding:8px 11px;"><div style="font-size:10px;font-weight:700;color:var(--mist);text-transform:uppercase;letter-spacing:.4px;">Extras</div><div style="font-size:13px;font-weight:700;color:var(--ink);margin-top:2px;">' + esc(_money(co.extras)) + '</div></div>' : '') +
+            (co.total      ? '<div style="background:linear-gradient(135deg, var(--gold-lt), #faf3df);border:1px solid var(--gold);border-radius:7px;padding:8px 11px;"><div style="font-size:10px;font-weight:700;color:var(--gold-dk);text-transform:uppercase;letter-spacing:.4px;">Total cotización</div><div style="font-size:14px;font-weight:800;color:var(--gold-dk);margin-top:2px;">' + esc(_money(co.total)) + '</div></div>' : '') +
           '</div>' +
 
           // === PRODUCTOS COTIZADOS ===

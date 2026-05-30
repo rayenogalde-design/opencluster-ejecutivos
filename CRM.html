@@ -7993,7 +7993,7 @@ async function abrirModalEditarContacto(id){
   document.getElementById('edInstitucion').value = c.institucion || '';
   document.getElementById('edCargo').value = c.cargo || '';
   document.getElementById('edEmail').value = c.email || '';
-  document.getElementById('edTelefono').value = c.telefono || '';
+  document.getElementById('edTelefono').value = c.telefono || '+56 ';   // +56 obligatorio para Zadarma
   document.getElementById('edCiudad').value = c.ciudad || '';
   document.getElementById('edRegion').value = c.region || '';
   document.getElementById('edEjecutivoAsignado').value = c.ejecutivo_asignado || '';
@@ -8071,13 +8071,21 @@ async function guardarEdicionContacto(){
   const r = await fetchAPI('crm_editar_contacto', null, data);
   if(!r.ok){ alert('Error guardando: ' + (r.error || '')); return; }
   cerrarModalEditarContacto();
-  // Recargar lista y ficha
-  CACHE.vMis = null;
-  CACHE.vTodos = null;
+  // Actualizar el contacto en los caches en memoria + LS (lista/tarjetas reflejan el cambio al toque)
+  if(typeof _cadActualizar === 'function') _cadActualizar(id, c => {
+    c.nombre=data.nombre; c.institucion=data.institucion; c.cargo=data.cargo; c.email=data.email;
+    c.telefono=data.telefono; c.ciudad=data.ciudad; c.region=data.region;
+    c.tipo_categoria=data.tipo_categoria; c.sub_categoria=data.sub_categoria;
+    c.pipeline_estado=data.pipeline_estado; c.ejecutivo_asignado=data.ejecutivo_asignado;
+    c.notas_publicas=data.notas_publicas;
+  });
+  // Bustar cache del perfil para que la ficha muestre lo recién guardado (ej. el teléfono nuevo).
+  try { localStorage.removeItem('crm_perfil_' + id + '_' + MODO_VISTA); } catch(e){}
   const view = document.getElementById('vMis').classList.contains('act') ? 'vMis' : 'vTodos';
-  if(view === 'vMis') await cargarContactos('vMis');
-  else await cargarContactos('vTodos');
-  abrirFicha(id, view);
+  if(typeof renderLista === 'function') renderLista(view);
+  // Refrescar la ficha (modal) si está abierta, forzando datos frescos del backend.
+  const fm = document.getElementById('modalFichaContacto');
+  if(fm && fm.classList.contains('show')) abrirFichaModal(id, true);
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -8088,6 +8096,7 @@ function abrirModalNuevoContacto(opts){
   // Reset form
   ['nc-nombre','nc-institucion','nc-cargo','nc-email','nc-telefono','nc-ciudad','nc-notas']
     .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  { const tel = document.getElementById('nc-telefono'); if(tel) tel.value = '+56 '; }   // +56 obligatorio para Zadarma
   document.getElementById('nc-region').value = '';
   document.getElementById('nc-tipo-categoria').value = '';
   document.getElementById('nc-sub-categoria').innerHTML = '<option value="">— Selecciona categoría primero —</option>';

@@ -3704,6 +3704,13 @@ function aiCooldownRemaining(key) {
 
 async function aiPedirFeedback(ejercicioId, textoUsuario, loaderTexto, loaderHint) {
   const key = `${state.moduleIdx}-${state.screenIdx}`;
+  // Los textos del loader se derivan del ejercicio (NO se pasan por el onclick:
+  // ahí JSON.stringify metía comillas dobles que rompían el atributo y el botón
+  // no respondía). Si por compatibilidad llegan como argumento, se respetan.
+  const _scrLoader = COURSE.modules[state.moduleIdx] && COURSE.modules[state.moduleIdx].screens[state.screenIdx];
+  const _optsLoader = (_scrLoader && _scrLoader.aiOpciones) || {};
+  loaderTexto = loaderTexto || _optsLoader.loaderTexto || 'La IA está leyendo tu respuesta…';
+  loaderHint = loaderHint || _optsLoader.loaderHint || 'Esto puede tardar entre 5 y 10 segundos. Es feedback cualitativo, no una nota.';
   if (AI_STATE.busy[key]) return;
   if (aiCooldownRemaining(key) > 0) return; // bloqueado por cooldown
 
@@ -3826,10 +3833,9 @@ function aiRenderBloqueParaPracticeEmail(ejercicioId, textoUsuario, opciones) {
   }
 
   // Estado inicial: aún no pedió feedback
-  const obligatorio = !inReplay;
   return `<div class="ai-actions" style="margin-top:8px;">
-    <button class="btn-ai-secondary" onclick="aiPedirFeedback('${ejercicioId}', getPracticeText(), ${JSON.stringify(loaderTexto)}, ${JSON.stringify(loaderHint)})">${btnTexto}</button>
-    <span style="font-size:11.5px; color:var(--oct-text-mute); align-self:center;">${obligatorio ? 'Obligatorio para avanzar.' : 'Modo repaso — opcional.'}</span>
+    <button class="btn-ai-secondary" onclick="aiPedirFeedback('${ejercicioId}', getPracticeText())">${btnTexto}</button>
+    <span style="font-size:11.5px; color:var(--oct-text-mute); align-self:center;">Opcional — pídelo para afinar tu respuesta.</span>
   </div>`;
 }
 
@@ -3837,7 +3843,7 @@ function aiRenderBloqueParaPracticeEmail(ejercicioId, textoUsuario, opciones) {
 function aiRenderErrorObligatorio(key, ejercicioId, loaderTexto, loaderHint, failCount, customMsg) {
   const cooldown = aiCooldownRemaining(key);
   const reachedLimit = failCount >= AI_STRIKE_LIMIT;
-  const retryCall = `aiPedirFeedback('${ejercicioId}', getPracticeText(), ${JSON.stringify(loaderTexto)}, ${JSON.stringify(loaderHint)})`;
+  const retryCall = `aiPedirFeedback('${ejercicioId}', getPracticeText())`;
   let inner = `<div class="ai-error">
     <div style="flex-shrink:0; width:18px; height:18px; border-radius:50%; background:var(--amber); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:11px;">!</div>
     <div style="flex:1;">
@@ -5645,8 +5651,11 @@ function isExerciseCorrect(screen, sel) {
     if (!sel.validated) return false;
     if (!screen.validations) return false;
     const structuralOk = screen.validations.every(v => v.test(sel.text || ''));
-    if (!structuralOk) return false;
-    return aiGateOk();
+    // El feedback de IA es OPCIONAL: pasar los criterios estructurales (verdes)
+    // basta para avanzar. Así nadie se queda atascado si la IA no responde, y el
+    // botón de feedback queda disponible para quien lo quiera. aiGateOk() ya no
+    // bloquea aquí (se mantiene la función para otros usos).
+    return structuralOk;
   }
   if (screen.type === 'practice_roleplay_chat' || screen.type === 'practice_roleplay_voz') {
     // Para roleplays: hay que terminar la conversación Y aceptar la evaluación final

@@ -4403,6 +4403,10 @@ function renderPracticeRoleplayChat(mod, screen) {
   // Errores y acciones post-cierre
   if (sel.rpError) {
     inputHtml = aiRenderError(`La línea se cayó. ${screen.personajeNombre || 'La IA'} no respondió esta vez.`, 'rpReintentarUltimoTurno()');
+    inputHtml += `<div style="display:flex; justify-content:center; gap:10px; margin-top:10px; flex-wrap:wrap;">
+      <button class="btn-ai-ghost" style="font-size:11.5px; padding:5px 12px;" onclick="rpTerminarManual()">Terminar la llamada y evaluar →</button>
+      <button class="btn-ai-ghost" style="font-size:11.5px; padding:5px 12px;" onclick="rpVozReiniciarLlamada()">Reiniciar llamada</button>
+    </div>`;
   }
 
   let finalHtml = '';
@@ -4423,6 +4427,13 @@ function renderPracticeRoleplayChat(mod, screen) {
     <div class="rp-chat" id="rpChat">${msgsHtml}${typingHtml}</div>
     ${inputHtml}
     ${finalHtml}`;
+}
+
+// Envía solo los últimos turnos a la IA: prompts más cortos = respuestas más
+// confiables y rápidas, y evita que la IA se cuelgue en conversaciones largas.
+function rpHistorial(sel) {
+  const m = (sel && sel.rpMessages) || [];
+  return m.length > 16 ? m.slice(-16) : m.slice();
 }
 
 async function rpEnviarTurno() {
@@ -4456,7 +4467,7 @@ async function rpEnviarTurno() {
   try {
     turno = await aiConTimeout(window.OpenClusterAI.conversar({
       ejercicioId: screen.aiEjercicioId,
-      mensajes: sel.rpMessages.slice(),
+      mensajes: rpHistorial(sel),
       contexto: contexto
     }));
   } catch (e) { turno = null; }
@@ -4468,7 +4479,7 @@ async function rpEnviarTurno() {
       await new Promise(r => setTimeout(r, 900));
       turno = await aiConTimeout(window.OpenClusterAI.conversar({
         ejercicioId: screen.aiEjercicioId,
-        mensajes: sel.rpMessages.slice(),
+        mensajes: rpHistorial(sel),
         contexto: contexto
       }));
     } catch (e) { turno = null; }
@@ -4508,7 +4519,7 @@ async function rpReintentarUltimoTurno() {
   try {
     turno = await aiConTimeout(window.OpenClusterAI.conversar({
       ejercicioId: screen.aiEjercicioId,
-      mensajes: sel.rpMessages.slice(),
+      mensajes: rpHistorial(sel),
       contexto: contexto
     }));
   } catch (e) { turno = null; }
@@ -4982,7 +4993,7 @@ async function rpVozProcesarRespuesta(texto) {
   try {
     turno = await aiConTimeout(window.OpenClusterAI.conversar({
       ejercicioId: screen.aiEjercicioId,
-      mensajes: sel.rpMessages.slice(),
+      mensajes: rpHistorial(sel),
       contexto: contexto
     }));
   } catch (e) { turno = null; }
@@ -4996,7 +5007,7 @@ async function rpVozProcesarRespuesta(texto) {
       await new Promise(r => setTimeout(r, 900));
       turno = await aiConTimeout(window.OpenClusterAI.conversar({
         ejercicioId: screen.aiEjercicioId,
-        mensajes: sel.rpMessages.slice(),
+        mensajes: rpHistorial(sel),
         contexto: contexto
       }));
     } catch (e) { turno = null; }

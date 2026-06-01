@@ -2245,6 +2245,20 @@ Te llamo porque sé que en estos casos quien convive con el problema clínico d�
         {
           type: 'practice_email',
           dynamicContact: true,
+          // Caso inventado FIJO: no se carga del pipeline (evita la espera de ~90s
+          // si el CRM no responde). Institución/contacto nuevos, no usados en el
+          // resto del curso, para que no se repita con casos ya vistos.
+          fixedContact: {
+            esDemo: true,
+            institucion: 'Clínica Los Cipreses',
+            nombre: 'Dra. Verónica Tapia',
+            cargo: 'Jefa de la Unidad de Rehabilitación',
+            ciudad: 'Chillán',
+            etapa: 'Prospecto',
+            etiquetas: ['unidad de rehabilitación nueva', 'pacientes ACV y TEC', 'inauguración 2026'],
+            productoSugerido: 'bipedestador supino con verticalización progresiva',
+            notaContexto: 'Inauguraron su unidad de rehabilitación hace tres meses (visto en prensa regional). Reciben pacientes de ACV y TEC de toda la provincia de Ñuble. La Dra. Tapia dirige el área desde su apertura (visto en LinkedIn).'
+          },
           aiEjercicioId: 'discovery-m4-apertura',
           aiOpciones: { loaderTexto: 'La IA está leyendo tu apertura…', loaderHint: 'Lee con los criterios del módulo: autoridad, motivo claro, sin pitch prematuro. ~5-10 segundos.' },
           stepLabel: 'Práctica 4.4',
@@ -3471,15 +3485,18 @@ function normalizeContact(c) {
 
 // Carga los contactos del pipeline del ejecutivo (async, solo lectura).
 async function loadPipelineContacts() {
+  const TIMEOUT_MS = 8000;  // si el CRM no responde en 8s, caemos al caso de ejemplo (no esperar ~90s)
   try {
     if (window.OpenClusterPipeline && typeof window.OpenClusterPipeline.fetchContacts === 'function') {
-      const raw = await window.OpenClusterPipeline.fetchContacts();
+      const fetchPromise = window.OpenClusterPipeline.fetchContacts();
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('pipeline-timeout')), TIMEOUT_MS));
+      const raw = await Promise.race([fetchPromise, timeoutPromise]);
       if (Array.isArray(raw) && raw.length) {
         const safe = raw.map(normalizeContact).filter(Boolean);
         if (safe.length) return safe;
       }
     }
-  } catch (e) { /* si la integración falla, caemos al modo laboratorio */ }
+  } catch (e) { /* timeout, red, o pipeline vacío → modo laboratorio */ }
   return [FALLBACK_CONTACT];
 }
 
@@ -3705,7 +3722,10 @@ async function aiPedirFeedback(ejercicioId, textoUsuario, loaderTexto, loaderHin
   sel.aiLoading = { texto: loaderTexto, hint: loaderHint };
   render();
 
-  const contexto = getActiveContact ? getActiveContact() : null;
+  // Si el ejercicio tiene un caso inventado fijo, la IA evalúa contra ESE contacto
+  // (no contra el pipeline), para que coincida con lo que ve el ejecutivo.
+  const _scr = COURSE.modules[state.moduleIdx].screens[state.screenIdx];
+  const contexto = (_scr && _scr.fixedContact) ? _scr.fixedContact : (getActiveContact ? getActiveContact() : null);
   let resultado = null;
   try {
     resultado = await aiConTimeout(window.OpenClusterAI.evaluate({
@@ -4264,21 +4284,27 @@ function renderPracticeEmail(mod, screen) {
   // ── Ejercicio con contacto dinámico (pipeline real o caso de ejemplo) ──
   let contactSelectorHtml = '';
   if (screen.dynamicContact) {
-    if (!state.contactsLoaded) {
-      ensureContactsLoaded();
-      return `<div style="text-align:center; padding:40px 20px; color:var(--oct-text-soft); font-size:14px;">
-        <div style="display:inline-block; width:22px; height:22px; border:3px solid var(--oct-ltblue); border-top-color:var(--oct-sky); border-radius:50%; animation:ocspin 0.7s linear infinite; margin-bottom:12px;"></div>
-        <div>Cargando tu pipeline…</div>
-      </div>`;
+    let contact;
+    if (screen.fixedContact) {
+      // Caso inventado fijo: directo, sin cargar el pipeline (sin espera).
+      contact = screen.fixedContact;
+    } else {
+      if (!state.contactsLoaded) {
+        ensureContactsLoaded();
+        return `<div style="text-align:center; padding:40px 20px; color:var(--oct-text-soft); font-size:14px;">
+          <div style="display:inline-block; width:22px; height:22px; border:3px solid var(--oct-ltblue); border-top-color:var(--oct-sky); border-radius:50%; animation:ocspin 0.7s linear infinite; margin-bottom:12px;"></div>
+          <div>Cargando tu pipeline…</div>
+        </div>`;
+      }
+      contact = getActiveContact();
+      if (!contact) {
+        return `<div style="text-align:center; padding:40px 20px; color:var(--oct-text-soft);">No se pudo cargar un contacto. Recarga la página para intentar de nuevo.</div>`;
+      }
+      contactSelectorHtml = renderContactSelector();
     }
-    const contact = getActiveContact();
-    if (!contact) {
-      return `<div style="text-align:center; padding:40px 20px; color:var(--oct-text-soft);">No se pudo cargar un contacto. Recarga la página para intentar de nuevo.</div>`;
-    }
-    // Materializar contexto y validaciones desde el contacto activo.
+    // Materializar contexto y validaciones desde el contacto (fijo o del pipeline).
     screen.context = screen.buildContext(contact);
     screen.validations = screen.buildValidations(contact);
-    contactSelectorHtml = renderContactSelector();
   }
 
   const key = `${state.moduleIdx}-${state.screenIdx}`;
@@ -4315,7 +4341,7 @@ function renderPracticeEmail(mod, screen) {
       </div>`;
     // Botón copiar: cuando es contacto real, el correo se puede usar de verdad.
     if (screen.dynamicContact) {
-      const c = getActiveContact();
+      const c = screen.fixedContact || getActiveContact();
       const usable = c && !c.esDemo;
       copyBtnHtml = `
         <div style="margin-top:14px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">

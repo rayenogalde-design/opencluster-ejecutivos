@@ -2968,7 +2968,7 @@ opencluster.tech</div>
           placeholder: 'Asunto: [tu asunto aquí]\n\nDr. Vega: Andrés Sepúlveda, [su cargo / relación], me sugirió que le escribiera.\n\n[Contexto: de qué hablamos, por qué pensó que esto le interesaría]\n\n[Propuesta de valor breve, en una oración]\n\n[Caso aplicado o dato breve, opcional]\n\n[CTA de interés, suave]\n\n[Firma]',
           validations: [
             { id: 'has_subject', label: 'Incluye un asunto', hint: 'Debe empezar con "Asunto:"', test: (v) => /^asunto:/im.test(v.trim()) },
-            { id: 'menciona_referente_temprano', label: 'Menciona a Andrés Sepúlveda en la primera oración del cuerpo', hint: 'La regla de oro del referido: el nombre del referente es el gancho más fuerte que tienes. Va en la primera oración, no en el tercer párrafo.', test: (v) => { let body = v.replace(/asunto:[^\n]*\n*/i, '').trim(); body = body.replace(/^[^\n:]{0,40}:\s*\n*/, '').trim(); const firstParagraph = body.split(/\n\n/)[0] || ''; return /andr[éeé]s|sep[uú]lveda|kinesiolog[íi]a (de )?cl[íi]nica norte/i.test(firstParagraph); } },
+            { id: 'menciona_referente_temprano', label: 'Menciona a Andrés Sepúlveda al principio del cuerpo (no en el tercer párrafo)', hint: 'La regla de oro del referido: el nombre del referente es el gancho más fuerte que tienes. Va en la primera oración del cuerpo, justo después del saludo.', test: (v) => { let body = v.replace(/asunto:[^\n]*\n*/i, '').trim(); let sinSaludo = body.replace(/^\s*(hola|buen[oa]s?\s+(d[íi]as?|tardes|noches)|estimad[oa]s?|distinguid[oa]s?|apreciad[oa]s?|saludos|querid[oa]s?)[^\n]*\n+/i, '').trim(); sinSaludo = sinSaludo.replace(/^[^\n:]{0,40}:\s*\n*/, '').trim(); const segmentos = sinSaludo.split(/(?:[.!?]+\s+|\n+)/).map(s => s.trim()).filter(Boolean); const arranque = segmentos.slice(0, 3).join(' '); return /andr[éeé]s|sep[uú]lveda|kinesiolog[íi]a (de )?cl[íi]nica norte/i.test(arranque); } },
             { id: 'menciona_contexto_referente', label: 'Explica DE QUÉ habló con Andrés (contexto del referente)', hint: 'No basta con "Andrés me dijo que le escribiera". Cuenta brevemente qué conversaron (transición a vertical, TEC, neurorehab) y por qué Andrés pensó que esto era para Vega.', test: (v) => /(transici[oó]n a vertical|pacientes TEC|neurorehab|verticalizaci[oó]n|conversamos|hablamos|mencionamos|conversando.{0,40}(sobre|de)|hablando.{0,40}(de|sobre))/i.test(v) },
             { id: 'menciona_vega_o_vida_nueva', label: 'Se dirige al Dr. Vega y/o menciona Clínica Vida Nueva o Antofagasta', hint: 'Demuestra que sabes con quién hablas: nombre, cargo o clínica.', test: (v) => /\b(vega|dr\.?\s*vega|dr\.?\s*felipe|vida nueva|antofagasta|unidad ambulatoria)\b/i.test(v) },
             { id: 'word_count_referido', label: 'Longitud del cuerpo entre 70 y 150 palabras', hint: 'El email a un referido es breve: el contexto del referente es corto, no un monólogo.', test: (v) => { const body = v.replace(/asunto:[^\n]*/i, '').replace(/\n+\s*[\-_=]{3,}.*$/s, ''); const w = body.trim().split(/\s+/).filter(Boolean).length; return w >= 55 && w <= 170; }, getInfo: (v) => { const body = v.replace(/asunto:[^\n]*/i, ''); return body.trim().split(/\s+/).filter(Boolean).length + ' palabras (estimado)'; } },
@@ -3652,6 +3652,11 @@ function renderPracticeEmail(mod, screen) {
   const text = sel.text || '';
   const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
 
+  // Asunto en su propio recuadro (arriba) y cuerpo abajo. La fuente única sigue
+  // siendo sel.text ("Asunto: ...\n\n cuerpo"); aquí solo lo separamos para editar.
+  const partsActual = splitEmail(text);
+  const partsPlaceholder = splitEmail(screen.placeholder || '');
+
   let feedbackHtml = '';
   let copyBtnHtml = '';
   if (sel.validated) {
@@ -3694,7 +3699,12 @@ function renderPracticeEmail(mod, screen) {
   return `
     ${contactSelectorHtml}
     <div style="background: var(--oct-softblue); border-radius: 10px; padding: 16px 20px; margin-bottom: 20px; font-size: 13.5px; line-height: 1.55;">${screen.context}</div>
-    <textarea class="write-textarea" id="practiceEmail" placeholder="${screen.placeholder}" oninput="updatePracticeEmail(this.value)" ${sel.validated ? 'disabled' : ''}>${text}</textarea>
+    <div style="margin-bottom:12px;">
+      <label style="display:block; font-size:11.5px; font-weight:700; color:var(--oct-text-soft); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px;">Asunto</label>
+      <input type="text" id="practiceSubject" value="${escAttr(partsActual.subject)}" placeholder="${escAttr(partsPlaceholder.subject)}" oninput="updateEmailField()" ${sel.validated ? 'disabled' : ''} style="width:100%; box-sizing:border-box; padding:11px 14px; border:1px solid var(--oct-border); border-radius:10px; font-family:inherit; font-size:14px; font-weight:600; color:var(--oct-navy); background:#fff;">
+    </div>
+    <label style="display:block; font-size:11.5px; font-weight:700; color:var(--oct-text-soft); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px;">Cuerpo del correo</label>
+    <textarea class="write-textarea" id="practiceEmail" placeholder="${partsPlaceholder.body}" oninput="updateEmailField()" ${sel.validated ? 'disabled' : ''}>${partsActual.body}</textarea>
     <div class="write-meta">
       <span class="${wordCount > 150 ? 'err' : (wordCount >= 60 && wordCount <= 150 ? 'ok' : (wordCount > 0 ? 'warn' : ''))}">${wordCount} palabras</span>
       <span>Idealmente entre 60 y 150</span>
@@ -3718,6 +3728,45 @@ function renderContactSelector() {
     <label style="font-size:12.5px; font-weight:600; color:var(--oct-text-soft);">Trabajando con:</label>
     <select onchange="selectContact(this.value)" style="font-family:inherit; font-size:13px; padding:7px 10px; border:1px solid var(--oct-divider); border-radius:8px; background:#fff; color:var(--oct-text); cursor:pointer; max-width:100%;">${opts}</select>
   </div>`;
+}
+
+// Separa un correo en {subject, body} a partir de una línea inicial "Asunto: ...".
+// Sirve tanto para lo que el ejecutivo escribió como para los placeholders.
+function splitEmail(text) {
+  text = text || '';
+  const m = text.match(/^[ \t]*asunto:[ \t]*([^\n]*)\n?/i);
+  if (m) {
+    return { subject: (m[1] || '').trim(), body: text.slice(m[0].length).replace(/^\n+/, '') };
+  }
+  return { subject: '', body: text };
+}
+
+// Escapa para usar dentro de un atributo HTML (value="..." / placeholder="...").
+function escAttr(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Recompone sel.text = "Asunto: ...\n\n cuerpo" cada vez que se edita el asunto o el cuerpo.
+// Mantiene intactas TODAS las validaciones (siguen leyendo sel.text con su línea "Asunto:").
+function updateEmailField() {
+  const subjEl = document.getElementById('practiceSubject');
+  const bodyEl = document.getElementById('practiceEmail');
+  const subject = subjEl ? subjEl.value.trim() : '';
+  const body = bodyEl ? bodyEl.value : '';
+  const combined = (subject ? 'Asunto: ' + subject + '\n\n' : '') + body;
+  const key = `${state.moduleIdx}-${state.screenIdx}`;
+  const sel = state.selections[key] || { text: '', validated: false };
+  sel.text = combined;
+  state.selections[key] = sel;
+  saveState();
+  const w = combined.trim().split(/\s+/).filter(Boolean).length;
+  const metas = document.querySelectorAll('.write-meta span');
+  if (metas.length) {
+    metas[0].textContent = `${w} palabras`;
+    metas[0].className = w > 150 ? 'err' : (w >= 60 && w <= 150 ? 'ok' : (w > 0 ? 'warn' : ''));
+  }
+  updateFooterNav(COURSE.modules[state.moduleIdx], COURSE.modules[state.moduleIdx].screens[state.screenIdx]);
 }
 
 function updatePracticeEmail(value) {

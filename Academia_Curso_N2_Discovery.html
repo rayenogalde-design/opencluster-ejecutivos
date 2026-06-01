@@ -8,6 +8,7 @@
 <script src="./pipeline-integration.js" onerror="window.__ocPipelineMissing=true;"></script>
 <script src="./progress-integration.js" onerror="window.__ocProgressMissing=true;"></script>
 <script src="./ai-integration.js" onerror="window.__ocAIMissing=true;"></script>
+<script src="./audio-integration.js" onerror="window.__ocAudioMissing=true;"></script>
 <style>
 /* ─────────────────────────────────────────────────────────────
    VARIABLES (DESIGN_SYSTEM de OpenCluster)
@@ -464,6 +465,10 @@ input, textarea {
   border-radius: 16px;
   padding: 36px 40px;
   animation: fadeUp 0.35s cubic-bezier(0.4,0,0.2,1);
+  /* Blindaje: evita que extensiones, reader mode o print preview reformateen el contenido en columnas */
+  column-count: 1 !important;
+  column-width: auto !important;
+  columns: auto !important;
 }
 
 .screen-card h2 {
@@ -1658,7 +1663,7 @@ const COURSE = {
           stepTitle: 'Bienvenido al segundo curso',
           body: `
             <p>Este es el segundo curso de la Academia OpenCluster. El primero te enseñó a escribir cold emails que abren la puerta. Este curso te enseña qué hacer después: <strong>las llamadas telefónicas que deciden si esa institución se convierte o no en cliente</strong>.</p>
-            <p>Una aclaración importante de entrada: en OpenCluster las discovery calls casi nunca son una sola llamada con el decisor. Son un <strong>camino de llamadas</strong>. Llamas a una clínica y te atiende una mesa de llamadas. Llamas a un colegio y te atiende la secretaria de recepción. Llamas a una ortopedia y te atiende el vendedor del mesón. Llamas a un hogar de ancianos y te atiende la enfermera a cargo. <strong>El director, el jefe médico, el dueño, la coordinadora PIE: están al final de un camino, no al inicio</strong>.</p>
+            <p>Una aclaración importante de entrada: en OpenCluster las discovery calls casi nunca son una sola llamada con el decisor. Son un <strong>camino de llamadas</strong>. Llamas a una clínica y te atiende una mesa de llamadas. Llamas a un colegio y te atiende la secretaria de recepción. Llamas a una ortopedia y te atiende el vendedor del mesón. Llamas a un hogar de ancianos y te atiende la enfermera a cargo. <strong>El director, el jefe médico, el dueño, la coordinadora PIE (Programa de Integración Escolar): están al final de un camino, no al inicio</strong>.</p>
             <p>Este curso te enseña a recorrer ese camino con disciplina. Cómo conseguir el contacto directo del decisor con los intermediarios (módulo 2), cómo conducir la llamada con el decisor una vez que llegas a él (módulos 3 al 6), y cómo cerrarla agendando una reunión por Google Meet (módulo 7). Cada etapa requiere habilidades distintas y cada una tiene su data detrás.</p>
             <div class="callout data">
               <div class="callout-icon">i</div>
@@ -1728,9 +1733,9 @@ const COURSE = {
           question: 'En una llamada al Dr. Pérez, jefe de la Unidad de Neurorehabilitación de la Mutual, ¿cuál de estas frases es DISCOVERY (no pitch)?',
           options: [
             { text: 'En OpenCluster contamos con bipedestadores supinos Talla 2 acreditados europeamente, con sistema de verticalización desde 0°.', correct: false, explain: 'Esto es pitch. Está hablando del producto sin haber preguntado nada sobre la realidad clínica del Dr. Pérez. El cliente todavía no tiene contexto para procesar esa información.' },
-            { text: 'Doctor, sé que la transición a vertical es uno de los momentos clínicos más sensibles en TEC. ¿Cómo manejan ustedes hoy esa fase con sus pacientes?', correct: true, explain: 'Correcto. Esto es discovery. Demuestra que conoce el contexto clínico, devuelve una pregunta abierta, y pone al Dr. Pérez en el rol de protagonista. Lo invita a hablar de SU realidad, no de OpenCluster.' },
+            { text: 'Doctor, sé que la transición a vertical es uno de los momentos clínicos más sensibles en el TEC (traumatismo encéfalo-craneano). ¿Cómo manejan ustedes hoy esa fase con sus pacientes?', correct: true, explain: 'Correcto. Esto es discovery. Demuestra que conoce el contexto clínico, devuelve una pregunta abierta, y pone al Dr. Pérez en el rol de protagonista. Lo invita a hablar de SU realidad, no de OpenCluster.' },
             { text: 'Le quiero contar que tenemos varios casos de éxito en mutuales similares a la suya, con excelentes resultados.', correct: false, explain: 'Esto es pitch sin contexto. "Casos de éxito" sin saber cuál es el problema del Dr. Pérez es ruido. La prueba importa, pero solo después de haber entendido el problema, no como apertura.' },
-            { text: 'Antes de hablar de nuestro equipamiento, quería ofrecerle una demostración por Google Meet.', correct: false, explain: 'Esto es un CTA prematuro, no discovery. Está pidiendo tiempo (una reunión) sin haber entendido todavía si hay un problema que justifique esa reunión.' }
+            { text: 'Antes de hablar de nuestro equipamiento, quería ofrecerle una demostración por Google Meet.', correct: false, explain: 'Esto es un CTA (llamado a la acción) prematuro, no discovery. Está pidiendo tiempo (una reunión) sin haber entendido todavía si hay un problema que justifique esa reunión.' }
           ],
           feedback: {
             correct: '<strong>Excelente.</strong> Discovery es siempre devolver el foco al cliente: su realidad, su contexto, su problema. Las otras tres opciones hablan de OpenCluster o piden algo del Dr. Pérez sin haber ganado el derecho a pedirlo.',
@@ -1752,7 +1757,7 @@ const COURSE = {
           stepLabel: 'Lección 2.1',
           stepTitle: 'No es una llamada, es un camino',
           body: `
-            <p>La primera llamada que haces a una institución casi nunca es con el decisor. Esto es una verdad práctica del mundo B2B que, si no la internalizas, te lleva a frustrarte llamada tras llamada.</p>
+            <p>La primera llamada que haces a una institución casi nunca es con el decisor. Esto es una verdad práctica del mundo B2B (venta entre empresas) que, si no la internalizas, te lleva a frustrarte llamada tras llamada.</p>
 
             <p>El decisor — el jefe médico, la coordinadora PIE, el director del hogar, el dueño de la ortopedia — está protegido por una estructura. A veces son <strong>filtros</strong> deliberados (mesa de llamadas, recepcionistas), a veces son <strong>intermediarios funcionales</strong> que atienden el teléfono porque ese es su rol (terapeutas, enfermeras, vendedores de mesón). En ambos casos, tu trabajo en esa primera llamada NO es vender ni hacer discovery completo. Es <strong>otra cosa</strong>:</p>
 
@@ -1842,7 +1847,7 @@ const COURSE = {
 
             <ul>
               <li><strong>Morgan J. Ingram</strong> (sales leader citado en docenas de papers): <em>"Interrumpe el patrón de preguntas del intermediario con un pedido directo y rápido. Aumenta tus chances de ser pasado."</em></li>
-              <li><strong>Sam Holeman</strong> (top SDR, B2B): <em>"Cuando hablo con un intermediario, hablo como si ya conociera al dueño. Hablo como si ya tuviera una reunión con esa persona."</em></li>
+              <li><strong>Sam Holeman</strong> (top SDR —Sales Development Representative—, B2B): <em>"Cuando hablo con un intermediario, hablo como si ya conociera al dueño. Hablo como si ya tuviera una reunión con esa persona."</em></li>
               <li>Los intermediarios deciden <strong>en 3 a 5 segundos</strong> si te pasan o no. Toda explicación que extienda esa decisión te quita probabilidad de éxito.</li>
               <li><strong>Estudio Avoma sobre llamadas comerciales</strong>: cuanto menos muletillas (<em>"emm"</em>, <em>"este"</em>, <em>"o sea"</em>, <em>"claro, claro"</em>), más confianza percibe el receptor sobre el conocimiento del ejecutivo. <strong>Las muletillas son leídas como falta de preparación, no como naturalidad</strong>.</li>
               <li><strong>Stanford GSB</strong> en su investigación sobre comunicación profesional: las muletillas <em>"reducen la credibilidad del hablante. Los oyentes las interpretan como signo de inseguridad y falta de preparación"</em>.</li>
@@ -1899,7 +1904,7 @@ const COURSE = {
 
             <div class="email-example good">
               <span class="email-example-tag">✓ Con un kinesiólogo (Centro de rehabilitación)</span>
-              <div class="email-example-body">"Hola [nombre], soy [tu nombre] de OpenCluster Tech. Trabajamos en equipamiento de bipedestación para perfiles TEC y ACV.
+              <div class="email-example-body">"Hola [nombre], soy [tu nombre] de OpenCluster Tech. Trabajamos en equipamiento de bipedestación para perfiles TEC y ACV (accidente cerebrovascular).
 
 Te llamo porque sé que en estos casos quien convive con el problema clínico día a día son ustedes los kinesiólogos, mucho más que las jefaturas. Antes de pedir hablar con la dirección clínica, me serviría entender: en el centro, ¿qué les está costando hoy en la transición a vertical? ¿Cuentan con bipedestador supino disponible para perfil TEC?"</div>
             </div>
@@ -1915,10 +1920,10 @@ Te llamo porque sé que en estos casos quien convive con el problema clínico d�
 
             <div class="email-example good">
               <span class="email-example-tag">✓ El cierre que abre la puerta</span>
-              <div class="email-example-body">"Te agradezco. Lo que escuchaste es exactamente lo que vemos en otros centros con perfil parecido. ¿Tendría sentido que conversemos esto con tu jefatura clínica también? Si tú vieras valor, me ayudarías un montón si me das el contacto directo y le adelantas que vamos a coordinar."</div>
+              <div class="email-example-body">"Te agradezco. Lo que escuchaste es exactamente lo que vemos en otros centros con perfil parecido. Si lo que conversamos te hace sentido, lo ideal sería mostrárselo también a tu jefatura clínica. ¿Te parece si me das su contacto directo y le adelantas que vamos a coordinar?"</div>
             </div>
 
-            <p>El cierre tiene un elemento crítico: <strong>"si tú vieras valor"</strong>. Estás pidiendo el contacto del jefe, pero ofreciéndole al kinesiólogo el rol de juez. Si él vio valor en la conversación, te va a dar el contacto Y va a hablarle bien al jefe antes de tu llamada. Eso es <strong>activar un campeón interno</strong>.</p>
+            <p>El cierre tiene un elemento crítico: <strong>"si lo que conversamos te hace sentido"</strong>. Estás pidiendo el contacto del jefe, pero ofreciéndole al kinesiólogo el rol de juez. Si él vio valor en la conversación, te va a dar el contacto Y va a hablarle bien al jefe antes de tu llamada. Eso es <strong>activar un campeón interno</strong>.</p>
 
             <div class="callout warning">
               <div class="callout-icon">✕</div>
@@ -2106,11 +2111,11 @@ Te llamo porque sé que en estos casos quien convive con el problema clínico d�
             <ul>
               <li><strong>3-4 preguntas de situación</strong> (para confirmar el contexto que ya intuyes por tu investigación previa).</li>
               <li><strong>4-5 preguntas de problema</strong> (para destapar los pain points específicos de la institución).</li>
-              <li><strong>3-4 preguntas de implicación</strong> (para hacer sentir las consecuencias). <em>Estas son las que veremos a fondo en el módulo 4 con el framework SPIN.</em></li>
+              <li><strong>3-5 preguntas de implicación</strong> (para hacer sentir las consecuencias). <em>Estas son las que veremos a fondo más adelante, con el framework SPIN.</em></li>
               <li><strong>2-3 preguntas de cierre / next steps</strong> (sobre el proceso de decisión, el timing, quién más participa).</li>
             </ul>
 
-            <p>Total: <strong>12-16 preguntas escritas</strong>, de las cuales en la llamada harás 11-14 según vaya el diálogo. Tener más que las que vas a usar es señal de buena preparación, no de exceso.</p>
+            <p>Total: <strong>12-17 preguntas escritas</strong>, de las cuales en la llamada harás 11-14 según vaya el diálogo. Tener más que las que vas a usar es señal de buena preparación, no de exceso.</p>
 
             <div class="callout warning">
               <div class="callout-icon">✕</div>
@@ -2126,7 +2131,7 @@ Te llamo porque sé que en estos casos quien convive con el problema clínico d�
           stepLabel: 'Ejercicio 3.4',
           stepTitle: 'Preparación bien hecha',
           question: 'Vas a llamar a la Sra. Soto, Coordinadora PIE del Colegio Antares en Maipú. ¿Cuáles de estas acciones SÍ deberías hacer antes de marcar?',
-          hint: 'Marca todas las que apliquen. Recuerda: la preparación es esencial pero acotada (10-15 minutos), y debe enfocarse en información útil para la conversación.',
+          hint: 'Marca todas las que apliquen. Distingue lo que de verdad te prepara para la conversación de lo que es procrastinar o prepararte para pitchear.',
           options: [
             { text: 'Revisar el sitio web del Colegio Antares: programa PIE, perfiles diagnósticos atendidos, equipo.', correct: true },
             { text: 'Buscar el LinkedIn de la Sra. Soto para ver cuánto tiempo lleva en el cargo.', correct: true },
@@ -2143,7 +2148,7 @@ Te llamo porque sé que en estos casos quien convive con el problema clínico d�
         }
       ]
     },
-    /* ─── MÓDULO 3: LOS PRIMEROS 90 SEGUNDOS ───────────────── */
+    /* ─── MÓDULO 4: LOS PRIMEROS 90 SEGUNDOS ───────────────── */
     {
       id: 'm4',
       title: 'Los primeros 90 segundos',
@@ -2655,7 +2660,7 @@ Te llamo porque sé que en estos casos quien convive con el problema clínico d�
               </tbody>
             </table>
 
-            <p><strong>Distribución sugerida de las 11-14 preguntas:</strong></p>
+            <p><strong>Distribución sugerida por tipo</strong> (las cantidades exactas varían según la conversación; apunta a un total de 11-14):</p>
             <ul>
               <li>2 a 4 de Situación</li>
               <li>3 a 5 de Problema</li>
@@ -2669,7 +2674,7 @@ Te llamo porque sé que en estos casos quien convive con el problema clínico d�
           stepLabel: 'Ejercicio 5.7',
           stepTitle: 'Clasifica las preguntas SPIN',
           question: 'De las siguientes preguntas dirigidas a un Hogar de ancianos, ¿cuáles son preguntas de IMPLICACIÓN (las más poderosas)?',
-          hint: 'Marca todas las que apliquen. Recuerda: las preguntas de Implicación hacen que el cliente sienta las CONSECUENCIAS del problema, no solo el problema en sí.',
+          hint: 'Marca todas las que apliquen. Para cada una, pregúntate de qué tipo SPIN es antes de decidir.',
           options: [
             { text: '¿Cuántos residentes tienen actualmente en cama prolongada?', correct: false },
             { text: 'Cuando aparece una escara grado II, ¿cuánto tiempo de enfermería adicional consume su tratamiento por semana?', correct: true },
@@ -2888,14 +2893,14 @@ Te llamo porque sé que en estos casos quien convive con el problema clínico d�
           stepLabel: 'Ejercicio · Escuchar',
           stepTitle: 'Identifica la escucha activa',
           question: 'El cliente te dice: "la verdad es que con la dotación que tenemos, dar la atención que quisiéramos es imposible". ¿Cuáles de estas respuestas son ejemplos de escucha activa bien aplicada?',
-          hint: 'Marca todas las que sean escucha activa real (parafrasear, tirar del hilo, reflejar o usar el silencio). Descarta las que sean pitch disfrazado o que ignoren lo que el cliente dijo.',
+          hint: 'Marca todas las que demuestren escucha activa real. Descarta las que rompen la escucha: saltar a vender o desviar la conversación.',
           options: [
-            { text: '"¿A qué se refiere con que es imposible? Cuénteme cómo se ve eso en un día normal." (tirar del hilo)', correct: true },
-            { text: '"Justamente para eso tenemos equipos que optimizan el trabajo del personal, le cuento..." (pitch inmediato)', correct: false },
-            { text: '"Entonces lo que entiendo es que el problema no es de voluntad del equipo sino de recursos para ejecutar. ¿Es así?" (parafrasear)', correct: true },
-            { text: '"Suena agotador para el equipo estar consciente de eso todos los días." (reflejar la emoción)', correct: true },
-            { text: '"Ya veo. Cambiando de tema, ¿cuántas camas tienen en total?" (ignora lo dicho y vuelve a datos)', correct: false },
-            { text: 'Esperar 2-3 segundos en silencio para que el cliente siga desarrollando la idea. (el silencio)', correct: true }
+            { text: '"¿A qué se refiere con que es imposible? Cuénteme cómo se ve eso en un día normal."', correct: true },
+            { text: '"Justamente para eso tenemos equipos que optimizan el trabajo del personal, le cuento..."', correct: false },
+            { text: '"Entonces lo que entiendo es que el problema no es de voluntad del equipo sino de recursos para ejecutar. ¿Es así?"', correct: true },
+            { text: '"Suena agotador para el equipo estar consciente de eso todos los días."', correct: true },
+            { text: '"Ya veo. Cambiando de tema, ¿cuántas camas tienen en total?"', correct: false },
+            { text: 'Esperar 2-3 segundos en silencio para que el cliente siga desarrollando la idea.', correct: true }
           ],
           feedback: {
             correct: '<strong>Excelente.</strong> Las cuatro correctas son las cuatro técnicas: tirar del hilo, parafrasear, reflejar y el silencio. Las dos incorrectas son los antipatrones clásicos: saltar a pitchear apenas el cliente menciona un dolor, e ignorar lo que dijo para volver a tu lista de preguntas de Situación.',
@@ -2909,7 +2914,7 @@ Te llamo porque sé que en estos casos quien convive con el problema clínico d�
     {
       id: 'm6',
       title: 'Cuando hay resistencia',
-      desc: 'Las 4 objeciones más comunes en OpenCluster y cómo no caer en defensa.',
+      desc: 'Las 5 objeciones más comunes en OpenCluster y cómo no caer en defensa.',
       time: '15 min',
       screens: [
         {
@@ -2946,7 +2951,7 @@ Te llamo porque sé que en estos casos quien convive con el problema clínico d�
               </div>
             </div>
 
-            <p>En las próximas pantallas veremos los cuatro tipos de objeción más frecuentes en OpenCluster, con respuestas concretas para cada uno.</p>
+            <p>En las próximas pantallas veremos los cinco tipos de objeción más frecuentes en OpenCluster, con respuestas concretas para cada uno.</p>
           `
         },
         {
@@ -3064,10 +3069,10 @@ Te llamo porque sé que en estos casos quien convive con el problema clínico d�
         },
         {
           type: 'quiz_multi',
-          stepLabel: 'Ejercicio 6.4',
+          stepLabel: 'Ejercicio 6.5',
           stepTitle: 'Identifica los antipatrones',
           question: '¿Cuáles de estas respuestas a "los productos son muy caros" son ANTIPATRONES (NO hacer)?',
-          hint: 'Marca todas las que son ANTIPATRONES. Recuerda: defender el precio o la calidad pone al ejecutivo en posición pasiva. La respuesta correcta valida, pregunta y redirige.',
+          hint: 'Marca todas las que son ANTIPATRONES. Pregúntate cuáles dejan al ejecutivo defendiéndose y cuáles lo mantienen conduciendo la conversación.',
           options: [
             { text: '"Pero la calidad de nuestros productos es muy superior a la competencia."', correct: true },
             { text: '"Entiendo. Para entenderlo bien, ¿caro comparado con qué referencia? ¿Con otra cotización, con el presupuesto disponible, o con lo que esperaban?"', correct: false },
@@ -3085,8 +3090,8 @@ Te llamo porque sé que en estos casos quien convive con el problema clínico d�
         {
           type: 'practice_email',
           aiEjercicioId: 'discovery-m6-objecion',
-          aiOpciones: { loaderTexto: 'La IA está evaluando tu manejo de objeción…', loaderHint: 'Verifica el framework validar → reformular → demostrar. ~5-10 segundos.' },
-          stepLabel: 'Práctica 6.5',
+          aiOpciones: { loaderTexto: 'La IA está evaluando tu manejo de objeción…', loaderHint: 'Verifica el marco validar → preguntar → redirigir. ~5-10 segundos.' },
+          stepLabel: 'Práctica 6.6',
           stepTitle: 'El caso de Germán',
           context: '<strong>Contexto real:</strong> Germán está en reunión por Meet con el <strong>Dr. Soto</strong>, dueño y director médico de la <strong>Clínica Andes</strong>. Ya presentó la propuesta de equipamiento de bipedestación. El Dr. Soto, después de escuchar, dice:<br><br><em>"Mira, te agradezco la presentación, pero los productos son muy caros. Estamos viendo otras opciones que cuestan la mitad."</em><br><br><strong>Tu misión:</strong> escribe la respuesta que Germán debería dar al Dr. Soto. Debe seguir el marco aprendido: validar, preguntar, redirigir con Implicación.',
           placeholder: 'Doctor Soto, entiendo perfectamente...\n\n[Validación]\n\n[Pregunta para entender el contexto del "caro"]\n\n[Redirección a una pregunta de Implicación sobre el problema clínico]',
@@ -3195,7 +3200,7 @@ Te llamo porque sé que en estos casos quien convive con el problema clínico d�
               <li><strong>Notas en viñetas, no en oraciones.</strong> Si vas a tener apuntes a la vista, que sean palabras clave o frases muy cortas. Algo que puedas LEER de reojo, no leer literalmente. Mal: <em>"Quería presentarle nuestro bipedestador supino Talla 2, que tiene un sistema de verticalización progresiva desde 0°..."</em>. Bien: <em>"Bipedestador supino · 0° → 90° · perfil TEC adulto"</em>.</li>
               <li><strong>Segunda pantalla para los apuntes.</strong> Si tienes un segundo monitor o un iPad, pon ahí las notas. Tu pantalla principal queda libre para el Meet, y la mirada se mantiene cerca de la cámara.</li>
               <li><strong>Practica antes los primeros 90 segundos.</strong> El inicio de la reunión es lo más importante. Si tienes los primeros 90 segundos memorizados (no leídos), arrancas con confianza y conexión, y el resto fluye.</li>
-              <li><strong>Mira a la cámara, no a la imagen del cliente en pantalla.</strong> Es contraintuitivo, pero el cliente NO te ve mirándolo cuando miras su carita en pantalla. Te ve mirándolo cuando miras la cámara. Truco: sticker al lado de la lente como recordatorio.</li>
+              <li><strong>Mira a la cámara, no a la imagen del cliente en pantalla.</strong> Es contraintuitivo, pero el cliente NO te ve mirándolo cuando miras su imagen en pantalla. Te ve mirándolo cuando miras la cámara. Truco: sticker al lado de la lente como recordatorio.</li>
               <li><strong>Pausas son OK.</strong> Si necesitas pensar 2-3 segundos antes de responder, hazlo. Eso se ve profesional. Mucho mejor que improvisar rellenos vacíos ("emm", "claro, sí, claro...").</li>
             </ol>
           `
@@ -3251,7 +3256,7 @@ Te llamo porque sé que en estos casos quien convive con el problema clínico d�
               <div class="callout-icon">★</div>
               <div class="callout-body">
                 <div class="callout-label">La regla de los 5 minutos</div>
-                <div class="callout-text">Apenas cuelgas, <strong>antes de hacer la siguiente llamada</strong>, registra lo que pasó en el CRM. No "después", no "al final del día". Ahora, con la conversación caliente. Lo que no registras en esos 5 minutos, se pierde — y con ello, parte del valor de la llamada que acabas de hacer.</div>
+                <div class="callout-text">Apenas cuelgas, <strong>antes de hacer la siguiente llamada</strong>, registra lo que pasó en el CRM (Customer Relationship Management, el sistema donde vive tu pipeline de contactos). No "después", no "al final del día". Ahora, con la conversación caliente. Lo que no registras en esos 5 minutos, se pierde — y con ello, parte del valor de la llamada que acabas de hacer.</div>
               </div>
             </div>
 
@@ -3307,7 +3312,7 @@ Te llamo porque sé que en estos casos quien convive con el problema clínico d�
         {
           type: 'practice_roleplay_voz',
           aiEjercicioId: 'discovery-m7-cierre',
-          stepLabel: 'Práctica final',
+          stepLabel: 'Práctica · Cierre al Meet',
           stepTitle: 'El cierre de tu discovery — llamada en vivo',
           context: '<strong>Contexto:</strong> Vas a tener una llamada de discovery con un decisor de tu pipeline. Tu objetivo: hacer rapport, identificar la necesidad real, manejar las objeciones que aparezcan, y cerrar con un próximo paso concreto (fecha + hora + plataforma).<br><br>Este ejercicio es <strong>por voz</strong>: hablas, el decisor te responde en voz alta, tú respondes en voz alta. Si tu navegador no lo soporta o prefieres texto, puedes cambiar el modo arriba.',
           personajeNombre: 'Decisor',
@@ -3315,7 +3320,7 @@ Te llamo porque sé que en estos casos quien convive con el problema clínico d�
           inputPlaceholder: 'Escribe lo que le dices al decisor…'
         }
       ]
-    }
+    },
   ]
 };
 /* ═════════════════════════════════════════════════════════════
@@ -3351,7 +3356,7 @@ const FALLBACK_CONTACT = {
   notaContexto: 'Programa PIE recién iniciado en 2026. Inauguraron el aula sensorial el mes pasado (visto en Instagram). La coordinadora lleva 8 meses en el cargo (visto en LinkedIn). Colegio particular subvencionado con financiamiento SEP.'
 };
 
-// Etapas consideradas "frías": aptas para practicar un cold email inicial.
+// Etapas consideradas "frías": aptas para practicar una primera llamada de discovery.
 const COLD_STAGES = ['prospecto', 'nuevo', 'sin contactar', 'por contactar', 'lead', 'frío', 'frio', 'identificado'];
 
 // Palabras genéricas que NO sirven para detectar mención de la institución.
@@ -3467,7 +3472,7 @@ const AI_FORBIDDEN_TERMS = /\b(tu energ[ií]a|tu tono emocional|tu emoci[óo]n|t
 
 function aiFilterTextDeOpinionDeVoz(t) {
   if (!t || typeof t !== 'string') return t || '';
-  return t.replace(AI_FORBIDDEN_TERMS, '[se omite: la IA no puede opinar sobre voz]');
+  return t.replace(AI_FORBIDDEN_TERMS, '').replace(/\s{2,}/g, ' ').trim();
 }
 
 function aiFilterArrayDeOpinionDeVoz(arr) {
@@ -3554,6 +3559,18 @@ const AI_STATE = {
 
 const AI_COOLDOWN_MS = 5000;
 const AI_STRIKE_LIMIT = 3;
+const AI_TIMEOUT_MS = 30000; // si la IA no responde en 30s, se trata como fallo (evita loader infinito)
+
+/* Envuelve cualquier promesa de IA contra un timeout. Si la promesa nunca
+   resuelve (se cuelga), igual devuelve null y cae en el path de error/strike/cooldown.
+   NUNCA deja el loader girando para siempre. */
+function aiConTimeout(promesa, ms) {
+  ms = ms || AI_TIMEOUT_MS;
+  return Promise.race([
+    Promise.resolve(promesa).catch(() => null),
+    new Promise((resolve) => setTimeout(() => resolve(null), ms))
+  ]);
+}
 
 function aiIsModuleInReplay() {
   // Replay = el ejecutivo ya completó este módulo antes y volvió a entrar a repasar.
@@ -3611,11 +3628,11 @@ async function aiPedirFeedback(ejercicioId, textoUsuario, loaderTexto, loaderHin
   const contexto = getActiveContact ? getActiveContact() : null;
   let resultado = null;
   try {
-    resultado = await window.OpenClusterAI.evaluate({
+    resultado = await aiConTimeout(window.OpenClusterAI.evaluate({
       ejercicioId: ejercicioId,
       texto: textoUsuario,
       contexto: contexto
-    });
+    }));
   } catch (e) { resultado = null; }
 
   AI_STATE.busy[key] = false;
@@ -3882,6 +3899,7 @@ function renderHome() {
 
   return `
     <div class="home-hero">
+      <a href="./Academia_OpenCluster.html" style="display:inline-flex; align-items:center; gap:6px; margin-bottom:16px; color:var(--oct-navy); text-decoration:none; font-size:13px; font-weight:600;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>Volver a la Academia</a>
       <div class="home-eyebrow">Curso · Comunicación comercial</div>
       <h1 class="home-title">Discovery telefónico: la conversación que define el negocio</h1>
       <p class="home-lede">Aprende a conducir el primer llamado a una institución para que se convierta en una reunión real. Basado en investigación de Gong (519.000 llamadas), Neil Rackham (35.000 llamadas analizadas), HubSpot y Chorus.</p>
@@ -4344,11 +4362,11 @@ async function rpEnviarTurno() {
   const contexto = getActiveContact ? getActiveContact() : null;
   let turno = null;
   try {
-    turno = await window.OpenClusterAI.conversar({
+    turno = await aiConTimeout(window.OpenClusterAI.conversar({
       ejercicioId: screen.aiEjercicioId,
       mensajes: sel.rpMessages.slice(),
       contexto: contexto
-    });
+    }));
   } catch (e) { turno = null; }
 
   sel.rpLoading = false;
@@ -4383,11 +4401,11 @@ async function rpReintentarUltimoTurno() {
   const contexto = getActiveContact ? getActiveContact() : null;
   let turno = null;
   try {
-    turno = await window.OpenClusterAI.conversar({
+    turno = await aiConTimeout(window.OpenClusterAI.conversar({
       ejercicioId: screen.aiEjercicioId,
       mensajes: sel.rpMessages.slice(),
       contexto: contexto
-    });
+    }));
   } catch (e) { turno = null; }
 
   sel.rpLoading = false;
@@ -4431,11 +4449,11 @@ async function rpPedirEvaluacionFinal() {
 
   let resultado = null;
   try {
-    resultado = await window.OpenClusterAI.evaluate({
+    resultado = await aiConTimeout(window.OpenClusterAI.evaluate({
       ejercicioId: screen.aiEjercicioId,
       texto: transcript,
       contexto: contexto
-    });
+    }));
   } catch (e) { resultado = null; }
 
   sel.rpEvalLoading = false;
@@ -4544,7 +4562,7 @@ function renderPracticeRoleplayVoz(mod, screen) {
   if (!sel.rpMessages) {
     sel.rpMessages = [{ rol: 'persona', texto: screen.mensajeInicial }];
     sel.rpEnded = false;
-    sel.rpMode = 'voz'; // o 'texto'
+    sel.rpMode = ((typeof window !== 'undefined') && (window.SpeechRecognition || window.webkitSpeechRecognition)) ? 'voz' : 'texto';
     sel.rpListening = false;
     sel.rpLoading = false;
     sel.rpSpeaking = false;
@@ -4760,11 +4778,11 @@ async function rpVozProcesarRespuesta(texto) {
   const t0 = Date.now();
   let turno = null;
   try {
-    turno = await window.OpenClusterAI.conversar({
+    turno = await aiConTimeout(window.OpenClusterAI.conversar({
       ejercicioId: screen.aiEjercicioId,
       mensajes: sel.rpMessages.slice(),
       contexto: contexto
-    });
+    }));
   } catch (e) { turno = null; }
   const elapsed = Date.now() - t0;
   if (elapsed > 18000) __ocNetworkSlow = true;
@@ -4850,7 +4868,7 @@ function renderPracticeVozBloques(mod, screen) {
   let grabacionHtml = '';
   if (!sttSupported) {
     grabacionHtml = `<div class="ai-error"><div style="flex-shrink:0; width:18px; height:18px; border-radius:50%; background:var(--amber); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:11px;">!</div>
-      <div style="flex:1;"><strong>Tu navegador no soporta grabación de voz.</strong><div style="margin-top:6px; font-size:12px; color:var(--oct-text-soft);">Prueba con Chrome o Edge en desktop. Si no puedes, lee el guion en voz alta sin grabación y completa el checklist de autoevaluación de abajo.</div></div></div>`;
+      <div style="flex:1;"><strong>Este ejercicio requiere grabar tu voz, y tu navegador no lo soporta.</strong><div style="margin-top:6px; font-size:12px; color:var(--oct-text-soft);">La grabación es obligatoria para completar esta práctica. Ábrela en Chrome o Edge de escritorio, con el micrófono habilitado, para poder grabarte y avanzar.</div></div></div>`;
   } else if (!sel.vozGrabado) {
     grabacionHtml = `<div class="voz-controls">
       <button class="btn-mic ${sel.vozListening ? 'listening' : ''}" onclick="vozGrabarToggle()" aria-label="Grabar">
@@ -4888,7 +4906,7 @@ function renderPracticeVozBloques(mod, screen) {
       <!-- BLOQUE 3 — Autoevaluación guiada -->
       <div class="voz-bloque voz-bloque-3">
         <div class="voz-bloque-header">Autoevaluación · solo tú puedes juzgar esto</div>
-        <div class="voz-honesty">Estas dimensiones requieren oído humano. La IA no puede medirlas — y aprender a escucharte a ti mismo es la habilidad que más vas a usar en tu carrera.</div>
+        <div class="voz-honesty">Estas dimensiones las juzgas tú: requieren tu propio oído. Aprender a escucharte es la habilidad que más vas a usar en tu carrera.</div>
         ${sel.vozAudioURL ? `<div style="margin-bottom:12px;"><audio controls src="${sel.vozAudioURL}" style="width:100%; max-width:420px;"></audio></div>` : ''}
         <div class="voz-checklist">
           ${renderVozChecklistItem('energia', 'Energía', sel.vozChecklist.energia)}
@@ -5052,6 +5070,19 @@ function vozGrabarToggle() {
           try {
             const blob = new Blob(__ocVozChunks, { type: 'audio/webm' });
             sel.vozAudioURL = URL.createObjectURL(blob);
+            // Subir la grabación para que la jefatura pueda reescucharla desde el panel de progreso.
+            // Desacoplado: no-op si audio-integration.js no está conectado. Fire-and-forget: no bloquea la UI.
+            if (!window.__ocAudioMissing && window.OpenClusterAcademyAudio && typeof window.OpenClusterAcademyAudio.upload === 'function') {
+              try {
+                window.OpenClusterAcademyAudio.upload({
+                  curso: 'discovery',
+                  ejercicioId: 'discovery-mvoz-grabacion',
+                  blob: blob,
+                  mime: 'audio/webm',
+                  fecha: new Date().toISOString()
+                });
+              } catch (e) { /* la subida nunca rompe el ejercicio */ }
+            }
             saveState();
             render();
           } catch(e){}
@@ -5096,11 +5127,11 @@ async function vozPedirBloque2() {
   const contexto = getActiveContact ? getActiveContact() : null;
   let r = null;
   try {
-    r = await window.OpenClusterAI.evaluate({
+    r = await aiConTimeout(window.OpenClusterAI.evaluate({
       ejercicioId: 'discovery-mvoz-contenido',
       texto: sel.vozTranscript,
       contexto: contexto
-    });
+    }));
   } catch (e) { r = null; }
   sel.vozBloque2Loading = false;
   if (r) {
@@ -5240,6 +5271,10 @@ function renderCourseComplete() {
         <div class="stat"><div class="stat-label">Módulos</div><div class="stat-value">${COURSE.modules.length}/${COURSE.modules.length}</div></div>
         <div class="stat"><div class="stat-label">Estado</div><div class="stat-value" style="color: var(--green);">Completo</div></div>
       </div>
+      <a href="./Academia_OpenCluster.html" style="display:inline-flex; align-items:center; gap:8px; margin-top:26px; background:var(--oct-navy); color:#fff; text-decoration:none; padding:13px 26px; border-radius:10px; font-family:inherit; font-size:14px; font-weight:700; transition:transform 0.1s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        Volver a la Academia
+      </a>
     </div>`;
 }
 

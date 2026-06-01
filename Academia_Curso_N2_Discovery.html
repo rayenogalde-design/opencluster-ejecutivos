@@ -4648,7 +4648,36 @@ function rpRenderEvalFinal(sel, screen, _ignored) {
    ROLEPLAY POR VOZ (Pattern C — M7 cierre del discovery)
    Web Speech API + STT + TTS por turnos. Fallback automático a texto.
    ═════════════════════════════════════════════════════════════ */
+// Género de la voz por personaje (para que la síntesis hable mujer/hombre).
+// El M7 (decisor) varía A/B según segmento → se deja en voz por defecto.
+const RP_VOZ_GENERO = {
+  'discovery-m2-filtro': 'f',     // Patricia
+  'discovery-sim-filtro': 'f',    // Jeannette
+  'discovery-sim-aliado': 'm',    // Felipe
+  'discovery-sim-apertura': 'f',  // Sra. Carmen
+  'discovery-sim-spin': 'm',      // Dr. Pérez
+  'discovery-sim-objecion': 'm'   // Don Rodrigo
+};
+
+// Elige una voz en español acorde al género. Si no hay match, voz por defecto.
+function ocPickVoiceEs(genero) {
+  if (genero !== 'f' && genero !== 'm') return null;
+  try {
+    const voices = (window.speechSynthesis.getVoices() || []).filter(v => /^es/i.test(v.lang || ''));
+    if (!voices.length) return null;
+    const fem = /(helena|sabina|laura|elena|paulina|m[oó]nica|esperanza|marisol|conchita|luc[ií]a|female|mujer|femenin)/i;
+    const masc = /(pablo|ra[uú]l|jorge|diego|miguel|carlos|enrique|alvaro|álvaro|male|hombre|masculin)/i;
+    let v = null;
+    if (genero === 'f') v = voices.find(x => fem.test(x.name)) || voices.find(x => !masc.test(x.name));
+    else v = voices.find(x => masc.test(x.name)) || voices.find(x => !fem.test(x.name));
+    return v || voices[0] || null;
+  } catch (e) { return null; }
+}
+
 function renderPracticeRoleplayVoz(mod, screen) {
+  // Calentar la lista de voces (carga asíncrona en Chrome): así para el primer
+  // turno ya está disponible y la voz sale con el género correcto.
+  try { if (window.speechSynthesis) { window.speechSynthesis.getVoices(); } } catch (e) {}
   const key = `${state.moduleIdx}-${state.screenIdx}`;
   const sel = state.selections[key] || {};
   if (!sel.rpMessages) {
@@ -4772,7 +4801,8 @@ function rpVozMicToggle() {
   const sel = state.selections[key];
   if (!sel) return;
   if (sel.rpListening) {
-    // Detener escucha (se procesará el último onresult ya recibido)
+    // El usuario pulsó parar: marcar y detener; onend procesará TODO lo dicho.
+    sel.rpUserStopped = true;
     if (__ocRecognition) { try { __ocRecognition.stop(); } catch(e){} }
     return;
   }
@@ -4781,21 +4811,23 @@ function rpVozMicToggle() {
   if (!Rec) { sel.rpMode = 'texto'; saveState(); render(); return; }
   const rec = new Rec();
   rec.lang = 'es-CL';
-  rec.interimResults = false;
+  rec.interimResults = true;   // capturar mientras habla
   rec.maxAlternatives = 1;
-  rec.continuous = false;
+  rec.continuous = true;       // NO cortar en la primera pausa: escucha hasta que el usuario pare
   __ocRecognition = rec;
-  let resultText = '';
-  rec.onresult = (e) => {
-    if (e.results && e.results[0] && e.results[0][0]) {
-      resultText = e.results[0][0].transcript || '';
-    }
-  };
-  rec.onend = () => {
+  sel.rpUserStopped = false;
+  // committedText: lo confirmado de sesiones previas (si el navegador reinició por silencio).
+  // currentText: lo de la sesión de reconocimiento actual.
+  let committedText = '';
+  let currentText = '';
+  const finalizar = (txt) => {
+    __ocRecognition = null;
     sel.rpListening = false;
-    if (resultText && resultText.trim().length > 1) {
+    sel.rpUserStopped = false;
+    const finalText = (txt || '').trim();
+    if (finalText.length > 1) {
       sel.rpSTTFailCount = 0;
-      rpVozProcesarRespuesta(resultText.trim());
+      rpVozProcesarRespuesta(finalText);
     } else {
       sel.rpSTTFailCount = (sel.rpSTTFailCount || 0) + 1;
       if (sel.rpSTTFailCount >= 2) {
@@ -4807,8 +4839,30 @@ function rpVozMicToggle() {
       render();
     }
   };
+  rec.onresult = (e) => {
+    let full = '';
+    for (let i = 0; i < e.results.length; i++) {
+      if (e.results[i] && e.results[i][0]) full += e.results[i][0].transcript;
+    }
+    currentText = full;
+  };
+  rec.onend = () => {
+    if (sel.rpUserStopped) {
+      finalizar(committedText + ' ' + currentText);
+    } else {
+      // El navegador cortó por silencio pero el usuario NO pulsó parar:
+      // guardar lo dicho y seguir escuchando.
+      committedText = (committedText + ' ' + currentText).trim();
+      currentText = '';
+      try { rec.start(); } catch (e) { finalizar(committedText); }
+    }
+  };
   rec.onerror = (e) => {
+    // 'no-speech'/'aborted' no son fallos reales: dejar que onend reinicie si sigue grabando.
+    if (e.error === 'no-speech' || e.error === 'aborted') return;
+    __ocRecognition = null;
     sel.rpListening = false;
+    sel.rpUserStopped = false;
     if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
       sel.rpMode = 'texto';
       sel.rpError = 'El micrófono está bloqueado. Cambiamos a texto.';
@@ -4879,6 +4933,19 @@ async function rpVozProcesarRespuesta(texto) {
   const elapsed = Date.now() - t0;
   if (elapsed > 18000) __ocNetworkSlow = true;
 
+  if (!turno) {
+    // Reintento automático una vez antes de declarar la caída: la IA gratis a
+    // veces tiene un hipo transitorio y el segundo intento entra bien.
+    try {
+      await new Promise(r => setTimeout(r, 900));
+      turno = await aiConTimeout(window.OpenClusterAI.conversar({
+        ejercicioId: screen.aiEjercicioId,
+        mensajes: sel.rpMessages.slice(),
+        contexto: contexto
+      }));
+    } catch (e) { turno = null; }
+  }
+
   sel.rpLoading = false;
   if (!turno) {
     sel.rpError = 'La línea se cayó. Intenta de nuevo.';
@@ -4903,6 +4970,8 @@ async function rpVozProcesarRespuesta(texto) {
       const u = new SpeechSynthesisUtterance(turno.respuesta);
       u.lang = 'es-CL';
       u.rate = 1.0;
+      const voz = ocPickVoiceEs(RP_VOZ_GENERO[screen.aiEjercicioId]);
+      if (voz) { u.voice = voz; if (voz.lang) u.lang = voz.lang; }
       u.onend = () => {
         sel.rpSpeaking = false;
         saveState();

@@ -4771,6 +4771,18 @@ function renderPracticeRoleplayVoz(mod, screen) {
     }
   }
 
+  // Botón "Reiniciar llamada": siempre disponible una vez que la conversación
+  // arrancó, por si el ejecutivo se pierde y quiere empezar de cero.
+  let reiniciarHtml = '';
+  if ((sel.rpMessages && sel.rpMessages.length > 1) || sel.rpEnded || sel.rpError) {
+    reiniciarHtml = `<div style="display:flex; justify-content:center; margin-top:14px;">
+      <button class="btn-ai-ghost" style="font-size:11.5px; padding:5px 12px;" onclick="rpVozReiniciarLlamada()" title="Empezar la conversación desde cero">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:5px;"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+        Reiniciar llamada
+      </button>
+    </div>`;
+  }
+
   return `
     ${contactSelectorHtml}
     <div style="background: var(--oct-softblue); border-radius: 10px; padding: 16px 20px; margin-bottom: 16px; font-size: 13.5px; line-height: 1.55;">${screen.context}</div>
@@ -4778,11 +4790,42 @@ function renderPracticeRoleplayVoz(mod, screen) {
     <div class="rp-chat" id="rpChat">${msgsHtml}${typingHtml}</div>
     ${inputHtml}
     ${escapeButton}
-    ${finalHtml}`;
+    ${finalHtml}
+    ${reiniciarHtml}`;
 }
 
 let __ocRecognition = null;
 let __ocNetworkSlow = false;
+
+// Reinicia la conversación del roleplay desde cero (por si el ejecutivo se pierde).
+function rpVozReiniciarLlamada() {
+  const key = `${state.moduleIdx}-${state.screenIdx}`;
+  const sel = state.selections[key];
+  if (!sel) return;
+  if (!confirm('¿Reiniciar esta llamada? Vas a empezar la conversación desde cero.')) return;
+  // Cortar cualquier escucha o voz en curso.
+  try { if (__ocRecognition) { sel.rpUserStopped = true; __ocRecognition.stop(); } } catch (e) {}
+  __ocRecognition = null;
+  try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) {}
+  const screen = COURSE.modules[state.moduleIdx].screens[state.screenIdx];
+  sel.rpMessages = [{ rol: 'persona', texto: screen.mensajeInicial }];
+  sel.rpEnded = false;
+  sel.rpEndManual = false;
+  sel.rpEndReason = null;
+  sel.rpError = null;
+  sel.rpLoading = false;
+  sel.rpListening = false;
+  sel.rpSpeaking = false;
+  sel.rpUserStopped = false;
+  sel.rpSTTFailCount = 0;
+  sel.rpFinalReady = false;
+  sel.rpFinalResult = null;
+  sel.rpFinalAccepted = false;
+  sel.rpSkippedByStrikes = false;
+  state.selections[key] = sel;
+  saveState();
+  render();
+}
 
 function rpVozCambiarModo() {
   const key = `${state.moduleIdx}-${state.screenIdx}`;

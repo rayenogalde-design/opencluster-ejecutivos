@@ -22,7 +22,7 @@
   'use strict';
 
   /* ─── 1. URL del backend Gemini ──────────────────────────── */
-  var AI_API_URL = 'https://script.google.com/macros/s/AKfycbwRRnA6xHlNIOzDbZeT19iC6xYlPb752yfwvoZUaVtP2Q7s_03cDaj_V0of-19VTw_zhQ/exec';
+  var AI_API_URL = 'https://script.google.com/macros/s/AKfycbzK0XFzsT-6_ImJYugk-4BsdYXft-7Mv0PhEIuw-wdv95Ln6cd1fOUVJEmENxy21ApRHg/exec';
 
   /* ─── 2. Catálogo de evaluaciones (criterios por ejercicio) ──
      Toma los bloques de la diseñadora tal cual. Cuando se agregue un

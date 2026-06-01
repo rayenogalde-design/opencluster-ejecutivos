@@ -3941,14 +3941,26 @@ function render() {
 /* ═════════════════════════════════════════════════════════════
    RENDER VISTA HOME
    ═════════════════════════════════════════════════════════════ */
+// Desbloqueo de revisión para la jefatura (Rayen): puede entrar a cualquier
+// módulo sin completar los anteriores, para revisar el contenido. Solo aplica
+// a su usuario (oc_central_user contiene "rayen"); el resto del equipo avanza
+// en orden normal.
+function esUsuarioRevisor() {
+  try {
+    var u = (localStorage.getItem('oc_central_user') || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    return u.indexOf('rayen') >= 0;
+  } catch (e) { return false; }
+}
+
 function renderHome() {
   const completed = state.completedModules.size;
   const total = COURSE.modules.length;
   const isComplete = completed === total;
+  const revisorUnlock = esUsuarioRevisor();
 
   const modulesHtml = COURSE.modules.map((mod, idx) => {
     const isCompleted = state.completedModules.has(idx);
-    const prevCompleted = idx === 0 || state.completedModules.has(idx - 1);
+    const prevCompleted = idx === 0 || state.completedModules.has(idx - 1) || revisorUnlock;
     const isLocked = !prevCompleted && !isCompleted;
     const classes = ['module-card'];
     if (isCompleted) classes.push('completed');

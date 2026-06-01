@@ -4461,6 +4461,19 @@ async function rpEnviarTurno() {
     }));
   } catch (e) { turno = null; }
 
+  if (!turno) {
+    // Reintento automático una vez antes de declarar la caída: la IA gratis a
+    // veces tiene un hipo transitorio y el segundo intento entra bien.
+    try {
+      await new Promise(r => setTimeout(r, 900));
+      turno = await aiConTimeout(window.OpenClusterAI.conversar({
+        ejercicioId: screen.aiEjercicioId,
+        mensajes: sel.rpMessages.slice(),
+        contexto: contexto
+      }));
+    } catch (e) { turno = null; }
+  }
+
   sel.rpLoading = false;
   if (!turno) {
     // Mantenemos el último turno del ejecutivo pero damos opción de reintentar

@@ -30,7 +30,8 @@
   // duplicadas para un mismo curso. Al sumar cursos nuevos: añadir aquí.
   var COURSE_TITLES = {
     'outreach': 'Outreach por email',
-    'discovery': 'Discovery telefónico'
+    'discovery': 'Discovery telefónico',
+    'postventa': 'Postventa y expansión'
   };
 
   window.OpenClusterProgress = {

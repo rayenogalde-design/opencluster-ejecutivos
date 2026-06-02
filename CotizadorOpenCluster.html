@@ -5342,6 +5342,8 @@ function abrirModalCrearContactoCotizador(nombrePreLlenado){
   document.getElementById("ncc-telefono").value = "+56 ";   // +56 obligatorio para Zadarma
   document.getElementById("ncc-ciudad").value = "";
   document.getElementById("ncc-region").value = "";
+  // Dirección: se prellena con la del cliente ya tipeada en la cotización (editable).
+  { const d = document.getElementById("ncc-direccion"); if(d) d.value = document.getElementById("eCDireccion")?.value.trim() || ""; }
   // Ejecutivo a cargo: por defecto el del perfil del cotizador (primer nombre), si calza con la lista.
   try {
     const selEj = document.getElementById("ncc-ejecutivo");
@@ -5386,8 +5388,8 @@ async function guardarNuevoContactoCotizador(){
     telefono: document.getElementById("ncc-telefono").value.trim(),
     ciudad: document.getElementById("ncc-ciudad").value.trim(),
     region: document.getElementById("ncc-region").value,
-    // Reusa la dirección del cliente ya tipeada en la cotización (si la hay).
-    direccion: document.getElementById("eCDireccion")?.value.trim() || "",
+    // Dirección del contacto: la que se escribe en este modal (viene prellenada desde la cotización, editable).
+    direccion: (document.getElementById("ncc-direccion")?.value.trim() || document.getElementById("eCDireccion")?.value.trim() || ""),
     ejecutivo_asignado: document.getElementById("ncc-ejecutivo").value,
     tipo_contacto: esInst ? "Institución" : "Persona Natural",
     pipeline_estado: "Cotizado"
@@ -5673,6 +5675,11 @@ const COMUNAS_CHILE = [
             <option>Los Ríos</option><option>Los Lagos</option><option>Aysén</option><option>Magallanes</option>
           </select>
         </div>
+      </div>
+
+      <div style="margin-top:12px;">
+        <label style="font-size:11px;font-weight:700;color:#1a1208;display:block;margin-bottom:4px;">Dirección</label>
+        <input id="ncc-direccion" type="text" placeholder="Ej: Av. Providencia 1234, of. 5" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;">
       </div>
 
       <div style="margin-top:12px;">

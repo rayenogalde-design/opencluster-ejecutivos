@@ -5355,6 +5355,7 @@ function abrirModalCrearContactoCotizador(nombrePreLlenado){
   } catch(e){}
   document.getElementById("ncc-tipo-persona").checked = true;
   if (typeof actualizarTipoNCC === "function") actualizarTipoNCC();   // oculta el tel. institucional al resetear
+  window.__nccForzarDup = false;   // reinicia el "crear de todos modos" del chequeo de duplicados
   document.getElementById("ncc-error").style.display = "none";
   document.getElementById("ncc-btn-guardar").disabled = false;
   document.getElementById("ncc-btn-guardar").textContent = "Crear contacto y seleccionar";
@@ -5401,7 +5402,10 @@ async function guardarNuevoContactoCotizador(){
     pipeline_estado: "Cotizado"
   };
 
-  const mostrarErr = m => { errEl.textContent = m; errEl.style.display = "block"; };
+  // Si en un intento anterior el CRM avisó "ya existe parecido" y la usuaria insiste, forzamos la creación.
+  if (window.__nccForzarDup) data.confirmar_crear_aunque_haya_duplicados = true;
+
+  const mostrarErr = m => { errEl.textContent = m; errEl.style.whiteSpace = "pre-line"; errEl.style.display = "block"; };
 
   if (!data.nombre) return mostrarErr("El nombre de la persona es obligatorio.");
   if (!data.email) return mostrarErr("El email es obligatorio para hacer seguimiento.");
@@ -5421,10 +5425,18 @@ async function guardarNuevoContactoCotizador(){
     });
     if (!resp.ok) throw new Error("HTTP " + resp.status);
     const r = await resp.json();
+    // El CRM encontró contactos parecidos (mismo email, o misma institución/nombre).
+    if (r && r.requiere_revision && Array.isArray(r.duplicados) && r.duplicados.length) {
+      const nombres = r.duplicados.map(function(x){ const c = x.contacto || x; return (c.nombre || c.institucion || "(sin nombre)") + (c.email ? " · " + c.email : ""); }).slice(0,3).join("  |  ");
+      window.__nccForzarDup = true;
+      btn.disabled = false; btn.textContent = "Crear de todos modos";
+      return mostrarErr("Ya existe un contacto parecido en el CRM:\n" + nombres + "\n\nSi es el mismo, cierra esta ventana y búscalo arriba para seleccionarlo. Si es distinto (otra persona de la misma institución), presiona \"Crear de todos modos\".");
+    }
     if (!r.ok) {
       btn.disabled = false; btn.textContent = "Crear contacto y seleccionar";
       return mostrarErr(r.error || "Error guardando");
     }
+    window.__nccForzarDup = false;
     // Optimización: NO re-fetch completo. Agregar el nuevo contacto directo al cache local.
     const nuevoContacto = r.contacto || {
       id: r.id, nombre: data.nombre, institucion: data.institucion,

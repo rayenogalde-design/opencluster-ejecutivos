@@ -158,6 +158,21 @@
       contexto_disponible: ['institucion', 'cargo', 'ciudad', 'etapa', 'etiquetas']
     },
 
+    /* Módulo WhatsApp — evaluación del roleplay de chat con Andrea. */
+    'discovery-wsp-seguimiento': {
+      criterios_evaluacion_final: [
+        '¿Se identificó con contexto de la conversación previa, no con un "hola" genérico?',
+        '¿Dio un motivo concreto para escribir ahora (coordinar la reunión)?',
+        '¿Mantuvo mensajes cortos y fáciles de responder, sin textazos?',
+        '¿Propuso algo concreto: un día y hora para la reunión?',
+        '¿Avanzó hacia acordar la reunión sin perseguir ni presionar, respetando el ritmo de WhatsApp?',
+        '¿Evitó disparar archivos sin avisar o mensajes genéricos tipo "¿alguna novedad?"?'
+      ],
+      tono_feedback: 'coaching de seguimiento por WhatsApp: directo, con un ejemplo de cómo mejorar un mensaje',
+      longitud_feedback: 'medio',
+      contexto_disponible: ['institucion', 'cargo']
+    },
+
     /* ─── CURSO DE POSTVENTA — evaluaciones de los 4 roleplays de voz ─── */
     'postventa-qbr': {
       criterios_evaluacion_final: [

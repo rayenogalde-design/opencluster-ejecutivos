@@ -2520,6 +2520,9 @@ body{
         <div class="fld"><label>Teléfono</label><input type="tel" id="edTelefono"></div>
         <div class="fld"><label>Ciudad</label><input type="text" id="edCiudad"></div>
       </div>
+      <div class="fld-row single">
+        <div class="fld"><label>Dirección</label><input type="text" id="edDireccion" placeholder="Ej: Av. Providencia 1234, of. 5"></div>
+      </div>
       <div class="fld-row">
         <div class="fld"><label>Región</label><input type="text" id="edRegion"></div>
         <div class="fld"><label>Ejecutivo asignado</label>
@@ -2627,6 +2630,9 @@ body{
         <div class="fld"><label>Teléfono</label><input type="tel" id="nc-telefono" placeholder="+56 9..."></div>
         <div class="fld"><label>Ciudad</label><input type="text" id="nc-ciudad" placeholder="Santiago, Talca..."></div>
       </div>
+      <div class="fld-row single">
+        <div class="fld"><label>Dirección</label><input type="text" id="nc-direccion" placeholder="Ej: Av. Providencia 1234, of. 5"></div>
+      </div>
       <div class="fld-row">
         <div class="fld"><label>Región</label>
           <select id="nc-region">
@@ -2655,6 +2661,20 @@ body{
             <option>Cotizado</option>
             <option>Reunión</option>
             <option>Seguimiento</option>
+          </select>
+        </div>
+      </div>
+      <!-- Ejecutivo asignado: SOLO admin (Rayen) lo elige. Para ejecutivos el contacto queda
+           automáticamente a su nombre (no ven este selector). -->
+      <div class="fld-row single" id="nc-row-ejecutivo" style="display:none;">
+        <div class="fld"><label>Ejecutivo asignado</label>
+          <select id="nc-ejecutivo">
+            <option value="Rayen Ogalde">Rayen Ogalde</option>
+            <option value="Maximiliano">Maximiliano</option>
+            <option value="Roberto">Roberto</option>
+            <option value="Germán">Germán</option>
+            <option value="William">William</option>
+            <option value="Ximena">Ximena</option>
           </select>
         </div>
       </div>
@@ -8010,7 +8030,15 @@ async function abrirModalEditarContacto(id){
   document.getElementById('edTelefono').value = c.telefono || '+56 ';   // +56 obligatorio para Zadarma
   document.getElementById('edCiudad').value = c.ciudad || '';
   document.getElementById('edRegion').value = c.region || '';
-  document.getElementById('edEjecutivoAsignado').value = c.ejecutivo_asignado || '';
+  document.getElementById('edDireccion').value = c.direccion || '';
+  { const selEjEd = document.getElementById('edEjecutivoAsignado');
+    selEjEd.value = c.ejecutivo_asignado || '';
+    // Solo Rayen (admin) puede reasignar. Para el resto queda visible pero bloqueado.
+    const esAdminEd = (ROL === 'admin');
+    selEjEd.disabled = !esAdminEd;
+    selEjEd.title = esAdminEd ? '' : 'Solo Rayen puede cambiar el ejecutivo asignado';
+    selEjEd.style.opacity = esAdminEd ? '' : '0.6';
+    selEjEd.style.cursor = esAdminEd ? '' : 'not-allowed'; }
   const edCat = document.getElementById('edTipoCategoria');
   edCat.value = c.tipo_categoria || '';
   // Si la categoría guardada no está en el select, la agregamos para NO perderla al guardar.
@@ -8070,6 +8098,7 @@ async function guardarEdicionContacto(){
     telefono: document.getElementById('edTelefono').value.trim(),
     ciudad: document.getElementById('edCiudad').value.trim(),
     region: document.getElementById('edRegion').value.trim(),
+    direccion: document.getElementById('edDireccion').value.trim(),
     ejecutivo_asignado: document.getElementById('edEjecutivoAsignado').value,
     tipo_categoria: document.getElementById('edTipoCategoria').value,
     sub_categoria: document.getElementById('edSubCategoria').value,
@@ -8088,7 +8117,7 @@ async function guardarEdicionContacto(){
   // Actualizar el contacto en los caches en memoria + LS (lista/tarjetas reflejan el cambio al toque)
   if(typeof _cadActualizar === 'function') _cadActualizar(id, c => {
     c.nombre=data.nombre; c.institucion=data.institucion; c.cargo=data.cargo; c.email=data.email;
-    c.telefono=data.telefono; c.ciudad=data.ciudad; c.region=data.region;
+    c.telefono=data.telefono; c.ciudad=data.ciudad; c.region=data.region; c.direccion=data.direccion;
     c.tipo_categoria=data.tipo_categoria; c.sub_categoria=data.sub_categoria;
     c.pipeline_estado=data.pipeline_estado; c.ejecutivo_asignado=data.ejecutivo_asignado;
     c.notas_publicas=data.notas_publicas;
@@ -8108,7 +8137,7 @@ async function guardarEdicionContacto(){
 function abrirModalNuevoContacto(opts){
   opts = opts || {};
   // Reset form
-  ['nc-nombre','nc-institucion','nc-cargo','nc-email','nc-telefono','nc-ciudad','nc-notas']
+  ['nc-nombre','nc-institucion','nc-cargo','nc-email','nc-telefono','nc-ciudad','nc-direccion','nc-notas']
     .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   { const tel = document.getElementById('nc-telefono'); if(tel) tel.value = '+56 '; }   // +56 obligatorio para Zadarma
   document.getElementById('nc-region').value = '';
@@ -8116,6 +8145,13 @@ function abrirModalNuevoContacto(opts){
   document.getElementById('nc-sub-categoria').innerHTML = '<option value="">— Selecciona categoría primero —</option>';
   document.getElementById('nc-pipeline').value = 'Contactado';
   const ncMedio = document.getElementById('nc-medio'); if(ncMedio) ncMedio.value = '';
+  // Ejecutivo asignado: solo el admin (Rayen) lo elige; default = el que crea el contacto.
+  // Para ejecutivos queda oculto y el contacto les queda automático (lo deriva el backend).
+  { const rowEj = document.getElementById('nc-row-ejecutivo'), selEj = document.getElementById('nc-ejecutivo');
+    if(rowEj && selEj){
+      if(ROL === 'admin'){ rowEj.style.display = ''; selEj.value = USUARIO; }
+      else { rowEj.style.display = 'none'; }
+    } }
   document.getElementById('nc-dup-warning').style.display = 'none';
   document.getElementById('nc-dup-warning').innerHTML = '';
   document.getElementById('nc-btn-guardar').textContent = 'Guardar contacto';
@@ -8190,6 +8226,7 @@ async function guardarNuevoContacto(forzar){
     telefono: document.getElementById('nc-telefono').value.trim(),
     ciudad: document.getElementById('nc-ciudad').value.trim(),
     region: document.getElementById('nc-region').value,
+    direccion: document.getElementById('nc-direccion').value.trim(),
     tipo_categoria: document.getElementById('nc-tipo-categoria').value,
     sub_categoria: document.getElementById('nc-sub-categoria').value,
     pipeline_estado: document.getElementById('nc-pipeline').value,
@@ -8197,6 +8234,13 @@ async function guardarNuevoContacto(forzar){
     medio_primer_contacto: document.getElementById('nc-medio').value,
     solicitante: USUARIO
   };
+  // Asignación: si es el admin (Rayen), respeta el ejecutivo que eligió en el selector.
+  // Si es un ejecutivo, NO mandamos el campo → el backend lo asigna a quien lo ingresa (solicitante),
+  // normalizado a su primer nombre. Solo Rayen puede reasignar después.
+  if (ROL === 'admin'){
+    const selEj = document.getElementById('nc-ejecutivo');
+    if (selEj && selEj.value) data.ejecutivo_asignado = selEj.value;
+  }
   if (forzar === true) data.confirmar_crear_aunque_haya_duplicados = true;
 
   const esInstitucion = document.getElementById('nc-tipo-institucion').checked;

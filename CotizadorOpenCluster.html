@@ -5344,6 +5344,7 @@ function abrirModalCrearContactoCotizador(nombrePreLlenado){
   document.getElementById("ncc-region").value = "";
   // Dirección: se prellena con la del cliente ya tipeada en la cotización (editable).
   { const d = document.getElementById("ncc-direccion"); if(d) d.value = document.getElementById("eCDireccion")?.value.trim() || ""; }
+  { const ti = document.getElementById("ncc-telefono-institucional"); if(ti) ti.value = ""; }
   // Ejecutivo a cargo: por defecto el del perfil del cotizador (primer nombre), si calza con la lista.
   try {
     const selEj = document.getElementById("ncc-ejecutivo");
@@ -5353,6 +5354,7 @@ function abrirModalCrearContactoCotizador(nombrePreLlenado){
     selEj.value = op ? op.value : "Rayen";
   } catch(e){}
   document.getElementById("ncc-tipo-persona").checked = true;
+  if (typeof actualizarTipoNCC === "function") actualizarTipoNCC();   // oculta el tel. institucional al resetear
   document.getElementById("ncc-error").style.display = "none";
   document.getElementById("ncc-btn-guardar").disabled = false;
   document.getElementById("ncc-btn-guardar").textContent = "Crear contacto y seleccionar";
@@ -5372,6 +5374,9 @@ function actualizarTipoNCC(){
     : 'Institución <span style="color:#e74c3c;">*</span>';
   document.getElementById("ncc-aviso-persona").style.display = esPersona ? "" : "none";
   document.getElementById("ncc-aviso-institucion").style.display = esPersona ? "none" : "";
+  // Teléfono institucional: solo para empresas (el personal es para WhatsApp).
+  const rowTelInst = document.getElementById("ncc-row-telinst");
+  if (rowTelInst) rowTelInst.style.display = esPersona ? "none" : "";
 }
 
 async function guardarNuevoContactoCotizador(){
@@ -5386,6 +5391,7 @@ async function guardarNuevoContactoCotizador(){
     cargo: document.getElementById("ncc-cargo").value.trim(),
     email: document.getElementById("ncc-email").value.trim(),
     telefono: document.getElementById("ncc-telefono").value.trim(),
+    telefono_institucional: (esInst ? (document.getElementById("ncc-telefono-institucional")?.value.trim() || "") : ""),
     ciudad: document.getElementById("ncc-ciudad").value.trim(),
     region: document.getElementById("ncc-region").value,
     // Dirección del contacto: la que se escribe en este modal (viene prellenada desde la cotización, editable).
@@ -5675,6 +5681,11 @@ const COMUNAS_CHILE = [
             <option>Los Ríos</option><option>Los Lagos</option><option>Aysén</option><option>Magallanes</option>
           </select>
         </div>
+      </div>
+
+      <div id="ncc-row-telinst" style="margin-top:12px;display:none;">
+        <label style="font-size:11px;font-weight:700;color:#1a1208;display:block;margin-bottom:4px;">Teléfono institucional <span style="font-weight:400;color:#888;">(de la empresa, para llamar)</span></label>
+        <input id="ncc-telefono-institucional" type="tel" placeholder="+56 ..." oninput="this.value=normTel(this.value)" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;">
       </div>
 
       <div style="margin-top:12px;">

@@ -2517,10 +2517,11 @@ body{
         <div class="fld"><label>Email</label><input type="email" id="edEmail"></div>
       </div>
       <div class="fld-row">
-        <div class="fld"><label>Teléfono</label><input type="tel" id="edTelefono"></div>
-        <div class="fld"><label>Ciudad</label><input type="text" id="edCiudad"></div>
+        <div class="fld"><label>Teléfono personal <span style="color:var(--smoke);font-weight:400;">(WhatsApp)</span></label><input type="tel" id="edTelefono"></div>
+        <div class="fld"><label>Teléfono institucional <span style="color:var(--smoke);font-weight:400;">(empresa, para llamar)</span></label><input type="tel" id="edTelefonoInstitucional" placeholder="+56 ..."></div>
       </div>
-      <div class="fld-row single">
+      <div class="fld-row">
+        <div class="fld"><label>Ciudad</label><input type="text" id="edCiudad"></div>
         <div class="fld"><label>Dirección</label><input type="text" id="edDireccion" placeholder="Ej: Av. Providencia 1234, of. 5"></div>
       </div>
       <div class="fld-row">
@@ -2627,8 +2628,11 @@ body{
         <div class="fld"><label>Email <span style="color:var(--ruby);">*</span></label><input type="email" id="nc-email" placeholder="correo@..." required></div>
       </div>
       <div class="fld-row">
-        <div class="fld"><label>Teléfono</label><input type="tel" id="nc-telefono" placeholder="+56 9..."></div>
+        <div class="fld"><label id="nc-label-telefono">Teléfono</label><input type="tel" id="nc-telefono" placeholder="+56 9..."></div>
         <div class="fld"><label>Ciudad</label><input type="text" id="nc-ciudad" placeholder="Santiago, Talca..."></div>
+      </div>
+      <div class="fld-row single" id="nc-row-telinst" style="display:none;">
+        <div class="fld"><label>Teléfono institucional <span style="color:var(--smoke);font-weight:400;">(de la empresa, para llamar)</span></label><input type="tel" id="nc-telefono-institucional" placeholder="+56 ..."></div>
       </div>
       <div class="fld-row single">
         <div class="fld"><label>Dirección</label><input type="text" id="nc-direccion" placeholder="Ej: Av. Providencia 1234, of. 5"></div>
@@ -5875,9 +5879,14 @@ function ejecutivoDeContacto(c){
 // Arma los links nativos {tel, wa, mail} usando la plantilla del estado + datos del ejecutivo.
 // Sin plantilla → links genéricos (sin texto). Sin tel/email → ese botón se deshabilita.
 function construirLinksContacto(c, g){
-  var tel = String(c.telefono||'').trim();
-  var telLink = tel ? 'tel:'+cleanPhone(tel) : '';
-  var waNum = tel ? cleanWhatsApp(tel) : '';
+  // Dos teléfonos: el personal (c.telefono) sirve para WhatsApp; el institucional
+  // (c.telefono_institucional) para llamar a la empresa. Si no hay institucional,
+  // se llama al personal (caso persona natural → un solo número para ambos).
+  var telPers = String(c.telefono||'').trim();
+  var telInst = String(c.telefono_institucional||'').trim();
+  var callRaw = telInst || telPers;
+  var telLink = callRaw ? 'tel:'+cleanPhone(callRaw) : '';
+  var waNum = telPers ? cleanWhatsApp(telPers) : '';
   var ej = ejecutivoDeContacto(c);
   // Selección de dos niveles: si el ejecutivo tiene segmento y existe plantilla
   // segmentada con contenido para (segmento, estado) → usarla; si no → genérica.
@@ -5912,7 +5921,7 @@ function construirLinksContacto(c, g){
     if(cuerpo) qs.push('body='+encodeURIComponent(cuerpo));
     mailLink = 'mailto:'+c.email + (qs.length ? '?'+qs.join('&') : '');
   }
-  return { tel:telLink, wa:waLink, mail:mailLink, hasTel:!!tel, hasMail:!!c.email };
+  return { tel:telLink, wa:waLink, mail:mailLink, hasTel:!!callRaw, hasWa:!!telPers, hasMail:!!c.email, telDisplay:callRaw, waDisplay:telPers };
 }
 
 // ── Selector de mensaje con preview (WhatsApp / Gmail) ──
@@ -6362,7 +6371,7 @@ function renderTarjetaV2(c, view){
     (L.hasTel
       ? '<a href="' + L.tel + '" class="v2-btn call" onclick="event.stopPropagation()">' + V2_SVG.phone + 'Llamar</a>'
       : '<span class="v2-btn call disabled">' + V2_SVG.phone + 'Llamar</span>') +
-    (L.hasTel
+    (L.hasWa
       ? '<button class="v2-btn wa" onclick="event.stopPropagation(); abrirSelectorMensaje(\'' + esc(c.id) + '\',\'whatsapp\')">' + V2_SVG.wa + 'WhatsApp</button>'
       : '<span class="v2-btn wa disabled">' + V2_SVG.wa + 'WhatsApp</span>') +
     (L.hasMail
@@ -7360,7 +7369,7 @@ function renderFicha(container, data){
         '</div>' +
         '<div class="v2-detail-actions">' +
           (LF.hasTel ? '<a href="' + LF.tel + '" class="v2-btn call">' + V2_SVG.phone + 'Llamar</a>' : '<span class="v2-btn call disabled">' + V2_SVG.phone + 'Llamar</span>') +
-          (LF.hasTel ? '<button class="v2-btn wa" onclick="abrirSelectorMensaje(\'' + esc(c.id) + '\',\'whatsapp\')">' + V2_SVG.wa + 'WhatsApp</button>' : '<span class="v2-btn wa disabled">' + V2_SVG.wa + 'WhatsApp</span>') +
+          (LF.hasWa ? '<button class="v2-btn wa" onclick="abrirSelectorMensaje(\'' + esc(c.id) + '\',\'whatsapp\')">' + V2_SVG.wa + 'WhatsApp</button>' : '<span class="v2-btn wa disabled">' + V2_SVG.wa + 'WhatsApp</span>') +
           (LF.hasMail ? '<button class="v2-btn mail" onclick="abrirSelectorMensaje(\'' + esc(c.id) + '\',\'email\')" title="Enviar correo (Gmail)">' + V2_SVG.gmail + '</button>' : '<span class="v2-btn mail disabled" title="Sin email">' + V2_SVG.gmail + '</span>') +
         '</div>' +
       '</div>' +
@@ -7389,8 +7398,8 @@ function renderFicha(container, data){
     '<div class="v2-block" style="margin-bottom:22px;">' +
       '<div class="v2-block-head">' + icoUser + '<span class="v2-block-label">DATOS DE CONTACTO</span><span class="v2-block-aside">toca para contactar</span></div>' +
       '<div class="v2-cpills" style="max-width:460px;">' +
-        (LF.hasTel ? '<a href="' + LF.tel + '" class="v2-cpill phone"><span class="v2-cpill-icon">' + icoPhone + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">Llamar</span><span class="v2-cpill-value">' + esc(c.telefono) + '</span></span></a>' : '') +
-        (LF.hasTel ? '<div onclick="abrirSelectorMensaje(\'' + esc(c.id) + '\',\'whatsapp\')" class="v2-cpill wa" style="cursor:pointer;"><span class="v2-cpill-icon">' + icoWaFill + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">WhatsApp</span><span class="v2-cpill-value">' + esc(c.telefono) + '</span></span></div>' : '') +
+        (LF.hasTel ? '<a href="' + LF.tel + '" class="v2-cpill phone"><span class="v2-cpill-icon">' + icoPhone + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">Llamar' + (String(c.telefono_institucional||'').trim() ? ' (institución)' : '') + '</span><span class="v2-cpill-value">' + esc(LF.telDisplay) + '</span></span></a>' : '') +
+        (LF.hasWa ? '<div onclick="abrirSelectorMensaje(\'' + esc(c.id) + '\',\'whatsapp\')" class="v2-cpill wa" style="cursor:pointer;"><span class="v2-cpill-icon">' + icoWaFill + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">WhatsApp</span><span class="v2-cpill-value">' + esc(LF.waDisplay) + '</span></span></div>' : '') +
         (LF.hasMail ? '<div onclick="abrirSelectorMensaje(\'' + esc(c.id) + '\',\'email\')" class="v2-cpill email" style="cursor:pointer;"><span class="v2-cpill-icon">' + V2_SVG.gmail + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">Gmail</span><span class="v2-cpill-value">' + esc(c.email) + '</span></span></div>' : '') +
         (dir ? '<div class="v2-cpill static"><span class="v2-cpill-icon">' + icoPin + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">Dirección</span><span class="v2-cpill-value">' + esc(dir) + '</span></span></div>' : '') +
       '</div>' +
@@ -8028,6 +8037,7 @@ async function abrirModalEditarContacto(id){
   document.getElementById('edCargo').value = c.cargo || '';
   document.getElementById('edEmail').value = c.email || '';
   document.getElementById('edTelefono').value = c.telefono || '+56 ';   // +56 obligatorio para Zadarma
+  document.getElementById('edTelefonoInstitucional').value = c.telefono_institucional || '';
   document.getElementById('edCiudad').value = c.ciudad || '';
   document.getElementById('edRegion').value = c.region || '';
   document.getElementById('edDireccion').value = c.direccion || '';
@@ -8096,6 +8106,7 @@ async function guardarEdicionContacto(){
     cargo: document.getElementById('edCargo').value.trim(),
     email: document.getElementById('edEmail').value.trim(),
     telefono: document.getElementById('edTelefono').value.trim(),
+    telefono_institucional: document.getElementById('edTelefonoInstitucional').value.trim(),
     ciudad: document.getElementById('edCiudad').value.trim(),
     region: document.getElementById('edRegion').value.trim(),
     direccion: document.getElementById('edDireccion').value.trim(),
@@ -8117,7 +8128,7 @@ async function guardarEdicionContacto(){
   // Actualizar el contacto en los caches en memoria + LS (lista/tarjetas reflejan el cambio al toque)
   if(typeof _cadActualizar === 'function') _cadActualizar(id, c => {
     c.nombre=data.nombre; c.institucion=data.institucion; c.cargo=data.cargo; c.email=data.email;
-    c.telefono=data.telefono; c.ciudad=data.ciudad; c.region=data.region; c.direccion=data.direccion;
+    c.telefono=data.telefono; c.telefono_institucional=data.telefono_institucional; c.ciudad=data.ciudad; c.region=data.region; c.direccion=data.direccion;
     c.tipo_categoria=data.tipo_categoria; c.sub_categoria=data.sub_categoria;
     c.pipeline_estado=data.pipeline_estado; c.ejecutivo_asignado=data.ejecutivo_asignado;
     c.notas_publicas=data.notas_publicas;
@@ -8137,7 +8148,7 @@ async function guardarEdicionContacto(){
 function abrirModalNuevoContacto(opts){
   opts = opts || {};
   // Reset form
-  ['nc-nombre','nc-institucion','nc-cargo','nc-email','nc-telefono','nc-ciudad','nc-direccion','nc-notas']
+  ['nc-nombre','nc-institucion','nc-cargo','nc-email','nc-telefono','nc-telefono-institucional','nc-ciudad','nc-direccion','nc-notas']
     .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   { const tel = document.getElementById('nc-telefono'); if(tel) tel.value = '+56 '; }   // +56 obligatorio para Zadarma
   document.getElementById('nc-region').value = '';
@@ -8199,6 +8210,13 @@ function actualizarTipoContacto(){
       ? 'Institución <span style="color:var(--mist); font-size:11px; font-weight:500;">(opcional)</span>'
       : 'Institución <span style="color:var(--ruby);">*</span>';
   }
+  // Teléfono institucional: solo para empresas. El personal pasa a ser "para WhatsApp".
+  const rowTelInst = document.getElementById('nc-row-telinst');
+  if (rowTelInst) rowTelInst.style.display = esPersona ? 'none' : '';
+  const labelTel = document.getElementById('nc-label-telefono');
+  if (labelTel) labelTel.innerHTML = esPersona
+    ? 'Teléfono'
+    : 'Teléfono personal <span style="color:var(--smoke); font-weight:400;">(WhatsApp)</span>';
 }
 
 function cerrarModalNuevoContacto(){
@@ -8224,6 +8242,7 @@ async function guardarNuevoContacto(forzar){
     cargo: document.getElementById('nc-cargo').value.trim(),
     email: document.getElementById('nc-email').value.trim(),
     telefono: document.getElementById('nc-telefono').value.trim(),
+    telefono_institucional: (document.getElementById('nc-tipo-institucion').checked ? document.getElementById('nc-telefono-institucional').value.trim() : ''),
     ciudad: document.getElementById('nc-ciudad').value.trim(),
     region: document.getElementById('nc-region').value,
     direccion: document.getElementById('nc-direccion').value.trim(),

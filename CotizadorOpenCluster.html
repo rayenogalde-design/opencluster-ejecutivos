@@ -377,6 +377,8 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
    celdas de 1 columna o de fila completa, así las divisiones siempre caen
    a 1/3 y 2/3 y nunca se desalinean (nada de spans de 2 columnas). */
 .pclient-cell.full { grid-column:1 / -1; }
+/* Valor medio-largo (p.ej. una dirección): ocupa 2/3, dejando 1/3 para un dato corto al lado. */
+.pclient-cell.wide { grid-column:span 2; }
 .pclient-label {
   font-size:6.5pt; font-weight:700; text-transform:uppercase;
   letter-spacing:0.4px; color:var(--sky); margin-bottom:1px; display:block;
@@ -3369,11 +3371,12 @@ function upd() {
     <div class="pclient-card">
       ${clientFields.map(f=>{
         const isInst = f.label === "Institución/Empresa";
-        // 3 por línea. Un valor que no entra en un tercio (~38 chars) toma
-        // la fila completa; los cortos rellenan los huecos (grid dense).
+        // 3 por línea. Según el largo: hasta ~38 chars = 1/3; medio (≤60) = 2/3
+        // (deja 1/3 para un dato corto al lado, p.ej. Dirección + Email en la
+        // misma fila); muy largo = fila completa. 'dense' rellena los huecos.
         const len = String(f.val || "").length;
-        const isLong = len > 38;
-        return `<div class="pclient-cell${isLong ? " full" : ""}">
+        const cls = len > 60 ? " full" : (len > 38 ? " wide" : "");
+        return `<div class="pclient-cell${cls}">
           <span class="pclient-label">${f.label}</span>
           <span class="pclient-value${isInst ? " inst" : ""}">${f.val}</span>
         </div>`;

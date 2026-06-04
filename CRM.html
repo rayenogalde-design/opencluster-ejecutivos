@@ -2178,6 +2178,7 @@ body{
           <h1 id="dshSaludo">Bienvenido</h1>
           <p id="dshFecha">—</p>
         </div>
+        <div id="dshLeads"></div>
         <div id="dshToquesHoy"></div>
         <div id="scriptBanner"></div>
         <div id="dshCampana"></div>
@@ -5124,6 +5125,7 @@ async function cargarDashboard(){
   pintarBannerListaPartida();
   pintarProductosSugeridos();
   pintarToquesHoy();
+  pintarLeadsDashboard();
 
   // Token único de esta carga — descartamos respuestas de fetches anteriores
   const miToken = ++window.__DASH_FETCH_TOKEN;
@@ -6144,6 +6146,7 @@ function _cadPostRefrescar(id){
   if(vAct && (vAct.id==='vMis' || vAct.id==='vTodos') && typeof renderLista==='function') renderLista(vAct.id);
   refrescarBannerFicha(id);
   pintarToquesHoy();
+  pintarLeadsDashboard();
 }
 
 async function cadenciaHecho(id, btn){
@@ -6273,6 +6276,64 @@ function toastToques(n){
     t.onclick = () => { try{ goView('vDashboard'); }catch(e){} const el=document.getElementById('dshToquesHoy'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); t.remove(); };
     document.body.appendChild(t);
     setTimeout(() => { t.style.transition='opacity .4s'; t.style.opacity='0'; setTimeout(()=>t.remove(), 420); }, 6500);
+  } catch(e){}
+}
+
+/* ════ Aviso de LEADS URGENTES en el dashboard del ejecutivo ════ */
+async function pintarLeadsDashboard(){
+  const cont = document.getElementById('dshLeads');
+  if(!cont) return;
+  let lista;
+  try { lista = await _cargarContactosBase(); } catch(e){ lista = CACHE.vTodos || []; }
+  if(!Array.isArray(lista)) lista = [];
+  if(typeof esActuandoComoAdmin==='function' && !esActuandoComoAdmin()) lista = lista.filter(esOwner);
+  // Leads urgentes asignados con fecha límite pendiente (= aún no contactados).
+  const items = lista.filter(c => _esLead(c) && c.proxima_accion);
+  const hoy0 = new Date(); hoy0.setHours(0,0,0,0);
+  items.forEach(c => { const pa=new Date(c.proxima_accion); pa.setHours(0,0,0,0); c.__leadDiff = isNaN(pa.getTime())? 9999 : Math.round((pa-hoy0)/86400000); });
+  items.sort((a,b)=> a.__leadDiff - b.__leadDiff);
+  if(!items.length){ cont.innerHTML=''; return; }
+  if(!window.__LEADS_TOAST){ window.__LEADS_TOAST = true; _toastLeads(items.length); }
+  const filas = items.slice(0,10).map(c => {
+    const nom = esc(c.nombre || c.institucion || '(sin nombre)');
+    const inst = (c.institucion && c.nombre) ? ' · '+esc(c.institucion) : '';
+    const d = c.__leadDiff;
+    const venc = d<0 ? '<span style="color:#B91C1C;font-weight:800;">Vencido hace '+Math.abs(d)+'d</span>' : (d===0 ? '<span style="color:#B45309;font-weight:800;">Vence hoy</span>' : '<span style="color:#9D174D;font-weight:700;">Contactar en '+d+'d</span>');
+    const pet = String(c.nota_proxima||'').replace(/^LEAD URGENTE[^·]*·?\s*/i,'').trim();
+    return '<div class="toques-item">' +
+      '<div class="toques-info">' +
+        '<div class="toques-nom" onclick="abrirFichaModal(\''+esc(c.id)+'\')">'+nom+inst+'</div>' +
+        '<div class="toques-desc">'+venc+(pet?(' · '+esc(pet)):'')+'</div>' +
+      '</div>' +
+      '<div class="toques-acc">' +
+        '<button class="toques-btn done" onclick="abrirFichaModal(\''+esc(c.id)+'\')">Contactar</button>' +
+        '<button class="toques-btn snooze" onclick="_leadListo(\''+esc(c.id)+'\', this)" title="Ya lo contacté">Listo</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  cont.innerHTML = '<div class="toques-card" style="border-color:#FBCFE8;background:#FFF5F7;">' +
+    '<div class="toques-hd">' +
+      '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#DB2777" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>' +
+      '<h3 style="color:#9D174D;">Leads urgentes para ti</h3>' +
+      '<div class="toques-sum"><span class="toques-pill" style="background:#FCE7F3;color:#9D174D;">'+items.length+'</span></div>' +
+    '</div>' + filas +
+  '</div>';
+}
+async function _leadListo(id, btn){
+  try { if(btn){ btn.disabled=true; btn.textContent='…'; }
+    await fetchAPI('crm_actualizar_proxima', { id: id, fecha: '', nota: '', solicitante: USUARIO });
+    if(typeof _cadActualizar==='function') _cadActualizar(id, c=>{ c.proxima_accion=''; c.nota_proxima=''; });
+  } catch(e){}
+  pintarLeadsDashboard();
+}
+function _toastLeads(n){
+  try {
+    const t = document.createElement('div');
+    t.style.cssText = 'position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:99999;background:#DB2777;color:#fff;padding:12px 18px;border-radius:11px;font-weight:700;font-size:13.5px;box-shadow:0 8px 24px rgba(0,0,0,.22);cursor:pointer;display:flex;align-items:center;gap:9px;font-family:inherit;max-width:90vw;';
+    t.innerHTML = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Tienes '+n+' lead'+(n>1?'s':'')+' urgente'+(n>1?'s':'')+' por contactar — toca para verlos';
+    t.onclick = () => { try{ goView('vDashboard'); }catch(e){} const el=document.getElementById('dshLeads'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); t.remove(); };
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.transition='opacity .4s'; t.style.opacity='0'; setTimeout(()=>t.remove(), 420); }, 7000);
   } catch(e){}
 }
 

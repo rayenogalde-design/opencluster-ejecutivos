@@ -2594,6 +2594,31 @@ body{
       </button>
     </div>
     <div class="modal-body">
+      <!-- ════ Pegar lead (texto o captura) → rellenar con IA ════ -->
+      <div id="nc-lead-box" style="background:var(--oct-cream); border:1px solid #F5C77B; border-radius:12px; padding:14px 16px; margin-bottom:18px;">
+        <div style="font-size:12px; font-weight:800; color:#92400e; text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px;">Pegar lead — texto o captura</div>
+        <textarea id="nc-lead-pegar" placeholder="Pega aquí el correo o el formulario del lead — o pega una captura de pantalla (Ctrl+V). Después dale 'Rellenar campos'." rows="3" style="width:100%; box-sizing:border-box; border:1px solid var(--smoke); border-radius:8px; padding:10px; font-family:inherit; font-size:13px; resize:vertical;" onpaste="ncLeadOnPaste(event)"></textarea>
+        <div id="nc-lead-imgpreview" style="display:none; margin-top:8px; font-size:12px; color:#065f46; font-weight:700;"></div>
+        <div style="display:flex; gap:10px; margin-top:8px; flex-wrap:wrap; align-items:center;">
+          <button type="button" onclick="ncLeadRellenar()" id="nc-lead-btn" style="background:var(--oct-navy); color:#fff; border:none; border-radius:8px; padding:8px 14px; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer;">Rellenar campos</button>
+          <label style="font-size:12.5px; color:var(--oct-navy); cursor:pointer; text-decoration:underline; font-weight:600;">subir imagen<input type="file" accept="image/*" onchange="ncLeadFile(event)" style="display:none;"></label>
+          <span id="nc-lead-status" style="font-size:12px; color:var(--subtle);"></span>
+        </div>
+      </div>
+
+      <!-- ════ Lead urgente (deadline + tag) ════ -->
+      <div style="background:#FFF1F2; border:1px solid #FBCFE8; border-radius:12px; padding:12px 16px; margin-bottom:18px;">
+        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:13.5px; font-weight:700; color:#9D174D;">
+          <input type="checkbox" id="nc-lead-urgente" onchange="ncLeadUrgenteToggle()" style="width:18px; height:18px; accent-color:#DB2777;">
+          Marcar como LEAD URGENTE — aparece prioritario en el CRM del ejecutivo
+        </label>
+        <div id="nc-lead-urgente-fecha" style="display:none; margin-top:10px;">
+          <label style="font-size:12px; color:#9D174D; font-weight:700; display:block; margin-bottom:4px;">Fecha límite de contacto</label>
+          <input type="datetime-local" id="nc-lead-deadline" style="border:1px solid var(--smoke); border-radius:8px; padding:8px 10px; font-family:inherit; font-size:13px;">
+          <div style="font-size:11.5px; color:var(--subtle); margin-top:4px;">Por defecto 24 horas desde ahora. Puedes cambiarla.</div>
+        </div>
+      </div>
+
       <div style="margin-bottom:16px;">
         <label style="font-size:12px; font-weight:800; color:var(--ink); text-transform:uppercase; letter-spacing:.5px; display:block; margin-bottom:8px;">Tipo de contacto <span style="color:var(--ruby);">*</span></label>
         <div style="display:flex; gap:10px;">
@@ -8156,6 +8181,14 @@ function abrirModalNuevoContacto(opts){
   document.getElementById('nc-sub-categoria').innerHTML = '<option value="">— Selecciona categoría primero —</option>';
   document.getElementById('nc-pipeline').value = 'Contactado';
   const ncMedio = document.getElementById('nc-medio'); if(ncMedio) ncMedio.value = '';
+  // Reset campos de LEAD (caja de pegar, imagen, urgente)
+  { const lp = document.getElementById('nc-lead-pegar'); if(lp) lp.value = '';
+    const lpv = document.getElementById('nc-lead-imgpreview'); if(lpv){ lpv.style.display='none'; lpv.textContent=''; }
+    const ls = document.getElementById('nc-lead-status'); if(ls) ls.textContent='';
+    window.__ncLeadImg = null;
+    const lu = document.getElementById('nc-lead-urgente'); if(lu) lu.checked = false;
+    const luf = document.getElementById('nc-lead-urgente-fecha'); if(luf) luf.style.display='none';
+    const ld = document.getElementById('nc-lead-deadline'); if(ld) ld.value=''; }
   // Ejecutivo asignado: solo el admin (Rayen) lo elige; default = el que crea el contacto.
   // Para ejecutivos queda oculto y el contacto les queda automático (lo deriva el backend).
   { const rowEj = document.getElementById('nc-row-ejecutivo'), selEj = document.getElementById('nc-ejecutivo');
@@ -8233,6 +8266,88 @@ function actualizarSubcatsNuevo(){
   const ops = TIPOS_ORG_CRM[cat] || [];
   sel.innerHTML = '<option value="">— Seleccionar —</option>' +
     ops.map(o => '<option value="' + esc(o) + '">' + esc(o) + '</option>').join('');
+}
+
+/* ════ LEAD: pegar (texto/imagen) → rellenar con IA + parser local ════ */
+const IA_API_URL = 'https://script.google.com/macros/s/AKfycbzK0XFzsT-6_ImJYugk-4BsdYXft-7Mv0PhEIuw-wdv95Ln6cd1fOUVJEmENxy21ApRHg/exec';
+window.__ncLeadImg = null;
+
+function ncLeadOnPaste(e){
+  try {
+    const items = (e.clipboardData && e.clipboardData.items) || [];
+    for (let i=0;i<items.length;i++){
+      if (items[i].type && items[i].type.indexOf('image') === 0){
+        const file = items[i].getAsFile();
+        if (file){ e.preventDefault(); _ncLeadCargarImagen(file); return; }
+      }
+    }
+  } catch(err){}
+}
+function ncLeadFile(e){ const f = e.target.files && e.target.files[0]; if (f) _ncLeadCargarImagen(f); }
+function _ncLeadCargarImagen(file){
+  const fr = new FileReader();
+  fr.onload = function(){
+    const res = String(fr.result||''); const comma = res.indexOf(',');
+    window.__ncLeadImg = { base64: comma>=0 ? res.slice(comma+1) : res, mime: file.type || 'image/jpeg' };
+    const pv = document.getElementById('nc-lead-imgpreview');
+    if (pv){ pv.style.display='block'; pv.textContent = 'Imagen lista (' + (file.name||'captura') + '). Dale "Rellenar campos".'; }
+  };
+  fr.readAsDataURL(file);
+}
+async function ncLeadRellenar(){
+  const status = document.getElementById('nc-lead-status');
+  const btn = document.getElementById('nc-lead-btn');
+  const txt = (document.getElementById('nc-lead-pegar').value||'').trim();
+  const img = window.__ncLeadImg;
+  if (!txt && !img){ if(status) status.textContent='Pega el texto o una captura primero.'; return; }
+  // 1) Texto con formato de formulario → parser local instantáneo.
+  if (txt && !img){
+    const local = _parsearLeadLocal(txt);
+    if (local && local._suficiente){ _ncLlenarCamposLead(local); if(status) status.textContent='Campos rellenados. Revisa y asigna.'; return; }
+  }
+  // 2) IA (texto libre o imagen).
+  if(btn){ btn.disabled=true; btn.textContent='Leyendo…'; }
+  if(status) status.textContent = img ? 'Leyendo la imagen con IA…' : 'Leyendo con IA…';
+  try {
+    const payload = { action:'extraer_lead' };
+    if (img){ payload.imagenBase64 = img.base64; payload.mime = img.mime; if(txt) payload.texto = txt; }
+    else payload.texto = txt;
+    const resp = await fetch(IA_API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(payload) });
+    const data = await resp.json();
+    const rr = data && data.resultado;
+    if (rr && (rr.nombre || rr.email || rr.telefono)){ _ncLlenarCamposLead(rr); if(status) status.textContent='Campos rellenados con IA. Revisa y asigna.'; }
+    else { if(status) status.textContent='No se pudieron leer los datos. Llénalos a mano.'; }
+  } catch(err){ if(status) status.textContent='No se pudo conectar a la IA. Llénalos a mano.'; }
+  finally { if(btn){ btn.disabled=false; btn.textContent='Rellenar campos'; } }
+}
+function _parsearLeadLocal(t){
+  const out = {};
+  const g = (re)=>{ const m = t.match(re); return m ? (m[1]||'').trim() : ''; };
+  out.nombre = g(/nombre\s*:\s*\n?\s*(.+)/i);
+  out.email = g(/(?:correo electr[oó]nico|email|correo)\s*:\s*\n?\s*([^\s]+@[^\s]+)/i) || g(/([a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,})/i);
+  out.telefono = g(/(?:n[uú]mero de tel[eé]fono|tel[eé]fono|fono)\s*:\s*\n?\s*([+\d][\d\s]{6,})/i);
+  out.peticion = g(/¿?con qu[eé] sala deseas comenzar\??\s*:\s*\n?\s*(.+)/i);
+  out.mensaje = g(/mensaje\s*:\s*\n?\s*([\s\S]+?)(?:\n\s*\n|muchas gracias|saludos|$)/i);
+  if (!out.peticion && /sala|sensorial|multisensorial/i.test((out.mensaje||'')+' '+t)) out.peticion = 'Sala multisensorial';
+  out._suficiente = !!(out.nombre && out.email);
+  return out;
+}
+function _ncLlenarCamposLead(r){
+  const set = (id,v)=>{ const el=document.getElementById(id); if(el && v) el.value = String(v).trim(); };
+  set('nc-nombre', r.nombre); set('nc-email', r.email); set('nc-telefono', r.telefono);
+  set('nc-institucion', r.institucion); set('nc-ciudad', r.ciudad);
+  const pet = r.peticion || ''; const msg = r.mensaje || '';
+  const notas = document.getElementById('nc-notas');
+  if (notas && (pet||msg)) notas.value = (pet ? ('Pide: '+pet+'. ') : '') + (msg||'');
+  const medio = document.getElementById('nc-medio'); if (medio && !medio.value) medio.value = 'Correo entrante';
+  if (r.institucion){ const ti=document.getElementById('nc-tipo-institucion'); if(ti){ ti.checked=true; if(typeof actualizarTipoContacto==='function') actualizarTipoContacto(); } }
+}
+function ncLeadUrgenteToggle(){
+  const on = document.getElementById('nc-lead-urgente').checked;
+  const box = document.getElementById('nc-lead-urgente-fecha'); if (box) box.style.display = on ? 'block' : 'none';
+  if (on){ const dl = document.getElementById('nc-lead-deadline');
+    if (dl && !dl.value){ const d=new Date(Date.now()+24*3600*1000); const p=(n)=>String(n).padStart(2,'0');
+      dl.value = d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes()); } }
 }
 
 async function guardarNuevoContacto(forzar){
@@ -8326,6 +8441,22 @@ async function guardarNuevoContacto(forzar){
     btn.disabled = false; btn.textContent = 'Guardar contacto';
     return;
   }
+
+  // Si se marcó LEAD URGENTE: fija la fecha límite (próxima acción) y la etiqueta,
+  // para que le aparezca prioritario al ejecutivo en su CRM.
+  try {
+    const chk = document.getElementById('nc-lead-urgente');
+    if (r.id && chk && chk.checked){
+      const dlInput = document.getElementById('nc-lead-deadline');
+      let dlVal = dlInput && dlInput.value ? dlInput.value : '';
+      if (!dlVal){ const d=new Date(Date.now()+24*3600*1000); const p=(n)=>String(n).padStart(2,'0'); dlVal=d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes()); }
+      const fechaDia = dlVal.slice(0,10);
+      const hora = dlVal.slice(11,16);
+      const pet = (document.getElementById('nc-notas') && document.getElementById('nc-notas').value || '').trim();
+      await fetchAPI('crm_actualizar_proxima', { id: r.id, fecha: fechaDia, nota: 'LEAD URGENTE' + (hora?(' — límite '+hora+'h'):'') + (pet?(' · '+pet):''), solicitante: USUARIO });
+      await fetchAPI('crm_actualizar_etiquetas', { id: r.id, etiquetas: ['Lead urgente'], solicitante: USUARIO });
+    }
+  } catch(e){}
 
   cerrarModalNuevoContacto();
   // Limpiar caches y refrescar

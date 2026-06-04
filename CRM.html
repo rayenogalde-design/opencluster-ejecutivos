@@ -2098,6 +2098,11 @@ body{
       </div>
 
       <div class="side-section admin" id="secAdmin" style="display:none;">Administración</div>
+      <div class="side-tab admin" data-view="vLeads" id="navLeads" onclick="goView('vLeads')" style="display:none;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Leads urgentes
+        <span class="badge" id="badgeLeads" style="display:none;background:#DB2777;">0</span>
+      </div>
       <div class="side-tab admin" data-view="vActividad" id="navActividad" onclick="goView('vActividad')" style="display:none;">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         Actividad del equipo
@@ -2130,6 +2135,22 @@ body{
       <div id="deployBanner"></div>
 
       <!-- ═══ Actividad del equipo (admin) ═══ -->
+      <!-- ═══ Leads urgentes (admin) ═══ -->
+      <div class="view" id="vLeads">
+        <div class="sec-head">
+          <h1>Leads urgentes</h1>
+          <p>Los contactos que derivaste como lead urgente. Aquí los revisas: a quién se los asignaste, su fecha límite y cómo van.</p>
+        </div>
+        <div style="margin:14px 0;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+          <div class="searchbox" style="flex:1;min-width:280px;max-width:480px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <input type="text" id="searchLeads" oninput="filtrarLeads(this.value)" placeholder="Buscar por nombre, institución, ejecutivo…">
+          </div>
+          <div style="color:var(--subtle);font-size:13.5px;font-weight:600;"><b id="cntLeads" style="color:var(--ink);">0</b> leads</div>
+        </div>
+        <div id="listLeads"><div class="loading-state"><div class="spinner"></div>Cargando…</div></div>
+      </div>
+
       <div class="view" id="vActividad">
         <div class="sec-head" style="display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;">
           <div>
@@ -3721,7 +3742,7 @@ function aplicarVisibilidadPorRol(){
 
   // Vistas admin (Territorios, Auditoría, Migración, Importar): visibles solo si Rayen está
   // en modo Admin. En modo Ejecutiva o para ejecutivos no admin, se ocultan.
-  ['navActividad', 'navTerr', 'navAud', 'navMigracion', 'navImportar', 'navConfig', 'secAdmin'].forEach(id => {
+  ['navLeads', 'navActividad', 'navTerr', 'navAud', 'navMigracion', 'navImportar', 'navConfig', 'secAdmin'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.style.display = verComoEjecutivo ? 'none' : '';
   });
@@ -3806,6 +3827,7 @@ function goView(id){
     case 'vMigracion':       /* no autoload */ break;
     case 'vActividad':       cargarActividadEquipo(); break;
     case 'vConfig':          cargarConfig(); break;
+    case 'vLeads':           cargarLeads(); break;
   }
 }
 
@@ -7176,6 +7198,49 @@ function renderListaCerrar(){
   }
   container.innerHTML = '<div class="v2-grid">' +
     lista.map(c => renderTarjetaV2(c, 'vCerrar')).join('') + '</div>';
+}
+
+/* ════ Vista LEADS URGENTES (admin): todos los contactos derivados como lead ════ */
+function _esLead(c){
+  const e = c.etiquetas;
+  const s = Array.isArray(e) ? e.join(' ') : String(e || '');
+  return /lead urgente/i.test(s);
+}
+function _ordenProx(c){ const t = Date.parse(c.proxima_accion || ''); return isNaN(t) ? 8.64e15 : t; }
+async function cargarLeads(){
+  const container = document.getElementById('listLeads');
+  const cnt = document.getElementById('cntLeads');
+  container.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando…</div>';
+  let lista = await _cargarContactosBase();
+  lista = lista.filter(_esLead);
+  if(!esActuandoComoAdmin()) lista = lista.filter(esOwner);
+  lista.sort((a, b) => _ordenProx(a) - _ordenProx(b));  // vencidos / más cercanos primero
+  CACHE.vLeads = lista;
+  cnt.textContent = lista.length;
+  const badge = document.getElementById('badgeLeads');
+  if(badge){ if(lista.length){ badge.style.display = 'inline-block'; badge.textContent = lista.length; } else badge.style.display = 'none'; }
+  renderListaLeads();
+}
+function filtrarLeads(q){ FILTROS.vLeads = q; renderListaLeads(); }
+function renderListaLeads(){
+  const container = document.getElementById('listLeads');
+  const q = _busqNorm(FILTROS.vLeads || '').trim();
+  let lista = CACHE.vLeads || [];
+  if(q){
+    lista = lista.filter(c =>
+      _busqNorm(c.nombre).includes(q) ||
+      _busqNorm(c.institucion).includes(q) ||
+      _busqNorm(c.ejecutivo_asignado).includes(q) ||
+      _busqNorm(c.email).includes(q)
+    );
+  }
+  if(!lista.length){
+    container.innerHTML = '<div class="loading-state" style="padding:30px 20px;">' +
+      (q ? 'Ningún lead coincide con "' + esc(q) + '"' : 'No hay leads urgentes por ahora. Cuando marques un contacto como lead urgente, aparece acá.') +
+      '</div>';
+    return;
+  }
+  container.innerHTML = '<div class="v2-grid">' + lista.map(c => renderTarjetaV2(c, 'vLeads')).join('') + '</div>';
 }
 
 async function cargarOlvidados(){

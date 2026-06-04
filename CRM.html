@@ -7240,7 +7240,27 @@ function renderListaLeads(){
       '</div>';
     return;
   }
-  container.innerHTML = '<div class="v2-grid">' + lista.map(c => renderTarjetaV2(c, 'vLeads')).join('') + '</div>';
+  container.innerHTML = lista.map(c => {
+    const ej = String(c.ejecutivo_asignado || '').trim() || 'Sin asignar';
+    const fc = _fmtFechaLead(c.fecha_creacion);
+    const dl = _fmtFechaLead(c.proxima_accion);
+    return '<div style="margin-bottom:16px;">' +
+      '<div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center; font-size:12.5px; margin:0 0 6px 4px;">' +
+        '<span style="color:var(--subtle);">Asignado a <b style="color:var(--purple-dk);">' + esc(ej) + '</b></span>' +
+        (fc ? '<span style="color:var(--subtle);">Subido el <b style="color:var(--ink);">' + esc(fc) + '</b></span>' : '') +
+        (dl ? '<span style="color:#9D174D;font-weight:700;">Límite ' + esc(dl) + '</span>' : '') +
+      '</div>' +
+      renderTarjetaV2(c, 'vLeads') +
+    '</div>';
+  }).join('');
+}
+function _fmtFechaLead(f){
+  if(!f) return '';
+  const m = String(f).match(/(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return m[3] + '-' + m[2] + '-' + m[1];
+  const d = new Date(f);
+  if(!isNaN(d.getTime())){ const p=(n)=>String(n).padStart(2,'0'); return p(d.getDate())+'-'+p(d.getMonth()+1)+'-'+d.getFullYear(); }
+  return String(f);
 }
 
 async function cargarOlvidados(){

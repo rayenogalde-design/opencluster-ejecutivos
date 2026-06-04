@@ -6293,6 +6293,7 @@ async function pintarLeadsDashboard(){
   items.forEach(c => { const pa=new Date(c.proxima_accion); pa.setHours(0,0,0,0); c.__leadDiff = isNaN(pa.getTime())? 9999 : Math.round((pa-hoy0)/86400000); });
   items.sort((a,b)=> a.__leadDiff - b.__leadDiff);
   if(!items.length){ cont.innerHTML=''; return; }
+  _mostrarBloqueoLeads(items);
   if(!window.__LEADS_TOAST){ window.__LEADS_TOAST = true; _toastLeads(items.length); }
   const filas = items.slice(0,10).map(c => {
     const nom = esc(c.nombre || c.institucion || '(sin nombre)');
@@ -6318,6 +6319,66 @@ async function pintarLeadsDashboard(){
       '<div class="toques-sum"><span class="toques-pill" style="background:#FCE7F3;color:#9D174D;">'+items.length+'</span></div>' +
     '</div>' + filas +
   '</div>';
+}
+// Aviso de pantalla completa que BLOQUEA el CRM hasta que el ejecutivo le da clic.
+// Solo para leads urgentes recién asignados que aún no reconoció en esta sesión.
+function _mostrarBloqueoLeads(items){
+  try {
+    if(!items || !items.length) return;
+    let ack = [];
+    try { ack = JSON.parse(sessionStorage.getItem('leads_ack') || '[]'); } catch(e){ ack = []; }
+    const nuevos = items.filter(c => ack.indexOf(c.id) < 0);
+    if(!nuevos.length) return;
+    if(document.getElementById('leadBloqueoOverlay')) return; // ya visible
+    const asignador = esc(String((nuevos[0] && nuevos[0].ejecutivo_creador) || 'Rayen').trim().split(' ')[0] || 'Rayen');
+    const plural = nuevos.length > 1;
+    const titulo = asignador + ' te ha asignado ' + (plural ? (nuevos.length + ' contactos') : 'este contacto') + ' de forma URGENTE';
+    const tarjetas = nuevos.slice(0,6).map(c => {
+      const nom = esc(c.nombre || c.institucion || '(sin nombre)');
+      const inst = c.institucion ? esc(c.institucion) : '';
+      const d = (typeof c.__leadDiff === 'number') ? c.__leadDiff : 9999;
+      const limite = d<0 ? ('Vencido hace '+Math.abs(d)+' día'+(Math.abs(d)===1?'':'s')) : (d===0 ? 'Vence HOY' : 'Tienes '+d+' día'+(d===1?'':'s')+' para contactar');
+      const limCol = d<=0 ? '#B91C1C' : '#9D174D';
+      const pet = esc(String(c.nota_proxima||'').replace(/^LEAD URGENTE[^·]*·?\s*/i,'').trim());
+      return '<div style="background:#fff;border:1px solid #FBCFE8;border-radius:14px;padding:16px 18px;margin-top:12px;text-align:left;">' +
+          '<div style="font-size:18px;font-weight:800;color:#111;">'+nom+'</div>' +
+          (inst?'<div style="font-size:13.5px;color:#666;margin-top:2px;">'+inst+'</div>':'') +
+          (pet?'<div style="font-size:14px;color:#374151;margin-top:8px;">'+pet+'</div>':'') +
+          '<div style="font-size:13.5px;font-weight:800;color:'+limCol+';margin-top:10px;">'+limite+'</div>' +
+          '<button onclick="_leadBloqueoVer(\''+esc(c.id)+'\')" style="margin-top:12px;background:#DB2777;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-weight:800;font-size:13.5px;cursor:pointer;font-family:inherit;">Ver contacto &rarr;</button>' +
+        '</div>';
+    }).join('');
+    const ov = document.createElement('div');
+    ov.id = 'leadBloqueoOverlay';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:2147483600;background:rgba(60,7,30,.74);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:24px;font-family:inherit;';
+    ov.innerHTML =
+      '<div style="background:linear-gradient(180deg,#FFF5F7,#fff);border:2px solid #DB2777;border-radius:22px;max-width:560px;width:100%;max-height:88vh;overflow:auto;box-shadow:0 24px 70px rgba(0,0,0,.42);padding:30px 28px;text-align:center;">' +
+        '<div style="width:64px;height:64px;border-radius:50%;background:#FCE7F3;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">' +
+          '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#DB2777" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>' +
+        '</div>' +
+        '<div style="display:inline-block;background:#DB2777;color:#fff;font-size:11.5px;font-weight:800;letter-spacing:.08em;padding:4px 12px;border-radius:999px;">PRIORIDAD URGENTE</div>' +
+        '<h2 style="font-size:22px;font-weight:800;color:#9D174D;margin:14px 0 0;line-height:1.25;">'+titulo+'</h2>' +
+        tarjetas +
+        '<button onclick="_cerrarBloqueoLeads()" style="margin-top:22px;background:#111;color:#fff;border:none;border-radius:12px;padding:14px 22px;font-weight:800;font-size:15px;cursor:pointer;width:100%;font-family:inherit;">Entendido, lo atender&eacute;</button>' +
+      '</div>';
+    ov.dataset.ids = nuevos.map(c=>c.id).join(',');
+    document.body.appendChild(ov);
+  } catch(e){}
+}
+function _leadBloqueoVer(id){
+  _cerrarBloqueoLeads();
+  try { abrirFichaModal(id); } catch(e){}
+}
+function _cerrarBloqueoLeads(){
+  const ov = document.getElementById('leadBloqueoOverlay');
+  if(!ov) return;
+  try {
+    let ack = [];
+    try { ack = JSON.parse(sessionStorage.getItem('leads_ack') || '[]'); } catch(e){ ack = []; }
+    (ov.dataset.ids||'').split(',').filter(Boolean).forEach(id => { if(ack.indexOf(id)<0) ack.push(id); });
+    sessionStorage.setItem('leads_ack', JSON.stringify(ack));
+  } catch(e){}
+  ov.remove();
 }
 async function _leadListo(id, btn){
   try { if(btn){ btn.disabled=true; btn.textContent='…'; }

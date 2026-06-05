@@ -7728,15 +7728,68 @@ async function cargarMetricas(){
   const cont = document.getElementById('metricasCharts');
   const muro = document.getElementById('muroHonor');
   cont.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando métricas…</div>';
+  try { _METRICAS_CHARTS.forEach(ch => ch.destroy()); } catch(e){}
+  _METRICAS_CHARTS = [];
   const ejec = (typeof getEjecutivoEfectivo==='function' ? getEjecutivoEfectivo() : '') || USUARIO;
-  const [met, kpis, cots] = await Promise.all([
+  const [met, kpis, cots, comp] = await Promise.all([
     fetchAPI('crm_metricas_anuales', { ejecutivo: ejec }),
     fetchAPI('crm_kpis_dashboard', { solicitante: USUARIO }),
-    fetchAPI('crm_mis_cotizaciones', { ejecutivo: USUARIO })
+    fetchAPI('crm_mis_cotizaciones', { ejecutivo: USUARIO }),
+    fetchAPI('crm_comparativo_equipo', { solicitante: USUARIO })
   ]);
   try { renderMuroHonor(muro, kpis, cots); } catch(e){ if(muro) muro.innerHTML=''; }
-  if(!met || !met.ok || !met.series){ cont.innerHTML = '<div class="error-state">No se pudieron cargar las métricas.<div style="font-size:12px;color:var(--subtle);margin-top:4px;">'+esc((met&&met.error)||'desconocido')+'</div></div>'; return; }
-  renderMetricasCharts(cont, met.series);
+  cont.innerHTML = '<div id="metVsEquipo"></div><div id="metAnual"></div>';
+  if(comp && comp.ok && Array.isArray(comp.comparativo)){ try { renderMetricasVsEquipo(document.getElementById('metVsEquipo'), comp); } catch(e){} }
+  if(met && met.ok && met.series){ renderMetricasCharts(document.getElementById('metAnual'), met.series); }
+  else { const a=document.getElementById('metAnual'); if(a) a.innerHTML='<div class="loading-state" style="padding:20px;">No se pudo cargar el detalle anual.</div>'; }
+}
+function renderMetricasVsEquipo(cont, comp){
+  if(!cont) return;
+  const arr = comp.comparativo || [];
+  const meses6 = comp.meses_6m || [];
+  const MN = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const lblM = m => { const p=String(m).split('-'); return MN[parseInt(p[1],10)-1]||m; };
+  const fn = s => String(s||'').split(' ')[0];
+  const mi = fn((typeof getEjecutivoEfectivo==='function'?getEjecutivoEfectivo():'')||USUARIO);
+  const miReg = arr.find(x => _busqNorm(fn(x.ejecutivo))===_busqNorm(mi)) || arr[0] || {};
+  const avg = key => meses6.map((_,i)=> arr.length ? Math.round(arr.reduce((s,x)=> s + (((x[key]||[])[i])||0), 0)/arr.length*10)/10 : 0);
+  const card = (id,titulo,sub)=> '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:14px 16px;">' +
+    '<div style="font-family:Montserrat,sans-serif;font-size:12.5px;font-weight:800;color:var(--ink);border-left:3px solid #5b21b6;padding-left:8px;display:flex;justify-content:space-between;">' +
+      '<span>'+esc(titulo)+'</span>'+(sub?'<span style="font-weight:600;color:var(--subtle);font-size:11px;">'+esc(sub)+'</span>':'')+'</div>' +
+    '<canvas id="'+id+'" height="150" style="margin-top:8px;"></canvas></div>';
+  cont.innerHTML = '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--oct-navy,#001A60);text-transform:uppercase;letter-spacing:.06em;margin:6px 0 12px;">Mi desempeño vs equipo</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-bottom:24px;">' +
+      card('vs-desemp','Mi desempeño vs equipo','cotizaciones · últimos 6 meses') +
+      card('vs-reun','Mis reuniones vs equipo','últimos 6 meses') +
+      card('vs-cotmes','Monto cotizado del mes vs equipo','') +
+      card('vs-cotanio','Monto cotizado del año vs equipo','') +
+      card('vs-ganmes','Ventas cerradas del mes vs equipo','') +
+      card('vs-gananio','Ventas cerradas del año vs equipo','') +
+      card('vs-fndr','Proyectos postulados a Fondos','equipo') +
+    '</div>';
+  if(typeof Chart==='undefined') return;
+  const labels6 = meses6.map(lblM);
+  function lineChart(id, miData, avgData, color){
+    const ctx=document.getElementById(id); if(!ctx) return;
+    _METRICAS_CHARTS.push(new Chart(ctx,{ type:'line', data:{ labels:labels6, datasets:[
+      { label:'Yo', data:miData, borderColor:color, backgroundColor:color, tension:.35, fill:false, pointRadius:3 },
+      { label:'Promedio equipo', data:avgData, borderColor:'#F59E0B', borderDash:[5,4], tension:.35, fill:false, pointRadius:2 }
+    ]}, options:{ responsive:true, plugins:{legend:{display:true,labels:{boxWidth:10,font:{size:10}}}}, scales:{ y:{beginAtZero:true,ticks:{font:{size:10}}}, x:{ticks:{font:{size:10}}} } } }));
+  }
+  lineChart('vs-desemp', miReg.serie_cot_6m||[], avg('serie_cot_6m'), '#5b21b6');
+  lineChart('vs-reun', miReg.serie_reu_6m||[], avg('serie_reu_6m'), '#06B3FD');
+  function barChart(id, valKey, color, money){
+    const ctx=document.getElementById(id); if(!ctx) return;
+    const rows = arr.slice().sort((a,b)=>(b[valKey]||0)-(a[valKey]||0));
+    const cols = rows.map(x => _busqNorm(fn(x.ejecutivo))===_busqNorm(mi) ? color : '#cbd5e1');
+    _METRICAS_CHARTS.push(new Chart(ctx,{ type:'bar', data:{ labels:rows.map(x=>fn(x.ejecutivo)), datasets:[{ data:rows.map(x=>x[valKey]||0), backgroundColor:cols, borderRadius:5, maxBarThickness:34 }]},
+      options:{ responsive:true, plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>money?fmtCLP(c.parsed.y):String(c.parsed.y)}}}, scales:{ y:{beginAtZero:true,ticks:{callback:v=>money?('$'+Math.round(v/1000000)+'M'):v,font:{size:10}}}, x:{ticks:{font:{size:10}}} } } }));
+  }
+  barChart('vs-cotmes','cot_mes_monto','#5b21b6',true);
+  barChart('vs-cotanio','cot_anio_monto','#C9A96E',true);
+  barChart('vs-ganmes','gan_mes_monto','#16A34A',true);
+  barChart('vs-gananio','gan_anio_monto','#16A34A',true);
+  barChart('vs-fndr','fndr_cant','#5b21b6',false);
 }
 function renderMuroHonor(muro, kpis, cots){
   if(!muro) return;
@@ -7770,8 +7823,7 @@ function renderMuroHonor(muro, kpis, cots){
     '</div>';
 }
 function renderMetricasCharts(cont, series){
-  try { _METRICAS_CHARTS.forEach(ch => ch.destroy()); } catch(e){}
-  _METRICAS_CHARTS = [];
+  if(!cont) return;
   const defs = [
     { key:'cotizaciones_por_mes', titulo:'Cantidad de Cotizaciones', sub:'por mes', color:'#001A60', money:false },
     { key:'montos_por_mes',       titulo:'Montos Cotizados',         sub:'neto por mes', color:'#92580e', money:true },
@@ -7781,7 +7833,8 @@ function renderMetricasCharts(cont, series){
     { key:'sm_ganadas_por_mes',   titulo:'Salas Multisensoriales Implementadas', sub:'ganadas por mes', color:'#DB2777', money:false }
   ];
   const mesLbl = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  cont.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;">' +
+  cont.innerHTML = '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--oct-navy,#001A60);text-transform:uppercase;letter-spacing:.06em;margin:6px 0 12px;">Métricas Anuales · Equipo Difusión</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;">' +
     defs.map((d,i) => '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:14px 16px;">' +
       '<div style="font-family:Montserrat,sans-serif;font-size:12.5px;font-weight:800;color:var(--ink);">'+esc(d.titulo)+'</div>' +
       '<div style="font-size:11px;color:var(--subtle);margin-bottom:8px;">Equipo Difusión · '+esc(d.sub)+'</div>' +

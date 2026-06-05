@@ -7429,7 +7429,9 @@ function renderListaCerrar(){
 /* ════ Vista MIS COTIZACIONES — por cotización, agrupadas por mes, con semáforo de seguimiento ════ */
 async function cargarMisCotizaciones(){
   const container = document.getElementById('listMisCot');
-  container.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando…</div>';
+  // Render instantáneo desde la caché de sesión (refresca en background) → al reabrir es inmediato.
+  if(CACHE.vMisCot && CACHE.vMisCot.length){ try { _aplicarTituloMisCot(); _poblarSelectorEjecMisCot(); renderMisCotizaciones(); } catch(e){} }
+  else container.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando…</div>';
   const ejec = (typeof getEjecutivoEfectivo === 'function' ? getEjecutivoEfectivo() : '') || USUARIO;
   const r = await fetchAPI('crm_mis_cotizaciones', { ejecutivo: ejec, modo_vista: MODO_VISTA });
   if(!r || !r.ok){
@@ -7724,89 +7726,33 @@ async function marcarEstadoCotMC(num, estado, btn){
 
 /* ════ Vista MÉTRICAS — Muro de Honor + gráficos anuales del equipo (replica el Portal) ════ */
 let _METRICAS_CHARTS = [];
+const _PALETA_EJ = ['#001A60','#06B3FD','#16A34A','#F59E0B','#5b21b6','#DB2777','#0891B2','#92580e'];
+const _MN = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 async function cargarMetricas(){
   const cont = document.getElementById('metricasCharts');
+  // Render instantáneo desde caché de sesión (refresca en background) → al reabrir es inmediato.
+  if(window.__METRICAS_COMP){ try { _pintarMetricas(window.__METRICAS_COMP); } catch(e){} }
+  else cont.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando métricas…</div>';
+  const comp = await fetchAPI('crm_comparativo_equipo', { solicitante: USUARIO });
+  if(!comp || !comp.ok){ if(!window.__METRICAS_COMP) cont.innerHTML = '<div class="error-state">No se pudieron cargar las métricas.<div style="font-size:12px;color:var(--subtle);margin-top:4px;">'+esc((comp&&comp.error)||'desconocido')+'</div></div>'; return; }
+  window.__METRICAS_COMP = comp;
+  _pintarMetricas(comp);
+}
+function _pintarMetricas(comp){
+  const cont = document.getElementById('metricasCharts');
   const muro = document.getElementById('muroHonor');
-  cont.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando métricas…</div>';
   try { _METRICAS_CHARTS.forEach(ch => ch.destroy()); } catch(e){}
   _METRICAS_CHARTS = [];
-  const ejec = (typeof getEjecutivoEfectivo==='function' ? getEjecutivoEfectivo() : '') || USUARIO;
-  const [met, kpis, cots, comp] = await Promise.all([
-    fetchAPI('crm_metricas_anuales', { ejecutivo: ejec }),
-    fetchAPI('crm_kpis_dashboard', { solicitante: USUARIO }),
-    fetchAPI('crm_mis_cotizaciones', { ejecutivo: USUARIO }),
-    fetchAPI('crm_comparativo_equipo', { solicitante: USUARIO })
-  ]);
-  try { renderMuroHonor(muro, kpis, cots); } catch(e){ if(muro) muro.innerHTML=''; }
+  try { renderMuroHonor(muro, comp); } catch(e){ if(muro) muro.innerHTML=''; }
   cont.innerHTML = '<div id="metVsEquipo"></div><div id="metAnual"></div>';
-  if(comp && comp.ok && Array.isArray(comp.comparativo)){ try { renderMetricasVsEquipo(document.getElementById('metVsEquipo'), comp); } catch(e){} }
-  if(met && met.ok && met.series){ renderMetricasCharts(document.getElementById('metAnual'), met.series); }
-  else { const a=document.getElementById('metAnual'); if(a) a.innerHTML='<div class="loading-state" style="padding:20px;">No se pudo cargar el detalle anual.</div>'; }
+  try { renderMetricasVsEquipo(document.getElementById('metVsEquipo'), comp); } catch(e){}
+  try { renderMetricasAnualApilado(document.getElementById('metAnual'), comp); } catch(e){}
 }
-function renderMetricasVsEquipo(cont, comp){
-  if(!cont) return;
-  const arr = comp.comparativo || [];
-  const meses6 = comp.meses_6m || [];
-  const MN = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  const lblM = m => { const p=String(m).split('-'); return MN[parseInt(p[1],10)-1]||m; };
-  const fn = s => String(s||'').split(' ')[0];
-  const mi = fn((typeof getEjecutivoEfectivo==='function'?getEjecutivoEfectivo():'')||USUARIO);
-  const miReg = arr.find(x => _busqNorm(fn(x.ejecutivo))===_busqNorm(mi)) || arr[0] || {};
-  const avg = key => meses6.map((_,i)=> arr.length ? Math.round(arr.reduce((s,x)=> s + (((x[key]||[])[i])||0), 0)/arr.length*10)/10 : 0);
-  const card = (id,titulo,sub)=> '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:14px 16px;">' +
-    '<div style="font-family:Montserrat,sans-serif;font-size:12.5px;font-weight:800;color:var(--ink);border-left:3px solid #5b21b6;padding-left:8px;display:flex;justify-content:space-between;">' +
-      '<span>'+esc(titulo)+'</span>'+(sub?'<span style="font-weight:600;color:var(--subtle);font-size:11px;">'+esc(sub)+'</span>':'')+'</div>' +
-    '<canvas id="'+id+'" height="150" style="margin-top:8px;"></canvas></div>';
-  cont.innerHTML = '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--oct-navy,#001A60);text-transform:uppercase;letter-spacing:.06em;margin:6px 0 12px;">Mi desempeño vs equipo</div>' +
-    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-bottom:24px;">' +
-      card('vs-desemp','Mi desempeño vs equipo','cotizaciones · últimos 6 meses') +
-      card('vs-reun','Mis reuniones vs equipo','últimos 6 meses') +
-      card('vs-cotmes','Monto cotizado del mes vs equipo','') +
-      card('vs-cotanio','Monto cotizado del año vs equipo','') +
-      card('vs-ganmes','Ventas cerradas del mes vs equipo','') +
-      card('vs-gananio','Ventas cerradas del año vs equipo','') +
-      card('vs-fndr','Proyectos postulados a Fondos','equipo') +
-    '</div>';
-  if(typeof Chart==='undefined') return;
-  const labels6 = meses6.map(lblM);
-  function lineChart(id, miData, avgData, color){
-    const ctx=document.getElementById(id); if(!ctx) return;
-    _METRICAS_CHARTS.push(new Chart(ctx,{ type:'line', data:{ labels:labels6, datasets:[
-      { label:'Yo', data:miData, borderColor:color, backgroundColor:color, tension:.35, fill:false, pointRadius:3 },
-      { label:'Promedio equipo', data:avgData, borderColor:'#F59E0B', borderDash:[5,4], tension:.35, fill:false, pointRadius:2 }
-    ]}, options:{ responsive:true, plugins:{legend:{display:true,labels:{boxWidth:10,font:{size:10}}}}, scales:{ y:{beginAtZero:true,ticks:{font:{size:10}}}, x:{ticks:{font:{size:10}}} } } }));
-  }
-  lineChart('vs-desemp', miReg.serie_cot_6m||[], avg('serie_cot_6m'), '#5b21b6');
-  lineChart('vs-reun', miReg.serie_reu_6m||[], avg('serie_reu_6m'), '#06B3FD');
-  function barChart(id, valKey, color, money){
-    const ctx=document.getElementById(id); if(!ctx) return;
-    const rows = arr.slice().sort((a,b)=>(b[valKey]||0)-(a[valKey]||0));
-    const cols = rows.map(x => _busqNorm(fn(x.ejecutivo))===_busqNorm(mi) ? color : '#cbd5e1');
-    _METRICAS_CHARTS.push(new Chart(ctx,{ type:'bar', data:{ labels:rows.map(x=>fn(x.ejecutivo)), datasets:[{ data:rows.map(x=>x[valKey]||0), backgroundColor:cols, borderRadius:5, maxBarThickness:34 }]},
-      options:{ responsive:true, plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>money?fmtCLP(c.parsed.y):String(c.parsed.y)}}}, scales:{ y:{beginAtZero:true,ticks:{callback:v=>money?('$'+Math.round(v/1000000)+'M'):v,font:{size:10}}}, x:{ticks:{font:{size:10}}} } } }));
-  }
-  barChart('vs-cotmes','cot_mes_monto','#5b21b6',true);
-  barChart('vs-cotanio','cot_anio_monto','#C9A96E',true);
-  barChart('vs-ganmes','gan_mes_monto','#16A34A',true);
-  barChart('vs-gananio','gan_anio_monto','#16A34A',true);
-  barChart('vs-fndr','fndr_cant','#5b21b6',false);
-}
-function renderMuroHonor(muro, kpis, cots){
+function renderMuroHonor(muro, comp){
   if(!muro) return;
-  const fn = s => String(s||'').split(' ')[0];
-  function topRanking(kpiObj){
-    const r = (kpiObj && kpiObj.ranking_equipo) || [];
-    let best = null; r.forEach(x => { if(!best || (x.anio||0) > (best.anio||0)) best = x; });
-    return best && best.anio ? { nombre: fn(best.ejec), valor: best.anio } : null;
-  }
-  const topCot = (kpis && kpis.ok && kpis.kpis) ? topRanking(kpis.kpis.cotizaciones) : null;
-  const topReu = (kpis && kpis.ok && kpis.kpis) ? topRanking(kpis.kpis.reuniones) : null;
-  let topVenta = null;
-  if(cots && cots.ok && Array.isArray(cots.cotizaciones)){
-    const anio = String(new Date().getFullYear()), porEj = {};
-    cots.cotizaciones.forEach(c => { if(c.ganada && String(c.mes||'').substring(0,4)===anio){ const kk=fn(c.ejecutivo); porEj[kk]=(porEj[kk]||0)+(c.monto||c.neto||0); } });
-    Object.keys(porEj).forEach(kk => { if(!topVenta || porEj[kk] > topVenta.valor) topVenta = { nombre:kk, valor:porEj[kk] }; });
-  }
+  const arr = (comp && comp.comparativo) || [];
+  const top = key => { let b=null; arr.forEach(x=>{ if(!b || (x[key]||0) > (b[key]||0)) b=x; }); return (b && b[key]) ? {nombre:b.ejecutivo, valor:b[key]} : null; };
+  const tCot = top('cot_anio_cant'), tReu = top('reuniones_anio'), tVen = top('gan_anio_monto');
   const trofeo = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/></svg>';
   const card = (titulo,color,nombre,valor) =>
     '<div style="flex:1;min-width:170px;background:#fff;border:1px solid var(--smoke,#e5e7eb);border-top:3px solid '+color+';border-radius:12px;padding:14px 16px;text-align:center;">' +
@@ -7817,43 +7763,89 @@ function renderMuroHonor(muro, kpis, cots){
     '</div>';
   muro.innerHTML = '<div style="font-family:Montserrat,sans-serif;font-size:12px;font-weight:800;color:var(--purple-dk,#5b21b6);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Muro de Honor · 2026</div>' +
     '<div style="display:flex;gap:12px;flex-wrap:wrap;">' +
-      card('Más cotizaciones','#001A60', topCot?topCot.nombre:'—', topCot?(topCot.valor+' cotiz'):'Sin datos') +
-      card('Más reuniones','#06B3FD', topReu?topReu.nombre:'—', topReu?(topReu.valor+' reuniones'):'Sin datos') +
-      card('Más ventas','#16A34A', topVenta?topVenta.nombre:'—', topVenta?fmtCLP(topVenta.valor):'Sin datos') +
+      card('Más cotizaciones','#001A60', tCot?tCot.nombre:'—', tCot?(tCot.valor+' cotiz'):'Sin datos') +
+      card('Más reuniones','#06B3FD', tReu?tReu.nombre:'—', tReu?(tReu.valor+' reuniones'):'Sin datos') +
+      card('Más ventas','#16A34A', tVen?tVen.nombre:'—', tVen?fmtCLP(tVen.valor):'Sin datos') +
     '</div>';
 }
-function renderMetricasCharts(cont, series){
+function _gridMetricas(inner){
+  // 2 por fila (gráficos grandes), 1 en pantallas chicas.
+  return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:18px;margin-bottom:24px;">' + inner + '</div>';
+}
+function renderMetricasVsEquipo(cont, comp){
   if(!cont) return;
+  const arr = comp.comparativo || [];
+  const fn = s => String(s||'').split(' ')[0];
+  const mi = fn((typeof getEjecutivoEfectivo==='function'?getEjecutivoEfectivo():'')||USUARIO);
+  const miReg = arr.find(x => _busqNorm(fn(x.ejecutivo))===_busqNorm(mi)) || arr[0] || {};
+  // Ventana últimos 6 meses dentro del año
+  const cur = new Date().getMonth();
+  const idxs = []; for(let i=Math.max(0,cur-5); i<=cur; i++) idxs.push(i);
+  const labels6 = idxs.map(i=>_MN[i]);
+  const sliceS = serie => idxs.map(i => (serie||[])[i]||0);
+  const avgS = key => idxs.map(i => arr.length ? Math.round(arr.reduce((s,x)=> s + (((x[key]||[])[i])||0),0)/arr.length*10)/10 : 0);
+  const card = (id,t,sub)=> '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
+    '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #5b21b6;padding-left:8px;display:flex;justify-content:space-between;align-items:baseline;">' +
+      '<span>'+esc(t)+'</span>'+(sub?'<span style="font-weight:600;color:var(--subtle);font-size:11px;">'+esc(sub)+'</span>':'')+'</div>' +
+    '<canvas id="'+id+'" height="190" style="margin-top:10px;"></canvas></div>';
+  cont.innerHTML = '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--oct-navy,#001A60);text-transform:uppercase;letter-spacing:.06em;margin:6px 0 12px;">Mi desempeño vs equipo</div>' +
+    _gridMetricas(
+      card('vs-desemp','Mi desempeño vs equipo','cotizaciones · 6 meses') +
+      card('vs-reun','Mis reuniones vs equipo','6 meses') +
+      card('vs-cotmes','Monto cotizado del mes vs equipo','') +
+      card('vs-cotanio','Monto cotizado del año vs equipo','') +
+      card('vs-ganmes','Ventas cerradas del mes vs equipo','') +
+      card('vs-gananio','Ventas cerradas del año vs equipo','') +
+      card('vs-fndr','Proyectos postulados a Fondos','equipo · año')
+    );
+  if(typeof Chart==='undefined') return;
+  function lineChart(id, miData, avgData, color){
+    const ctx=document.getElementById(id); if(!ctx) return;
+    _METRICAS_CHARTS.push(new Chart(ctx,{ type:'line', data:{ labels:labels6, datasets:[
+      { label:'Yo', data:miData, borderColor:color, backgroundColor:color, tension:.35, fill:false, pointRadius:3, borderWidth:2.5 },
+      { label:'Promedio equipo', data:avgData, borderColor:'#9aa3af', borderDash:[5,4], tension:.35, fill:false, pointRadius:2 }
+    ]}, options:{ responsive:true, plugins:{legend:{display:true,labels:{boxWidth:10,font:{size:11}}}}, scales:{ y:{beginAtZero:true,ticks:{font:{size:11}}}, x:{ticks:{font:{size:11}}} } } }));
+  }
+  lineChart('vs-desemp', sliceS(miReg.serie_cot_12m), avgS('serie_cot_12m'), '#5b21b6');
+  lineChart('vs-reun', sliceS(miReg.serie_reu_12m), avgS('serie_reu_12m'), '#06B3FD');
+  function barChart(id, valKey, color, money){
+    const ctx=document.getElementById(id); if(!ctx) return;
+    const rows = arr.slice().sort((a,b)=>(b[valKey]||0)-(a[valKey]||0));
+    const cols = rows.map(x => _busqNorm(fn(x.ejecutivo))===_busqNorm(mi) ? color : '#cbd5e1');
+    _METRICAS_CHARTS.push(new Chart(ctx,{ type:'bar', data:{ labels:rows.map(x=>fn(x.ejecutivo)), datasets:[{ data:rows.map(x=>x[valKey]||0), backgroundColor:cols, borderRadius:6, maxBarThickness:46 }]},
+      options:{ responsive:true, plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>money?fmtCLP(c.parsed.y):String(c.parsed.y)}}}, scales:{ y:{beginAtZero:true,ticks:{callback:v=>money?('$'+Math.round(v/1000000)+'M'):v,font:{size:11}}}, x:{ticks:{font:{size:11}}} } } }));
+  }
+  barChart('vs-cotmes','cot_mes_monto','#5b21b6',true);
+  barChart('vs-cotanio','cot_anio_monto','#C9A96E',true);
+  barChart('vs-ganmes','gan_mes_monto','#16A34A',true);
+  barChart('vs-gananio','gan_anio_monto','#16A34A',true);
+  barChart('vs-fndr','fndr_cant','#5b21b6',false);
+}
+// Bloque anual APILADO por ejecutivo (se ve quién aporta cada mes; leyenda = quién es quién).
+function renderMetricasAnualApilado(cont, comp){
+  if(!cont) return;
+  const arr = comp.comparativo || [];
+  const fn = s => String(s||'').split(' ')[0];
   const defs = [
-    { key:'cotizaciones_por_mes', titulo:'Cantidad de Cotizaciones', sub:'por mes', color:'#001A60', money:false },
-    { key:'montos_por_mes',       titulo:'Montos Cotizados',         sub:'neto por mes', color:'#92580e', money:true },
-    { key:'ventas_por_mes',       titulo:'Ventas Netas',             sub:'ganadas por mes', color:'#16A34A', money:false },
-    { key:'reuniones_por_mes',    titulo:'Reuniones',                sub:'por mes', color:'#06B3FD', money:false },
-    { key:'sm_cotizadas_por_mes', titulo:'Salas Multisensoriales Cotizadas', sub:'por mes', color:'#5b21b6', money:false },
-    { key:'sm_ganadas_por_mes',   titulo:'Salas Multisensoriales Implementadas', sub:'ganadas por mes', color:'#DB2777', money:false }
+    { key:'serie_cot_12m',      t:'Cantidad de Cotizaciones', money:false },
+    { key:'serie_montocot_12m', t:'Montos Cotizados',         money:true },
+    { key:'serie_gan_12m',      t:'Ventas ganadas (por cierre)', money:false },
+    { key:'serie_reu_12m',      t:'Reuniones',                money:false },
+    { key:'serie_smcot_12m',    t:'Salas Multisensoriales Cotizadas', money:false },
+    { key:'serie_smgan_12m',    t:'Salas Multisensoriales Implementadas', money:false }
   ];
-  const mesLbl = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  cont.innerHTML = '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--oct-navy,#001A60);text-transform:uppercase;letter-spacing:.06em;margin:6px 0 12px;">Métricas Anuales · Equipo Difusión</div>' +
-    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;">' +
-    defs.map((d,i) => '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:14px 16px;">' +
-      '<div style="font-family:Montserrat,sans-serif;font-size:12.5px;font-weight:800;color:var(--ink);">'+esc(d.titulo)+'</div>' +
-      '<div style="font-size:11px;color:var(--subtle);margin-bottom:8px;">Equipo Difusión · '+esc(d.sub)+'</div>' +
-      '<canvas id="mchart-'+i+'" height="150"></canvas></div>').join('') + '</div>';
-  if(typeof Chart === 'undefined'){ return; }
-  defs.forEach((d,i) => {
-    const arr = series[d.key] || [];
-    const data = arr.map(x => x.valor || 0);
-    const ctx = document.getElementById('mchart-'+i);
-    if(!ctx) return;
-    const ch = new Chart(ctx, {
-      type:'bar',
-      data:{ labels: mesLbl, datasets:[{ data: data, backgroundColor: d.color, borderRadius:5, maxBarThickness:26 }] },
-      options:{ responsive:true, maintainAspectRatio:true,
-        plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: c => d.money ? fmtCLP(c.parsed.y) : String(c.parsed.y) } } },
-        scales:{ y:{ beginAtZero:true, ticks:{ callback: v => d.money ? ('$'+Math.round(v/1000000)+'M') : v, font:{size:10} } }, x:{ ticks:{ font:{size:10} } } }
-      }
-    });
-    _METRICAS_CHARTS.push(ch);
+  const card = (id,t)=> '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
+    '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #001A60;padding-left:8px;">'+esc(t)+' <span style="font-weight:600;color:var(--subtle);font-size:11px;">· por ejecutivo y mes</span></div>' +
+    '<canvas id="'+id+'" height="190" style="margin-top:10px;"></canvas></div>';
+  cont.innerHTML = '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--oct-navy,#001A60);text-transform:uppercase;letter-spacing:.06em;margin:6px 0 12px;">Métricas anuales · quién hace qué</div>' +
+    _gridMetricas(defs.map((d,i)=>card('man-'+i, d.t)).join(''));
+  if(typeof Chart==='undefined') return;
+  defs.forEach((d,di)=>{
+    const ctx = document.getElementById('man-'+di); if(!ctx) return;
+    const datasets = arr.map((x,i)=>({ label: fn(x.ejecutivo), data: (x[d.key]||[]).slice(0,12), backgroundColor: _PALETA_EJ[i % _PALETA_EJ.length], stack:'s', borderRadius:3, maxBarThickness:34 }));
+    _METRICAS_CHARTS.push(new Chart(ctx,{ type:'bar', data:{ labels:_MN, datasets },
+      options:{ responsive:true, plugins:{ legend:{display:true, position:'bottom', labels:{boxWidth:11, font:{size:10}, padding:8}}, tooltip:{callbacks:{label:c=> c.dataset.label+': '+(d.money?fmtCLP(c.parsed.y):c.parsed.y)}} },
+        scales:{ x:{stacked:true, ticks:{font:{size:10}}}, y:{stacked:true, beginAtZero:true, ticks:{callback:v=>d.money?('$'+Math.round(v/1000000)+'M'):v, font:{size:10}}} } } }));
   });
 }
 

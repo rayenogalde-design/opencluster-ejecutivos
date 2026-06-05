@@ -2390,6 +2390,9 @@ body{
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
             <input type="text" id="searchMisCot" oninput="filtrarMisCotizaciones(this.value)" placeholder="Buscar por N°, cliente o institución…">
           </div>
+          <select id="filtroMisCotEjec" onchange="renderMisCotizaciones()" style="display:none;padding:8px 12px;border:1px solid var(--border-subtle);border-radius:8px;font-size:13px;font-family:var(--font-sans);">
+            <option value="">Todos los ejecutivos</option>
+          </select>
           <select id="filtroMisCot" onchange="renderMisCotizaciones()" style="padding:8px 12px;border:1px solid var(--border-subtle);border-radius:8px;font-size:13px;font-family:var(--font-sans);">
             <option value="">Todas</option>
             <option value="pendientes">Con seguimiento pendiente</option>
@@ -7365,9 +7368,29 @@ async function cargarMisCotizaciones(){
   const venc = CACHE.vMisCot.filter(c => c.estado_seguimiento === 'vencido').length;
   const badge = document.getElementById('badgeMisCotizaciones');
   if(badge){ if(venc){ badge.style.display='inline-block'; badge.textContent = venc; } else badge.style.display='none'; }
+  _poblarSelectorEjecMisCot();
   renderMisCotizaciones();
 }
 function filtrarMisCotizaciones(q){ FILTROS.vMisCot = q; renderMisCotizaciones(); }
+// Selector de ejecutivo (solo admin): primeros nombres distintos, sin duplicar por tildes (William Marín/Marin).
+function _poblarSelectorEjecMisCot(){
+  const sel = document.getElementById('filtroMisCotEjec');
+  if(!sel) return;
+  const esAdmin = (typeof esActuandoComoAdmin==='function') && esActuandoComoAdmin();
+  if(!esAdmin){ sel.style.display='none'; sel.value=''; return; }
+  const vistos = {}, nombres = [];
+  (CACHE.vMisCot||[]).forEach(c => {
+    const fn = String(c.ejecutivo||'').trim().split(' ')[0];
+    if(!fn) return;
+    const k = _busqNorm(fn);
+    if(!vistos[k]){ vistos[k]=1; nombres.push(fn); }
+  });
+  nombres.sort((a,b)=>a.localeCompare(b));
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Todos los ejecutivos</option>' + nombres.map(n=>'<option value="'+esc(n)+'">'+esc(n)+'</option>').join('');
+  sel.value = cur;
+  sel.style.display = '';
+}
 
 const _SEM_MISCOT = {
   vencido:  { txt:'Seguimiento vencido',   color:'#B91C1C', bg:'#FEF2F2', dot:'#EF4444' },
@@ -7391,6 +7414,9 @@ function renderMisCotizaciones(){
   const sel = document.getElementById('filtroMisCot');
   const filtro = sel ? sel.value : '';
   if(q) lista = lista.filter(c => _busqNorm(c.cotizacion).includes(q) || _busqNorm(c.cliente).includes(q) || _busqNorm(c.institucion).includes(q));
+  const selEj = document.getElementById('filtroMisCotEjec');
+  const ejecFiltro = selEj ? selEj.value : '';
+  if(ejecFiltro){ const efn = _busqNorm(ejecFiltro); lista = lista.filter(c => _busqNorm(String(c.ejecutivo||'').trim().split(' ')[0]) === efn); }
   if(filtro === 'pendientes') lista = lista.filter(c => c.estado_seguimiento==='pendiente' || c.estado_seguimiento==='vencido');
   else if(filtro === 'activas') lista = lista.filter(c => !c.cerrada);
   else if(filtro === 'ganada') lista = lista.filter(c => c.ganada);

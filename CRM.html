@@ -2093,7 +2093,7 @@ body{
       </div>
       <div class="side-tab" data-view="vMisCotizaciones" id="navMisCotizaciones" onclick="goView('vMisCotizaciones')">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
-        Mis Cotizaciones
+        <span id="lblNavMisCot">Mis Cotizaciones</span>
         <span class="badge" id="badgeMisCotizaciones" style="display:none;">0</span>
       </div>
       <div class="side-tab" data-view="vOlvidados" id="navOlvidados" onclick="goView('vOlvidados')">
@@ -2382,8 +2382,8 @@ body{
       <!-- ═══ Mis Cotizaciones ═══ -->
       <div class="view" id="vMisCotizaciones">
         <div class="sec-head">
-          <h1>Mis Cotizaciones</h1>
-          <p>Todas tus cotizaciones por mes, con su estado y cuáles tienen seguimiento pendiente. El 1er seguimiento de una cotización vence al día 3 de enviada.</p>
+          <h1 id="tituloMisCot">Mis Cotizaciones</h1>
+          <p id="subtMisCot">Todas tus cotizaciones por mes, con su estado y cuáles tienen seguimiento pendiente. El 1er seguimiento de una cotización vence al día 3 de enviada.</p>
         </div>
         <div style="margin:14px 0;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
           <div class="searchbox" style="flex:1;min-width:280px;max-width:480px;">
@@ -3463,12 +3463,17 @@ function ownerLabel(c){
   return a;
 }
 
-// Parser robusto de montos chilenos: "$211.000" / "211.000" / "211000" / "$1.234.567,50" → number
+// Parser robusto de montos chilenos: "$211.000" / "211.000" / "211000" / "$1.234.567,50" → number.
+// Tolera basura del Registro: "$5.980 (Courrier externo)", "37.180 aprox", etc. → toma SOLO el 1er número.
 function parseCLP(v){
   if(v == null || v === '') return 0;
   if(typeof v === 'number') return v;
-  let s = String(v).trim().replace(/[$\s]/g, '');
+  let s = String(v).trim();
   if(!s) return 0;
+  // Quedarse con el primer número (dígitos + separadores), ignorando "$", letras y notas entre paréntesis.
+  const _mNum = s.match(/-?\d[\d.,]*/);
+  if(!_mNum) return 0;
+  s = _mNum[0];
   // Si tiene coma → es separador decimal (formato chileno: punto miles, coma decimales)
   if(s.indexOf(',') >= 0){ s = s.replace(/\./g, '').replace(',', '.'); }
   else {
@@ -3500,6 +3505,19 @@ function fmtM(v){
 function fmtCLP(v){
   const n = parseCLP(v);
   return '$' + Math.round(n).toLocaleString('es-CL');
+}
+
+// Monto coherente de una cotización (número), robusto a datos sucios del Registro.
+// La columna "Total c/IVA" a veces trae "37.18" (debía ser 37.180) o "$5.980 (Courrier externo)".
+// Regla: si el total c/IVA es incoherente (menor que el neto) o falta, se calcula neto × 1,19.
+// Acepta tanto un objeto cotización {neto,total,total_iva} como (neto, total, totalIva) sueltos.
+function montoCotSano(neto, total, totalIva){
+  if(neto && typeof neto === 'object'){ const co = neto; neto = co.neto; total = co.total; totalIva = co.total_iva; }
+  const nNeto = parseCLP(neto);
+  let nTot = parseCLP(totalIva) || parseCLP(total);
+  if(nNeto > 0 && nTot < nNeto) nTot = Math.round(nNeto * 1.19);   // total corrupto o en otra unidad
+  if(nTot === 0 && nNeto > 0)   nTot = Math.round(nNeto * 1.19);   // sin total → calcular con IVA
+  return nTot;
 }
 
 function formatFecha(f){
@@ -3786,6 +3804,7 @@ function aplicarVisibilidadPorRol(){
       goView('vDashboard');
     }
   }
+  if (typeof _aplicarTituloMisCot === 'function') _aplicarTituloMisCot();
 }
 
 // Solo Rayen (admin) puede alternar entre ver TODO o ver SOLO SUS datos como ejecutiva.
@@ -7369,7 +7388,19 @@ async function cargarMisCotizaciones(){
   const badge = document.getElementById('badgeMisCotizaciones');
   if(badge){ if(venc){ badge.style.display='inline-block'; badge.textContent = venc; } else badge.style.display='none'; }
   _poblarSelectorEjecMisCot();
+  _aplicarTituloMisCot();
   renderMisCotizaciones();
+}
+// Título/etiqueta según rol: admin = "Cotizaciones Equipo"; ejecutiva/ejecutivo = "Mis Cotizaciones".
+function _aplicarTituloMisCot(){
+  const admin = (typeof esActuandoComoAdmin==='function') && esActuandoComoAdmin();
+  const lbl = admin ? 'Cotizaciones Equipo' : 'Mis Cotizaciones';
+  const n = document.getElementById('lblNavMisCot'); if(n) n.textContent = lbl;
+  const t = document.getElementById('tituloMisCot'); if(t) t.textContent = lbl;
+  const s = document.getElementById('subtMisCot');
+  if(s) s.textContent = admin
+    ? 'Todas las cotizaciones del equipo por mes. Filtra por ejecutivo arriba. El 1er seguimiento vence al día 3 de enviada.'
+    : 'Todas tus cotizaciones por mes, con su estado y cuáles tienen seguimiento pendiente. El 1er seguimiento de una cotización vence al día 3 de enviada.';
 }
 function filtrarMisCotizaciones(q){ FILTROS.vMisCot = q; renderMisCotizaciones(); }
 // Selector de ejecutivo (solo admin): primeros nombres distintos, sin duplicar por tildes (William Marín/Marin).
@@ -7959,19 +7990,14 @@ function renderHistorialAgrupado(tl, contacto){
     cotsAgrupadas.forEach((co, idx) => {
       const num = (co.num_cotizacion || extraerNumCot(co.detalle) || extraerNumCot(co.titulo) || '').toUpperCase();
       const segs = num ? (segPorCot[num] || []) : [];
-      // Preferir el total CON IVA (más completo). co.total es "Total Cotización c/IVA" del Sheet.
-      // Si no existe, usar total_iva (también con IVA). Como último recurso usar el detalle.
-      const totalMostrado = co.total || co.total_iva || '';
-      let montoStr = '';
-      if (totalMostrado) {
-        const s = String(totalMostrado);
-        montoStr = s.indexOf('$') >= 0 ? s : '$' + s.replace(/^\$+/, '');
-      } else {
-        const m = (co.detalle || '').match(/\$[\d.,]+/);
-        if (m) montoStr = m[0];
-      }
-      // Reformatear monto principal con formato CLP correcto (puntos como miles)
-      if(montoStr){ montoStr = fmtCLP(montoStr); }
+      // Monto robusto: "Total c/IVA" del Sheet a veces trae basura ("37.18" que debía ser 37.180,
+      // "$5.980 (Courrier externo)"). montoCotSano valida contra el neto y, si el total es incoherente,
+      // lo calcula como neto × 1,19. (Bug histórico del $37 — Rayen 2026-06-05.)
+      const _montoNum = montoCotSano(co);
+      let montoStr = _montoNum > 0 ? fmtCLP(_montoNum) : '';
+      if(!montoStr){ const m = (co.detalle || '').match(/\$[\d.,]+/); if(m) montoStr = fmtCLP(m[0]); }
+      // Que el desglose ("Total cotización") muestre el mismo monto coherente.
+      if(_montoNum > 0) co.total = String(_montoNum);
       const estado = co.estado || (co.titulo || '').replace(/^.*—\s*/, '').trim() || 'En gestión';
       // Reformatear cada campo monetario para evitar $211 cuando es $211.000
       const fmtCampo = v => { if(v == null || v === '') return ''; const s = String(v).trim(); if(!s) return ''; const n = parseCLP(s); return n === 0 ? s : Math.round(n).toLocaleString('es-CL'); };

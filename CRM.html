@@ -1976,6 +1976,7 @@ body{
 .oct-apertura-text{ font-size:14px; font-style:italic; color:var(--oct-text); line-height:1.65; flex:1; }
 @media (max-width:600px){ .oct-drawer{ width:100%; } }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 
 <body>
@@ -2112,6 +2113,10 @@ body{
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
         <span id="lblNavMisCot">Mis Cotizaciones</span>
         <span class="badge" id="badgeMisCotizaciones" style="display:none;">0</span>
+      </div>
+      <div class="side-tab" data-view="vMetricas" id="navMetricas" onclick="goView('vMetricas')">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Métricas
       </div>
       <div class="side-tab" data-view="vOlvidados" id="navOlvidados" onclick="goView('vOlvidados')">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
@@ -2420,6 +2425,16 @@ body{
           <div style="color:var(--subtle);font-size:13.5px;font-weight:600;"><b id="cntMisCot" style="color:var(--ink);">0</b> cotizaciones</div>
         </div>
         <div id="listMisCot"><div class="loading-state"><div class="spinner"></div>Cargando…</div></div>
+      </div>
+
+      <!-- ═══ Métricas ═══ -->
+      <div class="view" id="vMetricas">
+        <div class="sec-head">
+          <h1>Métricas</h1>
+          <p>Desempeño del equipo de difusión — año completo 2026. Muro de honor y evolución por mes.</p>
+        </div>
+        <div id="muroHonor" style="margin:14px 0;"></div>
+        <div id="metricasCharts"><div class="loading-state"><div class="spinner"></div>Cargando métricas…</div></div>
       </div>
 
       <!-- ═══ Contactos olvidados ═══ -->
@@ -3888,6 +3903,7 @@ function goView(id){
     case 'vImportar':        inicializarImportar(); break;
     case 'vCerrar':          cargarPorCerrar(); break;
     case 'vMisCotizaciones': cargarMisCotizaciones(); break;
+    case 'vMetricas':        cargarMetricas(); break;
     case 'vOlvidados':       cargarOlvidados(); break;
     case 'vTerritorios':     cargarTerritorios(); break;
     case 'vMiTerritorio':    cargarMiTerritorio(); break;
@@ -7677,6 +7693,88 @@ async function marcarEstadoCotMC(num, estado, btn){
   try { Object.keys(localStorage).forEach(kk=>{ if(kk.indexOf('crm_perfil_')===0||kk.indexOf('crm_kpis_cache')===0||kk.indexOf('crm_dash')===0) localStorage.removeItem(kk); }); } catch(e){}
   if(estado==='Ganada'){ const cc=(CACHE.vMisCot||[]).find(x=>x.cotizacion===num); try{ celebrarVenta(cc?cc.monto:0); }catch(e){} }
   cargarMisCotizaciones();
+}
+
+/* ════ Vista MÉTRICAS — Muro de Honor + gráficos anuales del equipo (replica el Portal) ════ */
+let _METRICAS_CHARTS = [];
+async function cargarMetricas(){
+  const cont = document.getElementById('metricasCharts');
+  const muro = document.getElementById('muroHonor');
+  cont.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando métricas…</div>';
+  const ejec = (typeof getEjecutivoEfectivo==='function' ? getEjecutivoEfectivo() : '') || USUARIO;
+  const [met, kpis, cots] = await Promise.all([
+    fetchAPI('crm_metricas_anuales', { ejecutivo: ejec }),
+    fetchAPI('crm_kpis_dashboard', { solicitante: USUARIO }),
+    fetchAPI('crm_mis_cotizaciones', { ejecutivo: USUARIO })
+  ]);
+  try { renderMuroHonor(muro, kpis, cots); } catch(e){ if(muro) muro.innerHTML=''; }
+  if(!met || !met.ok || !met.series){ cont.innerHTML = '<div class="error-state">No se pudieron cargar las métricas.<div style="font-size:12px;color:var(--subtle);margin-top:4px;">'+esc((met&&met.error)||'desconocido')+'</div></div>'; return; }
+  renderMetricasCharts(cont, met.series);
+}
+function renderMuroHonor(muro, kpis, cots){
+  if(!muro) return;
+  const fn = s => String(s||'').split(' ')[0];
+  function topRanking(kpiObj){
+    const r = (kpiObj && kpiObj.ranking_equipo) || [];
+    let best = null; r.forEach(x => { if(!best || (x.anio||0) > (best.anio||0)) best = x; });
+    return best && best.anio ? { nombre: fn(best.ejec), valor: best.anio } : null;
+  }
+  const topCot = (kpis && kpis.ok && kpis.kpis) ? topRanking(kpis.kpis.cotizaciones) : null;
+  const topReu = (kpis && kpis.ok && kpis.kpis) ? topRanking(kpis.kpis.reuniones) : null;
+  let topVenta = null;
+  if(cots && cots.ok && Array.isArray(cots.cotizaciones)){
+    const anio = String(new Date().getFullYear()), porEj = {};
+    cots.cotizaciones.forEach(c => { if(c.ganada && String(c.mes||'').substring(0,4)===anio){ const kk=fn(c.ejecutivo); porEj[kk]=(porEj[kk]||0)+(c.monto||c.neto||0); } });
+    Object.keys(porEj).forEach(kk => { if(!topVenta || porEj[kk] > topVenta.valor) topVenta = { nombre:kk, valor:porEj[kk] }; });
+  }
+  const trofeo = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/></svg>';
+  const card = (titulo,color,nombre,valor) =>
+    '<div style="flex:1;min-width:170px;background:#fff;border:1px solid var(--smoke,#e5e7eb);border-top:3px solid '+color+';border-radius:12px;padding:14px 16px;text-align:center;">' +
+      '<div style="color:'+color+';margin-bottom:6px;display:flex;justify-content:center;">'+trofeo+'</div>' +
+      '<div style="font-size:10px;font-weight:800;color:var(--mist,#9aa3af);text-transform:uppercase;letter-spacing:.5px;">'+esc(titulo)+'</div>' +
+      '<div style="font-size:18px;font-weight:800;color:var(--ink);margin-top:5px;">'+esc(nombre||'—')+'</div>' +
+      '<div style="font-size:13px;font-weight:700;color:'+color+';margin-top:2px;">'+esc(valor)+'</div>' +
+    '</div>';
+  muro.innerHTML = '<div style="font-family:Montserrat,sans-serif;font-size:12px;font-weight:800;color:var(--purple-dk,#5b21b6);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Muro de Honor · 2026</div>' +
+    '<div style="display:flex;gap:12px;flex-wrap:wrap;">' +
+      card('Más cotizaciones','#001A60', topCot?topCot.nombre:'—', topCot?(topCot.valor+' cotiz'):'Sin datos') +
+      card('Más reuniones','#06B3FD', topReu?topReu.nombre:'—', topReu?(topReu.valor+' reuniones'):'Sin datos') +
+      card('Más ventas','#16A34A', topVenta?topVenta.nombre:'—', topVenta?fmtCLP(topVenta.valor):'Sin datos') +
+    '</div>';
+}
+function renderMetricasCharts(cont, series){
+  try { _METRICAS_CHARTS.forEach(ch => ch.destroy()); } catch(e){}
+  _METRICAS_CHARTS = [];
+  const defs = [
+    { key:'cotizaciones_por_mes', titulo:'Cantidad de Cotizaciones', sub:'por mes', color:'#001A60', money:false },
+    { key:'montos_por_mes',       titulo:'Montos Cotizados',         sub:'neto por mes', color:'#92580e', money:true },
+    { key:'ventas_por_mes',       titulo:'Ventas Netas',             sub:'ganadas por mes', color:'#16A34A', money:false },
+    { key:'reuniones_por_mes',    titulo:'Reuniones',                sub:'por mes', color:'#06B3FD', money:false },
+    { key:'sm_cotizadas_por_mes', titulo:'Salas Multisensoriales Cotizadas', sub:'por mes', color:'#5b21b6', money:false },
+    { key:'sm_ganadas_por_mes',   titulo:'Salas Multisensoriales Implementadas', sub:'ganadas por mes', color:'#DB2777', money:false }
+  ];
+  const mesLbl = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  cont.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;">' +
+    defs.map((d,i) => '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:14px 16px;">' +
+      '<div style="font-family:Montserrat,sans-serif;font-size:12.5px;font-weight:800;color:var(--ink);">'+esc(d.titulo)+'</div>' +
+      '<div style="font-size:11px;color:var(--subtle);margin-bottom:8px;">Equipo Difusión · '+esc(d.sub)+'</div>' +
+      '<canvas id="mchart-'+i+'" height="150"></canvas></div>').join('') + '</div>';
+  if(typeof Chart === 'undefined'){ return; }
+  defs.forEach((d,i) => {
+    const arr = series[d.key] || [];
+    const data = arr.map(x => x.valor || 0);
+    const ctx = document.getElementById('mchart-'+i);
+    if(!ctx) return;
+    const ch = new Chart(ctx, {
+      type:'bar',
+      data:{ labels: mesLbl, datasets:[{ data: data, backgroundColor: d.color, borderRadius:5, maxBarThickness:26 }] },
+      options:{ responsive:true, maintainAspectRatio:true,
+        plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: c => d.money ? fmtCLP(c.parsed.y) : String(c.parsed.y) } } },
+        scales:{ y:{ beginAtZero:true, ticks:{ callback: v => d.money ? ('$'+Math.round(v/1000000)+'M') : v, font:{size:10} } }, x:{ ticks:{ font:{size:10} } } }
+      }
+    });
+    _METRICAS_CHARTS.push(ch);
+  });
 }
 
 /* ════ Vista LEADS URGENTES (admin): todos los contactos derivados como lead ════ */

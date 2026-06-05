@@ -2091,6 +2091,11 @@ body{
         Cotizaciones por cerrar
         <span class="badge" id="badgeCerrar" style="display:none;">0</span>
       </div>
+      <div class="side-tab" data-view="vMisCotizaciones" id="navMisCotizaciones" onclick="goView('vMisCotizaciones')">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
+        Mis Cotizaciones
+        <span class="badge" id="badgeMisCotizaciones" style="display:none;">0</span>
+      </div>
       <div class="side-tab" data-view="vOlvidados" id="navOlvidados" onclick="goView('vOlvidados')">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
         Contactos olvidados
@@ -2372,6 +2377,29 @@ body{
           <div style="color:var(--subtle);font-size:13.5px;font-weight:600;"><b id="cntCerrar" style="color:var(--ink);">0</b> contactos</div>
         </div>
         <div id="listCerrar"><div class="loading-state"><div class="spinner"></div>Cargando…</div></div>
+      </div>
+
+      <!-- ═══ Mis Cotizaciones ═══ -->
+      <div class="view" id="vMisCotizaciones">
+        <div class="sec-head">
+          <h1>Mis Cotizaciones</h1>
+          <p>Todas tus cotizaciones por mes, con su estado y cuáles tienen seguimiento pendiente. El 1er seguimiento de una cotización vence al día 3 de enviada.</p>
+        </div>
+        <div style="margin:14px 0;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+          <div class="searchbox" style="flex:1;min-width:280px;max-width:480px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <input type="text" id="searchMisCot" oninput="filtrarMisCotizaciones(this.value)" placeholder="Buscar por N°, cliente o institución…">
+          </div>
+          <select id="filtroMisCot" onchange="renderMisCotizaciones()" style="padding:8px 12px;border:1px solid var(--border-subtle);border-radius:8px;font-size:13px;font-family:var(--font-sans);">
+            <option value="">Todas</option>
+            <option value="pendientes">Con seguimiento pendiente</option>
+            <option value="activas">Por gestionar (abiertas)</option>
+            <option value="ganada">Ganadas</option>
+            <option value="perdida">Perdidas</option>
+          </select>
+          <div style="color:var(--subtle);font-size:13.5px;font-weight:600;"><b id="cntMisCot" style="color:var(--ink);">0</b> cotizaciones</div>
+        </div>
+        <div id="listMisCot"><div class="loading-state"><div class="spinner"></div>Cargando…</div></div>
       </div>
 
       <!-- ═══ Contactos olvidados ═══ -->
@@ -3820,6 +3848,7 @@ function goView(id){
     case 'vKanban':          cargarKanban(); break;
     case 'vImportar':        inicializarImportar(); break;
     case 'vCerrar':          cargarPorCerrar(); break;
+    case 'vMisCotizaciones': cargarMisCotizaciones(); break;
     case 'vOlvidados':       cargarOlvidados(); break;
     case 'vTerritorios':     cargarTerritorios(); break;
     case 'vMiTerritorio':    cargarMiTerritorio(); break;
@@ -7320,6 +7349,98 @@ function renderListaCerrar(){
   }
   container.innerHTML = '<div class="v2-grid">' +
     lista.map(c => renderTarjetaV2(c, 'vCerrar')).join('') + '</div>';
+}
+
+/* ════ Vista MIS COTIZACIONES — por cotización, agrupadas por mes, con semáforo de seguimiento ════ */
+async function cargarMisCotizaciones(){
+  const container = document.getElementById('listMisCot');
+  container.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando…</div>';
+  const ejec = (typeof getEjecutivoEfectivo === 'function' ? getEjecutivoEfectivo() : '') || USUARIO;
+  const r = await fetchAPI('crm_mis_cotizaciones', { ejecutivo: ejec, modo_vista: MODO_VISTA });
+  if(!r || !r.ok){
+    container.innerHTML = '<div class="error-state">No se pudieron cargar las cotizaciones.<div style="font-size:12px;color:var(--subtle);margin-top:4px;">' + esc((r&&r.error)||'desconocido') + '</div></div>';
+    return;
+  }
+  CACHE.vMisCot = r.cotizaciones || [];
+  const venc = CACHE.vMisCot.filter(c => c.estado_seguimiento === 'vencido').length;
+  const badge = document.getElementById('badgeMisCotizaciones');
+  if(badge){ if(venc){ badge.style.display='inline-block'; badge.textContent = venc; } else badge.style.display='none'; }
+  renderMisCotizaciones();
+}
+function filtrarMisCotizaciones(q){ FILTROS.vMisCot = q; renderMisCotizaciones(); }
+
+const _SEM_MISCOT = {
+  vencido:  { txt:'Seguimiento vencido',   color:'#B91C1C', bg:'#FEF2F2', dot:'#EF4444' },
+  pendiente:{ txt:'Seguimiento pendiente', color:'#B45309', bg:'#FFFBEB', dot:'#F59E0B' },
+  al_dia:   { txt:'Al día',                color:'#047857', bg:'#F0FDF4', dot:'#10B981' },
+  ganada:   { txt:'Ganada',                color:'#047857', bg:'#F0FDF4', dot:'#10B981' },
+  perdida:  { txt:'Perdida',               color:'#6B7280', bg:'#F9FAFB', dot:'#9CA3AF' },
+  sin_fecha:{ txt:'Sin fecha',             color:'#6B7280', bg:'#F9FAFB', dot:'#9CA3AF' }
+};
+const _MES_NOMBRE = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+function _mesLabel(ym){
+  if(!ym || ym.indexOf('-')<0) return 'Sin fecha';
+  const p = ym.split('-'); const mi = parseInt(p[1],10)-1;
+  return (_MES_NOMBRE[mi]||'') + ' ' + p[0];
+}
+function renderMisCotizaciones(){
+  const container = document.getElementById('listMisCot');
+  const cnt = document.getElementById('cntMisCot');
+  let lista = (CACHE.vMisCot || []).slice();
+  const q = _busqNorm(FILTROS.vMisCot || '').trim();
+  const sel = document.getElementById('filtroMisCot');
+  const filtro = sel ? sel.value : '';
+  if(q) lista = lista.filter(c => _busqNorm(c.cotizacion).includes(q) || _busqNorm(c.cliente).includes(q) || _busqNorm(c.institucion).includes(q));
+  if(filtro === 'pendientes') lista = lista.filter(c => c.estado_seguimiento==='pendiente' || c.estado_seguimiento==='vencido');
+  else if(filtro === 'activas') lista = lista.filter(c => !c.cerrada);
+  else if(filtro === 'ganada') lista = lista.filter(c => c.ganada);
+  else if(filtro === 'perdida') lista = lista.filter(c => c.cerrada && !c.ganada);
+  if(cnt) cnt.textContent = lista.length;
+  if(!lista.length){
+    container.innerHTML = '<div class="loading-state" style="padding:30px 20px;">' + (q||filtro ? 'Ninguna cotización coincide.' : 'No tienes cotizaciones registradas.') + '</div>';
+    return;
+  }
+  const grupos = {};
+  lista.forEach(c => { const k = c.mes || '0000-00'; (grupos[k] = grupos[k] || []).push(c); });
+  const peso = { vencido:0, pendiente:1, al_dia:2, sin_fecha:3, ganada:4, perdida:5 };
+  const pw = s => (peso[s]!==undefined ? peso[s] : 9);
+  let html = '';
+  Object.keys(grupos).sort((a,b)=> b.localeCompare(a)).forEach(ym => {
+    const arr = grupos[ym];
+    arr.sort((a,b)=> pw(a.estado_seguimiento)-pw(b.estado_seguimiento) || (b.dias_sin_gestion||0)-(a.dias_sin_gestion||0));
+    const nGan = arr.filter(c=>c.ganada).length;
+    const nVenc = arr.filter(c=>c.estado_seguimiento==='vencido').length;
+    html += '<div style="margin:18px 0 10px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">' +
+      '<span style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--oct-navy,#001A60);text-transform:uppercase;letter-spacing:.5px;">' + esc(_mesLabel(ym)) + '</span>' +
+      '<span style="font-size:12px;color:var(--subtle);">' + arr.length + ' cotiz · ' + nGan + ' ganadas' + (nVenc? ' · <b style="color:#B91C1C;">'+nVenc+' vencidas</b>':'') + '</span>' +
+      '</div>' + arr.map(_cardMisCot).join('');
+  });
+  container.innerHTML = html;
+}
+function _cardMisCot(c){
+  const sem = _SEM_MISCOT[c.estado_seguimiento] || _SEM_MISCOT.sin_fecha;
+  let monto = '';
+  if(c.total!=='' && c.total!=null){ const s = String(c.total); monto = fmtCLP(s.indexOf('$')>=0 ? s : '$'+s); }
+  const diasTxt = (c.dias_sin_gestion!=null && !c.cerrada) ? (c.dias_sin_gestion + ' día' + (c.dias_sin_gestion===1?'':'s') + ' sin gestión') : '';
+  const adminEjec = (typeof esActuandoComoAdmin==='function' && esActuandoComoAdmin() && c.ejecutivo) ? '<span style="font-size:11px;color:var(--subtle);">· ' + esc(String(c.ejecutivo).split(' ')[0]) + '</span>' : '';
+  const verBtn = c.contacto_id
+    ? '<button onclick="abrirFichaModal(\'' + esc(c.contacto_id) + '\')" style="background:var(--oct-navy,#001A60);color:#fff;border:none;padding:7px 13px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;">Ver ficha / Seguimiento</button>'
+    : '<span style="font-size:11px;color:var(--mist);">Sin contacto vinculado en el CRM</span>';
+  return '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-left:4px solid ' + sem.dot + ';border-radius:10px;padding:12px 15px;margin-bottom:9px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">' +
+    '<div style="flex:1;min-width:200px;">' +
+      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+        '<span style="font-family:Courier New,monospace;font-weight:800;color:var(--purple-dk,#5b21b6);font-size:12.5px;">' + esc(c.cotizacion||'—') + '</span>' +
+        '<span style="font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px;background:' + sem.bg + ';color:' + sem.color + ';">' + esc(c.estado||sem.txt) + '</span>' + adminEjec +
+      '</div>' +
+      '<div style="font-size:13.5px;font-weight:700;color:var(--ink);margin-top:3px;">' + esc(c.cliente || c.institucion || '(sin nombre)') + (c.cliente && c.institucion ? ' <span style="font-weight:500;color:var(--subtle);">· ' + esc(c.institucion) + '</span>' : '') + '</div>' +
+      '<div style="font-size:11.5px;color:var(--subtle);margin-top:2px;">' + esc(c.fecha||'') + (c.ultimo_seguimiento ? ' · últ. seguimiento ' + esc(c.ultimo_seguimiento) : (c.cerrada?'':' · sin seguimientos')) + '</div>' +
+    '</div>' +
+    '<div style="text-align:right;min-width:120px;">' +
+      (monto ? '<div style="font-weight:800;color:var(--gold-dk,#92580e);font-size:14px;">' + esc(monto) + '</div>' : '') +
+      '<div style="font-size:11px;font-weight:700;color:' + sem.color + ';margin-top:2px;display:flex;align-items:center;gap:5px;justify-content:flex-end;"><span style="width:7px;height:7px;border-radius:50%;background:' + sem.dot + ';display:inline-block;"></span>' + esc(c.cerrada ? sem.txt : (sem.txt + (diasTxt? ' · '+diasTxt : ''))) + '</div>' +
+    '</div>' +
+    '<div style="flex-basis:100%;display:flex;justify-content:flex-end;">' + verBtn + '</div>' +
+  '</div>';
 }
 
 /* ════ Vista LEADS URGENTES (admin): todos los contactos derivados como lead ════ */

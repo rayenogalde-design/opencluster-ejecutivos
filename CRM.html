@@ -1809,6 +1809,12 @@ body{
 .v2-quote-chev{ color:var(--v2-text-mute); display:inline-flex; transition:transform .2s; }
 .v2-quote[open] .v2-quote-chev{ transform:rotate(180deg); color:#854F0B; }
 .v2-quote-det{ padding:14px 16px 16px; border-top:1px solid #F5C77B; }
+/* Mis Cotizaciones: meses + cotizaciones desplegables */
+#listMisCot details > summary{ user-select:none; }
+#listMisCot details > summary::-webkit-details-marker{ display:none; }
+#listMisCot .mc-chev{ transition:transform .2s; flex-shrink:0; }
+#listMisCot details.mc-mes[open] > summary .mc-chev{ transform:rotate(90deg); }
+#listMisCot details.mc-mes:hover:not([open]) > summary{ background:#f3f4f6 !important; }
 .v2-quote-items{ background:#fff; border-radius:8px; padding:10px 12px; margin-bottom:10px; }
 .v2-qi{ display:grid; grid-template-columns:1fr auto auto; gap:12px; padding:6px 0; font-size:12px; align-items:center; }
 .v2-qi + .v2-qi{ border-top:0.5px solid var(--v2-border); }
@@ -7384,6 +7390,8 @@ async function cargarMisCotizaciones(){
     return;
   }
   CACHE.vMisCot = r.cotizaciones || [];
+  CACHE.vMisCotKpis = r.kpis || null;
+  CACHE.vMisCotAnio = r.anio || '';
   const venc = CACHE.vMisCot.filter(c => c.estado_seguimiento === 'vencido').length;
   const badge = document.getElementById('badgeMisCotizaciones');
   if(badge){ if(venc){ badge.style.display='inline-block'; badge.textContent = venc; } else badge.style.display='none'; }
@@ -7437,67 +7445,149 @@ function _mesLabel(ym){
   const p = ym.split('-'); const mi = parseInt(p[1],10)-1;
   return (_MES_NOMBRE[mi]||'') + ' ' + p[0];
 }
+function _kpisDeMisCot(arr, anio){
+  let t=0,g=0,s=0,m=0;
+  (arr||[]).forEach(c=>{
+    if(String(c.mes||'').substring(0,4)===anio){ t++; m += (c.monto||0); if(c.ganada) g++; }
+    if(!c.cerrada && (c.estado_seguimiento==='pendiente'||c.estado_seguimiento==='vencido')) s++;
+  });
+  return {total_anio:t,ganadas_anio:g,sin_seguimiento:s,monto_cotizado_anio:m};
+}
 function renderMisCotizaciones(){
   const container = document.getElementById('listMisCot');
   const cnt = document.getElementById('cntMisCot');
-  let lista = (CACHE.vMisCot || []).slice();
+  const anio = CACHE.vMisCotAnio || String(new Date().getFullYear());
+  // Base tras el filtro de ejecutivo (los KPIs reflejan al ejecutivo elegido, NO la búsqueda).
+  let base = (CACHE.vMisCot || []).slice();
+  const selEj = document.getElementById('filtroMisCotEjec');
+  const ejecFiltro = selEj ? selEj.value : '';
+  if(ejecFiltro){ const efn = _busqNorm(ejecFiltro); base = base.filter(c => _busqNorm(String(c.ejecutivo||'').trim().split(' ')[0]) === efn); }
+  const k = _kpisDeMisCot(base, anio);
+  const kpiCard = (lbl,val,color)=> '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-top:3px solid '+color+';border-radius:10px;padding:12px 15px;flex:1;min-width:150px;"><div style="font-size:10px;font-weight:800;color:var(--mist,#9aa3af);text-transform:uppercase;letter-spacing:.5px;">'+esc(lbl)+'</div><div style="font-size:23px;font-weight:800;color:var(--ink);margin-top:4px;line-height:1;">'+esc(String(val))+'</div></div>';
+  const kpiHtml = '<div style="display:flex;gap:11px;flex-wrap:wrap;margin-bottom:18px;">' +
+    kpiCard('Cotizaciones '+anio, k.total_anio, '#001A60') +
+    kpiCard('Ganadas '+anio, k.ganadas_anio, '#16A34A') +
+    kpiCard('Sin seguimiento', k.sin_seguimiento, '#F59E0B') +
+    kpiCard('Monto cotizado '+anio, fmtCLP(k.monto_cotizado_anio), '#92580e') +
+  '</div>';
+
+  // Lista filtrada (búsqueda + estado) para el detalle por mes
+  let lista = base.slice();
   const q = _busqNorm(FILTROS.vMisCot || '').trim();
   const sel = document.getElementById('filtroMisCot');
   const filtro = sel ? sel.value : '';
   if(q) lista = lista.filter(c => _busqNorm(c.cotizacion).includes(q) || _busqNorm(c.cliente).includes(q) || _busqNorm(c.institucion).includes(q));
-  const selEj = document.getElementById('filtroMisCotEjec');
-  const ejecFiltro = selEj ? selEj.value : '';
-  if(ejecFiltro){ const efn = _busqNorm(ejecFiltro); lista = lista.filter(c => _busqNorm(String(c.ejecutivo||'').trim().split(' ')[0]) === efn); }
   if(filtro === 'pendientes') lista = lista.filter(c => c.estado_seguimiento==='pendiente' || c.estado_seguimiento==='vencido');
   else if(filtro === 'activas') lista = lista.filter(c => !c.cerrada);
   else if(filtro === 'ganada') lista = lista.filter(c => c.ganada);
   else if(filtro === 'perdida') lista = lista.filter(c => c.cerrada && !c.ganada);
   if(cnt) cnt.textContent = lista.length;
   if(!lista.length){
-    container.innerHTML = '<div class="loading-state" style="padding:30px 20px;">' + (q||filtro ? 'Ninguna cotización coincide.' : 'No tienes cotizaciones registradas.') + '</div>';
+    container.innerHTML = kpiHtml + '<div class="loading-state" style="padding:30px 20px;">' + (q||filtro ? 'Ninguna cotización coincide.' : 'No hay cotizaciones registradas.') + '</div>';
     return;
   }
   const grupos = {};
-  lista.forEach(c => { const k = c.mes || '0000-00'; (grupos[k] = grupos[k] || []).push(c); });
+  lista.forEach(c => { const kk = c.mes || '0000-00'; (grupos[kk] = grupos[kk] || []).push(c); });
   const peso = { vencido:0, pendiente:1, al_dia:2, sin_fecha:3, ganada:4, perdida:5 };
   const pw = s => (peso[s]!==undefined ? peso[s] : 9);
-  let html = '';
+  let html = kpiHtml;
+  const abrirBusqueda = !!(q || filtro);  // si está buscando, abrir los meses para que vea resultados
   Object.keys(grupos).sort((a,b)=> b.localeCompare(a)).forEach(ym => {
     const arr = grupos[ym];
     arr.sort((a,b)=> pw(a.estado_seguimiento)-pw(b.estado_seguimiento) || (b.dias_sin_gestion||0)-(a.dias_sin_gestion||0));
     const nGan = arr.filter(c=>c.ganada).length;
     const nVenc = arr.filter(c=>c.estado_seguimiento==='vencido').length;
-    html += '<div style="margin:18px 0 10px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">' +
-      '<span style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--oct-navy,#001A60);text-transform:uppercase;letter-spacing:.5px;">' + esc(_mesLabel(ym)) + '</span>' +
-      '<span style="font-size:12px;color:var(--subtle);">' + arr.length + ' cotiz · ' + nGan + ' ganadas' + (nVenc? ' · <b style="color:#B91C1C;">'+nVenc+' vencidas</b>':'') + '</span>' +
-      '</div>' + arr.map(_cardMisCot).join('');
+    html += '<details class="mc-mes"' + (abrirBusqueda?' open':'') + ' style="margin-bottom:10px;border:1px solid var(--smoke,#e5e7eb);border-radius:10px;overflow:hidden;">' +
+      '<summary style="list-style:none;cursor:pointer;padding:12px 15px;background:#fafbfc;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
+        '<svg class="mc-chev" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--mist,#9aa3af);"><polyline points="9 18 15 12 9 6"/></svg>' +
+        '<span style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--oct-navy,#001A60);text-transform:uppercase;letter-spacing:.5px;">' + esc(_mesLabel(ym)) + '</span>' +
+        '<span style="font-size:12px;color:var(--subtle);">' + arr.length + ' cotiz · ' + nGan + ' ganadas' + (nVenc? ' · <b style="color:#B91C1C;">'+nVenc+' vencidas</b>':'') + '</span>' +
+      '</summary>' +
+      '<div style="padding:10px 12px;">' + arr.map(_cardMisCot).join('') + '</div>' +
+    '</details>';
   });
   container.innerHTML = html;
 }
 function _cardMisCot(c){
   const sem = _SEM_MISCOT[c.estado_seguimiento] || _SEM_MISCOT.sin_fecha;
-  let monto = '';
-  if(c.total!=='' && c.total!=null){ const s = String(c.total); monto = fmtCLP(s.indexOf('$')>=0 ? s : '$'+s); }
-  const diasTxt = (c.dias_sin_gestion!=null && !c.cerrada) ? (c.dias_sin_gestion + ' día' + (c.dias_sin_gestion===1?'':'s') + ' sin gestión') : '';
+  const monto = (c.monto && c.monto>0) ? fmtCLP(c.monto) : '';
+  const diasTxt = (c.dias_sin_gestion!=null && !c.cerrada) ? (c.dias_sin_gestion + 'd sin gestión') : '';
   const adminEjec = (typeof esActuandoComoAdmin==='function' && esActuandoComoAdmin() && c.ejecutivo) ? '<span style="font-size:11px;color:var(--subtle);">· ' + esc(String(c.ejecutivo).split(' ')[0]) + '</span>' : '';
-  const verBtn = c.contacto_id
-    ? '<button onclick="abrirFichaModal(\'' + esc(c.contacto_id) + '\')" style="background:var(--oct-navy,#001A60);color:#fff;border:none;padding:7px 13px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;">Ver ficha / Seguimiento</button>'
-    : '<span style="font-size:11px;color:var(--mist);">Sin contacto vinculado en el CRM</span>';
-  return '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-left:4px solid ' + sem.dot + ';border-radius:10px;padding:12px 15px;margin-bottom:9px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">' +
-    '<div style="flex:1;min-width:200px;">' +
-      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
-        '<span style="font-family:Courier New,monospace;font-weight:800;color:var(--purple-dk,#5b21b6);font-size:12.5px;">' + esc(c.cotizacion||'—') + '</span>' +
-        '<span style="font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px;background:' + sem.bg + ';color:' + sem.color + ';">' + esc(c.estado||sem.txt) + '</span>' + adminEjec +
-      '</div>' +
-      '<div style="font-size:13.5px;font-weight:700;color:var(--ink);margin-top:3px;">' + esc(c.cliente || c.institucion || '(sin nombre)') + (c.cliente && c.institucion ? ' <span style="font-weight:500;color:var(--subtle);">· ' + esc(c.institucion) + '</span>' : '') + '</div>' +
-      '<div style="font-size:11.5px;color:var(--subtle);margin-top:2px;">' + esc(c.fecha||'') + (c.ultimo_seguimiento ? ' · últ. seguimiento ' + esc(c.ultimo_seguimiento) : (c.cerrada?'':' · sin seguimientos')) + '</div>' +
+  const numSafe = String(c.cotizacion||'').replace(/[^a-zA-Z0-9\-]/g,'');
+  const numJS = String(c.cotizacion||'').replace(/'/g,"\\'");
+  const prod = String(c.productos||'').trim();
+  const listaProd = prod ? prod.split(/[\r\n]+|;|•/).map(p=>p.trim()).filter(p=>p.length>1) : [];
+  const segs = Array.isArray(c.seguimientos) ? c.seguimientos : [];
+  // Detalle desplegado
+  let det = '<div style="font-size:11.5px;color:var(--subtle);margin:10px 0;">Cotización del ' + esc(c.fecha||'—') + (c.ejecutivo?' · por ' + esc(String(c.ejecutivo).split(' ')[0]):'') + (monto?' · ' + esc(monto):'') + '</div>';
+  if(listaProd.length){
+    det += '<div style="background:#fafbfc;border:1px solid var(--smoke);border-radius:8px;padding:10px 13px;margin-bottom:10px;"><div style="font-size:10.5px;font-weight:800;color:var(--purple-dk,#5b21b6);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Productos</div><ul style="margin:0;padding-left:18px;font-size:12.5px;color:var(--ink);line-height:1.6;">' + listaProd.map(p=>'<li>'+esc(p)+'</li>').join('') + '</ul></div>';
+  }
+  det += '<div style="font-size:10.5px;font-weight:800;color:#b45309;text-transform:uppercase;letter-spacing:.6px;margin:10px 0 7px;">Seguimientos de la cotización</div>';
+  det += segs.length
+    ? segs.map(s=>'<div style="background:#fffbeb;border-left:3px solid #f59e0b;border-radius:6px;padding:8px 11px;margin-bottom:6px;"><div style="display:flex;justify-content:space-between;gap:8px;"><span style="font-size:11px;font-weight:700;color:#92580e;">'+esc(s.fecha||'')+'</span>'+(s.estado?'<span style="font-size:11px;color:var(--subtle);">'+esc(s.estado)+'</span>':'')+'</div>'+(s.notas?'<div style="font-size:12px;color:var(--ink);margin-top:3px;">'+esc(s.notas)+'</div>':'')+'</div>').join('')
+    : '<div style="font-size:12px;color:var(--mist);font-style:italic;padding:4px 0 8px;">Sin seguimientos registrados todavía.</div>';
+  // Form nuevo seguimiento
+  det += '<div style="background:#fefbf3;border:1px dashed var(--gold,#d4a017);border-radius:8px;padding:10px 12px;margin-top:8px;">' +
+    '<div style="font-size:10.5px;font-weight:800;color:var(--gold-dk,#92580e);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px;">+ Registrar seguimiento</div>' +
+    '<div style="display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap;">' +
+      '<select id="mc-seg-res-'+numSafe+'" style="padding:6px 9px;border:1px solid var(--smoke);border-radius:6px;font-size:12px;flex:0 0 180px;"><option value="">— Resultado —</option><option>Esperando respuesta</option><option>Cliente interesado</option><option>Pidió ajuste</option><option>Llamada agendada</option><option>Reunión agendada</option><option>Sin respuesta</option><option>Posible cierre</option><option>Rechazada</option></select>' +
+      '<input type="date" id="mc-seg-fecha-'+numSafe+'" value="'+_hoyISO()+'" style="padding:6px 9px;border:1px solid var(--smoke);border-radius:6px;font-size:12px;flex:0 0 140px;">' +
     '</div>' +
-    '<div style="text-align:right;min-width:120px;">' +
-      (monto ? '<div style="font-weight:800;color:var(--gold-dk,#92580e);font-size:14px;">' + esc(monto) + '</div>' : '') +
-      '<div style="font-size:11px;font-weight:700;color:' + sem.color + ';margin-top:2px;display:flex;align-items:center;gap:5px;justify-content:flex-end;"><span style="width:7px;height:7px;border-radius:50%;background:' + sem.dot + ';display:inline-block;"></span>' + esc(c.cerrada ? sem.txt : (sem.txt + (diasTxt? ' · '+diasTxt : ''))) + '</div>' +
-    '</div>' +
-    '<div style="flex-basis:100%;display:flex;justify-content:flex-end;">' + verBtn + '</div>' +
+    '<textarea id="mc-seg-notas-'+numSafe+'" rows="2" placeholder="Detalle del seguimiento (qué pasó, próximos pasos)…" style="width:100%;padding:8px 10px;border:1px solid var(--smoke);border-radius:6px;font-size:12.5px;resize:vertical;font-family:inherit;"></textarea>' +
+    '<div style="display:flex;justify-content:flex-end;margin-top:6px;"><button onclick="guardarSeguimientoMC(\''+esc(numJS)+'\',this)" style="background:var(--gold-dk,#92580e);color:#fff;border:none;padding:7px 14px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">Guardar seguimiento</button></div>' +
   '</div>';
+  // Acciones
+  let acc = '';
+  if(!c.cerrada){
+    acc += '<button onclick="marcarEstadoCotMC(\''+esc(numJS)+'\',\'Ganada\',this)" style="background:#16A34A;color:#fff;border:none;padding:7px 13px;border-radius:7px;font-size:12px;font-weight:800;cursor:pointer;">Marcar ganada</button>';
+    acc += '<button onclick="marcarEstadoCotMC(\''+esc(numJS)+'\',\'Perdida\',this)" style="background:#fff;color:#B91C1C;border:1px solid #FCA5A5;padding:7px 13px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;">Marcar perdida</button>';
+  } else {
+    acc += '<button onclick="marcarEstadoCotMC(\''+esc(numJS)+'\',\'En gestión\',this)" style="background:#fff;color:var(--subtle);border:1px solid var(--smoke);padding:7px 13px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;">Reabrir</button>';
+  }
+  if(c.contacto_id) acc += '<button onclick="abrirFichaModal(\''+esc(c.contacto_id)+'\')" style="background:var(--oct-navy,#001A60);color:#fff;border:none;padding:7px 13px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;">Ver contacto</button>';
+  det += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">' + acc + '</div>';
+
+  return '<details style="border:1px solid var(--smoke,#e5e7eb);border-left:4px solid '+sem.dot+';border-radius:9px;margin-bottom:8px;background:#fff;">' +
+    '<summary style="list-style:none;cursor:pointer;padding:11px 13px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">' +
+      '<div style="flex:1;min-width:190px;">' +
+        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+          '<span style="font-family:Courier New,monospace;font-weight:800;color:var(--purple-dk,#5b21b6);font-size:12.5px;">' + esc(c.cotizacion||'—') + '</span>' +
+          '<span style="font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px;background:'+sem.bg+';color:'+sem.color+';">' + esc(c.estado||sem.txt) + '</span>' + adminEjec +
+        '</div>' +
+        '<div style="font-size:12.5px;color:var(--subtle);margin-top:3px;">' + esc(c.cliente || c.institucion || '(sin nombre)') + (c.cliente && c.institucion ? ' · ' + esc(c.institucion) : '') + '</div>' +
+      '</div>' +
+      '<div style="text-align:right;">' +
+        (monto ? '<div style="font-weight:800;color:var(--gold-dk,#92580e);font-size:14px;">' + esc(monto) + '</div>' : '') +
+        '<div style="font-size:11px;font-weight:700;color:'+sem.color+';margin-top:2px;">' + esc(c.cerrada ? sem.txt : (sem.txt + (diasTxt?' · '+diasTxt:''))) + '</div>' +
+      '</div>' +
+    '</summary>' +
+    '<div style="padding:2px 14px 14px;border-top:1px solid var(--paper,#f3f4f6);">' + det + '</div>' +
+  '</details>';
+}
+async function guardarSeguimientoMC(num, btn){
+  const c = (CACHE.vMisCot||[]).find(x=>x.cotizacion===num) || {};
+  const safe = String(num).replace(/[^a-zA-Z0-9\-]/g,'');
+  const resEl = document.getElementById('mc-seg-res-'+safe);
+  const fechaEl = document.getElementById('mc-seg-fecha-'+safe);
+  const notasEl = document.getElementById('mc-seg-notas-'+safe);
+  const res = resEl ? resEl.value : '';
+  const fecha = fechaEl ? fechaEl.value : '';
+  const notas = notasEl ? notasEl.value.trim() : '';
+  if(!notas && !res){ alert('Escribe el detalle del seguimiento o elige un resultado'); if(notasEl) notasEl.focus(); return; }
+  btn.disabled=true; btn.textContent='Guardando…';
+  const r = await fetchAPI('crm_crear_seguimiento', { num_cotizacion:num, contacto_id:c.contacto_id||'', nombre:c.cliente||'', institucion:c.institucion||'', email:'', fecha:fecha, fecha_iso:fecha, resultado:res, notas:notas, solicitante:USUARIO });
+  if(!r || !r.ok){ btn.disabled=false; btn.textContent='Guardar seguimiento'; alert('Error: '+((r&&r.error)||'desconocido')); return; }
+  cargarMisCotizaciones();
+}
+async function marcarEstadoCotMC(num, estado, btn){
+  const etq = estado==='Ganada'?'GANADA':estado==='Perdida'?'PERDIDA':'EN GESTIÓN (reabrir)';
+  if(!confirm('¿Marcar la cotización '+num+' como '+etq+'?\n\nLa venta se acredita al ejecutivo que la hizo.')) return;
+  const prev = btn.textContent; btn.disabled=true; btn.textContent='Guardando…';
+  const r = await fetchAPI('crm_marcar_cotizacion', { solicitante:USUARIO, num:num, estado:estado });
+  if(!r || !r.ok){ btn.disabled=false; btn.textContent=prev; alert('No se pudo: '+((r&&r.error)||'error desconocido')); return; }
+  try { Object.keys(localStorage).forEach(kk=>{ if(kk.indexOf('crm_perfil_')===0||kk.indexOf('crm_kpis_cache')===0||kk.indexOf('crm_dash')===0) localStorage.removeItem(kk); }); } catch(e){}
+  cargarMisCotizaciones();
 }
 
 /* ════ Vista LEADS URGENTES (admin): todos los contactos derivados como lead ════ */

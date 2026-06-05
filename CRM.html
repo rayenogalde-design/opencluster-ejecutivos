@@ -2133,6 +2133,10 @@ body{
         Leads urgentes
         <span class="badge" id="badgeLeads" style="display:none;background:#DB2777;">0</span>
       </div>
+      <div class="side-tab admin" data-view="vCoaching" id="navCoaching" onclick="goView('vCoaching')" style="display:none;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        Coaching
+      </div>
       <div class="side-tab admin" data-view="vActividad" id="navActividad" onclick="goView('vActividad')" style="display:none;">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         Actividad del equipo
@@ -2438,6 +2442,15 @@ body{
         </div>
         <div id="muroHonor" style="margin:14px 0;"></div>
         <div id="metricasCharts"><div class="loading-state"><div class="spinner"></div>Cargando métricas…</div></div>
+      </div>
+
+      <!-- ═══ Coaching (admin) ═══ -->
+      <div class="view" id="vCoaching">
+        <div class="sec-head">
+          <h1>Coaching del equipo</h1>
+          <p>Dónde se atasca cada ejecutivo: su embudo, por qué canal trabaja y un diagnóstico automático para ayudarlo justo ahí.</p>
+        </div>
+        <div id="coachingBody"><div class="loading-state"><div class="spinner"></div>Cargando…</div></div>
       </div>
 
       <!-- ═══ Contactos olvidados ═══ -->
@@ -3827,7 +3840,7 @@ function aplicarVisibilidadPorRol(){
 
   // Vistas admin (Territorios, Auditoría, Migración, Importar): visibles solo si Rayen está
   // en modo Admin. En modo Ejecutiva o para ejecutivos no admin, se ocultan.
-  ['navLeads', 'navActividad', 'navTerr', 'navAud', 'navMigracion', 'navImportar', 'navConfig', 'secAdmin'].forEach(id => {
+  ['navLeads', 'navCoaching', 'navActividad', 'navTerr', 'navAud', 'navMigracion', 'navImportar', 'navConfig', 'secAdmin'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.style.display = verComoEjecutivo ? 'none' : '';
   });
@@ -3835,7 +3848,7 @@ function aplicarVisibilidadPorRol(){
   // Si está en una vista admin y cambia a modo ejecutiva, redirigir al dashboard
   if (verComoEjecutivo) {
     const vActual = document.querySelector('.view.act');
-    if (vActual && ['vTerritorios','vAud','vMigracion','vImportar','vConfig','vActividad'].indexOf(vActual.id) >= 0) {
+    if (vActual && ['vTerritorios','vAud','vMigracion','vImportar','vConfig','vActividad','vCoaching'].indexOf(vActual.id) >= 0) {
       goView('vDashboard');
     }
   }
@@ -3907,6 +3920,7 @@ function goView(id){
     case 'vCerrar':          cargarPorCerrar(); break;
     case 'vMisCotizaciones': cargarMisCotizaciones(); break;
     case 'vMetricas':        cargarMetricas(); break;
+    case 'vCoaching':        cargarCoaching(); break;
     case 'vOlvidados':       cargarOlvidados(); break;
     case 'vTerritorios':     cargarTerritorios(); break;
     case 'vMiTerritorio':    cargarMiTerritorio(); break;
@@ -7848,6 +7862,58 @@ function renderMetricasAnualApilado(cont, comp){
       options:{ responsive:true, plugins:{ legend:{display:true, position:'bottom', labels:{boxWidth:11, font:{size:10}, padding:8}}, tooltip:{callbacks:{label:c=> c.dataset.label+': '+(d.money?fmtCLP(c.parsed.y):c.parsed.y)}} },
         scales:{ x:{stacked:true, ticks:{font:{size:10}}}, y:{stacked:true, beginAtZero:true, ticks:{callback:v=>d.money?('$'+Math.round(v/1000000)+'M'):v, font:{size:10}}} } } }));
   });
+}
+
+/* ════ Vista COACHING (admin): dónde se atasca cada ejecutivo ════ */
+async function cargarCoaching(){
+  const cont = document.getElementById('coachingBody');
+  if(window.__COACHING){ try { renderCoaching(window.__COACHING); } catch(e){} }
+  else cont.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando…</div>';
+  const r = await fetchAPI('crm_coaching', { solicitante: USUARIO });
+  if(!r || !r.ok){ if(!window.__COACHING) cont.innerHTML = '<div class="error-state">'+esc((r&&r.error)||'No se pudo cargar el coaching')+'</div>'; return; }
+  window.__COACHING = r;
+  renderCoaching(r);
+}
+function renderCoaching(r){
+  const cont = document.getElementById('coachingBody');
+  const arr = r.coaching || [];
+  if(!arr.length){ cont.innerHTML = '<div class="loading-state" style="padding:30px;">Sin datos de coaching todavía.</div>'; return; }
+  const stages = [
+    {k:'no_contactado', t:'No contactado', c:'#9aa3af'},
+    {k:'contactado', t:'Contactado', c:'#06B3FD'},
+    {k:'seguimiento', t:'Seguimiento', c:'#0891B2'},
+    {k:'reunion', t:'Reunión', c:'#5b21b6'},
+    {k:'cotizado', t:'Cotizado', c:'#FF7E00'},
+    {k:'ganado', t:'Ganado', c:'#16A34A'}
+  ];
+  let maxF = 1;
+  arr.forEach(x => stages.forEach(s => { const v=(x.funnel||{})[s.k]||0; if(v>maxF) maxF=v; }));
+  cont.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:16px;">' +
+    arr.map(x => {
+      const f = x.funnel||{}, cc = x.canal||{};
+      const barras = stages.map(s => {
+        const v = f[s.k]||0, w = Math.round((v/maxF)*100);
+        return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">' +
+          '<span style="font-size:11px;color:var(--subtle);width:92px;flex-shrink:0;">'+esc(s.t)+'</span>' +
+          '<div style="flex:1;height:14px;background:var(--paper,#f3f4f6);border-radius:5px;overflow:hidden;"><div style="height:100%;width:'+w+'%;background:'+s.c+';border-radius:5px;"></div></div>' +
+          '<span style="font-size:12px;font-weight:800;color:var(--ink);width:28px;text-align:right;">'+v+'</span>' +
+        '</div>';
+      }).join('');
+      const pill = (lbl,val,col)=> '<span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:'+col+'18;color:'+col+';">'+esc(lbl)+': '+val+'</span>';
+      return '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;">' +
+          '<span style="font-family:Montserrat,sans-serif;font-size:15px;font-weight:800;color:var(--oct-navy,#001A60);">'+esc(x.ejecutivo)+'</span>' +
+          '<span style="font-size:11.5px;color:var(--subtle);">'+(x.total||0)+' contactos</span>' +
+        '</div>' +
+        '<div style="background:#FFF7ED;border-left:3px solid #FF7E00;border-radius:7px;padding:9px 12px;margin-bottom:12px;font-size:12.5px;color:#7c2d12;line-height:1.45;"><b>Diagnóstico:</b> '+esc(x.diagnostico||'')+'</div>' +
+        barras +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:11px;">' +
+          pill('Llamadas', cc.llamada||0, '#16A34A') + pill('Emails', cc.email||0, '#06B3FD') + pill('WhatsApp', cc.whatsapp||0, '#16a34a') +
+          ((cc.entrante)?pill('Entrantes', cc.entrante, '#DB2777'):'') +
+          ((x.toques_vencidos)?'<span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:#FEF2F2;color:#B91C1C;">'+x.toques_vencidos+' toques vencidos</span>':'') +
+        '</div>' +
+      '</div>';
+    }).join('') + '</div>';
 }
 
 /* ════ Vista LEADS URGENTES (admin): todos los contactos derivados como lead ════ */

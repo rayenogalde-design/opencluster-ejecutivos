@@ -3554,7 +3554,7 @@ const ACCIONES_POST = [
   'crm_crear_reunion','crm_crear_seguimiento',
   'crm_actualizar_etiquetas','crm_toggle_favorito','crm_actualizar_proxima','crm_snooze_contacto',
   'crm_iniciar_cadencia','crm_avanzar_cadencia','crm_pausar_cadencia',
-  'crm_set_pipeline','crm_reasignar_contacto',
+  'crm_set_pipeline','crm_reasignar_contacto','crm_marcar_cotizacion',
   'crm_importar_csv','crm_reasignar_contactos',
   'crm_marcar_notif_leida','crm_crear_notificacion',
   'crm_fusionar','crm_asignar_ejecutivo_cuenta','crm_crear_cuenta','crm_editar_cuenta',
@@ -7849,6 +7849,39 @@ function renderHistorialAgrupado(tl, contacto){
       const _stCls = (_estL.indexOf('ganad') >= 0 || _estL.indexOf('acept') >= 0 || _estL.indexOf('cerrad') >= 0) ? 'ganada'
                    : (_estL.indexOf('vencid') >= 0 || _estL.indexOf('perdid') >= 0 || _estL.indexOf('rechaz') >= 0) ? 'vencida'
                    : (_estL.indexOf('borrador') >= 0) ? 'borrador' : 'entregada';
+
+      // === CONTROL DE VENTA (marcar la COTIZACIÓN como Ganada/Perdida) ===
+      // La venta vive en la cotización y se acredita a SU ejecutivo (no al dueño del contacto),
+      // así un mismo contacto puede tener ventas de ejecutivos distintos. Solo el autor de la
+      // cotización o el admin pueden marcarla. (Pedido de Rayen 2026-06-04, caso Samuel Flores.)
+      const _cotEjec = String(co.ejecutivo || '');
+      const _normN = s => String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+      const _puedeMarcarVenta = (ROL === 'admin') || (function(){
+        const u = _normN(USUARIO), e = _normN(_cotEjec);
+        if(!u || !e) return false;
+        const uf = u.split(' ')[0], ef = e.split(' ')[0];
+        return e === u || (uf && e.indexOf(uf) >= 0) || (ef && u.indexOf(ef) >= 0);
+      })();
+      const _esGan = _estL.indexOf('ganad') >= 0 || _estL.indexOf('cerrad') >= 0;
+      const _esPer = _estL.indexOf('perdid') >= 0 || _estL.indexOf('rechaz') >= 0;
+      const _numJS = String(num || '').replace(/'/g, "\\'");
+      let ventaCtrl = '';
+      if (num) {
+        if (_puedeMarcarVenta) {
+          let _btns = '';
+          if (!_esGan) _btns += '<button onclick="marcarEstadoCotizacion(\'' + esc(_numJS) + '\',\'Ganada\',this)" style="background:#16A34A;color:#fff;border:none;padding:7px 13px;border-radius:7px;font-size:12px;font-weight:800;cursor:pointer;">Marcar venta ganada</button>';
+          if (!_esPer) _btns += '<button onclick="marcarEstadoCotizacion(\'' + esc(_numJS) + '\',\'Perdida\',this)" style="background:#fff;color:#B91C1C;border:1px solid #FCA5A5;padding:7px 13px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;">Marcar perdida</button>';
+          if (_esGan || _esPer) _btns += '<button onclick="marcarEstadoCotizacion(\'' + esc(_numJS) + '\',\'En gestión\',this)" style="background:#fff;color:var(--subtle);border:1px solid var(--smoke);padding:7px 13px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;">Reabrir</button>';
+          ventaCtrl = '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:' + (_esGan ? '#F0FDF4' : '#fafbfc') + ';border:1px solid ' + (_esGan ? '#BBF7D0' : 'var(--smoke)') + ';border-radius:8px;padding:10px 13px;margin-bottom:14px;">' +
+            '<span style="font-size:10.5px;font-weight:800;color:var(--subtle);text-transform:uppercase;letter-spacing:.5px;">Venta</span>' +
+            '<span style="font-size:12.5px;font-weight:800;color:' + (_esGan ? '#16A34A' : _esPer ? '#B91C1C' : 'var(--ink)') + ';">' + esc(estado) + '</span>' +
+            (_cotEjec ? '<span style="font-size:11px;color:var(--subtle);">· acreditada a ' + esc(_cotEjec.split(' ')[0]) + '</span>' : '') +
+            '<span style="flex:1;"></span>' + _btns + '</div>';
+        } else {
+          ventaCtrl = '<div style="background:#fafbfc;border:1px solid var(--smoke);border-radius:8px;padding:8px 13px;margin-bottom:14px;font-size:11.5px;color:var(--subtle);">Venta de <b style="color:var(--ink);">' + esc(_cotEjec || '—') + '</b> · estado <b>' + esc(estado) + '</b></div>';
+        }
+      }
+
       html += '<details class="v2-quote" style="margin-bottom:10px;">' +
         '<summary class="v2-quote-sum">' +
           '<div class="v2-quote-main">' +
@@ -7869,6 +7902,8 @@ function renderHistorialAgrupado(tl, contacto){
           '</div>' +
         '</summary>' +
         '<div class="v2-quote-det" style="background:#fff;">' +
+
+          ventaCtrl +
 
           // === DESGLOSE DE COSTOS ===
           '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:14px;">' +
@@ -8828,6 +8863,31 @@ async function guardarSeguimientoInline(numCot, contactoId, btn){
     const v = document.querySelector('.view.act');
     if(v && typeof goView === 'function') goView(v.id);
   }
+}
+
+// Marca una COTIZACIÓN como Ganada / Perdida / En gestión desde la ficha.
+// La venta se acredita al ejecutivo de la cotización (no al dueño del contacto), así un
+// mismo contacto puede registrar ventas de ejecutivos distintos. (Pedido Rayen 2026-06-04.)
+async function marcarEstadoCotizacion(num, estado, btn){
+  if(!num){ alert('Esta cotización no tiene N° en el Registro, no se puede marcar.'); return; }
+  const etq = estado === 'Ganada' ? 'GANADA' : estado === 'Perdida' ? 'PERDIDA' : 'EN GESTIÓN (reabrir)';
+  if(!confirm('¿Marcar la cotización ' + num + ' como ' + etq + '?\n\nLa venta se acredita al ejecutivo que hizo la cotización.')) return;
+  const c = window.__CONTACTO_ACTIVO || {};
+  let prev = '';
+  if(btn){ prev = btn.textContent; btn.disabled = true; btn.textContent = 'Guardando…'; }
+  const r = await fetchAPI('crm_marcar_cotizacion', { solicitante: USUARIO, num: num, estado: estado });
+  if(!r || !r.ok){
+    if(btn){ btn.disabled = false; btn.textContent = prev; }
+    alert('No se pudo marcar: ' + ((r && r.error) || 'error desconocido'));
+    return;
+  }
+  // Bustear cachés locales (perfil del contacto + KPIs + dashboards) para que la venta se refleje ya.
+  try {
+    Object.keys(localStorage).forEach(k => {
+      if(k.indexOf('crm_perfil_') === 0 || k.indexOf('crm_kpis_cache') === 0 || k.indexOf('crm_dash') === 0) localStorage.removeItem(k);
+    });
+  } catch(e){}
+  if(c.id) abrirFichaModal(c.id, true);
 }
 
 // ════════════════════════════════════════════════════════════════════════════

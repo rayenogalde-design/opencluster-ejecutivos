@@ -33,7 +33,9 @@
   /* ─── 1. URL del backend de audio (ACADEMIA_AUDIO_API) ───────────
      Pegar aquí la URL /exec del Web App cuando esté desplegado.
      Mientras esté vacía, upload() es un no-op silencioso. */
-  var AUDIO_API_URL = '';   /* << PEGAR URL /exec DE ACADEMIA_AUDIO_API AQUÍ */
+  /* Mismo Web App ACADEMIA_IA_API que progress-integration.js: el endpoint
+     action:'subir' guarda el audio en Drive y registra la fila. Un solo deploy. */
+  var AUDIO_API_URL = 'https://script.google.com/macros/s/AKfycbzK0XFzsT-6_ImJYugk-4BsdYXft-7Mv0PhEIuw-wdv95Ln6cd1fOUVJEmENxy21ApRHg/exec';
 
   /* Tope defensivo: Apps Script recibe el POST en memoria y base64 infla
      ~33%. Una apertura hablada de 30-90 s en webm pesa muy por debajo de

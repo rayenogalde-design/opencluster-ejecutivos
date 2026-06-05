@@ -52,6 +52,14 @@ body {
 }
 .btn-refresh:hover { background: #00134a; }
 
+.toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+.toolbar label { font-size: 11px; font-weight: 800; color: var(--oct-text-mute); text-transform: uppercase; letter-spacing: 0.04em; }
+.toolbar select {
+  font-family: inherit; font-size: 14px; font-weight: 600; color: var(--oct-text);
+  background: var(--oct-white); border: 1px solid var(--oct-border); border-radius: 10px;
+  padding: 9px 12px; cursor: pointer; min-width: 240px;
+}
+
 .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 24px; }
 .kpi { background: var(--oct-white); border: 1px solid var(--oct-border); border-radius: 14px; padding: 18px; }
 .kpi .num { font-size: 28px; font-weight: 800; color: var(--oct-navy); letter-spacing: -0.02em; }
@@ -64,8 +72,9 @@ thead th {
   color: var(--oct-text-mute); padding: 14px 18px; border-bottom: 1px solid var(--oct-border);
 }
 tbody td { padding: 16px 18px; border-bottom: 1px solid var(--oct-border); font-size: 14px; vertical-align: middle; }
-tbody tr:last-child td { border-bottom: none; }
-tbody tr:hover { background: #fafcff; }
+tbody tr.exec-row:last-of-type td { border-bottom: none; }
+tbody tr.exec-row:hover { background: #fafcff; }
+.exec-row { cursor: pointer; }
 .exec { font-weight: 700; color: var(--oct-text); }
 .bar-wrap { display: flex; align-items: center; gap: 10px; min-width: 200px; }
 .bar { flex: 1; height: 8px; background: var(--oct-softblue); border-radius: 999px; overflow: hidden; }
@@ -80,11 +89,31 @@ tbody tr:hover { background: #fafcff; }
 .pill.prog { background: var(--oct-softblue); color: var(--oct-navy); }
 .pill.none { background: #F3F4F6; color: var(--oct-text-mute); }
 
+.chev { background: none; border: none; cursor: pointer; color: var(--oct-text-mute); padding: 0 8px 0 0; vertical-align: middle; }
+.chev svg { transition: transform .2s; display: block; }
+.chev.open svg { transform: rotate(90deg); }
+
+.detail-row > td { padding: 0 18px 18px; background: #fafcff; border-bottom: 1px solid var(--oct-border); }
+.detail { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; padding-top: 4px; }
+.detail-block { background: var(--oct-white); border: 1px solid var(--oct-border); border-radius: 12px; padding: 14px 16px; }
+.detail-h { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--oct-text-mute); margin-bottom: 10px; }
+.detail-empty { font-size: 13px; color: var(--oct-text-mute); padding: 8px 0; }
+.ans-item, .rec-item { padding: 10px 0; border-bottom: 1px solid var(--oct-border); }
+.ans-item:last-child, .rec-item:last-child { border-bottom: none; }
+.ans-q { font-size: 13px; font-weight: 700; color: var(--oct-text); margin-bottom: 4px; }
+.ans-a { font-size: 13px; color: var(--oct-text-soft); white-space: pre-wrap; background: var(--oct-page-bg); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; }
+.ans-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.meta-mute { color: var(--oct-text-mute); font-size: 12px; }
+.rec-item audio { width: 100%; margin: 8px 0 4px; }
+.rec-link { font-size: 12px; font-weight: 600; color: var(--oct-sky); text-decoration: none; }
+.rec-link:hover { text-decoration: underline; }
+
 .notice { background: #FFF4EA; border: 1px solid #FFD9B0; color: #8A5200; border-radius: 12px; padding: 16px 18px; font-size: 14px; margin-bottom: 20px; }
 .muted { color: var(--oct-text-mute); font-size: 13px; text-align: center; padding: 28px; }
 @media (max-width: 640px) {
   .kpis { grid-template-columns: 1fr; }
-  .last { display: none; }
+  .exec-row .last { display: none; }
+  .detail { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -107,7 +136,7 @@ tbody tr:hover { background: #fafcff; }
       </div>
       <div class="head-text">
         <h1>Progreso de la Academia</h1>
-        <p>Cómo avanza tu equipo en el curso de outreach por email</p>
+        <p id="subtitulo">Avance del equipo por curso</p>
       </div>
     </div>
     <button class="btn-refresh" onclick="cargar()">
@@ -117,6 +146,11 @@ tbody tr:hover { background: #fafcff; }
   </div>
 
   <div id="noticeBox"></div>
+
+  <div class="toolbar">
+    <label for="cursoSel">Curso</label>
+    <select id="cursoSel"></select>
+  </div>
 
   <div class="kpis">
     <div class="kpi"><div class="num" id="kpiActivos">0</div><div class="lbl">Empezaron el curso</div></div>
@@ -137,15 +171,23 @@ tbody tr:hover { background: #fafcff; }
 </div>
 
 <script>
-/* URL /exec del Web App ACADEMIA_API. */
-var ACADEMIA_API = 'https://script.google.com/macros/s/AKfycbzK0XFzsT-6_ImJYugk-4BsdYXft-7Mv0PhEIuw-wdv95Ln6cd1fOUVJEmENxy21ApRHg/exec';
+/* URL /exec del Web App ACADEMIA_IA_API (progreso + respuestas + grabaciones). */
+var ENDPOINT = 'https://script.google.com/macros/s/AKfycbzK0XFzsT-6_ImJYugk-4BsdYXft-7Mv0PhEIuw-wdv95Ln6cd1fOUVJEmENxy21ApRHg/exec';
 
 /* Equipo a mostrar (aunque no hayan empezado → aparecen en 0%). */
 var ROSTER = ['Rayen Ogalde', 'William Marín', 'Germán Alvarado', 'Roberto Cáceres', 'Maximiliano Astudillo', 'Ximena Romero', 'Mario'];
-var TOTAL_MODULOS = 6;
+
+/* Total de módulos por curso (fallback cuando aún nadie reportó avance). El
+   título es la clave porque la Sheet agrupa por título, igual que el front. */
+var KNOWN_COURSES = { 'Outreach por email': 9, 'Discovery telefónico': 11, 'Postventa y expansión': 11 };
+
+var DATA = { progreso: [], respuestas: [], grabaciones: [] };
+var cursoActivo = '';
+var abierto = {};   // primerNombre -> bool (filas expandidas)
 
 function norm(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim(); }
 function primerNombre(s) { return norm(s).split(' ')[0]; }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 
 function fmtFecha(iso) {
   if (!iso) return '—';
@@ -162,21 +204,99 @@ function pill(pct) {
   return '<span class="pill none">Sin empezar</span>';
 }
 
-function pintar(registros) {
-  // Map por primer nombre para casar con el roster de forma tolerante.
+/* Drive: del link /view sacamos el id y armamos una URL reproducible inline. */
+function driveId(url) { var s = String(url || ''); var m = s.match(/\/d\/([^/]+)/) || s.match(/[?&]id=([^&]+)/); return m ? m[1] : ''; }
+function audioSrc(url) { var id = driveId(url); return id ? ('https://drive.google.com/uc?export=download&id=' + id) : String(url || ''); }
+
+function cursosDisponibles() {
+  var set = {};
+  Object.keys(KNOWN_COURSES).forEach(function (c) { set[c] = true; });
+  DATA.progreso.forEach(function (r) { if (r.curso) set[r.curso] = true; });
+  DATA.respuestas.forEach(function (r) { if (r.curso) set[r.curso] = true; });
+  DATA.grabaciones.forEach(function (r) { if (r.curso) set[r.curso] = true; });
+  return Object.keys(set);
+}
+
+function totalModulos(curso) {
+  var t = 0;
+  DATA.progreso.forEach(function (r) { if (r.curso === curso && Number(r.total_modulos) > t) t = Number(r.total_modulos); });
+  return t || KNOWN_COURSES[curso] || 0;
+}
+
+function respuestasDe(nombre, curso) {
+  var pn = primerNombre(nombre);
+  return DATA.respuestas.filter(function (r) { return primerNombre(r.ejecutivo) === pn && r.curso === curso; });
+}
+function grabacionesDe(nombre, curso) {
+  var pn = primerNombre(nombre);
+  return DATA.grabaciones.filter(function (r) { return primerNombre(r.ejecutivo) === pn && r.curso === curso; });
+}
+
+function buildSelector() {
+  var cursos = cursosDisponibles();
+  if (!cursoActivo || cursos.indexOf(cursoActivo) < 0) cursoActivo = cursos[0] || '';
+  var sel = document.getElementById('cursoSel');
+  sel.innerHTML = cursos.map(function (c) {
+    return '<option value="' + esc(c) + '"' + (c === cursoActivo ? ' selected' : '') + '>' + esc(c) + '</option>';
+  }).join('');
+  document.getElementById('subtitulo').textContent = 'Avance del equipo en: ' + (cursoActivo || '—');
+}
+
+function detalleHtml(nombre) {
+  var curso = cursoActivo;
+  var resp = respuestasDe(nombre, curso);
+  var grab = grabacionesDe(nombre, curso);
+  var html = '';
+
+  html += '<div class="detail-block"><div class="detail-h">Respuestas (' + resp.length + ')</div>';
+  if (!resp.length) {
+    html += '<div class="detail-empty">Sin respuestas registradas todavía.</div>';
+  } else {
+    html += resp.map(function (r) {
+      var pillRes = /correcto/i.test(r.resultado) ? '<span class="pill done">' + esc(r.resultado) + '</span>'
+        : (/incorrecto/i.test(r.resultado) ? '<span class="pill none">' + esc(r.resultado) + '</span>'
+        : '<span class="pill prog">' + esc(r.resultado || '—') + '</span>');
+      return '<div class="ans-item">' +
+        '<div class="ans-q">' + esc(r.pregunta || r.ejercicio_id) + '</div>' +
+        '<div class="ans-a">' + esc(r.respuesta) + '</div>' +
+        '<div class="ans-meta">' + pillRes + '<span class="meta-mute">' + esc(r.ejercicio_id) + ' · ' + fmtFecha(r.fecha) + '</span></div>' +
+      '</div>';
+    }).join('');
+  }
+  html += '</div>';
+
+  html += '<div class="detail-block"><div class="detail-h">Grabaciones (' + grab.length + ')</div>';
+  if (!grab.length) {
+    html += '<div class="detail-empty">Sin grabaciones de voz todavía.</div>';
+  } else {
+    html += grab.map(function (g) {
+      return '<div class="rec-item">' +
+        '<div class="ans-meta"><span class="exec">' + esc(g.ejercicio_id || 'Grabación') + '</span><span class="meta-mute">' + fmtFecha(g.fecha) + '</span></div>' +
+        '<audio controls preload="none" src="' + esc(audioSrc(g.url_audio)) + '"></audio>' +
+        '<a class="rec-link" href="' + esc(g.url_audio) + '" target="_blank" rel="noopener">Abrir en Drive</a>' +
+      '</div>';
+    }).join('');
+  }
+  html += '</div>';
+  return html;
+}
+
+function pintar() {
+  var curso = cursoActivo;
   var porNombre = {};
-  registros.forEach(function (r) { porNombre[primerNombre(r.ejecutivo)] = r; });
+  DATA.progreso.filter(function (r) { return r.curso === curso; }).forEach(function (r) { porNombre[primerNombre(r.ejecutivo)] = r; });
+  var tot = totalModulos(curso);
 
   var filas = ROSTER.map(function (nombre) {
     var r = porNombre[primerNombre(nombre)] || null;
-    var pct = r ? r.pct : 0;
-    var comp = r ? r.modulos_completados : 0;
-    var tot = (r && r.total_modulos) ? r.total_modulos : TOTAL_MODULOS;
-    var ultimo = r ? r.ultimo_acceso : '';
-    return { nombre: nombre, pct: pct, comp: comp, tot: tot, ultimo: ultimo };
+    return {
+      nombre: nombre,
+      pct: r ? Number(r.pct) : 0,
+      comp: r ? Number(r.modulos_completados) : 0,
+      tot: (r && r.total_modulos) ? Number(r.total_modulos) : tot,
+      ultimo: r ? r.ultimo_acceso : ''
+    };
   });
-
-  // Ordenar: más avance primero.
   filas.sort(function (a, b) { return b.pct - a.pct; });
 
   var empezaron = filas.filter(function (f) { return f.pct > 0; }).length;
@@ -187,36 +307,59 @@ function pintar(registros) {
   document.getElementById('kpiProm').textContent = prom + '%';
 
   document.getElementById('tbody').innerHTML = filas.map(function (f) {
-    return '<tr>' +
-      '<td class="exec">' + f.nombre + '</td>' +
+    var pn = primerNombre(f.nombre);
+    var isOpen = !!abierto[pn];
+    var row = '<tr class="exec-row" data-n="' + esc(pn) + '">' +
+      '<td class="exec"><button class="chev' + (isOpen ? ' open' : '') + '" aria-label="Ver detalle"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>' + esc(f.nombre) + '</td>' +
       '<td><div class="bar-wrap"><div class="bar"><div class="bar-fill" style="width:' + f.pct + '%"></div></div><span class="pct">' + f.pct + '%</span></div></td>' +
       '<td class="mods">' + f.comp + ' / ' + f.tot + '</td>' +
       '<td>' + pill(f.pct) + '</td>' +
       '<td class="last">' + fmtFecha(f.ultimo) + '</td>' +
     '</tr>';
+    var det = '<tr class="detail-row" data-n="' + esc(pn) + '"' + (isOpen ? '' : ' style="display:none"') + '><td colspan="5"><div class="detail">' + detalleHtml(f.nombre) + '</div></td></tr>';
+    return row + det;
   }).join('');
+
+  Array.prototype.forEach.call(document.querySelectorAll('.exec-row'), function (row) {
+    row.addEventListener('click', function () {
+      var n = row.getAttribute('data-n');
+      abierto[n] = !abierto[n];
+      var det = document.querySelector('.detail-row[data-n="' + n + '"]');
+      var chev = row.querySelector('.chev');
+      if (det) det.style.display = abierto[n] ? '' : 'none';
+      if (chev) chev.classList.toggle('open', abierto[n]);
+    });
+  });
 }
 
 function cargar() {
   var notice = document.getElementById('noticeBox');
   notice.innerHTML = '';
-  if (!ACADEMIA_API) {
-    notice.innerHTML = '<div class="notice">El backend de progreso aún no está conectado. Cuando despliegues el Web App ACADEMIA_API y pegues su URL, esta tabla mostrará el avance real. Por ahora se muestra el equipo en 0%.</div>';
-    pintar([]);
-    return;
-  }
   document.getElementById('tbody').innerHTML = '<tr><td colspan="5" class="muted">Cargando…</td></tr>';
-  fetch(ACADEMIA_API + '?accion=progreso_todos')
-    .then(function (r) { return r.json(); })
-    .then(function (res) {
-      if (!res.ok) throw new Error(res.error || 'error');
-      pintar(res.progreso || []);
-    })
-    .catch(function (e) {
-      notice.innerHTML = '<div class="notice">No se pudo cargar el progreso (' + e.message + '). Revisa que la URL del Web App sea correcta y esté desplegado con acceso "Cualquier usuario".</div>';
-      pintar([]);
-    });
+
+  var g = function (accion) {
+    return fetch(ENDPOINT + '?accion=' + accion).then(function (r) { return r.json(); }).catch(function () { return { ok: false }; });
+  };
+
+  Promise.all([g('progreso_todos'), g('respuestas_todas'), g('grabaciones_todas')]).then(function (res) {
+    DATA.progreso = (res[0] && res[0].ok && res[0].progreso) || [];
+    DATA.respuestas = (res[1] && res[1].ok && res[1].respuestas) || [];
+    DATA.grabaciones = (res[2] && res[2].ok && res[2].grabaciones) || [];
+    if (!res[0] || !res[0].ok) {
+      notice.innerHTML = '<div class="notice">No se pudo cargar el progreso. Revisa que el Web App esté desplegado con acceso "Cualquier usuario".</div>';
+    }
+    buildSelector();
+    pintar();
+  });
 }
+
+/* Cambiar de curso → repinta (las filas expandidas se resetean por curso). */
+document.getElementById('cursoSel').addEventListener('change', function () {
+  cursoActivo = this.value;
+  abierto = {};
+  document.getElementById('subtitulo').textContent = 'Avance del equipo en: ' + (cursoActivo || '—');
+  pintar();
+});
 
 /* Guard suave: este panel es para administración. */
 (function () {

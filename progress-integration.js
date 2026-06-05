@@ -70,6 +70,45 @@
       } catch (e) {
         // silencio total — el curso no debe romperse por un reporte fallido
       }
+    },
+
+    /* Guarda las respuestas escritas/quiz de un módulo recién completado.
+       El curso arma `items` (sabe la estructura de sus pantallas) y acá las
+       POSTeamos una por una al endpoint respuesta_guardar (upsert por
+       ejercicio_id en el backend). Nunca rompe el curso.
+
+       cursoSlug: slug del curso (ej. 'outreach').
+       items: [{ ejercicio_id, pregunta, respuesta, resultado }] */
+    onAnswers: function (cursoSlug, items) {
+      try {
+        if (!Array.isArray(items) || !items.length) return;
+
+        var ejecutivo = '';
+        try { ejecutivo = localStorage.getItem('oc_central_user') || ''; } catch (e) {}
+        if (!ejecutivo) return;                            // sin sesión → no reporta
+
+        var titulo = COURSE_TITLES[String(cursoSlug)] || String(cursoSlug);
+
+        items.forEach(function (it) {
+          if (!it || !it.ejercicio_id) return;
+          var payload = {
+            action: 'respuesta_guardar',
+            ejecutivo: ejecutivo,
+            curso: titulo,
+            ejercicio_id: String(it.ejercicio_id || ''),
+            pregunta: String(it.pregunta || ''),
+            respuesta: String(it.respuesta || ''),
+            resultado: String(it.resultado || '')
+          };
+          fetch(ACADEMIA_API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload)
+          }).catch(function () { /* silencio */ });
+        });
+      } catch (e) {
+        // silencio total — el curso no debe romperse por un reporte fallido
+      }
     }
   };
 })();

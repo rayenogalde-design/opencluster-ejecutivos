@@ -5771,6 +5771,34 @@ function navNext() {
         });
       }
     } catch (e) { /* el reporte de progreso nunca debe romper el curso */ }
+    // Reportar las respuestas escritas/quiz de este módulo al panel admin
+    // (lo implementa progress-integration.js). Nunca rompe el curso.
+    try {
+      if (window.OpenClusterProgress && typeof window.OpenClusterProgress.onAnswers === 'function') {
+        var __strip = function (h) { var dv = document.createElement('div'); dv.innerHTML = String(h || ''); return (dv.textContent || '').replace(/\s+/g, ' ').trim(); };
+        var __items = [];
+        (mod.screens || []).forEach(function (sc, si) {
+          var se = state.selections[state.moduleIdx + '-' + si];
+          if (!se) return;
+          var eid = (mod.id || ('m' + state.moduleIdx)) + '/' + (sc.stepLabel || ('p' + si));
+          var preg = __strip((sc.stepTitle ? sc.stepTitle + ' — ' : '') + (sc.question || sc.context || sc.prompt || ''));
+          var resp = '', res = '';
+          if ((sc.type === 'quiz_single' || sc.type === 'quiz_multi') && se.validated && Array.isArray(se.picked)) {
+            resp = se.picked.map(function (i) { return (sc.options && sc.options[i]) ? __strip(sc.options[i].text) : ('opción ' + i); }).join('  |  ');
+            var ci = (sc.options || []).map(function (o, i) { return o.correct ? i : -1; }).filter(function (i) { return i >= 0; });
+            res = (se.picked.length === ci.length && se.picked.every(function (i) { return ci.indexOf(i) >= 0; })) ? 'correcto' : 'incorrecto';
+          } else if (typeof se.text === 'string' && se.text.trim()) {
+            resp = se.text.trim();
+            if (Array.isArray(sc.validations) && sc.validations.length) {
+              var pass = sc.validations.filter(function (v) { try { return v.test(resp); } catch (e2) { return false; } }).length;
+              res = pass + '/' + sc.validations.length + ' criterios';
+            } else { res = 'enviado'; }
+          } else { return; }
+          __items.push({ ejercicio_id: eid, pregunta: preg, respuesta: resp, resultado: res });
+        });
+        if (__items.length) window.OpenClusterProgress.onAnswers('discovery', __items);
+      }
+    } catch (e) { /* el reporte de respuestas nunca debe romper el curso */ }
     state.screenIdx = mod.screens.length;
     render();
   }

@@ -8431,8 +8431,11 @@ function abrirModalNuevoContacto(opts){
     const lu = document.getElementById('nc-lead-urgente'); if(lu) lu.checked = false;
     const luf = document.getElementById('nc-lead-urgente-fecha'); if(luf) luf.style.display='none';
     const ld = document.getElementById('nc-lead-deadline'); if(ld) ld.value=''; }
-  // La bandeja de leads (pegar + lead urgente) es SOLO para el admin (Rayen).
-  { const isAdm = (ROL === 'admin');
+  // La bandeja de leads (pegar + lead urgente) es SOLO para el admin (Rayen), y
+  // solo cuando está actuando como admin. Así, si Rayen previsualiza en modo
+  // EJECUTIVA, ve exactamente lo mismo que un ejecutivo (sin esta caja). Los
+  // ejecutivos de verdad nunca la ven (su ROL no es 'admin').
+  { const isAdm = (typeof esActuandoComoAdmin === 'function') ? esActuandoComoAdmin() : (ROL === 'admin');
     const lb = document.getElementById('nc-lead-box'); if(lb) lb.style.display = isAdm ? '' : 'none';
     const lub = document.getElementById('nc-lead-urgente-box'); if(lub) lub.style.display = isAdm ? '' : 'none'; }
   // Ejecutivo asignado: solo el admin (Rayen) lo elige; default = el que crea el contacto.

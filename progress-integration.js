@@ -52,6 +52,7 @@
         var pct = Math.round((completados / total) * 100);
 
         var payload = {
+          action: 'progreso_guardar',                      // sin esto el doPost lo ignora
           ejecutivo: ejecutivo,
           curso: titulo,
           modulos_completados: completados,

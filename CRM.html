@@ -6148,6 +6148,10 @@ const CADENCIAS = {
     { dia:3,  canal:'Email',    desc:'Seguimiento 1 — ¿dudas sobre la propuesta?' },
     { dia:7,  canal:'Llamada',  desc:'Llamada — resolver objeciones' },
     { dia:14, canal:'Email',    desc:'Seguimiento 2 — cierre / próximos pasos' }
+  ]},
+  inbound: { nombre:'Lead entrante', pasos:[
+    { dia:0, canal:'Llamada', desc:'Llamar HOY (te contactaron). Si no contesta: WhatsApp → email.' },
+    { dia:1, canal:'Llamada', desc:'Reintento: Llamada → WhatsApp → email. No dejar enfriar el lead.' }
   ]}
 };
 const CAD_ICONOS = {
@@ -6486,6 +6490,11 @@ function gestionContactoBar(c){
   const curOpt = _gestEstadoOpcion(c.ultimo_estado || c.pipeline_estado || '');
   const estSel = '<select onchange="cambiarEstadoFicha(\''+id+'\', this.value)" style="'+selStyle+'">' +
     _GEST_ESTADOS.map(e => '<option'+(e===curOpt?' selected':'')+'>'+esc(e)+'</option>').join('') + '</select>';
+  // Camino de entrada (origen) — control discreto: corrige la clasificación si quedó mal. Define qué cadencia corre.
+  const ORIGENES = [['prospeccion','Prospección (frío)'],['inbound','Lead entrante'],['cotizacion','Cotización']];
+  let curOrig = n(c.origen); if(curOrig!=='inbound' && curOrig!=='cotizacion') curOrig='prospeccion';
+  const origSel = '<select onchange="cambiarOrigenFicha(\''+id+'\', this.value)" title="Cómo entró el prospecto. Define la cadencia que corre." style="padding:6px 9px;border:1px solid var(--v2-divider,#e5e7eb);border-radius:8px;font-size:12px;color:var(--v2-text-soft,#5A6478);background:#fff;cursor:pointer;font-family:inherit;">' +
+    ORIGENES.map(o => '<option value="'+o[0]+'"'+(o[0]===curOrig?' selected':'')+'>'+esc(o[1])+'</option>').join('') + '</select>';
   let adminBox = '';
   if(ROL === 'admin'){
     const dueno = String(c.ejecutivo_asignado||'').trim();
@@ -6502,8 +6511,16 @@ function gestionContactoBar(c){
     '<div class="v2-block-head"><span class="v2-block-label">GESTIÓN RÁPIDA</span></div>' +
     '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;margin-top:8px;">' +
       '<div><label style="'+lblStyle+'">Estado del pipeline</label>'+estSel+'</div>' + adminBox +
+      '<div><label style="'+lblStyle+'">Camino de entrada</label>'+origSel+'</div>' +
     '</div>' +
   '</div>';
+}
+async function cambiarOrigenFicha(id, origen){
+  const r = await fetchAPI('crm_editar_contacto', null, { id, origen, solicitante: USUARIO });
+  if(!r || !r.ok){ alert('No se pudo cambiar el camino de entrada: ' + ((r&&r.error)||'')); return; }
+  _cadActualizar(id, c => { c.origen = origen; });
+  _gestBustCaches(id);
+  if(typeof toastCfg==='function') toastCfg('Camino de entrada actualizado');
 }
 function _gestBustCaches(id){
   try { localStorage.removeItem('crm_perfil_' + id + '_' + MODO_VISTA); } catch(e){}
@@ -8878,6 +8895,9 @@ async function guardarNuevoContacto(forzar){
     pipeline_estado: document.getElementById('nc-pipeline').value,
     notas_publicas: document.getElementById('nc-notas').value.trim(),
     medio_primer_contacto: document.getElementById('nc-medio').value,
+    // Camino de entrada: si se marca "Lead urgente" (alguien te contactó) → inbound (mini-cadencia
+    // tibia, sin cold-outreach). Si no → prospección (cadencia fría llamada-first). Ver 3-caminos.
+    origen: (document.getElementById('nc-lead-urgente') && document.getElementById('nc-lead-urgente').checked) ? 'inbound' : 'prospeccion',
     solicitante: USUARIO
   };
   // Asignación: si es el admin (Rayen), respeta el ejecutivo que eligió en el selector.

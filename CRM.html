@@ -6105,20 +6105,20 @@ function resolverMensaje(c, stageKey){
   };
   return { wa: pl ? repl(pl.mensaje_whatsapp) : '', asunto: pl ? repl(pl.email_asunto) : '', cuerpo: pl ? repl(pl.email_cuerpo) : '' };
 }
-async function abrirSelectorMensaje(contactoId, canal, pre){
+async function abrirSelectorMensaje(contactoId, canal, etapaForzada){
   var c = _buscarContactoCache(contactoId);
   if(!c){ try { var l = await _cargarContactosCrudo(); c = (l||[]).find(function(x){ return String(x.id) === String(contactoId); }); } catch(e){} }
   if(!c){ alert('Contacto no encontrado.'); return; }
   if(canal === 'whatsapp' && !String(c.telefono||'').trim()){ alert('Este contacto no tiene teléfono registrado.'); return; }
   if(canal === 'email' && !String(c.email||'').trim()){ alert('Este contacto no tiene email registrado.'); return; }
-  // pre = mensaje ya escrito de un toque de cadencia ({asunto?, texto}); si viene, se usa en vez de la plantilla por etapa.
-  window.__SEL_MSG = { contacto: c, canal: canal, pre: pre || null };
+  // etapaForzada (opcional): etapa de la plantilla a precargar (la del toque de cadencia).
+  window.__SEL_MSG = { contacto: c, canal: canal };
   var ov = document.getElementById('selMsgOverlay'); if(ov) ov.remove();
   ov = document.createElement('div'); ov.id = 'selMsgOverlay';
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;';
   ov.onclick = function(e){ if(e.target === ov) ov.remove(); };
   document.body.appendChild(ov);
-  var etapaActual = grupoPipeline(c.ultimo_estado || c.pipeline_estado || '').key;
+  var etapaActual = etapaForzada || grupoPipeline(c.ultimo_estado || c.pipeline_estado || '').key;
   var opts = CFG_ETAPAS.map(function(et){ return '<option value="'+et[0]+'"'+(et[0]===etapaActual?' selected':'')+'>'+esc(et[1])+'</option>'; }).join('');
   var esWa = canal === 'whatsapp';
   ov.innerHTML =
@@ -6149,37 +6149,20 @@ async function abrirSelectorMensaje(contactoId, canal, pre){
 }
 function _selMsgRellenar(){
   var ctx = window.__SEL_MSG; if(!ctx) return;
-  // Si viene un mensaje pre-escrito de un toque (y aún no se usó), se carga ese. Si la usuaria
-  // cambia la etapa en el selector, pasa a usar la plantilla por etapa.
-  if(ctx.pre && !ctx._preUsado){
-    ctx._preUsado = true;
-    if(ctx.canal === 'whatsapp'){ var tw = document.getElementById('selMsgWa'); if(tw) tw.value = ctx.pre.texto || ''; }
-    else { var ap = document.getElementById('selMsgAsunto'); if(ap) ap.value = ctx.pre.asunto || ''; var bp = document.getElementById('selMsgCuerpo'); if(bp) bp.value = ctx.pre.texto || ''; }
-    return;
-  }
   var sel = document.getElementById('selMsgEtapa'); if(!sel) return;
   var m = resolverMensaje(ctx.contacto, sel.value);
   if(ctx.canal === 'whatsapp'){ var t = document.getElementById('selMsgWa'); if(t) t.value = m.wa || ''; }
   else { var a = document.getElementById('selMsgAsunto'); if(a) a.value = m.asunto || ''; var b = document.getElementById('selMsgCuerpo'); if(b) b.value = m.cuerpo || ''; }
 }
-// Abre el mensaje YA ESCRITO del toque de cadencia actual (§5.3 plantillas por toque).
-function _msgVars(t, c){
-  var ej = (USUARIO || '').split(' ')[0];
-  return String(t || '')
-    .replace(/\{nombre\}/g, ((c.nombre || '').split(' ')[0]) || (c.nombre || ''))
-    .replace(/\{institucion\}/g, c.institucion || c['institución'] || '')
-    .replace(/\{ejecutivo\}/g, ej)
-    .replace(/\{ciudad\}/g, c.ciudad || '');
-}
+// Abre la PLANTILLA EXISTENTE (segmentada, ya escrita) que corresponde al toque de cadencia actual (§5.3).
 async function enviarMensajeToque(contactoId){
   var c = _buscarContactoCache(contactoId);
   if(!c){ try { var l = await _cargarContactosCrudo(); c = (l||[]).find(function(x){ return String(x.id) === String(contactoId); }); } catch(e){} }
   if(!c){ alert('Contacto no encontrado.'); return; }
   var cad = cadenciaDe(c);
-  var p = cad && cad.paso && cad.paso.plantilla;
+  var p = cad && cad.paso && cad.paso.msg;
   if(!p){ alert('Este toque es una llamada o conexión de LinkedIn — no trae mensaje escrito. El detalle del toque te guía qué hacer.'); return; }
-  var pre = { canal:p.canal, asunto: p.asunto ? _msgVars(p.asunto, c) : '', texto: _msgVars(p.texto, c) };
-  abrirSelectorMensaje(contactoId, p.canal, pre);
+  abrirSelectorMensaje(contactoId, p.canal, p.etapa);
 }
 function _lanzarMensaje(){
   var ctx = window.__SEL_MSG; if(!ctx) return;
@@ -6206,33 +6189,28 @@ function _lanzarMensaje(){
 // El backend escribe proxima_accion/nota_proxima; acá mostramos toque + canal y
 // damos el botón "Hecho" que avanza la cadencia. Aviso: tile en dashboard + toast.
 // ════════════════════════════════════════════════════════════════════════════
+// Cada toque mapea a una de las PLANTILLAS SEGMENTADAS ya existentes (por etapa) vía `msg`:
+//   { canal:'email'|'whatsapp', etapa:'<estado_pipeline de CFG_ETAPAS>' }.
+// El botón "Mensaje" abre esa plantilla real (segmentada por el segmento del ejecutivo),
+// NO un texto inventado. Los toques de llamada/LinkedIn no traen mensaje (su desc guía).
 const CADENCIAS = {
   prospeccion: { nombre:'Prospección', pasos:[
-    { dia:0,  canal:'Email',    desc:'Cold email principal — arranque',
-      plantilla:{ canal:'email', asunto:'OpenCluster · {institucion}', texto:'Hola {nombre},\n\nSoy {ejecutivo} de OpenCluster Tech, especialistas en tecnología asistiva para personas con discapacidad y adultos mayores. Le escribo porque [motivo / lo que vi de {institucion}].\n\n¿Le haría sentido una breve conversación esta semana para mostrarle cómo lo aplicamos en instituciones como la suya?\n\nSaludos cordiales,\n{ejecutivo} · OpenCluster' } },
+    { dia:0,  canal:'Email',    desc:'Cold email principal — arranque',          msg:{ canal:'email', etapa:'contactado' } },
     { dia:2,  canal:'LinkedIn', desc:'Conexión en LinkedIn (sin mensaje o breve)' },
-    { dia:4,  canal:'Email',    desc:'Follow-up 1 — caso aplicado',
-      plantilla:{ canal:'email', asunto:'Re: OpenCluster · {institucion}', texto:'Hola {nombre},\n\nRetomando mi correo: en una institución parecida a {institucion} aplicamos nuestra solución y vieron [resultado concreto]. ¿Le sirve que le cuente cómo fue, sin compromiso?\n\nSaludos cordiales,\n{ejecutivo}' } },
+    { dia:4,  canal:'Email',    desc:'Follow-up 1 — caso aplicado',              msg:{ canal:'email', etapa:'seguimiento-1' } },
     { dia:7,  canal:'Llamada',  desc:'Llamada (Zadarma) — menciona el correo' },
-    { dia:12, canal:'Email',    desc:'Follow-up 2 — recurso útil',
-      plantilla:{ canal:'email', asunto:'Un recurso para {institucion}', texto:'Hola {nombre},\n\nArmamos un comparativo de soluciones para instituciones como {institucion}. Se lo dejo por si le sirve para cuando evalúen el tema, sin compromiso.\n\nSaludos cordiales,\n{ejecutivo}' } },
-    { dia:21, canal:'Email',    desc:'Break-up — email de cierre',
-      plantilla:{ canal:'email', asunto:'¿Cierro el tema, {nombre}?', texto:'Hola {nombre},\n\nNo quiero insistir de más. Si por ahora no es prioridad, lo entiendo perfectamente — quedo disponible para cuando sea el momento adecuado.\n\nSaludos cordiales,\n{ejecutivo}' } }
+    { dia:12, canal:'Email',    desc:'Follow-up 2 — recurso útil',               msg:{ canal:'email', etapa:'seguimiento-2' } },
+    { dia:21, canal:'Email',    desc:'Break-up — email de cierre',               msg:{ canal:'email', etapa:'seguimiento-2' } }
   ]},
   cotizacion: { nombre:'Post-cotización', pasos:[
-    { dia:0,  canal:'Email',    desc:'Cotización enviada',
-      plantilla:{ canal:'email', asunto:'Cotización OpenCluster · {institucion}', texto:'Hola {nombre},\n\nLe envío la cotización solicitada. Quedo atento a cualquier duda o ajuste que necesite.\n\nSaludos cordiales,\n{ejecutivo} · OpenCluster' } },
-    { dia:3,  canal:'Email',    desc:'Seguimiento 1 — ¿dudas sobre la propuesta?',
-      plantilla:{ canal:'email', asunto:'Re: Cotización · {institucion}', texto:'Hola {nombre},\n\n¿Pudo revisar la cotización que le envié? Quedo disponible para resolver cualquier duda o ajustar lo que haga falta.\n\nSaludos cordiales,\n{ejecutivo}' } },
+    { dia:0,  canal:'Email',    desc:'Cotización enviada',                       msg:{ canal:'email', etapa:'cotizacion-entregada' } },
+    { dia:3,  canal:'Email',    desc:'Seguimiento 1 — ¿dudas sobre la propuesta?', msg:{ canal:'email', etapa:'seguimiento-cotizacion-1' } },
     { dia:7,  canal:'Llamada',  desc:'Llamada — resolver objeciones' },
-    { dia:14, canal:'Email',    desc:'Seguimiento 2 — cierre / próximos pasos',
-      plantilla:{ canal:'email', asunto:'Próximos pasos · {institucion}', texto:'Hola {nombre},\n\n¿Cómo va la evaluación de la propuesta? Si hay algo que conversar o afinar para avanzar, con gusto lo vemos.\n\nSaludos cordiales,\n{ejecutivo}' } }
+    { dia:14, canal:'Email',    desc:'Seguimiento 2 — cierre / próximos pasos',  msg:{ canal:'email', etapa:'seguimiento-cotizacion-2' } }
   ]},
   inbound: { nombre:'Lead entrante', pasos:[
-    { dia:0, canal:'Llamada', desc:'Llamar HOY (te contactaron). Si no contesta: WhatsApp → email.',
-      plantilla:{ canal:'whatsapp', texto:'Hola {nombre}, soy {ejecutivo} de OpenCluster. Vi tu consulta y te llamé pero no logré ubicarte. ¿Cuándo te queda cómodo que conversemos? Quedo atento. Saludos.' } },
-    { dia:1, canal:'Llamada', desc:'Reintento: Llamada → WhatsApp → email. No dejar enfriar el lead.',
-      plantilla:{ canal:'whatsapp', texto:'Hola {nombre}, te escribo de nuevo de OpenCluster por tu consulta. Quiero ayudarte a la brevedad — dime qué horario te acomoda y te llamo. Saludos, {ejecutivo}.' } }
+    { dia:0, canal:'Llamada', desc:'Llamar HOY (te contactaron). Si no contesta: WhatsApp → email.', msg:{ canal:'whatsapp', etapa:'contactado' } },
+    { dia:1, canal:'Llamada', desc:'Reintento: Llamada → WhatsApp → email. No dejar enfriar el lead.', msg:{ canal:'whatsapp', etapa:'contactado' } }
   ]}
 };
 const CAD_ICONOS = {
@@ -6393,7 +6371,7 @@ async function pintarToquesHoy(){
         '<div class="toques-desc">'+cuando+'Toque '+(cad.toque+1)+'/'+cad.total+' · '+esc(canal)+' · '+esc(cad.paso.desc)+'</div>' +
       '</div>' +
       '<div class="toques-acc">' +
-        (cad.paso.plantilla ? '<button class="toques-btn" style="background:#001A60;color:#fff;border-color:#001A60;" onclick="enviarMensajeToque(\''+esc(c.id)+'\')" title="Abrir el mensaje ya escrito de este toque">Mensaje</button>' : '') +
+        (cad.paso.msg ? '<button class="toques-btn" style="background:#001A60;color:#fff;border-color:#001A60;" onclick="enviarMensajeToque(\''+esc(c.id)+'\')" title="Abrir el mensaje ya escrito de este toque">Mensaje</button>' : '') +
         '<button class="toques-btn done" onclick="cadenciaHecho(\''+esc(c.id)+'\', this)">'+CAD_CHECK+' Hecho</button>' +
         '<button class="toques-btn snooze" onclick="abrirDatePicker(\''+esc(c.id)+'\', this)" title="Posponer / reprogramar">Posponer</button>' +
       '</div>' +
@@ -6673,7 +6651,7 @@ function renderTarjetaV2(c, view){
   var cad = cadenciaDe(c);
   var cadRow = (cad && cad.paso)
     ? '<div class="v2-cad-row"><span class="v2-cad-chip">' + cadCanalIco(cad.paso.canal) + 'Toque ' + (cad.toque+1) + '/' + cad.total + ' · ' + esc(cad.paso.canal) + '</span>' +
-        (cad.paso.plantilla ? '<button class="v2-cad-done" style="background:#001A60;color:#fff;" onclick="event.stopPropagation(); enviarMensajeToque(\'' + esc(c.id) + '\')" title="Mensaje listo de este toque">Mensaje</button>' : '') +
+        (cad.paso.msg ? '<button class="v2-cad-done" style="background:#001A60;color:#fff;" onclick="event.stopPropagation(); enviarMensajeToque(\'' + esc(c.id) + '\')" title="Mensaje listo de este toque">Mensaje</button>' : '') +
         '<button class="v2-cad-done" onclick="event.stopPropagation(); cadenciaHecho(\'' + esc(c.id) + '\', this)">' + CAD_CHECK + 'Hecho</button></div>'
     : '';
   var nextBlock = '<div class="v2-next' + (snoozed?' snooze':'') + (proxEmpty?' empty':'') + '" onclick="' + dp + '">' +

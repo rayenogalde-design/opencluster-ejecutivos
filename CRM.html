@@ -6332,6 +6332,22 @@ function refrescarBannerFicha(id){
   el.innerHTML = _cadBannerInner(c, (typeof puedeEditar==='function') ? puedeEditar(c) : true);
 }
 
+// Canal inferido de una nota de próxima acción sin cadencia (recap, manual).
+function _canalDeNota(nota){
+  const n = String(nota||'').toLowerCase();
+  if(n.indexOf('whatsapp')>=0) return 'WhatsApp';
+  if(n.indexOf('llamad')>=0 || n.indexOf('llamar')>=0) return 'Llamada';
+  if(n.indexOf('linkedin')>=0) return 'LinkedIn';
+  return 'Email';
+}
+// Marca hecha una próxima acción SIN cadencia (recap 24h / manual): limpia proxima_accion.
+async function toqueManualHecho(id, btn){
+  try { if(btn){ btn.disabled=true; btn.textContent='…'; }
+    await fetchAPI('crm_actualizar_proxima', { id:id, fecha:'', nota:'', solicitante: USUARIO });
+    if(typeof _cadActualizar==='function') _cadActualizar(id, c=>{ c.proxima_accion=''; c.nota_proxima=''; });
+  } catch(e){}
+  pintarToquesHoy();
+}
 // ── Tile "Toques de hoy" del dashboard + badge + toast de entrada ──
 async function pintarToquesHoy(){
   const cont = document.getElementById('dshToquesHoy');
@@ -6343,12 +6359,12 @@ async function pintarToquesHoy(){
   const hoy0 = new Date(); hoy0.setHours(0,0,0,0);
   const items = [];
   lista.forEach(c => {
-    const cad = cadenciaDe(c);
-    if(!cad || !cad.paso || !c.proxima_accion) return;
+    if(!c.proxima_accion) return;
     const pa = new Date(c.proxima_accion); if(isNaN(pa.getTime())) return;
     pa.setHours(0,0,0,0);
     const diff = Math.round((pa - hoy0)/86400000);
     if(diff > 0) return;                      // futuro: no es de hoy ni atrasado
+    const cad = cadenciaDe(c);                // puede ser null: recap 24h o próxima acción manual
     items.push({ c, cad, diff });
   });
   items.sort((a,b) => a.diff - b.diff);
@@ -6361,18 +6377,24 @@ async function pintarToquesHoy(){
   if(atrasados>0 && !window.__TOQUES_TOAST){ window.__TOQUES_TOAST = true; toastToques(atrasados); }
   const MAX = 8;
   const filas = items.slice(0, MAX).map(it => {
-    const c = it.c, cad = it.cad, canal = cad.paso.canal;
+    const c = it.c, cad = it.cad;
+    const canal = cad ? cad.paso.canal : _canalDeNota(c.nota_proxima);
     const nom = esc(c.nombre || c.institucion || '(sin nombre)');
     const cuando = it.diff < 0 ? '<span class="atr">Atrasado '+Math.abs(it.diff)+'d</span> · ' : '';
+    const desc = cad
+      ? 'Toque '+(cad.toque+1)+'/'+cad.total+' · '+esc(canal)+' · '+esc(cad.paso.desc)
+      : esc(canal)+' · '+esc(String(c.nota_proxima||'Acción pendiente').replace(/^LEAD URGENTE[^·]*·?\s*/i,'').trim());
+    const tieneMsg = cad && cad.paso.msg;
+    const doneFn = cad ? ('cadenciaHecho(\''+esc(c.id)+'\', this)') : ('toqueManualHecho(\''+esc(c.id)+'\', this)');
     return '<div class="toques-item">' +
       '<div class="toques-ico '+esc(canal)+'">'+cadCanalIco(canal)+'</div>' +
       '<div class="toques-info">' +
         '<div class="toques-nom" onclick="abrirFichaModal(\''+esc(c.id)+'\')">'+nom+'</div>' +
-        '<div class="toques-desc">'+cuando+'Toque '+(cad.toque+1)+'/'+cad.total+' · '+esc(canal)+' · '+esc(cad.paso.desc)+'</div>' +
+        '<div class="toques-desc">'+cuando+desc+'</div>' +
       '</div>' +
       '<div class="toques-acc">' +
-        (cad.paso.msg ? '<button class="toques-btn" style="background:#001A60;color:#fff;border-color:#001A60;" onclick="enviarMensajeToque(\''+esc(c.id)+'\')" title="Abrir el mensaje ya escrito de este toque">Mensaje</button>' : '') +
-        '<button class="toques-btn done" onclick="cadenciaHecho(\''+esc(c.id)+'\', this)">'+CAD_CHECK+' Hecho</button>' +
+        (tieneMsg ? '<button class="toques-btn" style="background:#001A60;color:#fff;border-color:#001A60;" onclick="enviarMensajeToque(\''+esc(c.id)+'\')" title="Abrir el mensaje ya escrito de este toque">Mensaje</button>' : '') +
+        '<button class="toques-btn done" onclick="'+doneFn+'">'+CAD_CHECK+' Hecho</button>' +
         '<button class="toques-btn snooze" onclick="abrirDatePicker(\''+esc(c.id)+'\', this)" title="Posponer / reprogramar">Posponer</button>' +
       '</div>' +
     '</div>';

@@ -6314,7 +6314,9 @@ function _cadBannerInner(c, editable){
       const f = c.proxima_accion ? new Date(c.proxima_accion) : null;
       const fTxt = (f && !isNaN(f.getTime())) ? (' · vence '+f.toLocaleDateString('es-CL',{day:'2-digit',month:'short'})) : '';
       detalle = 'Toque '+(cad.toque+1)+'/'+cad.total+' · '+esc(cad.paso.canal)+' · '+esc(cad.paso.desc)+fTxt;
-      if(editable) acciones = '<div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn primary" onclick="cadenciaHecho(\''+id+'\', this)">Marcar toque hecho</button><button class="btn" onclick="cadenciaPausar(\''+id+'\', true)">Pausar</button></div>';
+      if(editable) acciones = '<div style="display:flex;gap:8px;flex-wrap:wrap;">'+
+        (cad.paso.msg ? '<button class="btn" style="background:#001A60;color:#fff;border-color:#001A60;" onclick="enviarMensajeToque(\''+id+'\')">Mensaje listo</button>' : '')+
+        '<button class="btn primary" onclick="cadenciaHecho(\''+id+'\', this)">Marcar toque hecho</button><button class="btn" onclick="cadenciaPausar(\''+id+'\', true)">Pausar</button></div>';
     } else { detalle = 'Cadencia completada.'; }
     return wrap('<div class="v2-block-head"><span class="v2-block-label">CADENCIA · '+nombre+'</span></div>'+
       '<div style="font-size:13px;color:var(--v2-hl-text,#1f2937);margin:6px 0 10px;font-weight:600;">'+detalle+'</div>'+acciones, '#06B3FD');
@@ -7949,6 +7951,7 @@ function renderCoaching(r){
         '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:11px;">' +
           pill('Llamadas', cc.llamada||0, '#16A34A') + pill('Emails', cc.email||0, '#06B3FD') + pill('WhatsApp', cc.whatsapp||0, '#16a34a') +
           ((cc.entrante)?pill('Entrantes', cc.entrante, '#DB2777'):'') +
+          ((x.cotiz_sin_seg)?'<span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:#FFF7ED;color:#C2410C;">'+x.cotiz_sin_seg+' cotiz. sin seguir</span>':'') +
           ((x.toques_vencidos)?'<span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:#FEF2F2;color:#B91C1C;">'+x.toques_vencidos+' toques vencidos</span>':'') +
         '</div>' +
       '</div>';

@@ -3652,6 +3652,7 @@ const ACCIONES_POST = [
   'crm_actualizar_etiquetas','crm_toggle_favorito','crm_actualizar_proxima','crm_snooze_contacto',
   'crm_iniciar_cadencia','crm_avanzar_cadencia','crm_pausar_cadencia',
   'crm_set_pipeline','crm_reasignar_contacto','crm_marcar_cotizacion',
+  'crm_venta_cerrar','crm_venta_estado',
   'crm_importar_csv','crm_reasignar_contactos',
   'crm_marcar_notif_leida','crm_crear_notificacion',
   'crm_fusionar','crm_asignar_ejecutivo_cuenta','crm_crear_cuenta','crm_editar_cuenta',
@@ -9524,8 +9525,144 @@ async function marcarEstadoCotizacion(num, estado, btn){
       if(k.indexOf('crm_perfil_') === 0 || k.indexOf('crm_kpis_cache') === 0 || k.indexOf('crm_dash') === 0) localStorage.removeItem(k);
     });
   } catch(e){}
-  if(estado === 'Ganada'){ try { celebrarVenta(); } catch(e){} }
+  if(estado === 'Ganada'){ try { celebrarVenta(); } catch(e){} abrirPanelCierreVenta(num, c); return; }
   if(c.id) abrirFichaModal(c.id, true);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// PANEL DE CIERRE DE VENTA — al marcar Ganada (sube OC+transferencia, envío, etiquetas)
+// → llega a Finanzas y (si courier) a Ximena. Ver PROPUESTA_flujo_venta_ganada.md
+// ════════════════════════════════════════════════════════════════════════════
+function _vcUploadBox(key, label){
+  return '<div style="flex:1;min-width:160px;">' +
+    '<div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:4px;">' + label + '</div>' +
+    '<label style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:2px dashed #cbd5e1;border-radius:10px;padding:14px;cursor:pointer;font-size:12px;color:#64748b;">' +
+      '<span id="vc-' + key + '-lbl">Subir imagen</span>' +
+      '<input type="file" accept="image/*" onchange="_vcSubirImagen(\'' + key + '\', this)" style="display:none;">' +
+    '</label></div>';
+}
+function _vcCampo(id, label, val){
+  return '<label style="font-size:12.5px;font-weight:700;color:#374151;display:block;margin-top:8px;">' + label + '</label>' +
+    '<input id="vc-' + id + '" value="' + (typeof esc==='function'?esc(val||''):(val||'')) + '" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid #d1d5db;border-radius:7px;font-size:13px;margin-top:3px;">';
+}
+function _vcSubirImagen(key, input){
+  var f = input.files && input.files[0]; if(!f) return;
+  if(f.size > 8*1024*1024){ alert('La imagen es muy pesada (máx 8 MB).'); return; }
+  var fr = new FileReader();
+  fr.onload = function(){
+    var res = String(fr.result||''); var comma = res.indexOf(',');
+    var b64 = comma>=0 ? res.slice(comma+1) : res;
+    if(key==='oc'){ window.__vcImgOC = { data:b64, mime:f.type }; } else { window.__vcImgTransf = { data:b64, mime:f.type }; }
+    var lbl = document.getElementById('vc-'+key+'-lbl'); if(lbl){ lbl.textContent = '✓ ' + f.name.slice(0,18); lbl.style.color = '#047857'; }
+    _vcChk();
+  };
+  fr.readAsDataURL(f);
+}
+function _vcValidarMonto(){
+  var el = document.getElementById('vc-monto'); var msg = document.getElementById('vc-monto-msg');
+  if(!el||!msg) return;
+  var v = Number(String(el.value||'').replace(/[^0-9]/g,''));
+  var total = Number(window.__vcTotalCot||0);
+  if(!v){ msg.textContent=''; return; }
+  if(total){
+    if(v === total){ msg.textContent = '✓ Coincide con el total de la cotización.'; msg.style.color = '#047857'; }
+    else { msg.textContent = '⚠ No coincide con el total de la cotización ($' + total.toLocaleString('es-CL') + '). Revísalo.'; msg.style.color = '#B45309'; }
+  } else { msg.textContent = ''; }
+}
+function _vcToggleEtiquetas(){
+  var forma = (document.getElementById('vc-forma')||{}).value;
+  var box = document.getElementById('vc-etiquetas-box');
+  if(box) box.style.display = (forma === 'Courier externo') ? '' : 'none';
+  if(forma !== 'Courier externo'){ var chk = document.getElementById('vc-etiquetas'); if(chk) chk.checked = false; }
+  _vcChk();
+}
+function _vcChk(){
+  var dir = (document.getElementById('vc-direccion')||{}).value || '';
+  var btn = document.getElementById('vc-enviar');
+  var ok = dir.trim().length > 3;
+  if(btn){ btn.disabled = !ok; btn.style.opacity = ok ? '1' : '.5'; btn.style.cursor = ok ? 'pointer' : 'not-allowed'; }
+  var chk = document.getElementById('vc-etiquetas'); var campos = document.getElementById('vc-etiquetas-campos');
+  if(campos) campos.style.display = (chk && chk.checked) ? '' : 'none';
+}
+function _vcCerrar(){ var ov = document.getElementById('panelCierreVenta'); if(ov) ov.remove(); }
+function abrirPanelCierreVenta(num, contacto){
+  if(document.getElementById('panelCierreVenta')) return;
+  var c = contacto || window.__CONTACTO_ACTIVO || {};
+  var e2 = (typeof esc==='function') ? esc : function(s){ return String(s==null?'':s); };
+  window.__vcImgOC = null; window.__vcImgTransf = null; window.__vcNum = num; window.__vcContacto = c;
+  window.__vcTotalCot = Number(c.__totalCotActiva || 0);
+  var ov = document.createElement('div');
+  ov.id = 'panelCierreVenta';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:2147483600;background:rgba(0,0,0,.55);display:flex;align-items:flex-start;justify-content:center;padding:24px;overflow:auto;font-family:inherit;';
+  ov.innerHTML =
+    '<div style="background:#fff;border-radius:18px;max-width:640px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,.4);overflow:hidden;margin:auto;">' +
+      '<div style="background:#16A34A;color:#fff;padding:18px 24px;">' +
+        '<div style="font-size:11.5px;font-weight:800;letter-spacing:.08em;opacity:.92;">VENTA GANADA — CIERRE</div>' +
+        '<div style="font-size:19px;font-weight:800;margin-top:2px;">Cotización ' + e2(num) + (c.nombre||c.institucion ? ' · ' + e2(c.nombre||c.institucion) : '') + '</div>' +
+      '</div>' +
+      '<div style="padding:22px 24px;">' +
+        '<div style="font-weight:800;color:#111;margin-bottom:8px;">1. Comprobantes</div>' +
+        '<div style="display:flex;gap:12px;flex-wrap:wrap;">' + _vcUploadBox('oc','Orden de compra') + _vcUploadBox('transf','Transferencia') + '</div>' +
+        '<div style="margin-top:12px;"><label style="font-size:13px;font-weight:700;color:#374151;">Monto recibido</label>' +
+          '<input id="vc-monto" type="text" placeholder="Solo números" oninput="_vcValidarMonto()" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;margin-top:4px;">' +
+          '<div id="vc-monto-msg" style="font-size:12px;margin-top:4px;color:#6b7280;"></div></div>' +
+        '<div style="font-weight:800;color:#111;margin:18px 0 8px;">2. Documento</div>' +
+        '<label style="margin-right:18px;font-size:14px;"><input type="radio" name="vc-doc" value="Factura" checked> Factura</label>' +
+        '<label style="font-size:14px;"><input type="radio" name="vc-doc" value="Boleta"> Boleta</label>' +
+        '<div style="font-weight:800;color:#111;margin:18px 0 8px;">3. Envío</div>' +
+        '<label style="font-size:13px;font-weight:700;color:#374151;">Forma de envío</label>' +
+        '<select id="vc-forma" onchange="_vcToggleEtiquetas()" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;margin:4px 0 12px;">' +
+          '<option value="Courier externo">Courier externo</option><option value="Logística propia">Logística propia</option><option value="Retiro en bodega">Retiro en bodega</option><option value="No incluido">No incluido</option></select>' +
+        '<label style="font-size:13px;font-weight:700;color:#374151;">Costo de envío</label>' +
+        '<input id="vc-costo-envio" type="text" placeholder="Solo números (0 si no aplica)" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;margin:4px 0 12px;">' +
+        '<label style="font-size:13px;font-weight:700;color:#374151;">Dirección de despacho <span style="color:#DC2626;">*</span></label>' +
+        '<textarea id="vc-direccion" rows="2" placeholder="Dirección exacta de envío (obligatoria — sin ella no se puede enviar a Finanzas)" oninput="_vcChk()" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;margin-top:4px;font-family:inherit;"></textarea>' +
+        '<div id="vc-etiquetas-box" style="margin-top:16px;border:1px solid #FBCFE8;background:#FFF5F7;border-radius:12px;padding:14px 16px;">' +
+          '<label style="font-weight:800;color:#9D174D;font-size:14px;display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="vc-etiquetas" onchange="_vcChk()"> Solicitar etiquetas a Ximena (courier externo)</label>' +
+          '<div id="vc-etiquetas-campos" style="display:none;margin-top:10px;">' +
+            _vcCampo('et-nombre','Nombre', c.nombre||'') + _vcCampo('et-rut','RUT', c.rut||'') +
+            _vcCampo('et-correo','Correo', c.email||'') + _vcCampo('et-refs','Referencias de la institución', c.institucion||'') +
+            _vcCampo('et-producto','Qué producto es (detallado)','') + _vcCampo('et-cobro','Total — Producto y envío','') +
+          '</div></div>' +
+      '</div>' +
+      '<div style="padding:16px 24px;border-top:1px solid #eee;display:flex;gap:10px;justify-content:flex-end;">' +
+        '<button onclick="_vcCerrar()" style="background:#f3f4f6;color:#374151;border:none;border-radius:9px;padding:11px 18px;font-weight:700;cursor:pointer;font-family:inherit;">Después</button>' +
+        '<button id="vc-enviar" onclick="guardarCierreVenta()" disabled style="background:#16A34A;color:#fff;border:none;border-radius:9px;padding:11px 20px;font-weight:800;cursor:not-allowed;opacity:.5;font-family:inherit;">Enviar a Finanzas</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(ov);
+  _vcToggleEtiquetas(); _vcChk();
+}
+async function guardarCierreVenta(){
+  var dir = (document.getElementById('vc-direccion')||{}).value || '';
+  if(dir.trim().length < 4){ alert('La dirección de despacho es obligatoria.'); return; }
+  var btn = document.getElementById('vc-enviar'); if(btn){ btn.disabled = true; btn.textContent = 'Enviando…'; }
+  var docSel = document.querySelector('input[name="vc-doc"]:checked');
+  var quiereEtq = (document.getElementById('vc-etiquetas')||{}).checked || false;
+  var payload = {
+    solicitante: USUARIO, num: window.__vcNum, contacto_id: (window.__vcContacto||{}).id || '',
+    cliente: (window.__vcContacto||{}).nombre || '', institucion: (window.__vcContacto||{}).institucion || '',
+    monto_recibido: String((document.getElementById('vc-monto')||{}).value||'').replace(/[^0-9]/g,''),
+    documento: docSel ? docSel.value : 'Factura',
+    forma_envio: (document.getElementById('vc-forma')||{}).value || '',
+    costo_envio: String((document.getElementById('vc-costo-envio')||{}).value||'').replace(/[^0-9]/g,''),
+    direccion_despacho: dir.trim(),
+    solicita_etiquetas: quiereEtq,
+    etiqueta: quiereEtq ? {
+      nombre: (document.getElementById('vc-et-nombre')||{}).value||'', rut: (document.getElementById('vc-et-rut')||{}).value||'',
+      correo: (document.getElementById('vc-et-correo')||{}).value||'', referencias: (document.getElementById('vc-et-refs')||{}).value||'',
+      producto: (document.getElementById('vc-et-producto')||{}).value||'', cobro: (document.getElementById('vc-et-cobro')||{}).value||'',
+      documento: docSel ? docSel.value : 'Factura', direccion: dir.trim()
+    } : null,
+    imagen_oc: window.__vcImgOC || null, imagen_transferencia: window.__vcImgTransf || null
+  };
+  try {
+    var r = await fetchAPI('crm_venta_cerrar', payload);
+    if(!r || !r.ok){ alert('No se pudo enviar a Finanzas: ' + ((r&&r.error)||'error')); if(btn){ btn.disabled=false; btn.textContent='Enviar a Finanzas'; } return; }
+    _vcCerrar();
+    alert('Listo. La venta se envió a Finanzas' + (quiereEtq ? ' y las etiquetas a Ximena.' : '.'));
+    var cid = (window.__vcContacto||{}).id; if(cid) abrirFichaModal(cid, true);
+  } catch(e){ alert('Error: ' + e.message); if(btn){ btn.disabled=false; btn.textContent='Enviar a Finanzas'; } }
 }
 
 // ════════════════════════════════════════════════════════════════════════════

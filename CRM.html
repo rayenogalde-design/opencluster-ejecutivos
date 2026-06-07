@@ -7779,7 +7779,6 @@ async function marcarEstadoCotMC(num, estado, btn){
   try { Object.keys(localStorage).forEach(kk=>{ if(kk.indexOf('crm_perfil_')===0||kk.indexOf('crm_kpis_cache')===0||kk.indexOf('crm_dash')===0) localStorage.removeItem(kk); }); } catch(e){}
   if(estado==='Ganada'){
     const cc=(CACHE.vMisCot||[]).find(x=>x.cotizacion===num) || {};
-    try{ celebrarVenta(cc.monto||0); }catch(e){}
     const totalNum = Number(String(cc.total!=null?cc.total:(cc.monto||'')).replace(/[^0-9]/g,''));
     cargarMisCotizaciones();
     abrirPanelCierreVenta(num, { id: cc.contacto_id||cc.id||'', nombre: cc.cliente||'', institucion: cc.institucion||'', __totalCotActiva: totalNum });
@@ -9532,7 +9531,7 @@ async function marcarEstadoCotizacion(num, estado, btn){
       if(k.indexOf('crm_perfil_') === 0 || k.indexOf('crm_kpis_cache') === 0 || k.indexOf('crm_dash') === 0) localStorage.removeItem(k);
     });
   } catch(e){}
-  if(estado === 'Ganada'){ try { celebrarVenta(); } catch(e){} abrirPanelCierreVenta(num, c); return; }
+  if(estado === 'Ganada'){ abrirPanelCierreVenta(num, c); return; }
   if(c.id) abrirFichaModal(c.id, true);
 }
 
@@ -9667,6 +9666,7 @@ async function guardarCierreVenta(){
     var r = await fetchAPI('crm_venta_cerrar', payload);
     if(!r || !r.ok){ alert('No se pudo enviar a Finanzas: ' + ((r&&r.error)||'error')); if(btn){ btn.disabled=false; btn.textContent='Enviar a Finanzas'; } return; }
     _vcCerrar();
+    try { celebrarVenta(Number(payload.monto_recibido) || window.__vcTotalCot || 0); } catch(e){}
     alert('Listo. La venta se envió a Finanzas' + (quiereEtq ? ' y las etiquetas a Ximena.' : '.'));
     var cid = (window.__vcContacto||{}).id; if(cid) abrirFichaModal(cid, true);
   } catch(e){ alert('Error: ' + e.message); if(btn){ btn.disabled=false; btn.textContent='Enviar a Finanzas'; } }

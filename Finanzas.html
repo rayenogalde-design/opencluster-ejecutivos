@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finanzas — Ventas | OpenCluster</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;800&display=swap" rel="stylesheet">
+<style>
+  :root{ --navy:#001A60; --green:#16A34A; --ink:#111; --sub:#6b7280; --border:#e5e7eb; }
+  *{ box-sizing:border-box; }
+  body{ font-family:'Manrope',sans-serif; margin:0; background:#f4f6fb; color:var(--ink); }
+  .top{ background:var(--navy); color:#fff; padding:18px 24px; display:flex; align-items:center; gap:14px; }
+  .top a{ color:#cdd7ff; text-decoration:none; font-size:13px; font-weight:500; }
+  .top h1{ font-size:18px; font-weight:800; margin:0; }
+  .wrap{ max-width:920px; margin:0 auto; padding:24px 18px 60px; }
+  .intro{ color:var(--sub); font-size:14px; margin:6px 0 18px; }
+  .kpis{ display:flex; gap:12px; flex-wrap:wrap; margin-bottom:18px; }
+  .kpi{ background:#fff; border:1px solid var(--border); border-radius:14px; padding:14px 18px; flex:1; min-width:140px; }
+  .kpi .n{ font-size:26px; font-weight:800; color:var(--navy); }
+  .kpi .l{ font-size:12px; color:var(--sub); margin-top:2px; }
+  .card{ background:#fff; border:1px solid var(--border); border-radius:16px; padding:18px 20px; margin-bottom:14px; box-shadow:0 2px 10px rgba(0,0,0,.04); }
+  .card .hd{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; }
+  .card .cli{ font-size:17px; font-weight:800; }
+  .card .inst{ font-size:13px; color:var(--sub); }
+  .grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px 18px; margin:14px 0; }
+  .f .k{ font-size:11px; color:var(--sub); text-transform:uppercase; letter-spacing:.04em; }
+  .f .v{ font-size:14px; font-weight:500; margin-top:1px; }
+  .imgs{ display:flex; gap:10px; flex-wrap:wrap; margin:8px 0; }
+  .imgs a{ font-size:12.5px; font-weight:700; color:var(--navy); border:1px solid var(--border); border-radius:8px; padding:7px 12px; text-decoration:none; background:#f8faff; }
+  .pill{ font-size:11.5px; font-weight:800; padding:4px 11px; border-radius:999px; }
+  .row-acc{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:6px; }
+  .row-acc select{ font-family:inherit; font-size:13px; padding:7px 10px; border:1px solid var(--border); border-radius:8px; }
+  .muted{ color:var(--sub); text-align:center; padding:40px 20px; }
+  .etq{ background:#FFF5F7; border:1px solid #FBCFE8; border-radius:10px; padding:8px 12px; font-size:12.5px; color:#9D174D; font-weight:700; display:inline-block; margin-top:6px; }
+</style>
+</head>
+<body>
+  <div class="top">
+    <a href="index.html">&larr; Central</a>
+    <h1>Finanzas — Ventas del equipo de difusión</h1>
+  </div>
+  <div class="wrap">
+    <div class="intro">Cada venta cerrada por un ejecutivo llega aquí con sus comprobantes. Revisa, descarga, y mueve el estado a medida que avanza.</div>
+    <div class="kpis">
+      <div class="kpi"><div class="n" id="kNuevas">0</div><div class="l">Por confirmar</div></div>
+      <div class="kpi"><div class="n" id="kProceso">0</div><div class="l">En proceso</div></div>
+      <div class="kpi"><div class="n" id="kEntregadas">0</div><div class="l">Entregadas</div></div>
+    </div>
+    <div id="lista"><div class="muted">Cargando ventas…</div></div>
+  </div>
+<script>
+  var CRM_API = 'https://script.google.com/macros/s/AKfycbz3Vscxz-OlTHehsnEqqTD1qfql4xzstgWM81RG79P5IiLTkRvaYTU2sNoWV_QpceeowA/exec';
+  var ESTADOS = ['Pago por confirmar','Recibido por Finanzas','Preparación en bodega','Despachado','Entregado'];
+  var COLORES = {
+    'Pago por confirmar':{bg:'#FEF3C7',c:'#92400E'}, 'Recibido por Finanzas':{bg:'#DBEAFE',c:'#1E40AF'},
+    'Preparación en bodega':{bg:'#E0E7FF',c:'#3730A3'}, 'Despachado':{bg:'#CCFBF1',c:'#0F766E'}, 'Entregado':{bg:'#DCFCE7',c:'#166534'}
+  };
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function clp(n){ n=Number(String(n||'').replace(/[^0-9]/g,'')); return n? '$'+n.toLocaleString('es-CL') : '—'; }
+  function fmt(iso){ if(!iso) return '—'; try{ var d=new Date(iso); return d.toLocaleDateString('es-CL',{day:'2-digit',month:'short'})+' '+d.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}); }catch(e){ return '—'; } }
+  function f(k,v){ return '<div class="f"><div class="k">'+k+'</div><div class="v">'+v+'</div></div>'; }
+
+  async function cambiarEstado(id, estado, sel){
+    sel.disabled = true;
+    try{
+      var r = await fetch(CRM_API, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify({accion:'crm_venta_estado', id:id, estado:estado})});
+      var j = await r.json();
+      if(!j.ok) throw new Error(j.error||'error');
+      cargar();
+    }catch(e){ alert('No se pudo actualizar: '+e.message); sel.disabled=false; }
+  }
+  window.cambiarEstado = cambiarEstado;
+
+  function pill(estado){ var c=COLORES[estado]||{bg:'#eee',c:'#555'}; return '<span class="pill" style="background:'+c.bg+';color:'+c.c+';">'+esc(estado)+'</span>'; }
+
+  function render(ventas){
+    document.getElementById('kNuevas').textContent = ventas.filter(function(v){return v.estado==='Pago por confirmar';}).length;
+    document.getElementById('kProceso').textContent = ventas.filter(function(v){return ['Recibido por Finanzas','Preparación en bodega','Despachado'].indexOf(v.estado)>=0;}).length;
+    document.getElementById('kEntregadas').textContent = ventas.filter(function(v){return v.estado==='Entregado';}).length;
+    var cont = document.getElementById('lista');
+    if(!ventas.length){ cont.innerHTML = '<div class="muted">Aún no hay ventas registradas.</div>'; return; }
+    cont.innerHTML = ventas.map(function(v){
+      var opts = ESTADOS.map(function(e){ return '<option value="'+esc(e)+'"'+(e===v.estado?' selected':'')+'>'+esc(e)+'</option>'; }).join('');
+      var imgs = '';
+      if(v.url_oc) imgs += '<a href="'+esc(v.url_oc)+'" target="_blank">Ver orden de compra</a>';
+      if(v.url_transferencia) imgs += '<a href="'+esc(v.url_transferencia)+'" target="_blank">Ver transferencia</a>';
+      return '<div class="card">' +
+        '<div class="hd"><div><div class="cli">'+esc(v.cliente||v.institucion||'(sin nombre)')+'</div>'+(v.institucion&&v.cliente?'<div class="inst">'+esc(v.institucion)+'</div>':'')+'</div>'+pill(v.estado)+'</div>' +
+        '<div class="grid">' +
+          f('Cotización N°', esc(v.num||'—')) + f('Ejecutivo', esc(String(v.ejecutivo||'').split(' ')[0])) +
+          f('Monto recibido', clp(v.monto_recibido)) + f('Documento', esc(v.documento||'—')) +
+          f('Forma de envío', esc(v.forma_envio||'—')) + f('Costo de envío', clp(v.costo_envio)) +
+          f('Fecha', fmt(v.fecha)) +
+        '</div>' +
+        '<div class="f"><div class="k">Dirección de despacho</div><div class="v">'+esc(v.direccion_despacho||'—')+'</div></div>' +
+        (imgs?'<div class="imgs">'+imgs+'</div>':'') +
+        (v.solicita_etiquetas==='Sí'?'<div class="etq">Pidió etiquetas a Ximena ('+esc(v.estado_etiqueta||'Pendiente')+')</div>':'') +
+        '<div class="row-acc"><span style="font-size:12px;color:#6b7280;">Estado:</span><select onchange="cambiarEstado(\''+esc(v.id)+'\',this.value,this)">'+opts+'</select></div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function cargar(){
+    fetch(CRM_API + '?accion=crm_ventas_finanzas')
+      .then(function(r){ return r.json(); })
+      .then(function(res){ if(!res.ok) throw new Error(res.error||'error'); render(res.ventas||[]); })
+      .catch(function(e){ document.getElementById('lista').innerHTML = '<div class="muted">No se pudo cargar ('+e.message+').</div>'; });
+  }
+  cargar();
+</script>
+</body>
+</html>

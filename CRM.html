@@ -7781,7 +7781,8 @@ async function marcarEstadoCotMC(num, estado, btn){
     const cc=(CACHE.vMisCot||[]).find(x=>x.cotizacion===num) || {};
     const totalNum = Number(String(cc.total!=null?cc.total:(cc.monto||'')).replace(/[^0-9]/g,''));
     cargarMisCotizaciones();
-    abrirPanelCierreVenta(num, { id: cc.contacto_id||cc.id||'', nombre: cc.cliente||'', institucion: cc.institucion||'', __totalCotActiva: totalNum });
+    const _cont=(CACHE.vTodos||[]).find(x=>x.id===cc.contacto_id)||{};
+    abrirPanelCierreVenta(num, { id: cc.contacto_id||cc.id||'', nombre: cc.cliente||_cont.nombre||'', institucion: cc.institucion||_cont.institucion||'', email:_cont.email||'', rut:_cont.rut||'', __totalCotActiva: totalNum, __productos: cc.productos||'' });
     return;
   }
   cargarMisCotizaciones();
@@ -9582,13 +9583,22 @@ function _vcToggleEtiquetas(){
   if(forma !== 'Courier externo'){ var chk = document.getElementById('vc-etiquetas'); if(chk) chk.checked = false; }
   _vcChk();
 }
+function _vcAutollenarEtiqueta(){
+  var total = Number(window.__vcTotalCot||0);
+  var envio = Number(String((document.getElementById('vc-costo-envio')||{}).value||'').replace(/[^0-9]/g,''));
+  var clp = function(n){ return n ? '$'+Number(n).toLocaleString('es-CL') : ''; };
+  var set = function(id,val){ var el=document.getElementById('vc-'+id); if(el && !el.value) el.value = val; };
+  set('et-total', clp(total));
+  set('et-envio', clp(envio));
+  set('et-producto-monto', total ? clp(Math.max(0,total-envio)) : '');
+}
 function _vcChk(){
   var dir = (document.getElementById('vc-direccion')||{}).value || '';
   var btn = document.getElementById('vc-enviar');
   var ok = dir.trim().length > 3;
   if(btn){ btn.disabled = !ok; btn.style.opacity = ok ? '1' : '.5'; btn.style.cursor = ok ? 'pointer' : 'not-allowed'; }
   var chk = document.getElementById('vc-etiquetas'); var campos = document.getElementById('vc-etiquetas-campos');
-  if(campos) campos.style.display = (chk && chk.checked) ? '' : 'none';
+  if(campos){ var vis = !!(chk && chk.checked); campos.style.display = vis ? '' : 'none'; if(vis) _vcAutollenarEtiqueta(); }
 }
 function _vcCerrar(){ var ov = document.getElementById('panelCierreVenta'); if(ov) ov.remove(); }
 function abrirPanelCierreVenta(num, contacto){
@@ -9626,9 +9636,11 @@ function abrirPanelCierreVenta(num, contacto){
         '<div id="vc-etiquetas-box" style="margin-top:16px;border:1px solid #FBCFE8;background:#FFF5F7;border-radius:12px;padding:14px 16px;">' +
           '<label style="font-weight:800;color:#9D174D;font-size:14px;display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="vc-etiquetas" onchange="_vcChk()"> Solicitar etiquetas a Ximena (courier externo)</label>' +
           '<div id="vc-etiquetas-campos" style="display:none;margin-top:10px;">' +
-            _vcCampo('et-nombre','Nombre', c.nombre||'') + _vcCampo('et-rut','RUT', c.rut||'') +
+            '<div style="font-size:11.5px;color:#9D174D;margin-bottom:4px;">Autocompletado desde la cotización — revisa y corrige si hace falta.</div>' +
+            _vcCampo('et-nombre','Nombre', c.nombre||'') + _vcCampo('et-rut','RUT (complétalo — no está en el sistema)', c.rut||'') +
             _vcCampo('et-correo','Correo', c.email||'') + _vcCampo('et-refs','Referencias de la institución', c.institucion||'') +
-            _vcCampo('et-producto','Qué producto es (detallado)','') + _vcCampo('et-cobro','Total — Producto y envío','') +
+            _vcCampo('et-producto','Qué producto es (detallado)', c.__productos||'') +
+            _vcCampo('et-total','Total cotización','') + _vcCampo('et-producto-monto','Monto producto (total − envío)','') + _vcCampo('et-envio','Monto envío','') +
           '</div></div>' +
       '</div>' +
       '<div style="padding:16px 24px;border-top:1px solid #eee;display:flex;gap:10px;justify-content:flex-end;">' +
@@ -9657,7 +9669,8 @@ async function guardarCierreVenta(){
     etiqueta: quiereEtq ? {
       nombre: (document.getElementById('vc-et-nombre')||{}).value||'', rut: (document.getElementById('vc-et-rut')||{}).value||'',
       correo: (document.getElementById('vc-et-correo')||{}).value||'', referencias: (document.getElementById('vc-et-refs')||{}).value||'',
-      producto: (document.getElementById('vc-et-producto')||{}).value||'', cobro: (document.getElementById('vc-et-cobro')||{}).value||'',
+      producto: (document.getElementById('vc-et-producto')||{}).value||'',
+      total: (document.getElementById('vc-et-total')||{}).value||'', monto_producto: (document.getElementById('vc-et-producto-monto')||{}).value||'', monto_envio: (document.getElementById('vc-et-envio')||{}).value||'',
       documento: docSel ? docSel.value : 'Factura', direccion: dir.trim()
     } : null,
     imagen_oc: window.__vcImgOC || null, imagen_transferencia: window.__vcImgTransf || null

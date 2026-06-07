@@ -7777,7 +7777,14 @@ async function marcarEstadoCotMC(num, estado, btn){
   const r = await fetchAPI('crm_marcar_cotizacion', { solicitante:USUARIO, num:num, estado:estado });
   if(!r || !r.ok){ btn.disabled=false; btn.textContent=prev; alert('No se pudo: '+((r&&r.error)||'error desconocido')); return; }
   try { Object.keys(localStorage).forEach(kk=>{ if(kk.indexOf('crm_perfil_')===0||kk.indexOf('crm_kpis_cache')===0||kk.indexOf('crm_dash')===0) localStorage.removeItem(kk); }); } catch(e){}
-  if(estado==='Ganada'){ const cc=(CACHE.vMisCot||[]).find(x=>x.cotizacion===num); try{ celebrarVenta(cc?cc.monto:0); }catch(e){} }
+  if(estado==='Ganada'){
+    const cc=(CACHE.vMisCot||[]).find(x=>x.cotizacion===num) || {};
+    try{ celebrarVenta(cc.monto||0); }catch(e){}
+    const totalNum = Number(String(cc.total!=null?cc.total:(cc.monto||'')).replace(/[^0-9]/g,''));
+    cargarMisCotizaciones();
+    abrirPanelCierreVenta(num, { id: cc.contacto_id||cc.id||'', nombre: cc.cliente||'', institucion: cc.institucion||'', __totalCotActiva: totalNum });
+    return;
+  }
   cargarMisCotizaciones();
 }
 

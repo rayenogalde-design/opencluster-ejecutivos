@@ -2482,6 +2482,11 @@ body{
             <option value="ganada">Ganadas</option>
             <option value="perdida">Perdidas</option>
           </select>
+          <select id="filtroMisCotLinea" onchange="renderMisCotizaciones()" style="padding:8px 12px;border:1px solid var(--border-subtle);border-radius:8px;font-size:13px;font-family:var(--font-sans);">
+            <option value="">AT y SM</option>
+            <option value="AT">Ayudas Técnicas (AT)</option>
+            <option value="SM">Salas Multisensoriales (SM)</option>
+          </select>
           <div style="color:var(--subtle);font-size:13.5px;font-weight:600;"><b id="cntMisCot" style="color:var(--ink);">0</b> cotizaciones</div>
         </div>
         <div id="listMisCot"><div class="loading-state"><div class="spinner"></div>Cargando…</div></div>
@@ -7702,6 +7707,14 @@ function celebrarVenta(monto){
   }
   setTimeout(() => { ov.classList.remove('show'); }, 3200);
 }
+// Línea de negocio según el N° de cotización: termina en -AT (Ayudas Técnicas)
+// o -SM (Salas Multisensoriales). Sin sufijo reconocido → ''.
+function _lineaCot(num){
+  const s = String(num||'').toUpperCase();
+  if(/-AT$/.test(s)) return 'AT';
+  if(/-SM$/.test(s)) return 'SM';
+  return '';
+}
 function renderMisCotizaciones(){
   const container = document.getElementById('listMisCot');
   const cnt = document.getElementById('cntMisCot');
@@ -7711,6 +7724,10 @@ function renderMisCotizaciones(){
   const selEj = document.getElementById('filtroMisCotEjec');
   const ejecFiltro = selEj ? selEj.value : '';
   if(ejecFiltro){ const efn = _busqNorm(ejecFiltro); base = base.filter(c => _busqNorm(String(c.ejecutivo||'').trim().split(' ')[0]) === efn); }
+  // Filtro por línea AT / SM: aplica a la BASE para que KPIs, meta y lista queden todos por línea.
+  const selLinea = document.getElementById('filtroMisCotLinea');
+  const lineaFiltro = selLinea ? selLinea.value : '';
+  if(lineaFiltro){ base = base.filter(c => _lineaCot(c.cotizacion) === lineaFiltro); }
   const k = _kpisDeMisCot(base, anio);
   const metaHtml = renderMetaBarMisCot(base, anio);
   const kpiCard = (lbl,val,color,filtro)=> {

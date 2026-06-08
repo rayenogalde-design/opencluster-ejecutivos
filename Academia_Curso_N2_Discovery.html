@@ -4027,6 +4027,14 @@ function loadState() {
     const data = JSON.parse(raw);
     state.completedModules = new Set(data.completedModules || []);
     state.selections = data.selections || {};
+    // Saneo defensivo: algunas sesiones guardaron selecciones de quiz con `picked`
+    // ausente/undefined (no como lista). Eso reventaba renderQuiz y navNext
+    // (sel.picked.includes / sel.picked.length) y dejaba el botón Continuar muerto.
+    // Garantizamos que picked sea SIEMPRE una lista, reparando el estado al cargar.
+    Object.keys(state.selections).forEach(function (k) {
+      var s = state.selections[k];
+      if (s && typeof s === 'object' && !Array.isArray(s.picked)) s.picked = [];
+    });
     state.activeContactId = data.activeContactId || null;
   } catch(e) {}
 }

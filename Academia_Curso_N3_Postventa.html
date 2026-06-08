@@ -2904,6 +2904,12 @@ function loadState() {
     const data = JSON.parse(raw);
     state.completedModules = new Set(data.completedModules || []);
     state.selections = data.selections || {};
+    // Saneo defensivo: garantizamos que picked sea SIEMPRE una lista; sesiones
+    // viejas con picked ausente reventaban renderQuiz/navNext y mataban Continuar.
+    Object.keys(state.selections).forEach(function (k) {
+      var s = state.selections[k];
+      if (s && typeof s === 'object' && !Array.isArray(s.picked)) s.picked = [];
+    });
     state.activeContactId = data.activeContactId || null;
   } catch(e) {}
 }

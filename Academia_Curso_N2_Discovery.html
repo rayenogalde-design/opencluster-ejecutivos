@@ -4275,19 +4275,20 @@ function renderQuizFeedback(screen, sel) {
   const anyCorrect = sel.picked.some(i => correctIdxs.includes(i));
   const onlyCorrect = sel.picked.every(i => correctIdxs.includes(i));
 
+  // El objeto feedback es OPCIONAL: si un quiz no lo trae, usamos textos
+  // genéricos en vez de reventar (screen.feedback.correct sobre undefined
+  // tiraba un TypeError que rompía el render y dejaba el botón "muerto").
+  const fb = screen.feedback || {};
   let type, body;
   if (allCorrect) {
     type = 'correct';
-    body = screen.feedback.correct;
-  } else if (isMulti && onlyCorrect && anyCorrect) {
-    type = 'partial';
-    body = screen.feedback.partial || screen.feedback.incorrect;
+    body = fb.correct || '¡Correcto! Eso es justo lo que funciona.';
   } else if (isMulti && anyCorrect) {
     type = 'partial';
-    body = screen.feedback.partial || screen.feedback.incorrect;
+    body = fb.partial || fb.incorrect || 'Casi: tienes algunas bien, pero te falta o sobra alguna. Revisa las opciones marcadas.';
   } else {
     type = 'incorrect';
-    body = screen.feedback.incorrect;
+    body = fb.incorrect || 'No es eso. Repasa las opciones y vuelve a intentarlo.';
   }
 
   let perOption = '';

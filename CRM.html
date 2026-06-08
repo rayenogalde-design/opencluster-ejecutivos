@@ -3515,7 +3515,13 @@ function ownerLabel(c){
 // Tolera basura del Registro: "$5.980 (Courrier externo)", "37.180 aprox", etc. → toma SOLO el 1er número.
 function parseCLP(v){
   if(v == null || v === '') return 0;
-  if(typeof v === 'number') return v;
+  if(typeof v === 'number'){
+    // CLP no tiene decimales: si llega un número CON decimales y < 100.000, casi seguro
+    // Google Sheets lo mutiló (guardó "230.338" como el decimal 230,338). Se recompone ×1000,
+    // igual que el helper montoEntero del Cotizador. (Bug del $230 — Samuel, Rayen 2026-06-07.)
+    if(!Number.isInteger(v) && Math.abs(v) < 100000) return Math.round(v * 1000);
+    return v;
+  }
   let s = String(v).trim();
   if(!s) return 0;
   // Quedarse con el primer número (dígitos + separadores), ignorando "$", letras y notas entre paréntesis.

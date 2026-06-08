@@ -8303,7 +8303,36 @@ function renderFicha(container, data){
       histHtml = _timelineFallback(tl);
     }
   }
-  container.innerHTML = headerV2 + adminBtns + gestionContactoBar(c) + cadenciaBannerFicha(c, editable) + pillsDatos + histHtml;
+  container.innerHTML = headerV2 + adminBtns + gestionContactoBar(c) + cadenciaBannerFicha(c, editable) + pillsDatos + '<div id="docsVentaFicha"></div>' + histHtml;
+  try { cargarDocsVenta(c.id); } catch(e){}
+}
+
+// Sección "Documentos de la venta" en la ficha: OC, transferencia, etiquetas y tracking.
+// Lee la venta del contacto desde el backend (la misma data de Finanzas).
+async function cargarDocsVenta(contactoId){
+  if(!contactoId) return;
+  var cont = document.getElementById('docsVentaFicha');
+  if(!cont) return;
+  try {
+    var r = await fetchAPI('crm_ventas_finanzas', {});
+    if(!r || !r.ok) return;
+    var ventas = (r.ventas||[]).filter(function(x){ return String(x.contacto_id) === String(contactoId); });
+    if(!ventas.length) return;
+    var lk = 'display:inline-block;font-size:12.5px;font-weight:700;color:var(--oct-navy,#001A60);border:1px solid var(--smoke,#e3e3ea);border-radius:8px;padding:6px 11px;text-decoration:none;background:#f8faff;margin:4px 6px 0 0;';
+    var html = ventas.map(function(x){
+      var links = '';
+      if(x.url_oc) links += '<a href="'+esc(x.url_oc)+'" target="_blank" style="'+lk+'">Orden de compra</a>';
+      if(x.url_transferencia) links += '<a href="'+esc(x.url_transferencia)+'" target="_blank" style="'+lk+'">Transferencia</a>';
+      (x.etiqueta_urls||[]).forEach(function(u,ix){ links += '<a href="'+esc(u)+'" target="_blank" style="'+lk+'">Etiqueta '+(ix+1)+'</a>'; });
+      return '<div style="background:#fff;border:1px solid var(--smoke,#eee);border-radius:10px;padding:12px 14px;margin-bottom:8px;">' +
+        '<div style="font-size:13px;font-weight:800;color:#111;">Cotización '+esc(x.num||'—')+' · <span style="font-weight:600;color:var(--subtle);">'+esc(x.estado||'')+'</span></div>' +
+        (links ? '<div style="margin-top:4px;">'+links+'</div>' : '<div style="font-size:12px;color:var(--subtle);margin-top:4px;">Aún no hay documentos cargados.</div>') +
+        (x.tracking ? '<div style="font-size:12.5px;color:#374151;margin-top:8px;"><strong>Seguimiento:</strong> '+esc(x.tracking)+'</div>' : '') +
+        (x.direccion_despacho ? '<div style="font-size:12px;color:var(--subtle);margin-top:2px;">Despacho: '+esc(x.direccion_despacho)+'</div>' : '') +
+      '</div>';
+    }).join('');
+    cont.innerHTML = '<div class="v2-block" style="margin-bottom:22px;"><div class="v2-block-head"><span class="v2-block-label">DOCUMENTOS DE LA VENTA</span></div>' + html + '</div>';
+  } catch(e){}
 }
 
 // Historial simple de respaldo: si el render rico de cotizaciones falla, igual mostramos

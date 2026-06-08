@@ -62,11 +62,18 @@
   function f(k,v){ return '<div class="f"><div class="k">'+k+'</div><div class="v">'+v+'</div></div>'; }
 
   async function cambiarEstado(id, estado, sel){
+    var extra = {};
+    if(estado === 'Despachado'){
+      var t = prompt('Datos de envío / seguimiento (courier y N° de seguimiento) para avisarle al cliente:', '');
+      if(t === null){ cargar(); return; }   // canceló
+      extra.tracking = t;
+    }
     sel.disabled = true;
     try{
-      var r = await fetch(CRM_API, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify({accion:'crm_venta_estado', id:id, estado:estado})});
+      var r = await fetch(CRM_API, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(Object.assign({accion:'crm_venta_estado', id:id, estado:estado}, extra))});
       var j = await r.json();
       if(!j.ok) throw new Error(j.error||'error');
+      if(estado === 'Despachado') alert('Despachado. Le avisamos al ejecutivo con el seguimiento para que contacte al cliente.');
       cargar();
     }catch(e){ alert('No se pudo actualizar: '+e.message); sel.disabled=false; }
   }
@@ -85,6 +92,7 @@
       var imgs = '';
       if(v.url_oc) imgs += '<a href="'+esc(v.url_oc)+'" target="_blank">Ver orden de compra</a>';
       if(v.url_transferencia) imgs += '<a href="'+esc(v.url_transferencia)+'" target="_blank">Ver transferencia</a>';
+      (v.etiqueta_urls||[]).forEach(function(u,ix){ imgs += '<a href="'+esc(u)+'" target="_blank">Ver etiqueta '+(ix+1)+'</a>'; });
       return '<div class="card">' +
         '<div class="hd"><div><div class="cli">'+esc(v.cliente||v.institucion||'(sin nombre)')+'</div>'+(v.institucion&&v.cliente?'<div class="inst">'+esc(v.institucion)+'</div>':'')+'</div>'+pill(v.estado)+'</div>' +
         '<div class="grid">' +
@@ -96,6 +104,7 @@
         '<div class="f"><div class="k">Dirección de despacho</div><div class="v">'+esc(v.direccion_despacho||'—')+'</div></div>' +
         (imgs?'<div class="imgs">'+imgs+'</div>':'') +
         (v.solicita_etiquetas==='Sí'?'<div class="etq">Pidió etiquetas a Ximena ('+esc(v.estado_etiqueta||'Pendiente')+')</div>':'') +
+        (v.tracking?'<div class="f" style="margin-top:6px;"><div class="k">Datos de envío / seguimiento</div><div class="v">'+esc(v.tracking)+'</div></div>':'') +
         '<div class="row-acc"><span style="font-size:12px;color:#6b7280;">Estado:</span><select onchange="cambiarEstado(\''+esc(v.id)+'\',this.value,this)">'+opts+'</select></div>' +
       '</div>';
     }).join('');

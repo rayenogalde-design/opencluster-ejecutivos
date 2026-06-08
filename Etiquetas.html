@@ -42,13 +42,27 @@
   function fmt(iso){ if(!iso) return '—'; try{ var d=new Date(iso); return d.toLocaleDateString('es-CL',{day:'2-digit',month:'short'})+' '+d.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}); }catch(e){ return '—'; } }
   function dato(k,v){ return '<div class="dato"><div class="k">'+k+'</div><div class="v">'+esc(v||'—')+'</div></div>'; }
 
+  function _fileB64(f){ return new Promise(function(res,rej){ var fr=new FileReader(); fr.onload=function(){ var s=String(fr.result||''); var c=s.indexOf(','); res(c>=0?s.slice(c+1):s); }; fr.onerror=function(){ rej(fr.error||new Error('error')); }; fr.readAsDataURL(f); }); }
   async function marcarHecha(id, btn){
+    var input = document.getElementById('etf-'+id);
+    if(!input || !input.files || !input.files.length){
+      if(!confirm('No subiste ninguna imagen de etiqueta. ¿Marcar como lista igual (sin adjuntar)?')) return;
+    }
     btn.disabled = true; btn.textContent = '…';
     try{
-      var r = await fetch(CRM_API, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify({accion:'crm_venta_estado', id:id, estado_etiqueta:'Lista'})});
+      var imgs = [];
+      if(input && input.files){
+        for(var i=0;i<input.files.length;i++){
+          var f = input.files[i];
+          if(f.size > 8*1024*1024){ alert('La imagen "'+f.name+'" pesa más de 8 MB. Súbela más liviana.'); btn.disabled=false; btn.textContent='Marcar lista y enviar a bodega'; return; }
+          imgs.push({ data: await _fileB64(f), mime: f.type });
+        }
+      }
+      var r = await fetch(CRM_API, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify({accion:'crm_venta_estado', id:id, estado_etiqueta:'Lista', etiqueta_imagenes: imgs})});
       var j = await r.json(); if(!j.ok) throw new Error(j.error||'error');
+      alert('Listo. Las etiquetas se enviaron a bodega y al ejecutivo' + (imgs.length ? ' con las imágenes adjuntas.' : '.'));
       cargar();
-    }catch(e){ alert('No se pudo: '+e.message); btn.disabled=false; btn.textContent='Marcar etiqueta lista'; }
+    }catch(e){ alert('No se pudo: '+e.message); btn.disabled=false; btn.textContent='Marcar lista y enviar a bodega'; }
   }
   window.marcarHecha = marcarHecha;
 
@@ -73,7 +87,13 @@
         dato('Documento', e.documento||v.documento) +
         dato('Ejecutivo', String(v.ejecutivo||'').split(' ')[0]) +
         dato('Fecha solicitud', fmt(v.fecha)) +
-        (lista ? '' : '<button class="btn done" onclick="marcarHecha(\''+esc(v.id)+'\',this)">Marcar etiqueta lista</button>') +
+        ((v.etiqueta_urls && v.etiqueta_urls.length) ? '<div class="dato"><div class="k">Etiquetas</div><div class="v">' + v.etiqueta_urls.map(function(u,ix){ return '<a href="'+esc(u)+'" target="_blank" style="color:#001A60;font-weight:700;text-decoration:none;">Ver etiqueta '+(ix+1)+'</a>'; }).join('  ·  ') + '</div></div>' : '') +
+        (lista ? '' :
+          '<div style="margin-top:12px;padding-top:10px;border-top:1px solid #eee;">' +
+            '<div style="font-size:12.5px;font-weight:700;color:#374151;">Sube las etiquetas (imagen o PDF, puedes elegir varias):</div>' +
+            '<input type="file" id="etf-'+esc(v.id)+'" accept="image/*,application/pdf" multiple style="margin:8px 0;font-size:13px;">' +
+            '<br><button class="btn done" onclick="marcarHecha(\''+esc(v.id)+'\',this)">Marcar lista y enviar a bodega</button>' +
+          '</div>') +
       '</div>';
     }).join('');
   }

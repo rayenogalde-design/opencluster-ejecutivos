@@ -31,7 +31,8 @@
   var COURSE_TITLES = {
     'outreach': 'Outreach por email',
     'discovery': 'Discovery telefónico',
-    'postventa': 'Postventa y expansión'
+    'postventa': 'Postventa y expansión',
+    'proceso': 'El proceso completo'
   };
 
   window.OpenClusterProgress = {

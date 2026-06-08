@@ -436,6 +436,58 @@ input,select,textarea{font-family:inherit; font-size:14px;}
 }
 .prod-instruccion svg{ flex-shrink:0; color:#5b21b6; opacity:.7; }
 
+/* ── Lista de Precios por segmento (tabla) ── */
+.lp-subtitulo{
+  font-family:var(--font-sans); font-size:11.5px; color:var(--text-3,#6b6b6b);
+  margin-bottom:12px; display:flex; align-items:center; gap:5px;
+}
+.lp-familia{ margin-bottom:16px; }
+.lp-familia:last-child{ margin-bottom:0; }
+.lp-familia-hd{
+  display:flex; align-items:center; gap:8px;
+  padding-bottom:5px; margin-bottom:2px; border-bottom:1px solid #ece8f4;
+}
+.lp-fam-nombre{
+  font-family:var(--font-sans); font-size:10.5px; font-weight:800;
+  color:#5b21b6; text-transform:uppercase; letter-spacing:.9px;
+}
+.lp-fam-cnt{ font-size:10.5px; font-weight:600; color:var(--text-3,#9a93a8); }
+.lp-fam-cnt::before{ content:'· '; }
+.lp-colhead{
+  margin-left:auto; display:grid; grid-template-columns:repeat(3,82px); gap:6px;
+  text-align:right; font-size:9.5px; font-weight:700; text-transform:uppercase;
+  letter-spacing:.04em; color:var(--text-3,#9a93a8);
+}
+.lp-colhead-1{ grid-template-columns:120px; }
+.lp-fila{
+  display:flex; align-items:center; gap:10px;
+  padding:7px 0; border-top:1px solid #f4f2f8;
+}
+.lp-fila:first-of-type{ border-top:none; }
+.lp-nombre{
+  flex:1; min-width:0; font-family:var(--font-sans);
+  font-size:12.5px; color:var(--oct-text,#2b2b33); line-height:1.3;
+}
+.lp-sku{
+  display:block; font-size:10px; color:var(--text-3,#9a93a8);
+  font-weight:600; letter-spacing:.3px; margin-top:1px;
+}
+.lp-tarifa{
+  display:grid; grid-template-columns:repeat(3,82px); gap:6px;
+  text-align:right; font-variant-numeric:tabular-nums;
+  font-weight:700; font-size:12.5px; color:var(--oct-navy,#001A60); flex-shrink:0;
+}
+.lp-tarifa span:first-child{ font-weight:800; }
+.lp-monto{
+  width:120px; text-align:right; font-variant-numeric:tabular-nums;
+  font-weight:800; font-size:12.5px; color:var(--oct-navy,#001A60); flex-shrink:0;
+}
+@media (max-width:560px){
+  .lp-colhead,.lp-tarifa{ grid-template-columns:repeat(3,60px); }
+  .lp-colhead-1,.lp-monto{ width:auto; grid-template-columns:90px; }
+  .lp-tarifa,.lp-monto{ font-size:11px; }
+}
+
 .prod-grid{
   display:flex; flex-wrap:wrap; gap:6px;
 }
@@ -2219,6 +2271,7 @@ body{
         <div id="dshProductosCampanaCard"></div>
         <div id="dshListaPartida"></div>
         <div id="dshProductos"></div>
+        <div id="dshListasPrecios"></div>
         <div class="kpis" id="dshKpis"></div>
         <div class="dsh-grid">
           <div class="card dsh-funnel">
@@ -3895,6 +3948,7 @@ function cambiarModo(modo){
   //    si la inicialización aún no terminó. Repintamos las 3 secciones del dashboard de inmediato.
   pintarBannerCampana();
   pintarProductosSugeridos();
+  pintarListasPrecios();
   // Si la vista activa es otra, también la refrescamos
   const v = document.querySelector('.view.act');
   if (v) {
@@ -4996,6 +5050,7 @@ function cambiarPreviewEjec(nm){
   try { localStorage.setItem('crm_preview_ejec', nm); } catch(e){}
   pintarBannerCampana();
   pintarProductosSugeridos();
+  pintarListasPrecios();
 }
 
 // Banner naranja en el dashboard del ejecutivo: "Tu lista de partida — X empresas pre-cargadas sin trabajar"
@@ -5232,6 +5287,7 @@ async function cargarDashboard(){
   pintarTarjetaProductosCampana();
   pintarBannerListaPartida();
   pintarProductosSugeridos();
+  pintarListasPrecios();
   pintarToquesHoy();
   pintarLeadsDashboard();
 
@@ -12356,6 +12412,120 @@ function formatearPrecioCLP(v){
   if(typeof v !== 'number' || !isFinite(v)) return '—';
   return '$' + v.toLocaleString('es-CL');
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   LISTA DE PRECIOS POR SEGMENTO — precios oficiales por ejecutivo
+   Carga precios_segmento.json (6 segmentos). Cada ejecutivo ve la
+   lista que corresponde a SU segmento, con SU tipo de precio:
+   - retail (Rayen·AdultoMayor, Germán, Maximiliano, William): tramos 1–9 / 10–19 / 20+
+   - margen (Roberto): margen de distribución por volumen
+   - distribuidor (Rayen·Surterapia): valor distribuidor único
+   Rayen ve DOS listas: Adulto Mayor + Distribuidor Surterapia.
+   ═══════════════════════════════════════════════════════════════ */
+window.__PRECIOS_SEG = {};
+window.__PRECIOS_SEG_LOADED = false;
+
+// Mapa ejecutivo → segmento(s). Acepta nombre completo o primer nombre.
+const SEG_POR_EJEC = {
+  'William':['educacion'], 'William Marin':['educacion'],
+  'Germán':['rehabilitacion'], 'German':['rehabilitacion'],
+  'Maximiliano':['mutuales'],
+  'Roberto':['distribucion'],
+  'Rayen':['adulto_mayor','surterapia'], 'Rayen Ogalde':['adulto_mayor','surterapia']
+};
+function _segKeysParaEjec(nombre){
+  if(!nombre) return [];
+  if(SEG_POR_EJEC[nombre]) return SEG_POR_EJEC[nombre];
+  const first = String(nombre).split(' ')[0];
+  return SEG_POR_EJEC[first] || [];
+}
+
+var SVG_LP_TAG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>';
+var SVG_LP_CHEVRON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>';
+
+function renderListaPreciosCard(segKey){
+  const seg = (window.__PRECIOS_SEG || {})[segKey];
+  if(!seg || !Array.isArray(seg.familias) || !seg.familias.length) return '';
+  const fmt = formatearPrecioCLP;
+  const tipo = seg.tipo;
+  const totalP = seg.familias.reduce((a,f)=>a+f.productos.length, 0);
+  const subt = tipo==='margen' ? 'Margen de distribución por volumen · IVA incluido'
+             : tipo==='distribuidor' ? 'Valor distribuidor · IVA incluido'
+             : 'Precio por volumen · IVA incluido';
+  const head = tipo==='distribuidor'
+    ? '<div class="lp-colhead lp-colhead-1"><span>Valor distrib.</span></div>'
+    : '<div class="lp-colhead"><span>' + (tipo==='margen'?'Margen 1–9':'1–9 u.') + '</span><span>10–19 u.</span><span>20+ u.</span></div>';
+  const cuerpo = seg.familias.map(function(f){
+    const filas = f.productos.map(function(p){
+      const cols = tipo==='distribuidor'
+        ? '<div class="lp-monto">' + fmt(p.valor) + '</div>'
+        : '<div class="lp-tarifa"><span>' + fmt(p.t1) + '</span><span>' + fmt(p.t2) + '</span><span>' + fmt(p.t3) + '</span></div>';
+      return '<div class="lp-fila">' +
+          '<div class="lp-nombre">' + esc(p.nombre) + (p.sku ? '<span class="lp-sku">' + esc(p.sku) + '</span>' : '') + '</div>' +
+          cols +
+        '</div>';
+    }).join('');
+    return '<div class="lp-familia">' +
+        '<div class="lp-familia-hd">' +
+          '<span class="lp-fam-nombre">' + esc(f.nombre) + '</span>' +
+          '<span class="lp-fam-cnt">' + f.productos.length + '</span>' +
+          head +
+        '</div>' +
+        filas +
+      '</div>';
+  }).join('');
+  const abierta = (function(){ try{ return localStorage.getItem('crm_lp_'+segKey)==='1'; }catch(e){ return false; } })();
+  return '<div class="prod-card lp-card' + (abierta?'':' collapsed') + '" id="lpCard_' + segKey + '">' +
+      '<div class="prod-card-hd" onclick="toggleListaPrecios(\'' + segKey + '\')">' +
+        SVG_LP_TAG +
+        '<h3>Lista de Precios — ' + esc(seg.segmento) + '</h3>' +
+        '<span class="prod-cnt">' + totalP + ' productos</span>' +
+        '<span class="prod-card-chevron">' + SVG_LP_CHEVRON + '</span>' +
+      '</div>' +
+      '<div class="prod-card-body">' +
+        '<div class="lp-subtitulo">' + subt + '</div>' +
+        cuerpo +
+      '</div>' +
+    '</div>';
+}
+
+function pintarListasPrecios(){
+  const box = document.getElementById('dshListasPrecios');
+  if(!box) return;
+  if(!window.__PRECIOS_SEG_LOADED){ box.innerHTML = ''; return; } // se repinta al cargar el JSON
+  let keys = [];
+  if(typeof hayDrillDown === 'function' && hayDrillDown()){
+    keys = _segKeysParaEjec(typeof DRILL_DOWN_EJEC !== 'undefined' ? DRILL_DOWN_EJEC : '');
+  } else {
+    const modoActivo = (typeof getModoVista === 'function') ? getModoVista() : '';
+    const verComoEjec = (typeof ROL === 'undefined') || ROL !== 'admin' || modoActivo === 'ejecutiva';
+    if(verComoEjec){
+      keys = _segKeysParaEjec(typeof USUARIO !== 'undefined' ? USUARIO : '');
+    } else {
+      // Admin overview: todas las listas
+      keys = ['educacion','rehabilitacion','mutuales','distribucion','adulto_mayor','surterapia'];
+    }
+  }
+  box.innerHTML = keys.map(renderListaPreciosCard).join('');
+}
+
+function toggleListaPrecios(segKey){
+  const c = document.getElementById('lpCard_' + segKey);
+  if(!c) return;
+  const abierta = c.classList.toggle('collapsed') === false;
+  try{ localStorage.setItem('crm_lp_'+segKey, abierta?'1':'0'); }catch(e){}
+}
+
+(function cargarPreciosSeg(){
+  const inline = document.getElementById('preciosSegData');
+  if(inline && inline.textContent.trim()){
+    try{ window.__PRECIOS_SEG = JSON.parse(inline.textContent); window.__PRECIOS_SEG_LOADED = true; return; }catch(e){}
+  }
+  fetch('precios_segmento.json', { cache:'no-store' })
+    .then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); })
+    .then(function(d){ window.__PRECIOS_SEG = d; window.__PRECIOS_SEG_LOADED = true; try{ pintarListasPrecios(); }catch(e){} })
+    .catch(function(){});
+})();
 
 function renderFichasPorSku(skus){
   if(!Array.isArray(skus) || !skus.length) return '';

@@ -6390,10 +6390,18 @@ function _cadBannerInner(c, editable){
       '<div style="font-size:13px;color:var(--v2-hl-text,#1f2937);margin:6px 0 10px;font-weight:600;">'+detalle+'</div>'+acciones, '#06B3FD');
   }
   if(!editable) return '';
+  // Si no hay cadencia manual PERO hay una cotización abierta con seguimiento atrasado
+  // (lo calcula renderHistorialAgrupado), el banner lo avisa en vez de "sin cadencia",
+  // así la ficha dice lo mismo que Cotizaciones Equipo.
+  const _seg = c && c.__cotSegPend;
+  const _segVenc = !!(_seg && (_seg.sem === 'vencido' || _seg.sem === 'pendiente'));
+  const _segLinea = _segVenc
+    ? '<div style="font-size:13px;color:#B91C1C;font-weight:700;margin:6px 0 10px;">Cotización '+esc(_seg.num)+' sin seguimiento hace '+_seg.dias+' día'+(_seg.dias===1?'':'s')+'. Inicia el post-cotización para retomarla.</div>'
+    : '<div style="font-size:13px;color:var(--v2-text-soft);margin:6px 0 10px;">Sin cadencia activa.</div>';
   return wrap('<div class="v2-block-head"><span class="v2-block-label">CADENCIA DE SEGUIMIENTO</span></div>'+
-    '<div style="font-size:13px;color:var(--v2-text-soft);margin:6px 0 10px;">Sin cadencia activa.</div>'+
+    _segLinea+
     '<div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn primary" onclick="cadenciaIniciar(\''+id+'\',\'prospeccion\')">Iniciar prospección (5 toques)</button>'+
-    '<button class="btn" onclick="cadenciaIniciar(\''+id+'\',\'cotizacion\')">Iniciar post-cotización</button></div>', '#cbd5e1');
+    '<button class="btn'+(_segVenc?' primary':'')+'" onclick="cadenciaIniciar(\''+id+'\',\'cotizacion\')">Iniciar post-cotización</button></div>', _segVenc ? '#ef4444' : '#cbd5e1');
 }
 function cadenciaBannerFicha(c, editable){ return '<div id="cadBannerFicha">'+_cadBannerInner(c, editable)+'</div>'; }
 function refrescarBannerFicha(id){
@@ -8471,6 +8479,7 @@ function esReunion(ev){
 function renderHistorialAgrupado(tl, contacto){
   contacto = contacto || {};
   window.__CONTACTO_ACTIVO = contacto;
+  contacto.__cotSegPend = null; // peor seguimiento de cotización abierta (lo lee el banner de cadencia)
   // ¿Puede el usuario actual editar/eliminar interacciones de este contacto?
   // (Antes esto usaba `editable` y `c`, que NO existen en este scope → ReferenceError
   //  que tiraba TODA la ficha al fallback sin botones en cuanto había una "otra" interacción.)
@@ -8569,6 +8578,7 @@ function renderHistorialAgrupado(tl, contacto){
     });
     const cotsAgrupadas = Object.values(porNum).concat(sinNumRestantes);
 
+    let _peorSeg = null; // cotización abierta con el seguimiento más atrasado
     cotsAgrupadas.forEach((co, idx) => {
       const num = (co.num_cotizacion || extraerNumCot(co.detalle) || extraerNumCot(co.titulo) || '').toUpperCase();
       const segs = num ? (segPorCot[num] || []) : [];
@@ -8604,6 +8614,19 @@ function renderHistorialAgrupado(tl, contacto){
       const _stCls = (_estL.indexOf('ganad') >= 0 || _estL.indexOf('acept') >= 0 || _estL.indexOf('cerrad') >= 0) ? 'ganada'
                    : (_estL.indexOf('vencid') >= 0 || _estL.indexOf('perdid') >= 0 || _estL.indexOf('rechaz') >= 0) ? 'vencida'
                    : (_estL.indexOf('borrador') >= 0) ? 'borrador' : 'entregada';
+      // Seguimiento de la cotización con la MISMA regla que Cotizaciones Equipo (día 3):
+      // ref = último seguimiento, o la fecha de la cotización si no hay; <3 al día, 3-7
+      // pendiente, >7 vencido. Así la ficha "habla" con esa vista y el banner de cadencia
+      // puede avisar de una cotización abandonada en vez de decir "sin cadencia activa".
+      if(!/ganad|acept|cerrad|perdid|rechaz|cancel/.test(_estL)){
+        const _ultSeg = (segs && segs.length) ? segs[0] : null;
+        const _refTs = _ultSeg ? _ts(_ultSeg.fecha) : _ts(co.fecha);
+        if(_refTs){
+          const _diasSeg = Math.floor((Date.now() - _refTs) / 86400000);
+          const _semSeg = _diasSeg < 3 ? 'al_dia' : (_diasSeg <= 7 ? 'pendiente' : 'vencido');
+          if(_semSeg !== 'al_dia' && (!_peorSeg || _diasSeg > _peorSeg.dias)) _peorSeg = { num: num, dias: _diasSeg, sem: _semSeg };
+        }
+      }
 
       // === CONTROL DE VENTA (marcar la COTIZACIÓN como Ganada/Perdida) ===
       // La venta vive en la cotización y se acredita a SU ejecutivo (no al dueño del contacto),
@@ -8737,6 +8760,7 @@ function renderHistorialAgrupado(tl, contacto){
         '</div>' +
       '</details>';
     });
+    contacto.__cotSegPend = _peorSeg;
     html += '</div>';
   }
 

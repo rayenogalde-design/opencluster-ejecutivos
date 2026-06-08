@@ -6499,7 +6499,10 @@ async function pintarLeadsDashboard(){
   let lista;
   try { lista = await _cargarContactosBase(); } catch(e){ lista = CACHE.vTodos || []; }
   if(!Array.isArray(lista)) lista = [];
-  if(typeof esActuandoComoAdmin==='function' && !esActuandoComoAdmin()) lista = lista.filter(esOwner);
+  // La tarjeta "Leads urgentes para ti" es SIEMPRE personal: muestra solo los
+  // leads asignados al usuario real, aunque esté en modo admin. Así a Rayen no le
+  // aparecen los leads urgentes de otros ejecutivos (ej. uno asignado a William).
+  lista = lista.filter(esOwner);
   // Leads urgentes asignados con fecha límite pendiente (= aún no contactados).
   const items = lista.filter(c => _esLead(c) && c.proxima_accion);
   const hoy0 = new Date(); hoy0.setHours(0,0,0,0);

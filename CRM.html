@@ -7635,18 +7635,15 @@ function _mesLabel(ym){
 }
 // Periodo de los KPIs de Cotizaciones: 'anio' (año completo) o 'mes' (mes actual).
 let MISCOT_PERIODO = (function(){ try { return localStorage.getItem('crm_miscot_periodo') || 'anio'; } catch(e){ return 'anio'; } })();
-function setMisCotPeriodo(p){ MISCOT_PERIODO = (p==='mes'?'mes':'anio'); try{ localStorage.setItem('crm_miscot_periodo', MISCOT_PERIODO); }catch(e){} renderMisCotizaciones(); }
+function setMisCotPeriodo(p){ MISCOT_PERIODO = p || 'anio'; try{ localStorage.setItem('crm_miscot_periodo', MISCOT_PERIODO); }catch(e){} renderMisCotizaciones(); }
 function _kpisDeMisCot(arr, anio){
-  const periodo = MISCOT_PERIODO;
-  const ym = anio + '-' + String((new Date()).getMonth()+1).padStart(2,'0');
-  // Cotizaciones y monto cotizado: por fecha de la cotización. Ganadas y monto ganado:
-  // por fecha de CIERRE (mes_cierre), igual que "ventas ganadas este mes" del backend.
-  const enCot = c => periodo==='mes' ? (String(c.mes||'')===ym) : (String(c.mes||'').substring(0,4)===anio);
-  const enGan = c => { const mc = c.mes_cierre || c.mes; return periodo==='mes' ? (String(mc||'')===ym) : (String(mc||'').substring(0,4)===anio); };
+  const per = MISCOT_PERIODO; // 'anio' o un mes 'YYYY-MM'
+  // TODO se cuenta por la fecha de la COTIZACIÓN (c.mes), igual que el listado por mes,
+  // para que el KPI y la lista digan SIEMPRE lo mismo (no por fecha de cierre).
+  const enPer = c => (per==='anio') ? (String(c.mes||'').substring(0,4)===anio) : (String(c.mes||'')===per);
   let t=0,g=0,s=0,m=0,mg=0;
   (arr||[]).forEach(c=>{
-    if(enCot(c)){ t++; m += (c.monto||0); }
-    if(c.ganada && enGan(c)){ g++; mg += (c.neto || c.monto || 0); }
+    if(enPer(c)){ t++; m += (c.monto||0); if(c.ganada){ g++; mg += (c.neto || c.monto || 0); } }
     if(!c.cerrada && (c.estado_seguimiento==='pendiente'||c.estado_seguimiento==='vencido')) s++;
   });
   return {total_anio:t, ganadas_anio:g, sin_seguimiento:s, monto_cotizado_anio:m, monto_ganado:mg};
@@ -7759,10 +7756,14 @@ function renderMisCotizaciones(){
       (cl?'<div style="font-size:10px;font-weight:700;color:'+color+';margin-top:4px;">ver →</div>':'') +
     '</div>';
   };
-  const _perLbl = MISCOT_PERIODO==='mes' ? ((_MES_NOMBRE[(new Date()).getMonth()]||'') + ' ' + anio) : anio;
-  const _togBtn = (p,txt)=> '<button onclick="setMisCotPeriodo(\''+p+'\')" style="padding:6px 16px;border:1px solid var(--smoke,#e5e7eb);background:'+(MISCOT_PERIODO===p?'#001A60':'#fff')+';color:'+(MISCOT_PERIODO===p?'#fff':'var(--subtle)')+';font-size:12px;font-weight:700;cursor:pointer;'+(p==='mes'?'border-radius:8px 0 0 8px;':'border-radius:0 8px 8px 0;border-left:none;')+'">'+txt+'</button>';
-  const _toggle = '<div style="display:flex;justify-content:flex-end;margin-bottom:10px;"><div style="display:inline-flex;">'+_togBtn('mes','Mes')+_togBtn('anio','Año')+'</div></div>';
-  const kpiHtml = _toggle + '<div style="display:flex;gap:11px;flex-wrap:wrap;margin-bottom:18px;">' +
+  // Selector de período: "Año" + un chip por cada mes con datos (para ver KPIs de marzo, abril, etc.).
+  const _mesesData = Array.from(new Set((base||[]).map(c=>String(c.mes||'')).filter(x=>x.indexOf('-')>0))).sort().reverse();
+  const _perLbl = (MISCOT_PERIODO==='anio') ? anio : ((_MES_NOMBRE[parseInt(MISCOT_PERIODO.split('-')[1],10)-1]||'') + ' ' + (MISCOT_PERIODO.split('-')[0]||anio));
+  const _chip = (val,txt)=> '<button onclick="setMisCotPeriodo(\''+val+'\')" style="padding:5px 12px;border:1px solid var(--smoke,#e5e7eb);background:'+(MISCOT_PERIODO===val?'#001A60':'#fff')+';color:'+(MISCOT_PERIODO===val?'#fff':'var(--subtle)')+';font-size:11.5px;font-weight:700;border-radius:7px;cursor:pointer;">'+txt+'</button>';
+  let _selHtml = '<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center;margin-bottom:10px;"><span style="font-size:11px;color:var(--mist,#9aa3af);font-weight:700;">Ver:</span>' + _chip('anio','Año '+anio);
+  _mesesData.forEach(function(ym){ var mi=parseInt(ym.split('-')[1],10)-1; _selHtml += _chip(ym, (_MES_NOMBRE[mi]||'').substring(0,3)+' '+ym.split('-')[0].substring(2)); });
+  _selHtml += '</div>';
+  const kpiHtml = _selHtml + '<div style="display:flex;gap:11px;flex-wrap:wrap;margin-bottom:18px;">' +
     kpiCard('Cotizaciones '+_perLbl, k.total_anio, '#001A60') +
     kpiCard('Ganadas '+_perLbl, k.ganadas_anio, '#16A34A', 'ganada') +
     kpiCard('Monto ganado '+_perLbl, fmtCLP(k.monto_ganado), '#16A34A', 'ganada') +

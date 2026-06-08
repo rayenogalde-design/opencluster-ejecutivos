@@ -5233,7 +5233,7 @@ function irAListaPartida(sinTrabajar){
 
 // Lista canónica de ejecutivos del equipo (para el selector de drill-down).
 // Rayen no aparece en el selector — para verse a sí misma usa el toggle EJECUTIVA.
-const EJECUTIVOS_DRILLDOWN = ['William Marin', 'Roberto', 'Germán', 'Maximiliano'];
+const EJECUTIVOS_DRILLDOWN = ['William Marin', 'Roberto', 'Germán', 'Maximiliano', 'Ximena Romero'];
 
 // Renderiza el selector "Ver dashboard de: [Todo el equipo / William / Roberto / ...]"
 function renderSelectorDrillDown(){
@@ -6501,8 +6501,13 @@ async function pintarLeadsDashboard(){
   items.forEach(c => { const pa=new Date(c.proxima_accion); pa.setHours(0,0,0,0); c.__leadDiff = isNaN(pa.getTime())? 9999 : Math.round((pa-hoy0)/86400000); });
   items.sort((a,b)=> a.__leadDiff - b.__leadDiff);
   if(!items.length){ cont.innerHTML=''; return; }
-  _mostrarBloqueoLeads(items);
-  if(!window.__LEADS_TOAST){ window.__LEADS_TOAST = true; _toastLeads(items.length); }
+  // El bloqueo de pantalla y el toast son para que el PROPIO ejecutivo atienda
+  // sus leads. Si Rayen está en modo admin (viendo el dashboard del equipo o de
+  // otro ejecutivo), NO debe saltarle el aviso de leads que no son de ella.
+  if(!esActuandoComoAdmin()){
+    _mostrarBloqueoLeads(items);
+    if(!window.__LEADS_TOAST){ window.__LEADS_TOAST = true; _toastLeads(items.length); }
+  }
   const filas = items.slice(0,10).map(c => {
     const nom = esc(c.nombre || c.institucion || '(sin nombre)');
     const inst = (c.institucion && c.nombre) ? ' · '+esc(c.institucion) : '';

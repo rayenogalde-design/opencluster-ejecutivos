@@ -7637,6 +7637,7 @@ const _SEM_MISCOT = {
   vencido:  { txt:'Seguimiento vencido',   color:'#B91C1C', bg:'#FEF2F2', dot:'#EF4444' },
   pendiente:{ txt:'Seguimiento pendiente', color:'#C2410C', bg:'#FFF1E6', dot:'#FF7E00' },
   al_dia:   { txt:'Al día',                color:'#047857', bg:'#F0FDF4', dot:'#10B981' },
+  fndr:     { txt:'Proyecto FNDR · en concurso', color:'#7C3AED', bg:'#F5F3FF', dot:'#7C3AED' },
   ganada:   { txt:'Ganada',                color:'#047857', bg:'#F0FDF4', dot:'#10B981' },
   perdida:  { txt:'Perdida',               color:'#6B7280', bg:'#F9FAFB', dot:'#9CA3AF' },
   sin_fecha:{ txt:'Sin fecha',             color:'#6B7280', bg:'#F9FAFB', dot:'#9CA3AF' }
@@ -7802,7 +7803,7 @@ function renderMisCotizaciones(){
   }
   const grupos = {};
   lista.forEach(c => { const kk = c.mes || '0000-00'; (grupos[kk] = grupos[kk] || []).push(c); });
-  const peso = { vencido:0, pendiente:1, al_dia:2, sin_fecha:3, ganada:4, perdida:5 };
+  const peso = { vencido:0, pendiente:1, al_dia:2, fndr:2, sin_fecha:3, ganada:4, perdida:5 };
   const pw = s => (peso[s]!==undefined ? peso[s] : 9);
   let html = metaHtml + kpiHtml;
   const abrirBusqueda = !!(q || filtro);  // si está buscando, abrir los meses para que vea resultados
@@ -7845,7 +7846,7 @@ function _cardMisCot(c){
   det += '<div style="background:#fefbf3;border:1px dashed var(--gold,#d4a017);border-radius:8px;padding:10px 12px;margin-top:8px;">' +
     '<div style="font-size:10.5px;font-weight:800;color:var(--gold-dk,#92580e);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px;">+ Registrar seguimiento</div>' +
     '<div style="display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap;">' +
-      '<select id="mc-seg-res-'+numSafe+'" style="padding:6px 9px;border:1px solid var(--smoke);border-radius:6px;font-size:12px;flex:0 0 180px;"><option value="">— Resultado —</option><option>Esperando respuesta</option><option>Cliente interesado</option><option>Pidió ajuste</option><option>Llamada agendada</option><option>Reunión agendada</option><option>Sin respuesta</option><option>Posible cierre</option><option>Rechazada</option></select>' +
+      '<select id="mc-seg-res-'+numSafe+'" style="padding:6px 9px;border:1px solid var(--smoke);border-radius:6px;font-size:12px;flex:0 0 180px;"><option value="">— Resultado —</option><option>Esperando respuesta</option><option>Cliente interesado</option><option>Pidió ajuste</option><option>Llamada agendada</option><option>Reunión agendada</option><option>Sin respuesta</option><option>Posible cierre</option><option>Rechazada</option><option>Postulado a FNDR (en concurso)</option></select>' +
       '<input type="date" id="mc-seg-fecha-'+numSafe+'" value="'+_hoyISO()+'" style="padding:6px 9px;border:1px solid var(--smoke);border-radius:6px;font-size:12px;flex:0 0 140px;">' +
     '</div>' +
     '<textarea id="mc-seg-notas-'+numSafe+'" rows="2" placeholder="Detalle del seguimiento (qué pasó, próximos pasos)…" style="width:100%;padding:8px 10px;border:1px solid var(--smoke);border-radius:6px;font-size:12.5px;resize:vertical;font-family:inherit;"></textarea>' +
@@ -8655,10 +8656,14 @@ function renderHistorialAgrupado(tl, contacto){
       // puede avisar de una cotización abandonada en vez de decir "sin cadencia activa".
       if(!/ganad|acept|cerrad|perdid|rechaz|cancel/.test(_estL)){
         const _ultSeg = (segs && segs.length) ? segs[0] : null;
+        // Proyecto FNDR: postulación a fondo concursable → la respuesta llega meses después,
+        // así que no se pide seguimiento hasta 6 meses (180 días) después del último toque.
+        const _esFndr = _ultSeg && /fndr/i.test((_ultSeg.titulo||'')+' '+(_ultSeg.detalle||'')+' '+(_ultSeg.estado||''));
         const _refTs = _ultSeg ? _ts(_ultSeg.fecha) : _ts(co.fecha);
         if(_refTs){
           const _diasSeg = Math.floor((Date.now() - _refTs) / 86400000);
-          const _semSeg = _diasSeg < 3 ? 'al_dia' : (_diasSeg <= 7 ? 'pendiente' : 'vencido');
+          const _semSeg = _esFndr ? (_diasSeg < 180 ? 'al_dia' : 'vencido')
+                                  : (_diasSeg < 3 ? 'al_dia' : (_diasSeg <= 7 ? 'pendiente' : 'vencido'));
           if(_semSeg !== 'al_dia' && (!_peorSeg || _diasSeg > _peorSeg.dias)) _peorSeg = { num: num, dias: _diasSeg, sem: _semSeg };
         }
       }
@@ -8784,6 +8789,7 @@ function renderHistorialAgrupado(tl, contacto){
                 '<option>Cliente no responde</option>' +
                 '<option>Posible cierre</option>' +
                 '<option>Rechazada</option>' +
+                '<option>Postulado a FNDR (en concurso)</option>' +
               '</select>' +
               '<input type="date" id="seg-fecha-' + esc(num) + '" value="' + _hoyISO() + '" style="padding:6px 9px;border:1px solid var(--smoke);border-radius:6px;font-size:12px;flex:0 0 140px;">' +
             '</div>' +

@@ -2498,6 +2498,7 @@ body{
           <h1>Métricas</h1>
           <p>Desempeño del equipo de difusión — año completo 2026. Muro de honor y evolución por mes.</p>
         </div>
+        <div id="metricasSelector" style="display:none;justify-content:flex-end;margin:6px 0;"></div>
         <div id="muroHonor" style="margin:14px 0;"></div>
         <div id="metricasCharts"><div class="loading-state"><div class="spinner"></div>Cargando métricas…</div></div>
       </div>
@@ -5249,14 +5250,14 @@ function irAListaPartida(sinTrabajar){
 const EJECUTIVOS_DRILLDOWN = ['William Marin', 'Roberto', 'Germán', 'Maximiliano', 'Ximena Romero'];
 
 // Renderiza el selector "Ver dashboard de: [Todo el equipo / William / Roberto / ...]"
-function renderSelectorDrillDown(){
+function renderSelectorDrillDown(labelTxt){
   const actual = DRILL_DOWN_EJEC || '__equipo__';
   const opts = ['<option value="__equipo__">Todo el equipo</option>']
     .concat(EJECUTIVOS_DRILLDOWN.map(n =>
       '<option value="' + esc(n) + '"' + (n === actual ? ' selected' : '') + '>' + esc(n) + '</option>'
     ));
   return '<label style="display:inline-flex;align-items:center;gap:6px;margin-left:auto;font-size:11.5px;font-weight:600;color:var(--purple-dk);">' +
-    'Ver dashboard de:' +
+    (labelTxt || 'Ver dashboard de:') +
     '<select onchange="cambiarDrillDown(this.value)" style="padding:5px 10px;border:1px solid var(--purple-lt, #d4c5ec);border-radius:6px;font-size:12px;font-weight:700;color:var(--purple-dk);background:white;cursor:pointer;">' +
       opts.join('') +
     '</select>' +
@@ -5278,8 +5279,13 @@ function cambiarDrillDown(nm){
       if (k.indexOf('crm_kpis_cache_') === 0) localStorage.removeItem(k);
     });
   } catch(e){}
-  // Refrescar dashboard entero
-  if (typeof cargarDashboard === 'function') cargarDashboard();
+  // Refrescar la vista activa con el ejecutivo elegido (dashboard o métricas).
+  var _vMet = document.getElementById('vMetricas');
+  if (_vMet && _vMet.classList.contains('act')) {
+    try { if (window.__METRICAS_COMP) _pintarMetricas(window.__METRICAS_COMP); else cargarMetricas(); } catch(e){}
+  } else if (typeof cargarDashboard === 'function') {
+    cargarDashboard();
+  }
 }
 
 // Periodo activo del dashboard: 'semana' o 'mes' (se persiste en localStorage)
@@ -7923,6 +7929,12 @@ async function cargarMetricas(){
 function _pintarMetricas(comp){
   const cont = document.getElementById('metricasCharts');
   const muro = document.getElementById('muroHonor');
+  // Selector de ejecutivo (solo admin): "Todo el equipo" o uno específico. Las métricas
+  // ya respetan getEjecutivoEfectivo(), así que al cambiarlo se re-pintan con ese ejecutivo.
+  try {
+    var _selM = document.getElementById('metricasSelector');
+    if(_selM){ var _adm = (typeof ROL!=='undefined' && ROL==='admin'); _selM.style.display = _adm ? 'flex' : 'none'; _selM.innerHTML = _adm ? renderSelectorDrillDown('Ver métricas de:') : ''; }
+  } catch(e){}
   try { _METRICAS_CHARTS.forEach(ch => ch.destroy()); } catch(e){}
   _METRICAS_CHARTS = [];
   try { renderMuroHonor(muro, comp); } catch(e){ if(muro) muro.innerHTML=''; }

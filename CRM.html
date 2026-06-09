@@ -8205,6 +8205,26 @@ async function cargarLeads(){
   renderListaLeads();
 }
 function filtrarLeads(q){ FILTROS.vLeads = q; renderListaLeads(); }
+// WhatsApp del ejecutivo (por primer nombre), usando la lista del equipo VC_WA_DESTINATARIOS.
+function _waDeEjecutivo(nombre){
+  var fn = _busqNorm(String(nombre||'').split(' ')[0]);
+  if(!fn) return '';
+  var hit = (VC_WA_DESTINATARIOS||[]).find(function(d){ return _busqNorm(String(d.n||'').split(' ')[0]) === fn; });
+  return hit ? hit.wa : '';
+}
+// Abre WhatsApp del ejecutivo con el aviso del lead urgente ya escrito (Rayen aprieta enviar).
+function avisarLeadWhatsApp(contactoId){
+  var c = (CACHE.vLeads||[]).find(function(x){ return String(x.id)===String(contactoId); }) || (typeof _buscarContactoCache==='function' ? _buscarContactoCache(contactoId) : null);
+  if(!c){ alert('No encontré el lead.'); return; }
+  var ej = String(c.ejecutivo_asignado||'').trim();
+  var wa = _waDeEjecutivo(ej);
+  if(!wa){ alert('No tengo el WhatsApp de ' + (ej.split(' ')[0]||'ese ejecutivo') + '. Agrégalo en su ficha de ejecutivo.'); return; }
+  var pet = String(c.nota_proxima||'').replace(/^LEAD URGENTE[^·]*·?\s*/i,'').trim();
+  var inst = c.institucion || c.nombre || '';
+  var msg = 'Hola ' + ej.split(' ')[0] + ', te acabo de asignar un LEAD URGENTE: ' + inst + (pet ? ' — ' + pet : '') +
+    '. Por favor atiéndelo dentro del día. Muchas gracias, quedo disponible para cualquier consulta. Saludos, Rayen.';
+  window.open('https://wa.me/' + String(wa).replace(/[^0-9]/g,'') + '?text=' + encodeURIComponent(msg), '_blank', 'noopener');
+}
 function renderListaLeads(){
   const container = document.getElementById('listLeads');
   const q = _busqNorm(FILTROS.vLeads || '').trim();
@@ -8232,6 +8252,7 @@ function renderListaLeads(){
         '<span style="color:var(--subtle);">Asignado a <b style="color:var(--purple-dk);">' + esc(ej) + '</b></span>' +
         (fc ? '<span style="color:var(--subtle);">Subido el <b style="color:var(--ink);">' + esc(fc) + '</b></span>' : '') +
         (dl ? '<span style="color:#9D174D;font-weight:700;">Límite ' + esc(dl) + '</span>' : '') +
+        (c.ejecutivo_asignado ? '<button onclick="avisarLeadWhatsApp(\'' + esc(c.id) + '\')" style="margin-left:auto;background:#25D366;color:#fff;border:none;border-radius:7px;padding:5px 12px;font-weight:800;font-size:11.5px;cursor:pointer;font-family:inherit;">Avisar por WhatsApp →</button>' : '') +
       '</div>' +
       renderTarjetaV2(c, 'vLeads') +
     '</div>';

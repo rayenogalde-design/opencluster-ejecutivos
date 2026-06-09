@@ -2169,6 +2169,10 @@ body{
         <span id="lblNavMisCot">Mis Cotizaciones</span>
         <span class="badge" id="badgeMisCotizaciones" style="display:none;">0</span>
       </div>
+      <div class="side-tab" data-view="vVentasMes" id="navVentasMes" onclick="goView('vVentasMes')">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Ventas del Mes
+      </div>
       <div class="side-tab" data-view="vMetricas" id="navMetricas" onclick="goView('vMetricas')">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
         Métricas
@@ -2490,6 +2494,16 @@ body{
           <div style="color:var(--subtle);font-size:13.5px;font-weight:600;"><b id="cntMisCot" style="color:var(--ink);">0</b> cotizaciones</div>
         </div>
         <div id="listMisCot"><div class="loading-state"><div class="spinner"></div>Cargando…</div></div>
+      </div>
+
+      <!-- ═══ Ventas del Mes (por fecha de cierre — comisiones) ═══ -->
+      <div class="view" id="vVentasMes">
+        <div class="sec-head">
+          <h1>Ventas del Mes</h1>
+          <p>Ventas ganadas por el mes en que se CERRARON (la fecha en que se marcaron Ganadas) — para comisiones. Elige el mes y el ejecutivo.</p>
+        </div>
+        <div id="ventasMesBar" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:14px 0;"></div>
+        <div id="ventasMesBody"><div class="loading-state"><div class="spinner"></div>Cargando…</div></div>
       </div>
 
       <!-- ═══ Métricas ═══ -->
@@ -3994,6 +4008,7 @@ function goView(id){
     case 'vImportar':        inicializarImportar(); break;
     case 'vCerrar':          cargarPorCerrar(); break;
     case 'vMisCotizaciones': cargarMisCotizaciones(); break;
+    case 'vVentasMes':       cargarVentasMes(); break;
     case 'vMetricas':        cargarMetricas(); break;
     case 'vCoaching':        cargarCoaching(); break;
     case 'vOlvidados':       cargarOlvidados(); break;
@@ -7917,6 +7932,77 @@ async function marcarEstadoCotMC(num, estado, btn){
 let _METRICAS_CHARTS = [];
 const _PALETA_EJ = ['#001A60','#06B3FD','#16A34A','#F59E0B','#5b21b6','#DB2777','#0891B2','#92580e'];
 const _MN = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+/* ════ VENTAS DEL MES — ganadas por fecha de CIERRE (para comisiones) ════ */
+let VENTASMES_MES = '';   // 'YYYY-MM' del mes de cierre elegido
+let VENTASMES_EJEC = '';  // primer nombre del ejecutivo filtrado; '' = todos
+async function cargarVentasMes(){
+  const cont = document.getElementById('ventasMesBody');
+  if(window.__VENTASMES_DATA){ try { _pintarVentasMes(); } catch(e){} }
+  else cont.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando…</div>';
+  const esAdmin = (typeof ROL!=='undefined' && ROL==='admin');
+  const r = await fetchAPI('crm_mis_cotizaciones', { ejecutivo: esAdmin ? 'Rayen Ogalde' : (USUARIO||''), modo_vista: esAdmin ? 'admin' : 'ejecutiva' });
+  if(!r || !r.ok){ cont.innerHTML = '<div class="error-state">No se pudieron cargar las ventas.</div>'; return; }
+  window.__VENTASMES_DATA = (r.cotizaciones||[]).filter(c => c.ganada);
+  _pintarVentasMes();
+}
+function _mesCierreDe(c){ return String(c.mes_cierre || c.mes || ''); }
+function setVentasMesMes(m){ VENTASMES_MES = m; _pintarVentasMes(); }
+function setVentasMesEjec(e){ VENTASMES_EJEC = e; _pintarVentasMes(); }
+function _pintarVentasMes(){
+  const bar = document.getElementById('ventasMesBar');
+  const body = document.getElementById('ventasMesBody');
+  if(!bar || !body) return;
+  const esAdmin = (typeof ROL!=='undefined' && ROL==='admin');
+  const ventas = window.__VENTASMES_DATA || [];
+  const meses = Array.from(new Set(ventas.map(_mesCierreDe).filter(m=>m.indexOf('-')>0))).sort().reverse();
+  const ahoraYM = (new Date()).getFullYear() + '-' + String((new Date()).getMonth()+1).padStart(2,'0');
+  if(!VENTASMES_MES) VENTASMES_MES = (meses.indexOf(ahoraYM)>=0) ? ahoraYM : (meses[0]||ahoraYM);
+  const chip = (val,txt)=> '<button onclick="setVentasMesMes(\''+val+'\')" style="padding:6px 13px;border:1px solid var(--smoke,#e5e7eb);background:'+(VENTASMES_MES===val?'#16A34A':'#fff')+';color:'+(VENTASMES_MES===val?'#fff':'var(--subtle)')+';font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;">'+txt+'</button>';
+  let barH = '<span style="font-size:12px;font-weight:700;color:var(--mist,#9aa3af);">Mes de cierre:</span>';
+  meses.forEach(ym=>{ const mi=parseInt(ym.split('-')[1],10)-1; barH += chip(ym, (_MES_NOMBRE[mi]||'').substring(0,3)+' '+ym.split('-')[0].substring(2)); });
+  if(!meses.length) barH += '<span style="font-size:12.5px;color:var(--subtle);">Sin ventas ganadas registradas todavía.</span>';
+  if(esAdmin){
+    const ejecs = Array.from(new Set(ventas.map(v=>String(v.ejecutivo||'').trim().split(' ')[0]).filter(Boolean))).sort();
+    barH += '<select onchange="setVentasMesEjec(this.value)" style="margin-left:8px;padding:7px 10px;border:1px solid var(--smoke,#e5e7eb);border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;"><option value="">Todos los ejecutivos</option>'+
+      ejecs.map(n=>'<option value="'+esc(n)+'"'+(VENTASMES_EJEC===n?' selected':'')+'>'+esc(n)+'</option>').join('')+'</select>';
+    barH += '<button onclick="enviarResumenVentasMario()" style="margin-left:auto;background:#001A60;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-weight:800;font-size:13px;cursor:pointer;">Enviar resumen del mes a Mario →</button>';
+  }
+  bar.innerHTML = barH;
+  let delMes = ventas.filter(v => _mesCierreDe(v) === VENTASMES_MES);
+  if(VENTASMES_EJEC) delMes = delMes.filter(v => _busqNorm(String(v.ejecutivo||'').split(' ')[0]) === _busqNorm(VENTASMES_EJEC));
+  const mesLbl = (VENTASMES_MES.indexOf('-')>0) ? (_MES_NOMBRE[parseInt(VENTASMES_MES.split('-')[1],10)-1]+' '+VENTASMES_MES.split('-')[0]) : VENTASMES_MES;
+  if(!delMes.length){ body.innerHTML = '<div class="loading-state" style="padding:30px;">No hay ventas cerradas en '+esc(mesLbl)+(VENTASMES_EJEC?(' para '+esc(VENTASMES_EJEC)):'')+'.</div>'; return; }
+  const porEj = {};
+  delMes.forEach(v=>{ const e=String(v.ejecutivo||'(sin ejecutivo)').trim(); (porEj[e]=porEj[e]||[]).push(v); });
+  const totMes = delMes.reduce((s,v)=>s+(v.neto||v.monto||0),0);
+  let html = '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:#16A34A;text-transform:uppercase;letter-spacing:.06em;margin:6px 0 14px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;"><span>'+delMes.length+' venta'+(delMes.length===1?'':'s')+' cerrada'+(delMes.length===1?'':'s')+' en '+esc(mesLbl)+'</span><span style="color:#047857;">'+fmtCLP(totMes)+'</span></div>';
+  Object.keys(porEj).sort((a,b)=>porEj[b].length-porEj[a].length).forEach(ej=>{
+    const arr = porEj[ej];
+    const total = arr.reduce((s,v)=>s+(v.neto||v.monto||0),0);
+    html += '<div style="border:1px solid var(--smoke,#e5e7eb);border-radius:12px;margin-bottom:12px;overflow:hidden;">'+
+      '<div style="background:#F0FDF4;padding:11px 16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">'+
+        '<span style="font-weight:800;color:#065F46;font-size:14px;">'+esc(ej.split(' ')[0])+' · '+arr.length+' venta'+(arr.length===1?'':'s')+'</span>'+
+        '<span style="font-weight:800;color:#047857;font-size:13px;">'+fmtCLP(total)+'</span>'+
+      '</div>';
+    arr.forEach(v=>{
+      html += '<div style="padding:10px 16px;border-top:1px solid var(--smoke,#f1f1f4);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">'+
+        '<div style="min-width:0;"><div style="font-weight:700;color:var(--ink);font-size:13.5px;">'+esc(v.institucion||v.cliente||'(sin nombre)')+'</div>'+
+          '<div style="font-size:12px;color:var(--subtle);margin-top:2px;">'+esc(v.cotizacion||'')+(v.productos?(' · '+esc(v.productos)):'')+'</div></div>'+
+        '<div style="font-weight:700;color:var(--gold-dk);white-space:nowrap;">'+fmtCLP(v.monto||v.neto||0)+'</div>'+
+      '</div>';
+    });
+    html += '</div>';
+  });
+  body.innerHTML = html;
+}
+async function enviarResumenVentasMario(){
+  if(!VENTASMES_MES){ alert('Elige un mes primero.'); return; }
+  const mesLbl = _MES_NOMBRE[parseInt(VENTASMES_MES.split('-')[1],10)-1]+' '+VENTASMES_MES.split('-')[0];
+  if(!confirm('¿Enviar a Mario el resumen de ventas de '+mesLbl+'?\n(Va sin montos. Te llega una copia a ti para tu registro.)')) return;
+  const r = await fetchAPI('crm_resumen_ventas_mes', { solicitante: USUARIO, mes: VENTASMES_MES });
+  if(r && r.ok){ alert('Resumen de '+mesLbl+' enviado a Mario, con copia a ti. ('+(r.cantidad||0)+' ventas).'); }
+  else { alert('No se pudo enviar: '+((r&&r.error)||'error')); }
+}
 async function cargarMetricas(){
   const cont = document.getElementById('metricasCharts');
   // Render instantáneo desde caché de sesión (refresca en background) → al reabrir es inmediato.

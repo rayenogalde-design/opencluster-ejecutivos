@@ -5327,6 +5327,30 @@ function cambiarDestino(modo){
 }
 
 // ── Modal inline Crear Contacto en CRM (sin salir del Cotizador) ──
+// Categorías/subcategorías (espejo del CRM) para el modal de nuevo contacto del cotizador.
+const TIPOS_ORG_CRM_COT = {
+  "Sector Público Municipal": ["DIDECO (Dirección de Desarrollo Comunitario)","Oficina de Discapacidad Municipal","Oficina del Adulto Mayor","DAEM (Educación Municipal)","Departamento de Salud Municipal","Otra oficina municipal"],
+  "Salud Pública": ["CESFAM (Centro de Salud Familiar)","CECOSF / CCR","COSAM (Salud Mental)","Hospital Público","Servicio de Salud Regional","COMPIN","Otro centro de salud pública"],
+  "Educación": ["Escuela Especial","Escuela de Lenguaje","Programa PIE (Integración Escolar)","Colegio regular","Escuela","Escuela rural","Jardín Infantil (JUNJI/Integra)","Universidad / Instituto","Centro de Padres y Apoderados","Otro"],
+  "Gobierno Central/Regional": ["SENADIS","SENAMA (Adulto Mayor)","Gobierno Regional (GORE)","Delegación Presidencial","Ministerio / Seremi","JUNAEB","Otro organismo público"],
+  "Fundaciones y ONGs": ["Fundación de Discapacidad","Teletón / CRIT","Organización de Pacientes","Corporación / ONG","Otra fundación"],
+  "Organizaciones Comunitarias": ["Club de Adulto Mayor","Centro de Madres","Junta de Vecinos","Organización de Discapacidad","Otra agrupación comunitaria"],
+  "Profesionales de la Salud": ["Kinesiólogo/a","Terapeuta Ocupacional","Fonoaudiólogo/a","Psicólogo/a","Psicopedagogo/a","Neurólogo/a / Fisiatra","Otro profesional"],
+  "Privados": ["Hospital Privado","Clínica Privada","Centro Médico Privado","Centro Pediátrico Privado","Centro Odontológico Privado","Centro de Rehabilitación Neurológica","Centro de Rehabilitación Físico / Kinesiológico Privado","Centro de Rehabilitación Infantil Privado","Hospital Psiquiátrico Privado","Centro de Cuidados Paliativos / Hospicio Privado","Centro Kinesiología / TO / Fonoaudiología Multi-Profesional","Teletón / Instituto Teletón / CRIT","Colegio Particular Pagado","Colegio Particular Subvencionado","Jardín Infantil Privado","Universidad / Instituto Privado","Centro de Aprendizaje / Reforzamiento Privado","Centro de Estimulación Temprana Privado","Hogar de Ancianos / ELEAM Privado","Casa de Reposo / Residencia Asistida","Centro de Día para Adulto Mayor Privado","Centro de Memoria / Alzheimer Privado","Club Senior / Country Club","Programa Universitario para Adulto Mayor","Banco","Tienda por Departamento","Supermercado","Centro Comercial / Mall","Cadena de Farmacia","Hotel Internacional","Hotel Chileno / Cadena Nacional","Resort All-Inclusive","Termas / Spa Resort","Oficinas de Recursos Humanos de Gran Empresa","Empresa Mediana con personal con discapacidad","Empresa de RRHH / Reclutamiento Inclusivo","Inmobiliaria / Constructora","Empresa de Capacitación / Formación","Parroquia / Iglesia / Centro Religioso","Centro de Rehabilitación de Adicciones","Distribuidor — Ortopedia","Distribuidor — Farmacia Especializada","Distribuidor — Importador / Mayorista Médico","Distribuidor — Tienda Online de Productos Médicos","Distribuidor — Equipamiento Educativo","Distribuidor — Productos Geriátricos","Distribuidor — Empresas de Telecuidado / Botón SOS","Distribuidor — Representante / Agente Comercial","Distribuidor — Otro distribuidor","Clínica / Consulta privada","Centro de Rehabilitación privado","Centro Médico u Ortopédico","Casa de Reposo / Hogar de Adultos Mayores","Centro de Día Adulto Mayor","Iglesia / Parroquia","Empresa (inclusión laboral)","Distribuidor / Comercio","Otro privado"],
+  "Personas": ["Persona natural","Familia / Cuidador"]
+};
+function poblarCategoriaNCC(){
+  const sel = document.getElementById('ncc-categoria');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">— Sin categoría —</option>' + Object.keys(TIPOS_ORG_CRM_COT).map(k => '<option value="'+k+'">'+k+'</option>').join('');
+}
+function poblarSubcategoriaNCC(){
+  const cat = (document.getElementById('ncc-categoria')||{}).value || '';
+  const sub = document.getElementById('ncc-subcategoria');
+  if(!sub) return;
+  const arr = TIPOS_ORG_CRM_COT[cat] || [];
+  sub.innerHTML = arr.length ? ('<option value="">— Elegir —</option>' + arr.map(s => '<option value="'+s+'">'+s+'</option>').join('')) : '<option value="">— Selecciona categoría primero —</option>';
+}
 function abrirModalCrearContactoCotizador(nombrePreLlenado){
   const m = document.getElementById("modalCrearContactoCotizador");
   if (!m) return;
@@ -5350,6 +5374,12 @@ function abrirModalCrearContactoCotizador(nombrePreLlenado){
     selEj.value = op ? op.value : "Rayen";
   } catch(e){}
   document.getElementById("ncc-tipo-persona").checked = true;
+  // Campos replicados del CRM: primer contacto, categoría/subcategoría, notas.
+  { const e = document.getElementById("ncc-medio"); if(e) e.value = ""; }
+  poblarCategoriaNCC();
+  { const e = document.getElementById("ncc-categoria"); if(e) e.value = ""; }
+  poblarSubcategoriaNCC();
+  { const e = document.getElementById("ncc-notas"); if(e) e.value = ""; }
   if (typeof actualizarTipoNCC === "function") actualizarTipoNCC();   // oculta el tel. institucional al resetear
   window.__nccForzarDup = false;   // reinicia el "crear de todos modos" del chequeo de duplicados
   document.getElementById("ncc-error").style.display = "none";
@@ -5399,6 +5429,11 @@ async function guardarNuevoContactoCotizador(){
     direccion: (document.getElementById("ncc-direccion")?.value.trim() || document.getElementById("eCDireccion")?.value.trim() || ""),
     ejecutivo_asignado: document.getElementById("ncc-ejecutivo").value,
     tipo_contacto: esInst ? "Institución" : "Persona Natural",
+    // Campos replicados del formulario de contacto del CRM (antes quedaban vacíos):
+    medio_primer_contacto: (document.getElementById("ncc-medio")?.value || ""),
+    tipo_categoria: (document.getElementById("ncc-categoria")?.value || ""),
+    sub_categoria: (document.getElementById("ncc-subcategoria")?.value || ""),
+    notas_publicas: (document.getElementById("ncc-notas")?.value.trim() || ""),
     pipeline_estado: "Cotizado",
     origen: "cotizacion"
   };
@@ -5717,6 +5752,50 @@ const COMUNAS_CHILE = [
           <option value="Ximena">Ximena</option>
         </select>
         <div style="font-size:11px;color:#7a5a20;margin-top:3px;">Quién queda como dueño del contacto en el CRM. Por defecto, tú.</div>
+      </div>
+
+      <div style="margin-top:12px;">
+        <label style="font-size:11px;font-weight:700;color:#1a1208;display:block;margin-bottom:4px;">¿Cómo fue el primer contacto?</label>
+        <select id="ncc-medio" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;background:white;">
+          <option value="">— Elegir cómo fue el primer contacto —</option>
+          <optgroup label="Nosotros contactamos (saliente)">
+            <option value="Llamada">Llamada telefónica</option>
+            <option value="Email">Email</option>
+            <option value="WhatsApp">WhatsApp</option>
+            <option value="Visita">Visita</option>
+            <option value="Reunion">Reunión</option>
+          </optgroup>
+          <optgroup label="Nos contactaron (entrante)">
+            <option value="Redes sociales">Nos escribió por redes sociales</option>
+            <option value="Correo entrante">Nos escribió al correo de la empresa</option>
+            <option value="WhatsApp entrante">Nos escribió por WhatsApp</option>
+            <option value="Llamada entrante">Nos llamó</option>
+            <option value="Formulario web">Formulario / sitio web</option>
+            <option value="Reunión generada por Damaris">Reunión generada por Damaris</option>
+            <option value="Reunión generada por Gabriela">Reunión generada por Gabriela</option>
+          </optgroup>
+          <optgroup label="Otro origen">
+            <option value="Webinar">Webinar o evento</option>
+            <option value="Referido">Referido</option>
+            <option value="Otro">Otro</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:12px;">
+        <div style="flex:1;">
+          <label style="font-size:11px;font-weight:700;color:#1a1208;display:block;margin-bottom:4px;">Categoría</label>
+          <select id="ncc-categoria" onchange="poblarSubcategoriaNCC()" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;background:white;"><option value="">— Sin categoría —</option></select>
+        </div>
+        <div style="flex:1;">
+          <label style="font-size:11px;font-weight:700;color:#1a1208;display:block;margin-bottom:4px;">Subcategoría</label>
+          <select id="ncc-subcategoria" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;background:white;"><option value="">— Selecciona categoría primero —</option></select>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;">
+        <label style="font-size:11px;font-weight:700;color:#1a1208;display:block;margin-bottom:4px;">Notas iniciales</label>
+        <textarea id="ncc-notas" rows="2" placeholder="Contexto del contacto, qué necesita, etc." style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;font-family:inherit;resize:vertical;"></textarea>
       </div>
 
       <div id="ncc-error" style="display:none;background:#fee2e2;border:1px solid #ef4444;color:#7a1818;border-radius:8px;padding:10px 13px;margin-top:10px;font-size:13px;font-weight:600;"></div>

@@ -9764,6 +9764,58 @@ function _vcChk(){
   if(campos){ var vis = !!(chk && chk.checked); campos.style.display = vis ? '' : 'none'; if(vis) _vcAutollenarEtiqueta(); }
 }
 function _vcCerrar(){ var ov = document.getElementById('panelCierreVenta'); if(ov) ov.remove(); }
+
+// ── Notificaciones por WhatsApp del cierre de venta (etiquetas a Ximena, venta a Viarly) ──
+// El ejecutivo elige a quién mandar (por defecto el de siempre) y dispara WhatsApp con un clic.
+var VC_WA_DESTINATARIOS = [
+  { n:'Ximena (etiquetas)', wa:'56931495928' },
+  { n:'Viarly (finanzas)',  wa:'56973277277' },
+  { n:'William',            wa:'56998748982' },
+  { n:'Roberto',            wa:'56934619240' },
+  { n:'Maximiliano',        wa:'56940213164' },
+  { n:'Germán',             wa:'18297176289' },
+  { n:'Rayen',              wa:'18299257354' }
+];
+function _vcSelectorDest(id, defWa){
+  var opts = VC_WA_DESTINATARIOS.map(function(d){ return '<option value="'+d.wa+'"'+(d.wa===defWa?' selected':'')+'>'+esc(d.n)+'</option>'; }).join('');
+  return '<select id="'+id+'" onchange="_vcToggleCustom(\''+id+'\')" style="padding:7px 9px;border:1px solid #d1d5db;border-radius:7px;font-size:13px;font-family:inherit;">'+opts+'<option value="__otro__">Otro número…</option></select>'+
+    '<input id="'+id+'-otro" placeholder="+56 9 …" style="display:none;width:140px;padding:7px 9px;border:1px solid #d1d5db;border-radius:7px;font-size:13px;margin-left:6px;">';
+}
+function _vcToggleCustom(id){ var s=document.getElementById(id), i=document.getElementById(id+'-otro'); if(i) i.style.display=(s && s.value==='__otro__')?'':'none'; }
+function _vcAbrirWa(selId, msg){
+  var sel = document.getElementById(selId); var num = sel ? sel.value : '';
+  if(num === '__otro__') num = String((document.getElementById(selId+'-otro')||{}).value||'').replace(/[^0-9]/g,'');
+  num = String(num).replace(/[^0-9]/g,'');
+  if(!num || num.length < 8){ alert('Elige un destinatario o escribe un número válido (con código de país).'); return; }
+  window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(msg), '_blank', 'noopener');
+}
+function _vcMsgEtiquetas(){
+  var g=function(id){ return String((document.getElementById('vc-'+id)||{}).value||'').trim(); };
+  var doc=(document.querySelector('input[name="vc-doc"]:checked')||{}).value||'Factura';
+  return 'ETIQUETAS — Venta ganada\n'+
+    'Cotización: '+(window.__vcNum||'')+'\n'+
+    'Cliente: '+g('et-nombre')+'\n'+
+    (g('et-rut')?'RUT: '+g('et-rut')+'\n':'')+
+    (g('et-correo')?'Correo: '+g('et-correo')+'\n':'')+
+    (g('et-refs')?'Institución: '+g('et-refs')+'\n':'')+
+    'Producto: '+g('et-producto')+'\n'+
+    'Documento: '+doc+'\n'+
+    'Dirección de despacho: '+g('direccion')+'\n'+
+    'Total: '+g('et-total')+(g('et-envio')?' (producto '+g('et-producto-monto')+' + envío '+g('et-envio')+')':'');
+}
+function _vcMsgVenta(){
+  var c=window.__vcContacto||{};
+  var monto=String((document.getElementById('vc-monto')||{}).value||'').replace(/[^0-9]/g,'');
+  var doc=(document.querySelector('input[name="vc-doc"]:checked')||{}).value||'Factura';
+  return 'VENTA GANADA — para Finanzas\n'+
+    'Cotización: '+(window.__vcNum||'')+'\n'+
+    'Cliente: '+(c.nombre||c.institucion||'')+'\n'+
+    (monto?'Monto recibido: $'+Number(monto).toLocaleString('es-CL')+'\n':'')+
+    'Documento: '+doc+'\n'+
+    'Forma de envío: '+((document.getElementById('vc-forma')||{}).value||'')+'\n'+
+    'Dirección: '+String((document.getElementById('vc-direccion')||{}).value||'').trim()+'\n'+
+    'Ejecutivo: '+(USUARIO||'');
+}
 function abrirPanelCierreVenta(num, contacto){
   if(document.getElementById('panelCierreVenta')) return;
   var c = contacto || window.__CONTACTO_ACTIVO || {};
@@ -9804,11 +9856,21 @@ function abrirPanelCierreVenta(num, contacto){
             _vcCampo('et-correo','Correo', c.email||'') + _vcCampo('et-refs','Referencias de la institución', c.institucion||'') +
             _vcCampo('et-producto','Qué producto es (detallado)', c.__productos||'') +
             _vcCampo('et-total','Total cotización','') + _vcCampo('et-producto-monto','Monto producto (total − envío)','') + _vcCampo('et-envio','Monto envío','') +
+            '<div style="margin-top:10px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">' +
+              '<button type="button" onclick="_vcAbrirWa(\'vc-wa-etq\', _vcMsgEtiquetas())" style="background:#25D366;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;">Enviar etiquetas por WhatsApp →</button>' +
+              '<span style="font-size:12px;color:#9D174D;">a:</span>' + _vcSelectorDest('vc-wa-etq','56931495928') +
+            '</div>' +
           '</div></div>' +
+        '<div style="font-weight:800;color:#111;margin:18px 0 8px;">4. WhatsApp a Viarly <span style="font-weight:600;color:#6b7280;font-size:12px;">(opcional — además del correo)</span></div>' +
+        '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px;">' +
+          '<button type="button" onclick="_vcAbrirWa(\'vc-wa-venta\', _vcMsgVenta())" style="background:#25D366;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;">Enviar venta por WhatsApp →</button>' +
+          '<span style="font-size:12px;color:#374151;">a:</span>' + _vcSelectorDest('vc-wa-venta','56973277277') +
+        '</div>' +
+        '<div style="font-size:12px;color:#6b7280;">El correo a Viarly y a Rayen se envía solo al guardar la venta.</div>' +
       '</div>' +
       '<div style="padding:16px 24px;border-top:1px solid #eee;display:flex;gap:10px;justify-content:flex-end;">' +
         '<button onclick="_vcCerrar()" style="background:#f3f4f6;color:#374151;border:none;border-radius:9px;padding:11px 18px;font-weight:700;cursor:pointer;font-family:inherit;">Después</button>' +
-        '<button id="vc-enviar" onclick="guardarCierreVenta()" disabled style="background:#16A34A;color:#fff;border:none;border-radius:9px;padding:11px 20px;font-weight:800;cursor:not-allowed;opacity:.5;font-family:inherit;">Enviar a Finanzas</button>' +
+        '<button id="vc-enviar" onclick="guardarCierreVenta()" disabled style="background:#16A34A;color:#fff;border:none;border-radius:9px;padding:11px 20px;font-weight:800;cursor:not-allowed;opacity:.5;font-family:inherit;">Guardar venta</button>' +
       '</div>' +
     '</div>';
   document.body.appendChild(ov);
@@ -9828,6 +9890,7 @@ async function guardarCierreVenta(){
     forma_envio: (document.getElementById('vc-forma')||{}).value || '',
     costo_envio: String((document.getElementById('vc-costo-envio')||{}).value||'').replace(/[^0-9]/g,''),
     direccion_despacho: dir.trim(),
+    productos: (window.__vcContacto||{}).__productos || '',
     solicita_etiquetas: quiereEtq,
     etiqueta: quiereEtq ? {
       nombre: (document.getElementById('vc-et-nombre')||{}).value||'', rut: (document.getElementById('vc-et-rut')||{}).value||'',
@@ -9843,7 +9906,7 @@ async function guardarCierreVenta(){
     if(!r || !r.ok){ alert('No se pudo enviar a Finanzas: ' + ((r&&r.error)||'error')); if(btn){ btn.disabled=false; btn.textContent='Enviar a Finanzas'; } return; }
     _vcCerrar();
     try { celebrarVenta(Number(payload.monto_recibido) || window.__vcTotalCot || 0); } catch(e){}
-    alert('Listo. La venta se envió a Finanzas' + (quiereEtq ? ' y las etiquetas a Ximena.' : '.'));
+    alert('Venta guardada y enviada a Finanzas (correo automático a Viarly y Rayen' + (quiereEtq ? ', y etiquetas a Ximena' : '') + ').\n\nSi quieres, manda también los WhatsApp con los botones del panel.');
     var cid = (window.__vcContacto||{}).id; if(cid) abrirFichaModal(cid, true);
   } catch(e){ alert('Error: ' + e.message); if(btn){ btn.disabled=false; btn.textContent='Enviar a Finanzas'; } }
 }

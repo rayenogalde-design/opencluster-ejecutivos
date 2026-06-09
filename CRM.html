@@ -3623,12 +3623,20 @@ function fmtCLP(v){
 // La columna "Total c/IVA" a veces trae "37.18" (debía ser 37.180) o "$5.980 (Courrier externo)".
 // Regla: si el total c/IVA es incoherente (menor que el neto) o falta, se calcula neto × 1,19.
 // Acepta tanto un objeto cotización {neto,total,total_iva} como (neto, total, totalIva) sueltos.
-function montoCotSano(neto, total, totalIva){
-  if(neto && typeof neto === 'object'){ const co = neto; neto = co.neto; total = co.total; totalIva = co.total_iva; }
+function montoCotSano(neto, total, totalIva, transporte){
+  if(neto && typeof neto === 'object'){ const co = neto; neto = co.neto; total = co.total; totalIva = co.total_iva; transporte = co.transporte; }
   const nNeto = parseCLP(neto);
+  const nTransp = parseCLP(transporte);
   let nTot = parseCLP(totalIva) || parseCLP(total);
   if(nNeto > 0 && nTot < nNeto) nTot = Math.round(nNeto * 1.19);   // total corrupto o en otra unidad
   if(nTot === 0 && nNeto > 0)   nTot = Math.round(nNeto * 1.19);   // sin total → calcular con IVA
+  // Sumar el TRANSPORTE (con IVA) cuando el total guardado es el de PRODUCTOS solos y no lo
+  // incluye. Caso OC26-3639: total c/IVA 137.990 = neto×1,19, faltaba el flete 15.001 → 155.841.
+  // El guardia (total ≈ productos c/IVA) evita doble cobro si el total ya traía el flete.
+  if(nTransp > 0 && nNeto > 0){
+    const prodCIVA = Math.round(nNeto * 1.19);
+    if(Math.abs(nTot - prodCIVA) <= Math.max(50, prodCIVA * 0.01)) nTot += Math.round(nTransp * 1.19);
+  }
   return nTot;
 }
 

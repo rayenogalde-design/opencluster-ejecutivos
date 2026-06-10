@@ -3751,7 +3751,7 @@ const ACCIONES_POST = [
   'crm_crear_contacto','crm_editar_contacto','crm_eliminar_contacto',
   'crm_agregar_interaccion','crm_editar_interaccion','crm_eliminar_interaccion',
   'crm_crear_tarea','crm_editar_tarea','crm_completar_tarea','crm_eliminar_tarea',
-  'crm_crear_reunion','crm_crear_seguimiento',
+  'crm_crear_reunion','crm_crear_seguimiento','crm_borrar_seguimiento',
   'crm_actualizar_etiquetas','crm_toggle_favorito','crm_actualizar_proxima','crm_snooze_contacto',
   'crm_iniciar_cadencia','crm_avanzar_cadencia','crm_pausar_cadencia',
   'crm_set_pipeline','crm_reasignar_contacto','crm_marcar_cotizacion',
@@ -7612,13 +7612,15 @@ function renderListaCerrar(){
 }
 
 /* ════ Vista MIS COTIZACIONES — por cotización, agrupadas por mes, con semáforo de seguimiento ════ */
-async function cargarMisCotizaciones(){
+async function cargarMisCotizaciones(forzar){
   const container = document.getElementById('listMisCot');
   // Render instantáneo desde la caché de sesión (refresca en background) → al reabrir es inmediato.
-  if(CACHE.vMisCot && CACHE.vMisCot.length){ try { _aplicarTituloMisCot(); _poblarSelectorEjecMisCot(); renderMisCotizaciones(); } catch(e){} }
+  if(!forzar && CACHE.vMisCot && CACHE.vMisCot.length){ try { _aplicarTituloMisCot(); _poblarSelectorEjecMisCot(); renderMisCotizaciones(); } catch(e){} }
   else container.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando…</div>';
   const ejec = (typeof getEjecutivoEfectivo === 'function' ? getEjecutivoEfectivo() : '') || USUARIO;
-  const r = await fetchAPI('crm_mis_cotizaciones', { ejecutivo: ejec, modo_vista: MODO_VISTA });
+  const params = { ejecutivo: ejec, modo_vista: MODO_VISTA };
+  if(forzar) params.forzar = 1;
+  const r = await fetchAPI('crm_mis_cotizaciones', params);
   if(!r || !r.ok){
     container.innerHTML = '<div class="error-state">No se pudieron cargar las cotizaciones.<div style="font-size:12px;color:var(--subtle);margin-top:4px;">' + esc((r&&r.error)||'desconocido') + '</div></div>';
     return;
@@ -7872,12 +7874,17 @@ function _cardMisCot(c){
   }
   det += '<div style="font-size:10.5px;font-weight:800;color:#b45309;text-transform:uppercase;letter-spacing:.6px;margin:10px 0 7px;">Seguimientos de la cotización</div>';
   det += segs.length
-    ? segs.map(s=>'<div style="background:#fffbeb;border-left:3px solid #f59e0b;border-radius:6px;padding:8px 11px;margin-bottom:6px;"><div style="display:flex;justify-content:space-between;gap:8px;"><span style="font-size:11px;font-weight:700;color:#92580e;">'+esc(s.fecha||'')+'</span>'+(s.estado?'<span style="font-size:11px;color:var(--subtle);">'+esc(s.estado)+'</span>':'')+'</div>'+(s.notas?'<div style="font-size:12px;color:var(--ink);margin-top:3px;">'+esc(s.notas)+'</div>':'')+'</div>').join('')
+    ? segs.map(s=>{
+        const medioPill = s.medio ? '<span style="font-size:10.5px;font-weight:700;color:#5b21b6;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:999px;padding:1px 8px;">'+_iconMedio(s.medio)+esc(s.medio)+'</span>' : '';
+        const xBtn = (s.fila ? '<button title="Borrar este seguimiento" onclick="borrarSeguimiento(\''+esc(numJS)+'\','+s.fila+',this)" style="background:none;border:none;color:#b91c1c;cursor:pointer;font-size:15px;line-height:1;padding:0 2px;font-weight:800;">×</button>' : '');
+        return '<div style="background:#fffbeb;border-left:3px solid #f59e0b;border-radius:6px;padding:8px 11px;margin-bottom:6px;"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center;"><span style="font-size:11px;font-weight:700;color:#92580e;">'+esc(s.fecha||'')+'</span><span style="display:flex;align-items:center;gap:6px;">'+medioPill+(s.estado?'<span style="font-size:11px;color:var(--subtle);">'+esc(s.estado)+'</span>':'')+xBtn+'</span></div>'+(s.notas?'<div style="font-size:12px;color:var(--ink);margin-top:3px;">'+esc(s.notas)+'</div>':'')+'</div>';
+      }).join('')
     : '<div style="font-size:12px;color:var(--mist);font-style:italic;padding:4px 0 8px;">Sin seguimientos registrados todavía.</div>';
   // Form nuevo seguimiento
   det += '<div style="background:#fefbf3;border:1px dashed var(--gold,#d4a017);border-radius:8px;padding:10px 12px;margin-top:8px;">' +
     '<div style="font-size:10.5px;font-weight:800;color:var(--gold-dk,#92580e);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px;">+ Registrar seguimiento</div>' +
     '<div style="display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap;">' +
+      '<select id="mc-seg-medio-'+numSafe+'" style="padding:6px 9px;border:1px solid var(--smoke);border-radius:6px;font-size:12px;flex:0 0 150px;"><option value="">— ¿Cómo? —</option><option>WhatsApp</option><option>Correo</option><option>Llamada</option><option>Reunión</option><option>Presencial</option></select>' +
       '<select id="mc-seg-res-'+numSafe+'" style="padding:6px 9px;border:1px solid var(--smoke);border-radius:6px;font-size:12px;flex:0 0 180px;"><option value="">— Resultado —</option><option>Esperando respuesta</option><option>Cliente interesado</option><option>Pidió ajuste</option><option>Llamada agendada</option><option>Reunión agendada</option><option>Sin respuesta</option><option>Posible cierre</option><option>Rechazada</option><option>Postulado a FNDR (en concurso)</option></select>' +
       '<input type="date" id="mc-seg-fecha-'+numSafe+'" value="'+_hoyISO()+'" style="padding:6px 9px;border:1px solid var(--smoke);border-radius:6px;font-size:12px;flex:0 0 140px;">' +
     '</div>' +
@@ -7916,16 +7923,39 @@ async function guardarSeguimientoMC(num, btn){
   const c = (CACHE.vMisCot||[]).find(x=>x.cotizacion===num) || {};
   const safe = String(num).replace(/[^a-zA-Z0-9\-]/g,'');
   const resEl = document.getElementById('mc-seg-res-'+safe);
+  const medioEl = document.getElementById('mc-seg-medio-'+safe);
   const fechaEl = document.getElementById('mc-seg-fecha-'+safe);
   const notasEl = document.getElementById('mc-seg-notas-'+safe);
   const res = resEl ? resEl.value : '';
+  const medio = medioEl ? medioEl.value : '';
   const fecha = fechaEl ? fechaEl.value : '';
   const notas = notasEl ? notasEl.value.trim() : '';
-  if(!notas && !res){ alert('Escribe el detalle del seguimiento o elige un resultado'); if(notasEl) notasEl.focus(); return; }
+  if(!notas && !res && !medio){ alert('Escribe el detalle del seguimiento, elige cómo lo hiciste o un resultado'); if(notasEl) notasEl.focus(); return; }
   btn.disabled=true; btn.textContent='Guardando…';
-  const r = await fetchAPI('crm_crear_seguimiento', { num_cotizacion:num, contacto_id:c.contacto_id||'', nombre:c.cliente||'', institucion:c.institucion||'', email:'', fecha:fecha, fecha_iso:fecha, resultado:res, notas:notas, solicitante:USUARIO });
+  const r = await fetchAPI('crm_crear_seguimiento', { num_cotizacion:num, contacto_id:c.contacto_id||'', nombre:c.cliente||'', institucion:c.institucion||'', email:'', fecha:fecha, fecha_iso:fecha, resultado:res, medio:medio, notas:notas, solicitante:USUARIO });
   if(!r || !r.ok){ btn.disabled=false; btn.textContent='Guardar seguimiento'; alert('Error: '+((r&&r.error)||'desconocido')); return; }
-  cargarMisCotizaciones();
+  CACHE.vMisCot = null;
+  cargarMisCotizaciones(true);
+}
+// Ícono SVG breve según el medio del seguimiento (sin emojis).
+function _iconMedio(m){
+  const k = String(m||'').toLowerCase();
+  const c='display:inline-block;vertical-align:-2px;margin-right:3px;';
+  if(k.indexOf('whats')>=0) return '<svg width="12" height="12" viewBox="0 0 24 24" fill="#25D366" style="'+c+'"><path d="M12 2a10 10 0 0 0-8.6 15l-1.3 4.7 4.8-1.3A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.8.7.8-2.7-.2-.3A8 8 0 1 1 12 20zm4.4-5.5c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1-.2.2-.6.8-.7.9-.1.2-.3.2-.5.1a6.5 6.5 0 0 1-3.2-2.8c-.2-.4.2-.4.6-1.2.1-.2 0-.3 0-.5l-.7-1.6c-.2-.5-.4-.4-.5-.4h-.5c-.2 0-.5.1-.7.3-.8.8-.8 2 0 3.2a9 9 0 0 0 3.5 3.1c1.9.8 1.9.6 2.3.5.4 0 1.4-.5 1.5-1 .2-.5.2-.9.1-1z"/></svg>';
+  if(k.indexOf('corre')>=0||k.indexOf('mail')>=0) return '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#06B3FD" stroke-width="2.2" style="'+c+'"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>';
+  if(k.indexOf('llam')>=0||k.indexOf('tel')>=0) return '<svg width="12" height="12" viewBox="0 0 24 24" fill="#16A34A" style="'+c+'"><path d="M6.6 10.8a15 15 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.6.1.4 0 .8-.2 1z"/></svg>';
+  return '';
+}
+// Borra UN seguimiento (X). Disponible siempre; el backend valida permiso y firma.
+async function borrarSeguimiento(num, fila, btn){
+  if(!confirm('¿Borrar este seguimiento? No se puede deshacer.')) return;
+  const c = (CACHE.vMisCot||[]).find(x=>x.cotizacion===num) || {};
+  const s = (c.seguimientos||[]).find(x=>x.fila===fila) || {};
+  if(btn){ btn.disabled=true; btn.textContent='…'; }
+  const r = await fetchAPI('crm_borrar_seguimiento', { fila:fila, num_cotizacion:num, comentario:s.notas||'', solicitante:USUARIO });
+  if(!r || !r.ok){ if(btn){ btn.disabled=false; btn.textContent='×'; } alert('No se pudo borrar: '+((r&&r.error)||'error')); return; }
+  CACHE.vMisCot = null;
+  cargarMisCotizaciones(true);
 }
 async function marcarEstadoCotMC(num, estado, btn){
   const etq = estado==='Ganada'?'GANADA':estado==='Perdida'?'PERDIDA':'EN GESTIÓN (reabrir)';
@@ -8965,6 +8995,14 @@ function renderHistorialAgrupado(tl, contacto){
           '<div style="background:#fefbf3;border:1px dashed var(--gold);border-radius:8px;padding:11px 14px;margin-top:10px;">' +
             '<div style="font-size:11px;font-weight:800;color:var(--gold-dk);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">+ Nuevo seguimiento</div>' +
             '<div style="display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap;">' +
+              '<select id="seg-medio-' + esc(num) + '" style="padding:6px 9px;border:1px solid var(--smoke);border-radius:6px;font-size:12px;flex:0 0 150px;">' +
+                '<option value="">— ¿Cómo? —</option>' +
+                '<option>WhatsApp</option>' +
+                '<option>Correo</option>' +
+                '<option>Llamada</option>' +
+                '<option>Reunión</option>' +
+                '<option>Presencial</option>' +
+              '</select>' +
               '<select id="seg-res-' + esc(num) + '" style="padding:6px 9px;border:1px solid var(--smoke);border-radius:6px;font-size:12px;flex:0 0 180px;">' +
                 '<option value="">— Resultado —</option>' +
                 '<option>Esperando respuesta</option>' +
@@ -9841,12 +9879,14 @@ document.addEventListener('click', (e) => {
 async function guardarSeguimientoInline(numCot, contactoId, btn){
   const safeNum = String(numCot || '').replace(/[^a-zA-Z0-9\-]/g, '');
   const resEl = document.getElementById('seg-res-' + safeNum) || document.querySelector('[id^="seg-res-"]:not([data-used])');
+  const medioEl = document.getElementById('seg-medio-' + safeNum);
   const fechaEl = document.getElementById('seg-fecha-' + safeNum);
   const notasEl = document.getElementById('seg-notas-' + safeNum);
   const resultado = resEl ? resEl.value : '';
+  const medio = medioEl ? medioEl.value : '';
   const fecha = fechaEl ? fechaEl.value : '';
   const notas = notasEl ? notasEl.value.trim() : '';
-  if(!notas && !resultado){ alert('Escribe el detalle del seguimiento o elige un resultado'); if(notasEl) notasEl.focus(); return; }
+  if(!notas && !resultado && !medio){ alert('Escribe el detalle del seguimiento, elige cómo lo hiciste o un resultado'); if(notasEl) notasEl.focus(); return; }
   btn.disabled = true; btn.textContent = 'Guardando…';
   const c = window.__CONTACTO_ACTIVO || {};
   const r = await fetchAPI('crm_crear_seguimiento', {
@@ -9858,6 +9898,7 @@ async function guardarSeguimientoInline(numCot, contactoId, btn){
     fecha: fecha,
     fecha_iso: fecha,
     resultado: resultado,
+    medio: medio,
     notas: notas,
     solicitante: USUARIO
   });

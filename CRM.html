@@ -2127,10 +2127,6 @@ body{
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg>
         Mis Contactos
       </div>
-      <div class="side-tab" data-view="vCuentas" id="navCuentas" onclick="goView('vCuentas')">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><path d="M9 9v.01"/><path d="M9 12v.01"/><path d="M9 15v.01"/><path d="M9 18v.01"/></svg>
-        Empresas / Cuentas
-      </div>
       <div class="side-tab" data-view="vTodos" id="navTodos" onclick="goView('vTodos')">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         Todos los Contactos
@@ -3946,12 +3942,19 @@ function aplicarVisibilidadPorRol(){
 
   // Vistas admin (Territorios, Auditoría, Migración, Importar): visibles solo si Rayen está
   // en modo Admin. En modo Ejecutiva o para ejecutivos no admin, se ocultan.
-  ['navLeads', 'navCoaching', 'navActividad', 'navTerr', 'navConfig', 'secAdmin', 'secHerramientas'].forEach(id => {
+  ['navLeads', 'navCoaching', 'navActividad', 'navTerr', 'navConfig', 'secAdmin', 'secHerramientas', 'navVentasMes'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.style.display = verComoEjecutivo ? 'none' : '';
   });
   // El grupo Herramientas se colapsa siempre que no se esté como admin.
   if(verComoEjecutivo){ const g = document.getElementById('grpHerramientas'); if(g) g.style.display='none'; const ch=document.getElementById('chevHerr'); if(ch) ch.textContent='▸'; }
+
+  // Vistas PERSONALES del ejecutivo (Mis Contactos, Mi Territorio): el admin NO las necesita
+  // porque tiene "Todos los Contactos" y "Territorios". Se muestran solo en modo ejecutivo.
+  ['navMis','navMiTerritorio'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.style.display = verComoEjecutivo ? '' : 'none';
+  });
 
   // Si está en una vista admin y cambia a modo ejecutiva, redirigir al dashboard
   if (verComoEjecutivo) {

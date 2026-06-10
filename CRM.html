@@ -2193,6 +2193,10 @@ body{
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
         Coaching
       </div>
+      <div class="side-tab admin" data-view="vRegistroXimena" id="navRegistroXimena" onclick="goView('vRegistroXimena')" style="display:none;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Registro Ximena
+      </div>
       <div class="side-tab admin" data-view="vActividad" id="navActividad" onclick="goView('vActividad')" style="display:none;">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         Actividad del equipo
@@ -2515,6 +2519,16 @@ body{
         <div id="metricasSelector" style="display:none;justify-content:flex-end;margin:6px 0;"></div>
         <div id="muroHonor" style="margin:14px 0;"></div>
         <div id="metricasCharts"><div class="loading-state"><div class="spinner"></div>Cargando métricas…</div></div>
+      </div>
+
+      <!-- ═══ Registro Ximena (admin) — repartir contactos migrados ═══ -->
+      <div class="view" id="vRegistroXimena">
+        <div class="sec-head">
+          <h1>Registro de Ximena</h1>
+          <p>Contactos migrados de la planilla de Ximena. Elige a qué ejecutivo asignas cada uno — o todos los que estés viendo de una vez.</p>
+        </div>
+        <div id="rxBar" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:14px 0;"></div>
+        <div id="rxBody"><div class="loading-state"><div class="spinner"></div>Cargando…</div></div>
       </div>
 
       <!-- ═══ Coaching (admin) ═══ -->
@@ -3930,7 +3944,7 @@ function aplicarVisibilidadPorRol(){
 
   // Vistas admin (Territorios, Auditoría, Migración, Importar): visibles solo si Rayen está
   // en modo Admin. En modo Ejecutiva o para ejecutivos no admin, se ocultan.
-  ['navLeads', 'navCoaching', 'navActividad', 'navTerr', 'navAud', 'navMigracion', 'navImportar', 'navConfig', 'secAdmin'].forEach(id => {
+  ['navLeads', 'navCoaching', 'navRegistroXimena', 'navActividad', 'navTerr', 'navAud', 'navMigracion', 'navImportar', 'navConfig', 'secAdmin'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.style.display = verComoEjecutivo ? 'none' : '';
   });
@@ -4011,6 +4025,7 @@ function goView(id){
     case 'vCerrar':          cargarPorCerrar(); break;
     case 'vMisCotizaciones': cargarMisCotizaciones(); break;
     case 'vVentasMes':       cargarVentasMes(); break;
+    case 'vRegistroXimena':  cargarRegistroXimena(); break;
     case 'vMetricas':        cargarMetricas(); break;
     case 'vCoaching':        cargarCoaching(); break;
     case 'vOlvidados':       cargarOlvidados(); break;
@@ -7934,6 +7949,67 @@ async function marcarEstadoCotMC(num, estado, btn){
 let _METRICAS_CHARTS = [];
 const _PALETA_EJ = ['#001A60','#06B3FD','#16A34A','#F59E0B','#5b21b6','#DB2777','#0891B2','#92580e'];
 const _MN = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+/* ════ REGISTRO XIMENA — repartir los contactos migrados por ejecutivo ════ */
+let RX_DATA = [];
+let RX_Q = '';
+const RX_EJECS = ['Ximena','William','Roberto','Germán','Maximiliano','Rayen'];
+async function cargarRegistroXimena(){
+  const cont = document.getElementById('rxBody');
+  cont.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando contactos del registro…</div>';
+  const cs = await fetchAPI('crm_contactos', { solicitante: USUARIO });
+  RX_DATA = ((cs && cs.contactos)||[]).filter(c => String(c.etiquetas||'').indexOf('Registro Ximena')>=0);
+  _pintarRX();
+}
+function _rxFiltro(q){ RX_Q = q; _pintarRX(); }
+function _rxSel(id, actual){
+  const cur = _busqNorm(String(actual||'').split(' ')[0]);
+  return '<select onchange="asignarRX(\''+id+'\', this.value)" style="padding:6px 9px;border:1px solid var(--smoke,#e5e7eb);border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;'+(cur!=='ximena'?'background:#F0FDF4;border-color:#86EFAC;color:#065F46;':'')+'">'+
+    RX_EJECS.map(n => '<option value="'+n+'"'+(_busqNorm(n)===cur?' selected':'')+'>'+esc(n)+'</option>').join('') + '</select>';
+}
+function _pintarRX(){
+  const body = document.getElementById('rxBody'); const bar = document.getElementById('rxBar');
+  if(!body||!bar) return;
+  const q = _busqNorm(RX_Q||'');
+  let lista = RX_DATA;
+  if(q) lista = lista.filter(c => _busqNorm(c.nombre).includes(q) || _busqNorm(c.email).includes(q) || _busqNorm(c.notas_publicas).includes(q));
+  const repartidos = RX_DATA.filter(c => _busqNorm(String(c.ejecutivo_asignado||'').split(' ')[0]) !== 'ximena').length;
+  bar.innerHTML =
+    '<input type="text" oninput="_rxFiltro(this.value)" value="'+esc(RX_Q)+'" placeholder="Buscar nombre, email o producto…" style="flex:0 0 280px;padding:8px 12px;border:1px solid var(--smoke,#e5e7eb);border-radius:8px;font-size:13px;font-family:inherit;">'+
+    '<span style="font-size:13px;color:var(--subtle);">Repartidos: <b style="color:#16A34A;">'+repartidos+'</b> / '+RX_DATA.length+'</span>'+
+    '<span style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--subtle);">Asignar los <b>'+lista.length+'</b> visibles a:'+
+      '<select id="rxBulkEj" style="padding:7px 10px;border:1px solid var(--smoke,#e5e7eb);border-radius:8px;font-size:13px;font-weight:700;">'+RX_EJECS.filter(n=>n!=='Ximena').map(n=>'<option>'+esc(n)+'</option>').join('')+'</select>'+
+      '<button onclick="asignarRXBulk()" style="background:#001A60;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit;">Asignar todos</button></span>';
+  if(!lista.length){ body.innerHTML = '<div class="loading-state" style="padding:30px;">Sin resultados.</div>'; return; }
+  const TOPE = 400;
+  body.innerHTML = lista.slice(0,TOPE).map(c => {
+    const hist = String(c.notas_publicas||'').replace(/^—\s*Migrado del registro de Ximena\s*—\n?/,'').trim();
+    return '<div style="display:flex;gap:12px;align-items:flex-start;justify-content:space-between;padding:11px 14px;border:1px solid var(--smoke,#e5e7eb);border-radius:10px;margin-bottom:8px;flex-wrap:wrap;">'+
+      '<div style="min-width:0;flex:1;">'+
+        '<div style="font-weight:700;color:var(--ink);font-size:14px;">'+esc(c.nombre||'(sin nombre)')+' <span style="font-weight:600;color:var(--subtle);font-size:12px;">'+esc(c.email||'')+'</span></div>'+
+        (hist?'<div style="font-size:11.5px;color:var(--subtle);margin-top:3px;white-space:pre-wrap;">'+esc(hist)+'</div>':'')+
+      '</div>'+
+      '<div style="flex:0 0 auto;">'+_rxSel(c.id, c.ejecutivo_asignado)+'</div>'+
+    '</div>';
+  }).join('') + (lista.length>TOPE ? '<div style="text-align:center;color:var(--subtle);font-size:12px;padding:10px;">Mostrando '+TOPE+' de '+lista.length+'. Usa el buscador para filtrar (el botón "Asignar todos" igual reparte TODOS los '+lista.length+').</div>' : '');
+}
+async function asignarRX(id, ejec){
+  const c = RX_DATA.find(x=>x.id===id);
+  const r = await fetchAPI('crm_reasignar_contacto', null, { id, ejecutivo_nuevo: ejec, solicitante: USUARIO });
+  if(r && r.ok){ if(c) c.ejecutivo_asignado = ejec; _pintarRX(); }
+  else alert('No se pudo asignar: '+((r&&r.error)||'error'));
+}
+async function asignarRXBulk(){
+  const ej = (document.getElementById('rxBulkEj')||{}).value;
+  const q = _busqNorm(RX_Q||'');
+  let lista = RX_DATA; if(q) lista = lista.filter(c => _busqNorm(c.nombre).includes(q) || _busqNorm(c.email).includes(q) || _busqNorm(c.notas_publicas).includes(q));
+  if(!lista.length) return;
+  if(!confirm('¿Asignar '+lista.length+' contactos a '+ej+'?\n(Va uno por uno, puede tardar.)')) return;
+  const btn = document.querySelector('#rxBar button'); if(btn){ btn.disabled=true; btn.textContent='Asignando…'; }
+  let ok=0;
+  for(const c of lista){ try{ const r = await fetchAPI('crm_reasignar_contacto', null, { id:c.id, ejecutivo_nuevo:ej, solicitante:USUARIO }); if(r&&r.ok){ c.ejecutivo_asignado=ej; ok++; } }catch(e){} }
+  _pintarRX();
+  alert('Listo: '+ok+' de '+lista.length+' asignados a '+ej+'.');
+}
 /* ════ VENTAS DEL MES — ganadas por fecha de CIERRE (para comisiones) ════ */
 let VENTASMES_MES = '';   // 'YYYY-MM' del mes de cierre elegido
 let VENTASMES_EJEC = '';  // primer nombre del ejecutivo filtrado; '' = todos

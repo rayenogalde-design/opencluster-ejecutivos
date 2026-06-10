@@ -12233,6 +12233,10 @@ function abrirAsignarTerritorio(subcat){
 let ACT_DATA = null;
 let ACT_PERIODO = 'desde';
 let ACT_EJEC_ABIERTO = null;
+let ACT_EJEC_FILTRO = '';   // '' = todo el equipo; si no, foco en un ejecutivo
+let ACT_DESDE = '';         // rango libre (YYYY-MM-DD)
+let ACT_HASTA = '';
+const ACT_EJECS = ['William','Germán','Roberto','Maximiliano','Rayen','Ximena'];
 
 const ACT_MEDIOS = [
   { k:'llamadas',     label:'Llamadas',     color:'#06B3FD', ico:'<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.81.36 1.6.7 2.34a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.74.34 1.53.57 2.34.7A2 2 0 0 1 22 16.92z"/>' },
@@ -12256,7 +12260,9 @@ function actBaselineGet(){ try{ return localStorage.getItem('crm_actividad_last_
 function actBaselineSet(iso){ try{ localStorage.setItem('crm_actividad_last_visit', iso); }catch(e){} }
 
 let ACT_CACHE = {};
-function actCacheKey(){ return ACT_PERIODO + '|' + (ACT_PERIODO==='desde' ? (actBaselineGet()||'') : ''); }
+function actCacheKey(){ return ACT_PERIODO + '|' + (ACT_PERIODO==='desde' ? (actBaselineGet()||'') : '') + '|' + (ACT_PERIODO==='rango' ? (ACT_DESDE+'_'+ACT_HASTA) : ''); }
+// Hoy en formato YYYY-MM-DD (hora local).
+function actHoyISO(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 
 async function cargarActividadEquipo(periodo, forzar){
   if(periodo) ACT_PERIODO = periodo;
@@ -12272,6 +12278,7 @@ async function cargarActividadEquipo(periodo, forzar){
   if(body) body.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando actividad del equipo…</div>';
   const params = { solicitante: USUARIO, periodo: ACT_PERIODO };
   if(ACT_PERIODO === 'desde'){ const bl = actBaselineGet(); if(bl) params.desde = bl; }
+  if(ACT_PERIODO === 'rango'){ params.desde = ACT_DESDE || actHoyISO(); params.hasta = ACT_HASTA || params.desde; }
   const r = await fetchAPI('crm_actividad_equipo', params);
   if(!r || !r.ok){ if(body) body.innerHTML = '<div class="error-state">'+esc((r&&r.error)||'No se pudo cargar la actividad del equipo')+'</div>'; return; }
   ACT_DATA = r;
@@ -12288,20 +12295,50 @@ function volverActEquipo(){
 
 function renderActPeriodoBar(){
   const bar = document.getElementById('actPeriodoBar'); if(!bar) return;
+  // Selector de ejecutivo (foco) — '' = todo el equipo.
+  const opcsEj = ['<option value="">Todo el equipo</option>'].concat(
+    ACT_EJECS.map(n=>'<option value="'+esc(n)+'"'+(ACT_EJEC_FILTRO===n?' selected':'')+'>'+esc(n)+'</option>')
+  ).join('');
+  const selEjec = '<select onchange="actSetEjec(this.value)" style="padding:8px 12px;border:1px solid #E3E8EF;border-radius:9px;font-size:13px;font-weight:700;color:var(--oct-navy,#001A60);font-family:var(--font-sans);cursor:pointer;background:#fff;">'+opcsEj+'</select>';
+
   const ops = [
-    { k:'desde',  label:'Desde mi última revisión' },
     { k:'hoy',    label:'Hoy' },
+    { k:'ayer',   label:'Ayer' },
     { k:'semana', label:'Esta semana' },
-    { k:'mes',    label:'Este mes' }
+    { k:'mes',    label:'Este mes' },
+    { k:'desde',  label:'Desde mi última revisión' }
   ];
-  let html = ops.map(o=>{
+  const presets = ops.map(o=>{
     const act = o.k===ACT_PERIODO;
     return '<button onclick="cargarActividadEquipo(\''+o.k+'\')" style="padding:7px 13px;border-radius:999px;border:1px solid '+(act?'var(--navy,#001A60)':'#E3E8EF')+';background:'+(act?'var(--navy,#001A60)':'#fff')+';color:'+(act?'#fff':'var(--subtle,#64748B)')+';font-size:12.5px;font-weight:'+(act?'800':'600')+';cursor:pointer;font-family:var(--font-sans);">'+esc(o.label)+'</button>';
   }).join('');
-  if(ACT_PERIODO==='desde'){
-    html += '<button onclick="actMarcarVisto()" title="Pone el marcador a ahora: lo que entre después aparecerá como nuevo" style="padding:7px 13px;border-radius:999px;border:1px dashed #C7D0DC;background:#fff;color:var(--subtle,#64748B);font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--font-sans);display:inline-flex;align-items:center;gap:5px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Marcar como visto</button>';
-  }
-  bar.innerHTML = html;
+  const marcar = (ACT_PERIODO==='desde')
+    ? '<button onclick="actMarcarVisto()" title="Pone el marcador a ahora: lo que entre después aparecerá como nuevo" style="padding:7px 13px;border-radius:999px;border:1px dashed #C7D0DC;background:#fff;color:var(--subtle,#64748B);font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--font-sans);display:inline-flex;align-items:center;gap:5px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Marcar como visto</button>'
+    : '';
+  // Rango libre de fechas (día único: poné la misma fecha en los dos).
+  const rangoAct = ACT_PERIODO==='rango';
+  const inp = 'style="padding:7px 9px;border:1px solid '+(rangoAct?'var(--navy,#001A60)':'#E3E8EF')+';border-radius:8px;font-size:12.5px;font-family:var(--font-sans);color:var(--oct-navy,#001A60);"';
+  const rango =
+    '<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;background:'+(rangoAct?'#F0F7FF':'#F9FAFB')+';border:1px solid '+(rangoAct?'#BBDcFB':'#EEF1F5')+';border-radius:10px;padding:6px 10px;">'+
+      '<span style="font-size:11.5px;font-weight:700;color:var(--subtle);">Rango:</span>'+
+      '<input type="date" id="actDesde" value="'+esc(ACT_DESDE||actHoyISO())+'" '+inp+'>'+
+      '<span style="font-size:12px;color:var(--subtle);">a</span>'+
+      '<input type="date" id="actHasta" value="'+esc(ACT_HASTA||ACT_DESDE||actHoyISO())+'" '+inp+'>'+
+      '<button onclick="actSetRango()" style="padding:7px 14px;border-radius:8px;border:none;background:var(--navy,#001A60);color:#fff;font-size:12.5px;font-weight:800;cursor:pointer;font-family:var(--font-sans);">Ver</button>'+
+    '</div>';
+
+  bar.innerHTML =
+    '<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:9px;">'+selEjec+presets+marcar+'</div>'+
+    '<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">'+rango+'</div>';
+}
+// Cambia el foco de ejecutivo (filtro de cliente, no re-consulta el servidor).
+function actSetEjec(v){ ACT_EJEC_FILTRO = v||''; ACT_EJEC_ABIERTO = null; if(ACT_DATA){ renderActPeriodoBar(); renderActividadEquipo(); } else cargarActividadEquipo(); }
+// Aplica el rango libre elegido.
+function actSetRango(){
+  const d = document.getElementById('actDesde'), h = document.getElementById('actHasta');
+  ACT_DESDE = (d&&d.value) || actHoyISO();
+  ACT_HASTA = (h&&h.value) || ACT_DESDE;
+  cargarActividadEquipo('rango', true);
 }
 
 function actMarcarVisto(){
@@ -12311,9 +12348,14 @@ function actMarcarVisto(){
 
 function renderActividadEquipo(){
   const d = ACT_DATA; if(!d) return;
-  const eq = d.equipo || {};
+  // Si hay un ejecutivo en foco, los KPIs son SUYOS; si no, del equipo.
+  const ejecFoco = ACT_EJEC_FILTRO ? (d.ejecutivos||[]).find(x=>String(x.nombre).split(' ')[0].toLowerCase()===ACT_EJEC_FILTRO.toLowerCase() || String(x.nombre).toLowerCase().indexOf(ACT_EJEC_FILTRO.toLowerCase())>=0) : null;
+  const eq = ejecFoco || d.equipo || {};
   const sub = document.getElementById('actSubtitulo');
-  if(sub) sub.textContent = (d.periodo && d.periodo.label ? d.periodo.label : '') + ' · qué hizo cada ejecutivo y cómo lo hizo';
+  if(sub){
+    const quien = ejecFoco ? (actEjecMeta(ejecFoco.nombre).full||ejecFoco.nombre) : 'todo el equipo';
+    sub.textContent = (d.periodo && d.periodo.label ? d.periodo.label : '') + ' · ' + quien + ' · toca un KPI para ver el detalle';
+  }
 
   const kpi = (color,ico,valor,label,tipo,ganada)=>{
     const arg = "'"+tipo+"'"+(ganada?',true':'');
@@ -12329,15 +12371,31 @@ function renderActividadEquipo(){
     kpi('#7C3AED', actMedioMeta('emails').ico, eq.emails, 'Emails', 'emails') +
     kpi('#059669', actMedioMeta('whatsapp').ico, eq.whatsapp, 'WhatsApp', 'whatsapp') +
     kpi('#DB2777', actMedioMeta('entrantes').ico, eq.entrantes, 'Entrantes', 'entrantes') +
+    kpi('#D97706', actMedioMeta('reuniones').ico, eq.reuniones, 'Reuniones', 'reuniones') +
+    kpi('#92580e', '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/>', eq.seguimientos, 'Seguimientos', 'seguimiento') +
     kpi('#FF7E00', '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>', eq.contactos_nuevos, 'Contactos nuevos', 'contacto_nuevo') +
+    kpi('#0891B2', '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>', eq.cambios_estado, 'Cambios de estado', 'cambio_estado') +
+    kpi('#5b21b6', '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>', eq.cotizaciones, 'Cotizaciones', 'cotizacion') +
     kpi('#16A34A', '<path d="M20 6 9 17l-5-5"/>', eq.ganadas, 'Ventas ganadas', 'cotizacion', true);
 
-  const cards = (d.ejecutivos||[]).map(actCardEjecutivo).join('');
+  let resto;
+  if(ejecFoco){
+    // Foco en un ejecutivo: en vez de las tarjetas del equipo, su línea de tiempo completa.
+    const feed = ((d.eventos||[]).filter(ev=>ev.ejecutivo===ejecFoco.nombre)).slice(0,120);
+    const feedHtml = feed.length ? feed.map(ev=>actFeedRow(ev,false)).join('')
+      : '<div style="padding:26px;text-align:center;color:var(--subtle);font-size:13px;">Sin actividad registrada en este período.</div>';
+    resto =
+      '<div style="display:flex;align-items:baseline;gap:9px;margin:24px 0 12px;"><h2 style="font-size:15px;font-weight:800;color:var(--oct-navy,#001A60);margin:0;">Todo lo que hizo '+esc(actEjecMeta(ejecFoco.nombre).full||ejecFoco.nombre)+'</h2><span style="font-size:12px;color:var(--subtle);">'+feed.length+' acciones · o toca un KPI arriba para filtrar por tipo</span></div>'+
+      '<div style="background:#fff;border:1px solid var(--oct-border,#eee);border-radius:12px;overflow:hidden;">'+feedHtml+'</div>';
+  } else {
+    const cards = (d.ejecutivos||[]).map(actCardEjecutivo).join('');
+    resto =
+      '<div style="display:flex;align-items:baseline;gap:9px;margin:24px 0 12px;"><h2 style="font-size:15px;font-weight:800;color:var(--oct-navy,#001A60);margin:0;">Por ejecutivo</h2><span style="font-size:12px;color:var(--subtle);">toca una tarjeta para ver el resumen completo</span></div>'+
+      '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;">'+cards+'</div>';
+  }
 
   document.getElementById('actBody').innerHTML =
-    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;">'+kpis+'</div>'+
-    '<div style="display:flex;align-items:baseline;gap:9px;margin:24px 0 12px;"><h2 style="font-size:15px;font-weight:800;color:var(--oct-navy,#001A60);margin:0;">Por ejecutivo</h2><span style="font-size:12px;color:var(--subtle);">toca una tarjeta para ver el resumen completo</span></div>'+
-    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;">'+cards+'</div>';
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;">'+kpis+'</div>'+resto;
 }
 
 function actCardEjecutivo(e){
@@ -12393,7 +12451,7 @@ function abrirActEjecutivo(nombre){
     '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:20px;">'+medioBlock+'</div>'+
     '<h3 style="font-size:12.5px;font-weight:800;color:var(--oct-navy,#001A60);margin:0 0 10px;text-transform:uppercase;letter-spacing:.05em;">Resultados</h3>'+
     '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:20px;">'+
-      sec(e.contactos_nuevos,'Contactos nuevos')+sec(e.cambios_estado,'Cambios de estado')+sec(e.cotizaciones,'Cotizaciones')+sec(e.ganadas,'Ventas ganadas','#16A34A')+
+      sec(e.contactos_nuevos,'Contactos nuevos')+sec(e.seguimientos,'Seguimientos','#92580e')+sec(e.cambios_estado,'Cambios de estado')+sec(e.cotizaciones,'Cotizaciones')+sec(e.ganadas,'Ventas ganadas','#16A34A')+
     '</div>'+
     '<h3 style="font-size:12.5px;font-weight:800;color:var(--oct-navy,#001A60);margin:0 0 10px;text-transform:uppercase;letter-spacing:.05em;">Actividad reciente</h3>'+
     '<div style="background:#fff;border:1px solid var(--oct-border,#eee);border-radius:12px;overflow:hidden;">'+feedHtml+'</div>';
@@ -12402,6 +12460,7 @@ function abrirActEjecutivo(nombre){
 function actFeedRow(f, showEjec){
   let meta;
   if(f.tipo==='contacto_nuevo') meta={ label:'Contacto nuevo', color:'#FF7E00', ico:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>' };
+  else if(f.tipo==='seguimiento') meta={ label:'Seguimiento'+(f.medio?(' · '+f.medio):''), color:'#92580e', ico:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/>' };
   else if(f.tipo==='cambio_estado') meta={ label:'Cambio de estado', color:'#0891B2', ico:'<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>' };
   else if(f.tipo==='cotizacion') meta = f.ganada
       ? { label:'Venta ganada', color:'#16A34A', ico:'<path d="M20 6 9 17l-5-5"/>' }
@@ -12424,14 +12483,17 @@ function abrirActKpi(tipo, soloGanadas){
   const d = ACT_DATA; if(!d){ cargarActividadEquipo(); return; }
   let evs = (d.eventos || []).filter(ev=>ev.tipo===tipo);
   if(soloGanadas) evs = evs.filter(ev=>ev.ganada);
+  // Si hay un ejecutivo en foco, el detalle del KPI también se limita a él.
+  const foco = ACT_EJEC_FILTRO ? (d.ejecutivos||[]).find(x=>String(x.nombre).split(' ')[0].toLowerCase()===ACT_EJEC_FILTRO.toLowerCase() || String(x.nombre).toLowerCase().indexOf(ACT_EJEC_FILTRO.toLowerCase())>=0) : null;
+  if(foco) evs = evs.filter(ev=>ev.ejecutivo===foco.nombre);
   const titulos = {
     llamadas:'Llamadas', emails:'Emails', whatsapp:'WhatsApp', entrantes:'Entrantes (nos contactaron)',
-    contacto_nuevo:'Contactos nuevos', cambio_estado:'Cambios de estado',
+    reuniones:'Reuniones', seguimiento:'Seguimientos', contacto_nuevo:'Contactos nuevos', cambio_estado:'Cambios de estado',
     cotizacion: soloGanadas ? 'Ventas ganadas' : 'Cotizaciones'
   };
   const colores = {
     llamadas:'#06B3FD', emails:'#7C3AED', whatsapp:'#059669', entrantes:'#DB2777',
-    contacto_nuevo:'#FF7E00', cambio_estado:'#0891B2', cotizacion: soloGanadas?'#16A34A':'#D97706'
+    reuniones:'#D97706', seguimiento:'#92580e', contacto_nuevo:'#FF7E00', cambio_estado:'#0891B2', cotizacion: soloGanadas?'#16A34A':'#D97706'
   };
   const titulo = titulos[tipo] || 'Detalle';
   const color = colores[tipo] || 'var(--navy,#001A60)';

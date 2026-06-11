@@ -6590,6 +6590,56 @@ function toastToques(n){
   } catch(e){}
 }
 
+// ════ Agendar próxima gestión desde una COTIZACIÓN ════
+// Un solo paso deja: (1) una TAREA en "Mis Tareas" y (2) la PRÓXIMA ACCIÓN del contacto,
+// que aparece en "Toques de hoy" y dispara la notificación de arriba cuando llega la fecha.
+// Reusa endpoints ya vivos (crm_crear_tarea + crm_actualizar_proxima) → sin redeploy.
+let _AGENDA_CTX = null;
+function abrirAgendarProxima(contactoId, numCot, nombre){
+  if(!contactoId){ alert('Esta cotización aún no está enlazada a un contacto, no se puede agendar.'); return; }
+  _AGENDA_CTX = { id: contactoId, num: numCot||'', nombre: nombre||'' };
+  const d = new Date(); d.setDate(d.getDate()+3);
+  const def = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const ov = document.createElement('div');
+  ov.id = 'modalAgendaProxima';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:2147483600;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:24px;font-family:var(--font-sans);';
+  ov.onclick = (e)=>{ if(e.target===ov) cerrarAgendarProxima(); };
+  ov.innerHTML = '<div style="background:#fff;border-radius:16px;max-width:430px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,.4);overflow:hidden;">'+
+    '<div style="background:var(--oct-navy,#001A60);color:#fff;padding:16px 20px;"><div style="font-size:16px;font-weight:800;">Agendar próxima gestión</div><div style="font-size:12px;opacity:.85;margin-top:2px;">'+esc(nombre||'')+(numCot?(' · Cot '+esc(numCot)):'')+'</div></div>'+
+    '<div style="padding:18px 20px;display:flex;flex-direction:column;gap:12px;">'+
+      '<label style="font-size:12px;font-weight:700;color:var(--subtle);">¿Cuándo?<input type="date" id="ap-fecha" value="'+def+'" style="width:100%;margin-top:5px;padding:9px 11px;border:1px solid #E3E8EF;border-radius:8px;font-size:13px;font-family:inherit;"></label>'+
+      '<label style="font-size:12px;font-weight:700;color:var(--subtle);">¿Qué vas a hacer?<select id="ap-tipo" style="width:100%;margin-top:5px;padding:9px 11px;border:1px solid #E3E8EF;border-radius:8px;font-size:13px;font-family:inherit;"><option>Llamar</option><option>Escribir por WhatsApp</option><option>Enviar correo</option><option>Reunión</option><option>Otro</option></select></label>'+
+      '<label style="font-size:12px;font-weight:700;color:var(--subtle);">Nota (opcional)<textarea id="ap-nota" rows="2" placeholder="Ej: confirmar si revisaron la cotización" style="width:100%;margin-top:5px;padding:9px 11px;border:1px solid #E3E8EF;border-radius:8px;font-size:13px;resize:vertical;font-family:inherit;"></textarea></label>'+
+    '</div>'+
+    '<div style="display:flex;gap:10px;justify-content:flex-end;padding:0 20px 18px;">'+
+      '<button onclick="cerrarAgendarProxima()" style="padding:9px 16px;border:1px solid #E3E8EF;background:#fff;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">Cancelar</button>'+
+      '<button id="ap-guardar" onclick="guardarAgendarProxima()" style="padding:9px 18px;border:none;background:var(--gold-dk,#92580e);color:#fff;border-radius:8px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;">Agendar</button>'+
+    '</div></div>';
+  document.body.appendChild(ov);
+  setTimeout(()=>{ const f=document.getElementById('ap-fecha'); if(f) f.focus(); }, 80);
+}
+function cerrarAgendarProxima(){ const o=document.getElementById('modalAgendaProxima'); if(o) o.remove(); _AGENDA_CTX=null; }
+async function guardarAgendarProxima(){
+  if(!_AGENDA_CTX) return;
+  const fecha = (document.getElementById('ap-fecha')||{}).value || '';
+  const tipo  = (document.getElementById('ap-tipo')||{}).value || 'Gestión';
+  const nota  = ((document.getElementById('ap-nota')||{}).value || '').trim();
+  if(!fecha){ alert('Elige una fecha'); return; }
+  const btn = document.getElementById('ap-guardar'); if(btn){ btn.disabled=true; btn.textContent='Agendando…'; }
+  const ctx = _AGENDA_CTX;
+  const notaProx = tipo + (nota?(' · '+nota):'') + (ctx.num?(' · Cot '+ctx.num):'');
+  // 1) Próxima acción del contacto → "Toques de hoy" + notificación al llegar la fecha
+  const r1 = await fetchAPI('crm_actualizar_proxima', { id: ctx.id, fecha: fecha, nota: notaProx, solicitante: USUARIO });
+  // 2) Tarea → "Mis Tareas"
+  const r2 = await fetchAPI('crm_crear_tarea', { contacto_id: ctx.id, titulo: tipo + (ctx.num?(' — Cot '+ctx.num):''), fecha_vencimiento: fecha, prioridad: 'media', ejecutivo: USUARIO, descripcion: nota, creada_por: USUARIO, solicitante: USUARIO });
+  if(btn){ btn.disabled=false; btn.textContent='Agendar'; }
+  if((!r1||!r1.ok) && (!r2||!r2.ok)){ alert('No se pudo agendar: ' + (((r1&&r1.error)||(r2&&r2.error))||'error desconocido')); return; }
+  cerrarAgendarProxima();
+  try { if(typeof toastCfg==='function') toastCfg('Próxima gestión agendada · está en Mis Tareas y en Toques'); } catch(e){}
+  try { if(typeof pintarToquesHoy==='function') pintarToquesHoy(); } catch(e){}
+  try { CACHE.vMisCot=null; const v=document.getElementById('vMisCotizaciones'); if(v && v.classList.contains('act')) cargarMisCotizaciones(true); } catch(e){}
+}
+
 /* ════ Aviso de LEADS URGENTES en el dashboard del ejecutivo ════ */
 async function pintarLeadsDashboard(){
   const cont = document.getElementById('dshLeads');
@@ -7933,7 +7983,10 @@ function _cardMisCot(c){
       '<input type="date" id="mc-seg-fecha-'+numSafe+'" value="'+_hoyISO()+'" style="padding:6px 9px;border:1px solid var(--smoke);border-radius:6px;font-size:12px;flex:0 0 140px;">' +
     '</div>' +
     '<textarea id="mc-seg-notas-'+numSafe+'" rows="2" placeholder="Detalle del seguimiento (qué pasó, próximos pasos)…" style="width:100%;padding:8px 10px;border:1px solid var(--smoke);border-radius:6px;font-size:12.5px;resize:vertical;font-family:inherit;"></textarea>' +
-    '<div style="display:flex;justify-content:flex-end;margin-top:6px;"><button onclick="guardarSeguimientoMC(\''+esc(numJS)+'\',this)" style="background:var(--gold-dk,#92580e);color:#fff;border:none;padding:7px 14px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">Guardar seguimiento</button></div>' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;">' +
+      '<button onclick="abrirAgendarProxima(\''+esc(String(c.contacto_id||''))+'\',\''+esc(numJS)+'\',\''+esc(String(c.cliente||c.institucion||'').replace(/\x27/g,""))+'\')" title="Dejar agendada la próxima gestión (tarea + recordatorio)" style="background:#fff;color:var(--oct-navy,#001A60);border:1px solid #C7D0DC;padding:7px 12px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Agendar próxima</button>' +
+      '<button onclick="guardarSeguimientoMC(\''+esc(numJS)+'\',this)" style="background:var(--gold-dk,#92580e);color:#fff;border:none;padding:7px 14px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">Guardar seguimiento</button>' +
+    '</div>' +
   '</div>';
   // Acciones
   let acc = '';
@@ -9063,7 +9116,8 @@ function renderHistorialAgrupado(tl, contacto){
               '<input type="date" id="seg-fecha-' + esc(num) + '" value="' + _hoyISO() + '" style="padding:6px 9px;border:1px solid var(--smoke);border-radius:6px;font-size:12px;flex:0 0 140px;">' +
             '</div>' +
             '<textarea id="seg-notas-' + esc(num) + '" rows="2" placeholder="Detalle del seguimiento (qué pasó, próximos pasos)…" style="width:100%;padding:8px 10px;border:1px solid var(--smoke);border-radius:6px;font-size:12.5px;resize:vertical;font-family:inherit;"></textarea>' +
-            '<div style="display:flex;justify-content:flex-end;margin-top:6px;">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;">' +
+              '<button onclick="abrirAgendarProxima(\'' + esc(contacto.id || '') + '\',\'' + esc(num) + '\',\'' + esc(String(contacto.nombre||contacto.institucion||'').replace(/\x27/g,"")) + '\')" title="Dejar agendada la próxima gestión (tarea + recordatorio)" style="background:#fff;color:var(--oct-navy,#001A60);border:1px solid #C7D0DC;padding:7px 12px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Agendar próxima</button>' +
               '<button onclick="guardarSeguimientoInline(\'' + esc(num) + '\',\'' + esc(contacto.id || '') + '\',this)" style="background:var(--gold-dk);color:white;border:none;padding:7px 14px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">Guardar seguimiento</button>' +
             '</div>' +
           '</div>' +

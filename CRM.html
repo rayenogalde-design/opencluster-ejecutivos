@@ -2272,12 +2272,9 @@ body{
         </div>
         <div id="dshLeads"></div>
         <div id="dshToquesHoy"></div>
-        <div id="scriptBanner"></div>
         <div id="dshCampana"></div>
         <div id="dshProductosCampanaCard"></div>
         <div id="dshListaPartida"></div>
-        <div id="dshProductos"></div>
-        <div id="dshListasPrecios"></div>
         <div class="kpis" id="dshKpis"></div>
         <div class="dsh-grid">
           <div class="card dsh-funnel">
@@ -6107,8 +6104,14 @@ function renderLista(view){
   const visibles = lista.slice(0, limite);
   const hayMas = lista.length > limite;
 
+  // Barra con botón de exportar a Excel (exporta la lista YA filtrada, no solo lo visible)
+  var _toolbarExport = '<div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-bottom:10px;">' +
+    '<span style="font-size:11.5px;color:var(--subtle);">' + lista.length + ' contacto' + (lista.length===1?'':'s') + ((q||f.estado||f.segmento||f.etiqueta)?' (filtrados)':'') + '</span>' +
+    '<button onclick="exportarContactos(\'' + view + '\')" title="Descargar estos contactos a Excel (respeta el filtro y la búsqueda actuales)" style="display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:8px;border:none;background:var(--purple-dk);color:#fff;font-weight:700;font-size:12px;cursor:pointer;font-family:var(--font-sans);">' +
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' +
+    'Exportar a Excel</button></div>';
   // Grid de cards v2 con modal al click — solo las primeras N (resto lazy con "Ver más")
-  container.innerHTML = bannerFiltros + '<div class="v2-grid">' +
+  container.innerHTML = bannerFiltros + _toolbarExport + '<div class="v2-grid">' +
     visibles.map(c => renderTarjetaV2(c, view)).join('') + '</div>' +
     (hayMas
       ? '<div style="text-align:center;margin:16px 0 8px;">' +
@@ -6130,6 +6133,28 @@ function verMasContactos(view){
 // Resetea la paginación de todas las vistas (al cambiar búsqueda o filtros)
 function resetPaginacion(){
   window.__LISTA_LIMITE = {};
+}
+
+// Exporta a Excel (.xls) los contactos de la vista, RESPETANDO el filtro y la búsqueda
+// activos (usa la lista filtrada que ya guarda renderLista en __LISTA_VIEW).
+function exportarContactos(view){
+  var lista = (window.__LISTA_VIEW || {})[view] || [];
+  if(!lista.length){ alert('No hay contactos para exportar con el filtro actual.'); return; }
+  var cols = [['institucion','Institución'],['nombre','Contacto'],['cargo','Cargo'],['ciudad','Comuna/Ciudad'],['region','Región'],['telefono','Teléfono'],['email','Email'],['tipo_categoria','Categoría'],['sub_categoria','Subcategoría'],['etiquetas','Etiquetas'],['pipeline_estado','Estado'],['ejecutivo_asignado','Ejecutivo'],['tiene_cotizacion','¿Cotización?']];
+  var e = function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+  var html = '<html><head><meta charset="utf-8"></head><body><table border="1"><tr>' +
+    cols.map(function(c){ return '<th style="background:#001A60;color:#fff;font-weight:bold;">'+e(c[1])+'</th>'; }).join('') + '</tr>';
+  lista.forEach(function(c){ html += '<tr>' + cols.map(function(col){ return '<td>'+e(c[col[0]])+'</td>'; }).join('') + '</tr>'; });
+  html += '</table></body></html>';
+  try {
+    var blob = new Blob(['﻿'+html], { type:'application/vnd.ms-excel;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    var hoy = (new Date()).toISOString().slice(0,10);
+    a.href = url; a.download = 'Contactos_CRM_' + hoy + '.xls';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 3000);
+  } catch(err){ alert('No se pudo exportar: ' + err.message); }
 }
 
 // Genera HTML del badge de pipeline según el estado, usando los 3 tiers del rediseño boutique

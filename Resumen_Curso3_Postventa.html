@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resumen · Curso 3 — Postventa y expansión</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#001A60; --sky:#06B3FD; --orange:#FF7E00; --ltblue:#D6EEFF;
+    --softblue:#ECF6FF; --cream:#FFF4EA; --text:#1F2937; --soft:#6B7280;
+    --mute:#9CA3AF; --divider:#D1D5DB; --border:rgba(0,0,0,0.08); --page:#EAEFF5;
+    --green:#0E9F6E; --red:#DC2626;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Manrope',-apple-system,system-ui,sans-serif; background:var(--page); color:var(--text); -webkit-print-color-adjust:exact; print-color-adjust:exact;}
+  .toolbar{position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px 20px; background:#fff; border-bottom:1px solid var(--border);}
+  .toolbar .brand{display:flex; align-items:center; gap:10px; font-weight:800; color:var(--navy); font-size:15px;}
+  .toolbar .brand .dot{width:10px; height:10px; border-radius:50%; background:var(--orange);}
+  .toolbar .hint{font-size:13px; color:var(--soft);}
+  .btn-print{display:inline-flex; align-items:center; gap:8px; background:var(--navy); color:#fff; border:none; border-radius:10px; padding:10px 16px; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer;}
+  .btn-print:hover{background:#00237d;}
+  .btn-print svg{width:16px; height:16px;}
+
+  .deck{max-width:1040px; margin:0 auto; padding:28px 20px 60px;}
+  .slide{position:relative; background:#fff; border:1px solid var(--border); border-radius:18px; box-shadow:0 10px 30px rgba(0,26,96,.08); padding:40px 46px; margin-bottom:28px; min-height:560px; display:flex; flex-direction:column;}
+  .slide .kicker{display:inline-flex; align-items:center; gap:9px; font-size:12.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--sky); margin-bottom:13px;}
+  .slide .kicker .num{background:var(--navy); color:#fff; border-radius:7px; padding:3px 9px; font-size:12px; letter-spacing:.02em;}
+  .slide h2{font-size:28px; font-weight:800; color:var(--navy); line-height:1.15; margin-bottom:6px;}
+  .slide .sub{font-size:15px; color:var(--soft); margin-bottom:20px; max-width:68ch;}
+
+  .cols{display:grid; grid-template-columns:1fr; gap:24px; flex:1;}
+  .cols.split{grid-template-columns:1.12fr .88fr; align-items:start;}
+  .cols.two{grid-template-columns:1fr 1fr; gap:16px 28px;}
+
+  ul.points{list-style:none; display:flex; flex-direction:column; gap:12px;}
+  ul.points li{position:relative; padding-left:27px; font-size:14.5px; line-height:1.46;}
+  ul.points li::before{content:""; position:absolute; left:0; top:6px; width:13px; height:13px; border-radius:4px; background:var(--softblue); border:2px solid var(--sky);}
+  ul.points li strong{color:var(--navy);}
+  ul.points li .lead{display:block; font-weight:800; color:var(--navy); font-size:14px; margin-bottom:1px;}
+
+  .stats{display:flex; flex-direction:column; gap:11px;}
+  .stat{background:var(--softblue); border-radius:13px; padding:14px 16px; border-left:4px solid var(--sky);}
+  .stat .big{font-size:24px; font-weight:800; color:var(--navy); line-height:1.1; margin-bottom:5px;}
+  .stat .cap{font-size:12.5px; color:var(--text); line-height:1.4;}
+  .stat .cap b{color:var(--navy);}
+  .stat.orange{border-left-color:var(--orange); background:var(--cream);}
+  .stat.orange .big{color:var(--orange);}
+
+  .rule{margin-top:auto; background:var(--cream); border-left:4px solid var(--orange); border-radius:0 12px 12px 0; padding:15px 19px;}
+  .rule .lab{font-size:12px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:var(--orange); margin-bottom:5px;}
+  .rule .txt{font-size:14.5px; line-height:1.5; color:var(--text);}
+  .rule .txt strong{color:var(--navy);}
+
+  table.mini{width:100%; border-collapse:collapse; font-size:12.8px;}
+  table.mini td{padding:6px 10px; border-bottom:1px solid #EEF1F5; vertical-align:top; line-height:1.4;}
+  table.mini td:first-child{font-weight:800; color:var(--navy); width:30%; white-space:nowrap;}
+  table.mini tr:last-child td{border-bottom:none;}
+
+  .ex{background:#F4FAF7; border:1px solid #C8EAD8; border-left:4px solid var(--green); border-radius:11px; padding:12px 15px; font-size:13px; line-height:1.5; color:var(--text); margin-bottom:11px;}
+  .ex .tag{display:block; font-size:10.5px; font-weight:800; color:var(--green); text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px;}
+  .ex .body{font-style:italic;}
+  .ex .body b{font-style:normal; color:var(--navy); background:#DDF3E8; padding:0 2px; border-radius:3px;}
+  .ex.bad{background:#FDF5F5; border-color:#F3D0D0; border-left-color:var(--red);}
+  .ex.bad .tag{color:var(--red);}
+
+  .vs{display:grid; grid-template-columns:1fr 1fr; gap:13px;}
+  .vs .box{border-radius:11px; padding:13px 15px; font-size:13px; line-height:1.45;}
+  .vs .good{background:#ECFDF5; border:1px solid #A7F3D0;}
+  .vs .bad{background:#FEF2F2; border:1px solid #FECACA;}
+  .vs .box .h{font-weight:800; font-size:11.5px; text-transform:uppercase; letter-spacing:.04em; margin-bottom:7px;}
+  .vs .good .h{color:var(--green);} .vs .bad .h{color:var(--red);}
+
+  .flow{display:flex; flex-direction:column; gap:8px;}
+  .flow .step{display:flex; align-items:center; gap:13px; background:var(--softblue); border-radius:11px; padding:10px 14px;}
+  .flow .step .ch{flex:none; font-size:12px; font-weight:800; color:var(--sky); width:92px;}
+  .flow .step .name{font-size:13px; color:var(--text); line-height:1.35;}
+  .flow .step .name b{color:var(--navy);}
+
+  .pagefoot{position:absolute; bottom:15px; right:24px; font-size:11.5px; color:var(--mute); font-weight:700;}
+
+  .cover{background:linear-gradient(135deg,var(--navy) 0%,#002a8f 60%,#003bb5 100%); color:#fff; border:none; min-height:600px;}
+  .cover .kicker{color:var(--sky);}
+  .cover h1{font-size:42px; font-weight:800; line-height:1.1; max-width:20ch; margin-bottom:14px;}
+  .cover .lead{font-size:18px; color:#cde3ff; max-width:58ch; line-height:1.5;}
+  .cover .palancas{display:flex; gap:10px; margin-top:24px; flex-wrap:wrap;}
+  .cover .palancas span{background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.22); color:#eaf3ff; font-size:13.5px; font-weight:700; padding:8px 15px; border-radius:999px;}
+  .cover .palancas span b{color:var(--sky);}
+  .cover .meta{margin-top:auto; display:flex; align-items:center; gap:10px; font-weight:800; font-size:15px;}
+  .cover .meta .dot{width:11px; height:11px; border-radius:50%; background:var(--orange);}
+
+  @media (max-width:860px){
+    .cols.split,.cols.two{grid-template-columns:1fr;}
+    .vs{grid-template-columns:1fr;}
+    .slide{padding:30px 26px;} .slide h2{font-size:23px;} .cover h1{font-size:31px;}
+  }
+  @media print{
+    @page{size:A4 landscape; margin:11mm;}
+    body{background:#fff;}
+    .toolbar{display:none;}
+    .deck{max-width:none; margin:0; padding:0;}
+    .slide{box-shadow:none; border:none; border-radius:0; margin:0; min-height:183mm; page-break-after:always; break-after:page; padding:8mm 6mm;}
+    .slide:last-child{page-break-after:auto;}
+    .cover{min-height:183mm;}
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="brand"><span class="dot"></span> OpenCluster Academia · Resumen</div>
+  <div class="hint">Hoja con la tecla de scroll, o guárdalo como PDF&nbsp;→</div>
+  <button class="btn-print" onclick="window.print()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+    Guardar como PDF
+  </button>
+</div>
+
+<div class="deck">
+
+  <!-- PORTADA -->
+  <section class="slide cover">
+    <div class="kicker"><span class="num" style="background:var(--orange);">Curso 3</span> Postventa y expansión</div>
+    <h1>Convertir un cliente en una cuenta que crece</h1>
+    <p class="lead">Conseguir un cliente nuevo cuesta mucho más que cuidar uno actual. La postventa no es "atención al cliente": es la forma más rentable de vender. Lo que pasa después de la firma es donde está el verdadero negocio.</p>
+    <div class="palancas">
+      <span><b>1.</b> Retener</span>
+      <span><b>2.</b> Crecer</span>
+      <span><b>3.</b> Medir y reactivar</span>
+    </div>
+    <div class="meta"><span class="dot"></span> Resumen de repaso — no reemplaza el curso</div>
+  </section>
+
+  <!-- 01 -->
+  <section class="slide">
+    <div class="kicker"><span class="num">01</span> La mentalidad</div>
+    <h2>Firmar no es ganar. Es empezar.</h2>
+    <p class="sub">La firma es el inicio de la relación, no el final. Ahí parte el verdadero negocio.</p>
+    <div class="cols split">
+      <div>
+        <p style="font-size:14.5px; line-height:1.6; margin-bottom:14px;">Vendiste un par de catres a un hogar. Si desapareces tras la entrega, fuiste un proveedor más. Si los acompañas, vuelves a los 3 meses y descubres que necesitan <strong>colchones antiescaras, una grúa de transferencia</strong> y, el próximo año, equipar una <strong>segunda sede</strong>.</p>
+        <p style="font-size:14.5px; line-height:1.6;">Las tres palancas que ordenan todo el curso: <strong>Retener</strong> (onboarding, churn, renovaciones) · <strong>Crecer</strong> (upsell, cross-sell, expansión) · <strong>Medir y reactivar</strong> (NPS, referidos, métricas).</p>
+      </div>
+      <div class="stats">
+        <div class="stat orange"><div class="big">10x</div><div class="cap">Esa cuenta bien cuidada vale diez veces la primera venta — y casi todo ese valor está en la postventa.</div></div>
+        <div class="stat"><div class="big">Lo relacional manda</div><div class="cap">En el B2B chileno no hay automatización que reemplace que te conozcan, confíen y sepan que respondes cuando algo falla. La metodología da estructura; la relación la pones tú.</div></div>
+      </div>
+    </div>
+    <div class="pagefoot">Curso 3 · 01</div>
+  </section>
+
+  <!-- 02 -->
+  <section class="slide">
+    <div class="kicker"><span class="num">02</span> Vocabulario</div>
+    <h2>Las palabras del curso, sin tecnicismo</h2>
+    <p class="sub">Todas significan algo simple. Una pasada rápida para que no se sientan pesadas cuando aparezcan.</p>
+    <div class="cols two">
+      <table class="mini">
+        <tr><td>Postventa</td><td>Todo lo que haces con un cliente después de que te compra: cuidarlo, ayudarlo y hacerlo crecer.</td></tr>
+        <tr><td>Onboarding</td><td>El acompañamiento de los primeros días tras la compra (entrega, instalación, capacitación).</td></tr>
+        <tr><td>Churn</td><td>Cuando un cliente deja de serlo. Prevenirlo = retenerlo a tiempo.</td></tr>
+        <tr><td>Upsell</td><td>Venderle más de lo mismo, o una versión superior (de catre manual a eléctrico).</td></tr>
+        <tr><td>Cross-sell</td><td>Un producto complementario (al catre, el colchón antiescaras).</td></tr>
+        <tr><td>Expansión</td><td>Llevar tu solución a otras sedes o unidades de la misma institución.</td></tr>
+        <tr><td>Reactivación</td><td>Volver a conectar con un cliente que se enfrió.</td></tr>
+      </table>
+      <table class="mini">
+        <tr><td>Referido</td><td>Cuando un cliente contento te recomienda con otra institución.</td></tr>
+        <tr><td>QBR</td><td>Reunión periódica para revisar juntos cómo va la relación (Quarterly Business Review).</td></tr>
+        <tr><td>NPS</td><td>Nota del 0 al 10 que mide qué tan probable es que el cliente te recomiende.</td></tr>
+        <tr><td>CS y AM</td><td>Éxito del cliente (que le vaya bien) y gestión de cuenta (hacer crecer la relación).</td></tr>
+        <tr><td>NRR</td><td>Si tu cartera de clientes vale hoy más o menos que antes, contando lo que creció y lo que perdiste.</td></tr>
+        <tr><td>Renovación</td><td>Cuando un cliente vuelve a contratar o renueva un acuerdo que vencía.</td></tr>
+      </table>
+    </div>
+    <div class="pagefoot">Curso 3 · 02</div>
+  </section>
+
+  <!-- 03 -->
+  <section class="slide">
+    <div class="kicker"><span class="num">03</span> Onboarding</div>
+    <h2>Los primeros 90 días</h2>
+    <p class="sub">La ventana donde el cliente decide, sin decírtelo, si fue una buena decisión comprarte. La meta: que llegue rápido al <strong>primer valor real</strong>.</p>
+    <div class="cols split">
+      <div class="flow">
+        <div class="step"><span class="ch">Días 0-7</span><span class="name"><b>Entrega e instalación.</b> Confirmas recepción, coordinas instalación, verificas que llegó completo. Un accesorio faltante siembra desconfianza.</span></div>
+        <div class="step"><span class="ch">Días 7-30</span><span class="name"><b>Capacitación y primer uso.</b> El personal aprende a usarlo. Aquí ocurre (o no) el primer valor.</span></div>
+        <div class="step"><span class="ch">Días 30-60</span><span class="name"><b>Verificación de uso real.</b> ¿Lo están usando? ¿Apareció alguna fricción? Detectas problemas mientras son chicos.</span></div>
+        <div class="step"><span class="ch">Días 60-90</span><span class="name"><b>Primer chequeo de valor.</b> ¿Qué cambió? Es la base de tu primer QBR y la antesala del upsell.</span></div>
+      </div>
+      <div>
+        <div class="ex"><span class="tag">✓ Un contacto proactivo en la 1ª semana</span><div class="body">"¿Llegó todo bien? ¿Coordinamos la capacitación del personal?" — eso solo ya te distingue del 90% de los proveedores.</div></div>
+        <div class="rule" style="margin-top:0;">
+          <div class="lab">Proactivo, no reactivo</div>
+          <div class="txt">El cliente nunca debería sentir que desapareciste tras cobrar. Tú apareces <strong>antes</strong> de que pregunten. Un catre que queda en bodega 3 semanas no entregó valor; instalado y en uso esa semana, sí.</div>
+        </div>
+      </div>
+    </div>
+    <div class="pagefoot">Curso 3 · 03</div>
+  </section>
+
+  <!-- 04 -->
+  <section class="slide">
+    <div class="kicker"><span class="num">04</span> Dos sombreros</div>
+    <h2>Éxito del cliente vs gestión de cuenta</h2>
+    <p class="sub">La habilidad clave es saber qué sombrero te toca en cada conversación. Un mismo cliente necesita uno en una etapa y otro en otra.</p>
+    <div class="cols split">
+      <div class="vs">
+        <div class="box good">
+          <div class="h">CS · Éxito del cliente</div>
+          <p style="margin-bottom:6px;"><b>"¿Le está yendo bien al cliente?"</b></p>
+          <p>Que obtenga valor real: que lo use, que funcione, que el problema quede resuelto. Cuando recién compró o está frustrado.</p>
+        </div>
+        <div class="box good" style="background:#EFF6FF; border-color:#BFDBFE;">
+          <div class="h" style="color:var(--sky);">AM · Gestión de cuenta</div>
+          <p style="margin-bottom:6px;"><b>"¿Cómo crece esta cuenta?"</b></p>
+          <p>Renovaciones, upsell, cross-sell, expansión. Cuando lleva meses con buenos resultados y confía en ti.</p>
+        </div>
+      </div>
+      <div class="rule" style="margin-top:0;">
+        <div class="lab">El orden importa — y el error clásico</div>
+        <div class="txt">El éxito del cliente viene <strong>primero</strong>: si intentas crecer una cuenta donde aún no obtiene valor, empujas una venta sobre una base rota. El error clásico: ponerse el sombrero de vender cuando el cliente necesita ayuda (ej. una grúa llegó con pieza dañada → resuelves eso primero, sin venderle nada). Cuando dudes, parte por el éxito del cliente.</div>
+      </div>
+    </div>
+    <div class="pagefoot">Curso 3 · 04</div>
+  </section>
+
+  <!-- 05 -->
+  <section class="slide">
+    <div class="kicker"><span class="num">05</span> El QBR</div>
+    <h2>La reunión que sostiene la cuenta</h2>
+    <p class="sub">Una revisión periódica de negocio. No es una reunión de venta, es de <strong>valor</strong> — y por eso es la que más vende. Como en el discovery: tú conduces con preguntas, el cliente habla la mayor parte.</p>
+    <div class="cols split">
+      <div class="flow">
+        <div class="step"><span class="ch">1 · Atrás</span><span class="name"><b>Valor entregado.</b> "Desde que incorporaron las grúas, ¿cómo ha estado la carga del personal en los traslados?" Refuerzas que la decisión fue buena.</span></div>
+        <div class="step"><span class="ch">2 · Presente</span><span class="name"><b>Estado actual.</b> ¿Qué funciona, qué fricciones hay? Preguntas abiertas y silencio.</span></div>
+        <div class="step"><span class="ch">3 · Adelante</span><span class="name"><b>Sus planes.</b> ¿Van a crecer, abrir sede, recibir otro perfil? Aquí aparecen, dichas por ellos, las oportunidades.</span></div>
+        <div class="step"><span class="ch">4 · Acordar</span><span class="name"><b>Próximos pasos</b> concretos, con fecha.</span></div>
+      </div>
+      <div class="rule" style="margin-top:0;">
+        <div class="lab">El QBR no es un pitch</div>
+        <div class="txt">Si entras a vender, el cliente se cierra y deja de aceptarte la reunión. Si entras a entender su negocio, el crecimiento aparece solo, porque ellos mismos te cuentan lo que necesitan. <strong>La venta es consecuencia, no el objetivo declarado.</strong> Frecuencia: trimestral en cuentas grandes; lo clave es que exista el ritual.</div>
+      </div>
+    </div>
+    <div class="pagefoot">Curso 3 · 05</div>
+  </section>
+
+  <!-- 06 -->
+  <section class="slide">
+    <div class="kicker"><span class="num">06</span> Prevención de churn</div>
+    <h2>El cliente que se va casi siempre avisa</h2>
+    <p class="sub">Churn es perder un cliente. Casi nunca es sorpresa: da señales antes. Se previene leyéndolas a tiempo, no cuando ya se fue.</p>
+    <div class="cols split">
+      <div>
+        <p style="font-size:13.5px; font-weight:800; color:var(--navy); margin-bottom:8px;">Las señales de riesgo</p>
+        <ul class="points">
+          <li>Silencio prolongado del cliente.</li>
+          <li>El equipo que compró quedó sin usar.</li>
+          <li>Un reclamo que se cerró a medias.</li>
+          <li>Cambió el contacto clave (se fue la directora con la que tenías la relación).</li>
+        </ul>
+        <p style="font-size:13px; font-weight:800; color:var(--navy); margin:14px 0 7px;">Cómo salvar la cuenta</p>
+        <p style="font-size:13.5px; line-height:1.55;">1) Reapareces <strong>sin vender</strong> · 2) escuchas la verdad · 3) resuelves el problema real. Recuperas el valor primero; el crecimiento viene después.</p>
+      </div>
+      <div>
+        <div class="ex"><span class="tag">✓ Reaparecer con tono de cuidado, no de cobro</span><div class="body">"Quería saber cómo les ha ido con los equipos, hace un tiempo que no conversamos." Muchas veces el problema es chico y arreglable (faltó capacitación, una pieza, una duda).</div></div>
+        <div class="rule" style="margin-top:0;">
+          <div class="lab">El descuento no salva cuentas</div>
+          <div class="txt">Bajar el precio para retener a quien se va por un problema no resuelto solo posterga la pérdida y te enseña a regalar margen. Lo que retiene es <strong>resolver el problema y demostrar que estás ahí</strong>. La renovación se construye todo el año, no en la semana del vencimiento.</div>
+        </div>
+      </div>
+    </div>
+    <div class="pagefoot">Curso 3 · 06</div>
+  </section>
+
+  <!-- 07 -->
+  <section class="slide">
+    <div class="kicker"><span class="num">07</span> Upsell</div>
+    <h2>Más cantidad, o mejor versión</h2>
+    <p class="sub">Venderle más de lo mismo, o una versión superior. Nace de una necesidad real que detectaste, no de un afán de facturar.</p>
+    <div class="cols split">
+      <div>
+        <ul class="points">
+          <li><span class="lead">Las 2 condiciones antes de proponerlo</span>1) El cliente <strong>ya obtuvo valor</strong> con lo que tiene. 2) <strong>Cambió la necesidad</strong> (te lo cuenta en un QBR: "vamos a recibir pacientes más complejos").</li>
+          <li><span class="lead">Tipos</span>Más cantidad (4 catres más) · versión superior (manual → eléctrico de 4 posiciones) · upgrade de prestación (colchón estándar → antiescaras).</li>
+        </ul>
+      </div>
+      <div>
+        <div class="ex bad"><span class="tag">✕ Upsell forzado</span><div class="body">"Súbase a los eléctricos, son nuestra línea premium y dan más estatus." (no toca su problema)</div></div>
+        <div class="ex"><span class="tag">✓ Upsell que suena a solución</span><div class="body">"Por lo que me cuentan del <b>personal lesionándose</b> en los traslados, los catres eléctricos de 4 posiciones reducen mucho ese esfuerzo. ¿Lo vemos?"</div></div>
+        <p style="font-size:12.5px; color:var(--soft);">Conéctalo al dolor, no al producto. El upsell se gana, no se empuja.</p>
+      </div>
+    </div>
+    <div class="pagefoot">Curso 3 · 07</div>
+  </section>
+
+  <!-- 08 -->
+  <section class="slide">
+    <div class="kicker"><span class="num">08</span> Cross-sell</div>
+    <h2>El producto que completa la solución</h2>
+    <p class="sub">Productos complementarios que hacen funcionar mejor lo que ya compraron. Tu superpoder: <strong>conocer el catálogo completo</strong> y ver los combos naturales.</p>
+    <div class="cols split">
+      <div>
+        <p style="font-size:13.5px; font-weight:800; color:var(--navy); margin-bottom:8px;">Combos naturales del catálogo</p>
+        <table class="mini">
+          <tr><td>Residente postrado</td><td>Catre clínico + colchón antiescaras + grúa de transferencia = solución completa.</td></tr>
+          <tr><td>Comunicación / acceso</td><td>Comunicador Tobii + soporte Rehadapt + software (TD Snap / Communicator 5).</td></tr>
+          <tr><td>Switch</td><td>+ adaptador USB o receptor inalámbrico para conectarlo.</td></tr>
+          <tr><td>Sala de recursos</td><td>switches + comunicadores + soportes combinados.</td></tr>
+        </table>
+      </div>
+      <div>
+        <div class="ex"><span class="tag">✓ Escuchar la solución incompleta (vive en el QBR)</span><div class="body">Cliente: "un residente que usa el catre ha tenido problemas en la piel por estar tanto en cama." — Tú: "Para ese caso existe un <b>colchón antiescaras</b> que previene justamente eso, ¿te cuento?"</div></div>
+        <p style="font-size:12.5px; color:var(--soft);">Para quien no conoce el catálogo es un comentario al pasar; para ti, una necesidad clarísima. Lo planteas como <strong>cuidado, no como venta</strong>.</p>
+      </div>
+    </div>
+    <div class="pagefoot">Curso 3 · 08</div>
+  </section>
+
+  <!-- 09 -->
+  <section class="slide">
+    <div class="kicker"><span class="num">09</span> Expansión</div>
+    <h2>De una unidad a toda la institución</h2>
+    <p class="sub">El crecimiento de mayor impacto: replicar tu solución en otras sedes y unidades de la misma institución. Ya tienes lo más difícil: confianza y un caso de éxito demostrado.</p>
+    <div class="cols split">
+      <div class="flow">
+        <div class="step"><span class="ch">1 · Documenta</span><span class="name"><b>El resultado</b> en la unidad donde ya vendiste: personal con menos lesiones, residentes más cómodos, el dato concreto. Ese es tu activo.</span></div>
+        <div class="step"><span class="ch">2 · El puente</span><span class="name"><b>Tu cliente satisfecho.</b> "Lo que logramos acá, ¿tendría sentido conversarlo con las otras sedes?" Te recomienda internamente, como el aliado del curso 2.</span></div>
+        <div class="step"><span class="ch">3 · Con el caso</span><span class="name">Llegas a la nueva sede <b>no de cero</b>: "en la sede de Ñuñoa logramos esto, vengo a ver si acá tiene sentido". El frío ya está roto.</span></div>
+      </div>
+      <div class="rule" style="margin-top:0;">
+        <div class="lab">Por qué es oro</div>
+        <div class="txt">Vender en una segunda sede es mucho más fácil que un cliente nuevo: el producto ya está probado adentro, hay gente que lo recomienda y el decisor te conoce. Cadenas de hogares, clínicas con varias sedes, sostenedores con varios colegios: una venta exitosa es la puerta a todas las demás.</div>
+      </div>
+    </div>
+    <div class="pagefoot">Curso 3 · 09</div>
+  </section>
+
+  <!-- 10 -->
+  <section class="slide">
+    <div class="kicker"><span class="num">10</span> Reactivación</div>
+    <h2>El cliente dormido no está perdido</h2>
+    <p class="sub">Clientes que compraron alguna vez y se enfriaron sin que hubiera problema. Son tu base más subvalorada: reactivar a uno suele ser más rentable que conseguir uno nuevo.</p>
+    <div class="cols split">
+      <div>
+        <ul class="points">
+          <li><span class="lead">1 · Reaparece aportando, no pidiendo</span>Parte por algo que le sirva a él: un producto nuevo que le calza, una mejora de lo que tenía.</li>
+          <li><span class="lead">2 · Reconstruye el contexto</span>Mini-discovery: cómo les ha ido, qué cambió. La situación pudo cambiar mucho.</li>
+          <li><span class="lead">3 · Conecta con una necesidad actual</span>Si apareció una nueva, ahí está la reactivación real. Si no, dejaste la relación tibia y vuelves después. Ganaste igual.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="ex bad"><span class="tag">✕ Reaparecer pidiendo</span><div class="body">"Hola, hace mucho no compran nada, ¿necesitan algo del catálogo?" (suena a cobro)</div></div>
+        <div class="ex"><span class="tag">✓ Reaparecer con una excusa útil</span><div class="body">"Me acordé de ustedes porque salió una <b>versión nueva</b> que mejora justo lo que les preocupaba; ¿les cuento cómo les ha ido?"</div></div>
+        <p style="font-size:12.5px; color:var(--soft);">Paciencia relacional: no toda reactivación termina en venta. A veces basta volver a su radar para la próxima vez.</p>
+      </div>
+    </div>
+    <div class="pagefoot">Curso 3 · 10</div>
+  </section>
+
+  <!-- 11 -->
+  <section class="slide">
+    <div class="kicker"><span class="num">11</span> NPS y referidos</div>
+    <h2>Medir la satisfacción, y convertirla en clientes</h2>
+    <p class="sub">NPS: "del 0 al 10, ¿qué tan probable es que nos recomiendes?". Según la nota, tres grupos — y a cada uno lo tratas distinto.</p>
+    <div class="cols split">
+      <div>
+        <table class="mini">
+          <tr><td style="color:var(--green);">Promotores · 9-10</td><td>Te aman. Son tu mina de oro para referidos.</td></tr>
+          <tr><td style="color:var(--orange);">Pasivos · 7-8</td><td>Conformes, no entusiastas. Averigua qué los llevaría a un 9.</td></tr>
+          <tr><td style="color:var(--red);">Detractores · 0-6</td><td>Insatisfechos, riesgo de churn. Sombrero de éxito del cliente, urgente. <strong>No les pidas referidos.</strong></td></tr>
+        </table>
+        <p style="font-size:13px; font-weight:800; color:var(--navy); margin:13px 0 6px;">Cómo pedir un referido</p>
+        <p style="font-size:13px; line-height:1.5;">Solo a <strong>promotores</strong> · petición <strong>específica y fácil</strong> · facilita la conexión (tú llamas de parte de ellos). El mejor momento: justo después de un éxito concreto.</p>
+      </div>
+      <div>
+        <div class="ex bad"><span class="tag">✕ Pedido genérico</span><div class="body">"¿Conoces a alguien que necesite algo?" (difícil de responder)</div></div>
+        <div class="ex"><span class="tag">✓ Pedido específico a un promotor</span><div class="body">"¿Conoces otro <b>hogar de la zona</b> que esté pasando por lo mismo que ustedes <b>antes de incorporar las grúas</b>? Si quieres, lo llamo yo de tu parte."</div></div>
+      </div>
+    </div>
+    <div class="pagefoot">Curso 3 · 11</div>
+  </section>
+
+  <!-- 12 -->
+  <section class="slide">
+    <div class="kicker"><span class="num">12</span> Las métricas</div>
+    <h2>Saber si tu cartera está sana</h2>
+    <p class="sub">Tres números (del mundo del software, pero aplican perfecto al equipamiento). No hay que calcularlos a mano: entender qué te dicen.</p>
+    <div class="cols split">
+      <table class="mini">
+        <tr><td>Churn rate</td><td>Qué proporción de clientes dejaste de tener. Alto = llenas un balde con un hoyo. Métrica de "retener".</td></tr>
+        <tr><td>Expansion revenue</td><td>Cuánto más te compraron tus clientes <strong>existentes</strong> (upsell, cross-sell, sedes). Métrica de "crecer".</td></tr>
+        <tr><td>NRR</td><td>La métrica reina: cuánto vale hoy tu base de clientes vs antes, contando lo que creció y lo que perdiste.</td></tr>
+      </table>
+      <div>
+        <p style="font-size:13.5px; font-weight:800; color:var(--navy); margin-bottom:8px;">Las 3 preguntas sobre tu cartera</p>
+        <ul class="points">
+          <li>¿Cuántos de mis clientes del año pasado siguen comprándome?</li>
+          <li>¿Cuánto más me compraron mis clientes actuales este año?</li>
+          <li>¿Mi cartera vale más o menos que hace un año?</li>
+        </ul>
+        <div class="rule" style="margin-top:14px;">
+          <div class="lab">El cierre del curso</div>
+          <div class="txt">Si la expansión supera al churn, tu base <strong>crece sola</strong>, sin sumar un cliente nuevo. Tu cartera deja de ser una lista de ventas y se vuelve un activo que se aprecia contigo.</div>
+        </div>
+      </div>
+    </div>
+    <div class="pagefoot">Curso 3 · 12</div>
+  </section>
+
+</div>
+</body>
+</html>

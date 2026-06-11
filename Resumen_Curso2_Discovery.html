@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resumen · Curso 2 — Discovery telefónico</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#001A60; --sky:#06B3FD; --orange:#FF7E00; --ltblue:#D6EEFF;
+    --softblue:#ECF6FF; --cream:#FFF4EA; --text:#1F2937; --soft:#6B7280;
+    --mute:#9CA3AF; --divider:#D1D5DB; --border:rgba(0,0,0,0.08); --page:#EAEFF5;
+    --green:#0E9F6E; --red:#DC2626;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Manrope',-apple-system,system-ui,sans-serif; background:var(--page); color:var(--text); -webkit-print-color-adjust:exact; print-color-adjust:exact;}
+  .toolbar{position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px 20px; background:#fff; border-bottom:1px solid var(--border);}
+  .toolbar .brand{display:flex; align-items:center; gap:10px; font-weight:800; color:var(--navy); font-size:15px;}
+  .toolbar .brand .dot{width:10px; height:10px; border-radius:50%; background:var(--orange);}
+  .toolbar .hint{font-size:13px; color:var(--soft);}
+  .btn-print{display:inline-flex; align-items:center; gap:8px; background:var(--navy); color:#fff; border:none; border-radius:10px; padding:10px 16px; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer;}
+  .btn-print:hover{background:#00237d;}
+  .btn-print svg{width:16px; height:16px;}
+
+  .deck{max-width:1040px; margin:0 auto; padding:28px 20px 60px;}
+  .slide{position:relative; background:#fff; border:1px solid var(--border); border-radius:18px; box-shadow:0 10px 30px rgba(0,26,96,.08); padding:40px 46px; margin-bottom:28px; min-height:560px; display:flex; flex-direction:column;}
+  .slide .kicker{display:inline-flex; align-items:center; gap:9px; font-size:12.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--sky); margin-bottom:13px;}
+  .slide .kicker .num{background:var(--navy); color:#fff; border-radius:7px; padding:3px 9px; font-size:12px; letter-spacing:.02em;}
+  .slide h2{font-size:28px; font-weight:800; color:var(--navy); line-height:1.15; margin-bottom:6px;}
+  .slide .sub{font-size:15px; color:var(--soft); margin-bottom:20px; max-width:68ch;}
+
+  .cols{display:grid; grid-template-columns:1fr; gap:24px; flex:1;}
+  .cols.split{grid-template-columns:1.12fr .88fr; align-items:start;}
+  .cols.two{grid-template-columns:1fr 1fr; gap:16px 28px;}
+
+  ul.points{list-style:none; display:flex; flex-direction:column; gap:12px;}
+  ul.points li{position:relative; padding-left:27px; font-size:14.5px; line-height:1.46;}
+  ul.points li::before{content:""; position:absolute; left:0; top:6px; width:13px; height:13px; border-radius:4px; background:var(--softblue); border:2px solid var(--sky);}
+  ul.points li strong{color:var(--navy);}
+  ul.points li .lead{display:block; font-weight:800; color:var(--navy); font-size:14px; margin-bottom:1px;}
+
+  .stats{display:flex; flex-direction:column; gap:11px;}
+  .stat{background:var(--softblue); border-radius:13px; padding:14px 16px; border-left:4px solid var(--sky);}
+  .stat .big{font-size:25px; font-weight:800; color:var(--navy); line-height:1; margin-bottom:5px;}
+  .stat .cap{font-size:12.5px; color:var(--text); line-height:1.4;}
+  .stat .cap b{color:var(--navy);}
+  .stat.orange{border-left-color:var(--orange); background:var(--cream);}
+  .stat.orange .big{color:var(--orange);}
+
+  .rule{margin-top:auto; background:var(--cream); border-left:4px solid var(--orange); border-radius:0 12px 12px 0; padding:15px 19px;}
+  .rule .lab{font-size:12px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:var(--orange); margin-bottom:5px;}
+  .rule .txt{font-size:14.5px; line-height:1.5; color:var(--text);}
+  .rule .txt strong{color:var(--navy);}
+
+  table.mini{width:100%; border-collapse:collapse; font-size:13px;}
+  table.mini td{padding:7px 10px; border-bottom:1px solid #EEF1F5; vertical-align:top; line-height:1.4;}
+  table.mini td:first-child{font-weight:800; color:var(--navy); width:30%; white-space:nowrap;}
+  table.mini tr:last-child td{border-bottom:none;}
+  table.mini td .tag2{color:var(--sky); font-weight:800;}
+
+  .ex{background:#F4FAF7; border:1px solid #C8EAD8; border-left:4px solid var(--green); border-radius:11px; padding:12px 15px; font-size:13px; line-height:1.5; color:var(--text); margin-bottom:11px;}
+  .ex .tag{display:block; font-size:10.5px; font-weight:800; color:var(--green); text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px;}
+  .ex .body{font-style:italic;}
+  .ex .body b{font-style:normal; color:var(--navy); background:#DDF3E8; padding:0 2px; border-radius:3px;}
+  .ex.bad{background:#FDF5F5; border-color:#F3D0D0; border-left-color:var(--red);}
+  .ex.bad .tag{color:var(--red);}
+
+  .vs{display:grid; grid-template-columns:1fr 1fr; gap:13px;}
+  .vs .box{border-radius:11px; padding:13px 15px; font-size:13px; line-height:1.45;}
+  .vs .good{background:#ECFDF5; border:1px solid #A7F3D0;}
+  .vs .bad{background:#FEF2F2; border:1px solid #FECACA;}
+  .vs .box .h{font-weight:800; font-size:11.5px; text-transform:uppercase; letter-spacing:.04em; margin-bottom:7px;}
+  .vs .good .h{color:var(--green);} .vs .bad .h{color:var(--red);}
+  .vs .box ul{list-style:none; display:flex; flex-direction:column; gap:5px;}
+  .vs .box li{padding-left:14px; position:relative;}
+  .vs .good li::before{content:"✓"; position:absolute; left:0; color:var(--green); font-weight:800;}
+  .vs .bad li::before{content:"✕"; position:absolute; left:0; color:var(--red); font-weight:800;}
+
+  .flow{display:flex; flex-direction:column; gap:8px;}
+  .flow .step{display:flex; align-items:center; gap:13px; background:var(--softblue); border-radius:11px; padding:10px 14px;}
+  .flow .step .n{flex:none; min-width:30px; text-align:center; border-radius:8px; background:var(--navy); color:#fff; font-weight:800; font-size:13px; padding:5px 7px;}
+  .flow .step .ch{flex:none; font-size:12px; font-weight:800; color:var(--sky); width:78px;}
+  .flow .step .name{font-size:13px; color:var(--text); line-height:1.35;}
+  .flow .step .name b{color:var(--navy);}
+
+  .pagefoot{position:absolute; bottom:15px; right:24px; font-size:11.5px; color:var(--mute); font-weight:700;}
+
+  .cover{background:linear-gradient(135deg,var(--navy) 0%,#002a8f 60%,#003bb5 100%); color:#fff; border:none; min-height:600px;}
+  .cover .kicker{color:var(--sky);}
+  .cover h1{font-size:42px; font-weight:800; line-height:1.1; max-width:20ch; margin-bottom:14px;}
+  .cover .lead{font-size:18px; color:#cde3ff; max-width:58ch; line-height:1.5;}
+  .cover .meta{margin-top:auto; display:flex; align-items:center; gap:10px; font-weight:800; font-size:15px;}
+  .cover .meta .dot{width:11px; height:11px; border-radius:50%; background:var(--orange);}
+  .cover .fuentes{margin-top:20px; font-size:12.5px; color:#9fc4f0; line-height:1.5; max-width:62ch;}
+  .cover .fuentes b{color:#fff;}
+
+  @media (max-width:860px){
+    .cols.split,.cols.two{grid-template-columns:1fr;}
+    .vs{grid-template-columns:1fr;}
+    .slide{padding:30px 26px;} .slide h2{font-size:23px;} .cover h1{font-size:31px;}
+  }
+  @media print{
+    @page{size:A4 landscape; margin:11mm;}
+    body{background:#fff;}
+    .toolbar{display:none;}
+    .deck{max-width:none; margin:0; padding:0;}
+    .slide{box-shadow:none; border:none; border-radius:0; margin:0; min-height:183mm; page-break-after:always; break-after:page; padding:8mm 6mm;}
+    .slide:last-child{page-break-after:auto;}
+    .cover{min-height:183mm;}
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="brand"><span class="dot"></span> OpenCluster Academia · Resumen</div>
+  <div class="hint">Hoja con la tecla de scroll, o guárdalo como PDF&nbsp;→</div>
+  <button class="btn-print" onclick="window.print()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+    Guardar como PDF
+  </button>
+</div>
+
+<div class="deck">
+
+  <!-- PORTADA -->
+  <section class="slide cover">
+    <div class="kicker"><span class="num" style="background:var(--orange);">Curso 2</span> Discovery telefónico</div>
+    <h1>La conversación que define el negocio</h1>
+    <p class="lead">Después del correo viene la llamada. En OpenCluster casi nunca es una sola: es un camino de llamadas, del intermediario al decisor, hasta agendar la reunión por Meet.</p>
+    <div class="fuentes">Datos citados por nombre: <b>Gong</b> (519.000 discovery calls), <b>Neil Rackham</b> (35.000 llamadas, base de SPIN), <b>Prospeo</b> (300 millones de llamadas), <b>Cognism</b>, <b>HubSpot</b>, <b>Chorus</b> y <b>Sandler</b>. Patrones que se repiten en millones de llamadas reales.</div>
+    <div class="meta"><span class="dot"></span> Resumen de repaso — no reemplaza el curso</div>
+  </section>
+
+  <!-- 01 -->
+  <section class="slide">
+    <div class="kicker"><span class="num">01</span> Qué es discovery (y qué NO)</div>
+    <h2>Diagnosticar antes de prescribir</h2>
+    <p class="sub">Una discovery call es una conversación de <strong>diagnóstico, no de venta</strong>. Como un buen médico: pregunta y examina antes de recetar.</p>
+    <div class="cols split">
+      <ul class="points">
+        <li><span class="lead">Tu trabajo no es convencer</span>Es entender si el cliente tiene un problema que puedes resolver. Si lo tiene, la venta avanza sola.</li>
+        <li><span class="lead">Calificar también es ganar</span>Perder un deal rápido es mejor que perderlo lento: en 15 min sabes si no hay presupuesto ni problema, en vez de 3 reuniones después.</li>
+        <li><span class="lead">El error #1: pitchear muy pronto</span>Hablar del producto antes de preguntar nada. El test antes de cada frase: "¿esto le sirve al cliente, o solo me sirve a MÍ decirlo?".</li>
+      </ul>
+      <div class="stats">
+        <div class="stat"><div class="big">9%</div><div class="cap">del tiempo dedican los <b>vendedores top</b> a hablar de características del producto (Gong, 519.000 calls). El resto: entender al cliente.</div></div>
+        <div class="stat orange"><div class="big">2:43</div><div class="cap">el monólogo más largo en una discovery exitosa. Si hablas más seguido sin parar, perdiste al interlocutor.</div></div>
+      </div>
+    </div>
+    <div class="pagefoot">Curso 2 · 01</div>
+  </section>
+
+  <!-- 02 -->
+  <section class="slide">
+    <div class="kicker"><span class="num">02</span> El camino al decisor</div>
+    <h2>No es una llamada, es un camino</h2>
+    <p class="sub">El decisor está al final, protegido por intermediarios. Tu objetivo en la 1ª llamada: <strong>conseguir su contacto directo</strong> (nombre, cargo, correo/teléfono). No vendas.</p>
+    <div class="cols split">
+      <div class="vs">
+        <div class="box bad">
+          <div class="h">Filtro</div>
+          <p style="margin-bottom:6px;">Recepción, secretaria, mesa de llamadas. No entiende el producto.</p>
+          <p><b>Approach:</b> directo, breve, con autoridad. Cero explicación.</p>
+        </div>
+        <div class="box good">
+          <div class="h">Aliado potencial</div>
+          <p style="margin-bottom:6px;">Kinesiólogo, enfermera, terapeuta, vendedor de mesón. Convive con el problema.</p>
+          <p><b>Approach:</b> pequeño discovery + respeto profesional → tu campeón interno.</p>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="big">80%</div><div class="cap">del éxito con intermediarios lo explica <b>el tono</b>, no las palabras (Prospeo, 300M). Se construye con brevedad, autoridad y cero muletillas.</div></div>
+        <div class="stat orange"><div class="big">3-5 seg</div><div class="cap">es lo que tarda el intermediario en decidir si te pasa. Toda explicación larga te resta.</div></div>
+      </div>
+    </div>
+    <div class="rule">
+      <div class="lab">Cómo reconocerlos en 10 segundos</div>
+      <div class="txt">"Clínica X, ¿en qué le ayudo?" → <strong>filtro</strong>. Da su nombre y cargo profesional, o te hace preguntas técnicas → <strong>aliado</strong>. Tratar a un kinesiólogo como filtro pierde a quien mejor te defendería adentro.</div>
+    </div>
+    <div class="pagefoot">Curso 2 · 02</div>
+  </section>
+
+  <!-- 03 -->
+  <section class="slide">
+    <div class="kicker"><span class="num">03</span> Scripts que funcionan</div>
+    <h2>Qué decirle al filtro y al aliado</h2>
+    <p class="sub">Mismo objetivo (llegar al decisor), dos tonos distintos.</p>
+    <div class="cols two">
+      <div>
+        <p style="font-size:13px; font-weight:800; color:var(--navy); margin-bottom:7px;">Con el filtro — directo y breve</p>
+        <div class="ex"><span class="tag">✓ Apertura</span><div class="body">"Buenos días. Soy [tu nombre] de OpenCluster Tech. Necesito el contacto de la Coordinadora PIE del colegio. ¿Me podría pasar con ella?"</div></div>
+        <div class="ex"><span class="tag">✓ Si dice "déjeme su número y le devolvemos"</span><div class="body">"Lo agradezco. Para que la llamada de vuelta sea eficiente para ella, ¿me confirma cómo se llama exactamente y su correo directo? Le envío el contexto antes y así no nos cruzamos sin información."</div></div>
+      </div>
+      <div>
+        <p style="font-size:13px; font-weight:800; color:var(--navy); margin-bottom:7px;">Con el aliado — discovery + respeto</p>
+        <div class="ex"><span class="tag">✓ Con un kinesiólogo</span><div class="body">"Hola [nombre], soy [tu nombre] de OpenCluster Tech. Sé que en estos casos quien convive con el problema clínico día a día son ustedes, más que las jefaturas. Antes de pedir hablar con la dirección, me serviría entender: ¿qué les está costando hoy en la transición a vertical?"</div></div>
+        <div class="ex"><span class="tag">✓ El cierre que activa al campeón interno</span><div class="body">"Si lo que conversamos te hace sentido, lo ideal sería mostrárselo también a tu jefatura. ¿Me das su contacto directo y le adelantas que vamos a coordinar?"</div></div>
+      </div>
+    </div>
+    <div class="pagefoot">Curso 2 · 03</div>
+  </section>
+
+  <!-- 04 -->
+  <section class="slide">
+    <div class="kicker"><span class="num">04</span> Cuando no contestan</div>
+    <h2>El buzón de voz y cuánto insistir</h2>
+    <p class="sub">La mayoría de tus llamadas no las van a contestar. Eso no es fracaso: es el juego normal.</p>
+    <div class="cols split">
+      <div>
+        <ul class="points">
+          <li><span class="lead">El buzón no busca el callback</span>Busca <strong>dejar tu nombre instalado</strong> para que te reconozca cuando llegue tu correo o tu próxima llamada. Corto (15-30 seg), nombre claro, anuncia el correo, repite tu nombre al final.</li>
+          <li><span class="lead">Máximo 1-2 buzones</span>Dejar 3 o más baja la respuesta a ~2,2% (Gong): te vuelves ruido.</li>
+          <li><span class="lead">Varía la hora, no el día</span>Si nunca está a las 10 AM, seguir llamando a las 10 no cambia nada. Rota: temprano, post-almuerzo, fin del día.</li>
+        </ul>
+        <div class="ex" style="margin-top:12px;"><span class="tag">✓ Buzón de voz de 20 segundos</span><div class="body">"Dr. Vega, buenos días, le habla Maximiliano Astudillo de OpenCluster Tech. Lo llamaba por la nueva unidad ambulatoria de Vida Nueva. Le voy a enviar también un correo para que tenga el contexto. Repito, Maximiliano Astudillo, OpenCluster. Gracias."</div></div>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="big">11 → 33%</div><div class="cap">la probabilidad de contactar sube con cada intento: 1º ~11%, 2º ~22%, 3º ~33%. La mayoría de los éxitos ocurren entre el <b>4º y 6º intento</b> — donde casi todos se rindieron.</div></div>
+        <div class="stat orange"><div class="big">5-6 intentos</div><div class="cap">repartidos en 2 semanas (día 0, 1-2, 4, 7-8, 12-15), variando horas y combinando con correo. Eso es profesional, no acoso.</div></div>
+      </div>
+    </div>
+    <div class="pagefoot">Curso 2 · 04</div>
+  </section>
+
+  <!-- 05 -->
+  <section class="slide">
+    <div class="kicker"><span class="num">05</span> Antes de levantar el teléfono</div>
+    <h2>La preparación que se nota</h2>
+    <p class="sub">Una buena discovery empieza antes de marcar: 10-15 minutos que separan una llamada profesional de una improvisada.</p>
+    <div class="cols split">
+      <ul class="points">
+        <li><span class="lead">Investiga 10-15 min</span>Web institucional, LinkedIn del decisor, LinkedIn de la institución, memoria anual, prensa. Objetivo: <strong>2-3 datos concretos</strong> que demuestren que no es una llamada masiva.</li>
+        <li><span class="lead">Define el objetivo de ESTA llamada</span>No es "vender". Es una acción concreta: <strong>agendar un Meet</strong>, <strong>calificar/descalificar</strong>, o <strong>profundizar un problema</strong>.</li>
+        <li><span class="lead">Prepara las preguntas, no improvises</span>Ten 12-17 escritas (no para leerlas: para no perderte). Improvisar sale plano; leer literal suena a encuesta.</li>
+      </ul>
+      <div class="stats">
+        <div class="stat"><div class="big">12-17</div><div class="cap">preguntas preparadas: 3-4 de situación, 4-5 de problema, 3-5 de implicación, 2-3 de cierre. En la llamada usas 11-14.</div></div>
+        <div class="stat orange"><div class="big">10-15 min</div><div class="cap">el equilibrio justo. Más es procrastinar; menos es entrar a ciegas.</div></div>
+      </div>
+    </div>
+    <div class="pagefoot">Curso 2 · 05</div>
+  </section>
+
+  <!-- 06 -->
+  <section class="slide">
+    <div class="kicker"><span class="num">06</span> Los primeros 90 segundos</div>
+    <h2>La apertura ganadora</h2>
+    <p class="sub">Los primeros 10 segundos deciden si la llamada va a algún lado. Tu objetivo no es vender: es <strong>ganarte el derecho a preguntar</strong>.</p>
+    <div class="cols split">
+      <div>
+        <div class="ex"><span class="tag">✓ Apertura completa — 4 elementos</span><div class="body">"Sra. Carmen, le habla Rayen Ogalde de OpenCluster Tech. <b>El motivo de mi llamada</b> es que vi que en el Hogar San Vicente atienden alrededor de 80 residentes, con un porcentaje importante en cama. Quisiera <b>robarle 8 minutos</b> para entender cómo manejan hoy el tema de las escaras y ver si lo que hacemos tiene sentido. ¿Tiene esos minutos ahora, o le conviene que llame en otro momento?"</div></div>
+        <p style="font-size:12.5px; color:var(--soft); margin-bottom:11px;">1) Quién eres · 2) Por qué llamas (con un dato) · 3) Tiempo acotado · 4) Permiso con opción binaria.</p>
+        <div class="ex"><span class="tag">✓ Si te dicen "no tengo tiempo ahora"</span><div class="body">"Entiendo perfectamente. Tenemos dos caminos: o me da <b>45 segundos</b> ahora para ver si esto le hace sentido, y si no, no le robo más tiempo; o agendamos <b>10 minutos</b> otro día. ¿Cuál le acomoda?"</div></div>
+      </div>
+      <div>
+        <div class="stat"><div class="big">2,1x</div><div class="cap">más reuniones agendadas cuando la apertura usa <b>"el motivo de mi llamada es…"</b> vs un "hola, ¿cómo está?" (Prospeo, 300M).</div></div>
+        <div class="rule" style="margin-top:14px;">
+          <div class="lab">Las 2 respuestas que SIEMPRE aparecen</div>
+          <div class="txt"><strong>"¿De qué se trata?"</strong> → contexto breve + beneficio + una pregunta (25 seg), no un monólogo. <strong>"No tengo tiempo"</strong> → validar + acotar ("¿45 seg ahora o agendamos 10 min?") + opción binaria.</div>
+        </div>
+      </div>
+    </div>
+    <div class="pagefoot">Curso 2 · 06</div>
+  </section>
+
+  <!-- 07 -->
+  <section class="slide">
+    <div class="kicker"><span class="num">07</span> La voz</div>
+    <h2>Cómo suenas decide la llamada</h2>
+    <p class="sub">En el teléfono no hay lenguaje corporal: tu voz es el 100% del mensaje. Cómo lo dices pesa más que qué dices.</p>
+    <div class="cols split">
+      <ul class="points">
+        <li><span class="lead">Ritmo: 140-160 palabras/min</span>Bajo 110 suenas lento; sobre 170 atropellas y transmites ansiedad. Respira antes de marcar y ancla la primera frase.</li>
+        <li><span class="lead">La pausa: tu herramienta más subestimada</span>Después de una buena pregunta, cállate 2-3 seg. <strong>Quien habla primero, pierde.</strong> La pausa transmite seguridad.</li>
+        <li><span class="lead">La sonrisa se escucha</span>Sonríe antes de que contesten: cambia la resonancia de tu voz y baja la defensa del receptor. Llama de pie y vocaliza.</li>
+      </ul>
+      <div class="stats">
+        <div class="stat"><div class="big">65,6%</div><div class="cap">de las conversaciones vivas se convierten en reunión cuando conduces bien (Cognism). Lo decide cómo suenas, no el guion.</div></div>
+        <div class="stat orange"><div class="big">140-160</div><div class="cap">palabras por minuto: el ritmo de un buen presentador de radio, no el de alguien apurado.</div></div>
+      </div>
+    </div>
+    <div class="pagefoot">Curso 2 · 07</div>
+  </section>
+
+  <!-- 08 -->
+  <section class="slide">
+    <div class="kicker"><span class="num">08</span> La voz · los 4 tonos</div>
+    <h2>El tono correcto en cada momento</h2>
+    <p class="sub">Una llamada tiene fases, y cada una pide un tono distinto. Cambiarlo es lo que te hace sonar profesional, no leído.</p>
+    <div class="cols">
+      <div class="flow">
+        <div class="step"><span class="ch">Apertura</span><span class="name"><b>Seguro y cordial.</b> Calmado, con autoridad tranquila. No pides permiso para existir: tienes una razón legítima para llamar.</span></div>
+        <div class="step"><span class="ch">Discovery</span><span class="name"><b>Curioso y empático.</b> Más suave y lento, genuinamente interesado. Como quien quiere entender, no quien interroga. Aquí escuchas más.</span></div>
+        <div class="step"><span class="ch">Propuesta</span><span class="name"><b>Asertivo y claro.</b> Un punto más de energía y convicción. Afirmas con respaldo, sin condicionales tímidos ("quizás tal vez…").</span></div>
+        <div class="step"><span class="ch">Objeción</span><span class="name"><b>Calmado y bajo.</b> Lo contrafáctico: cuando el cliente sube la guardia, tú bajas el tono. Nunca a la defensiva, nunca acelerado. La calma desactiva la tensión.</span></div>
+      </div>
+    </div>
+    <div class="rule">
+      <div class="lab">El antipatrón</div>
+      <div class="txt">Mantener el mismo tono enérgico de "venta" toda la llamada suena artificial y cansa. Calmado ≠ dubitativo: bajas el tono ante la objeción, pero mantienes la autoridad.</div>
+    </div>
+    <div class="pagefoot">Curso 2 · 08</div>
+  </section>
+
+  <!-- 09 -->
+  <section class="slide">
+    <div class="kicker"><span class="num">09</span> El corazón: SPIN</div>
+    <h2>Preguntar como un top performer</h2>
+    <p class="sub">SPIN es el framework de Neil Rackham (35.000 llamadas, nunca refutado). En ventas complejas, <strong>el que mejor pregunta es el que más vende</strong> — no el que más sabe del producto.</p>
+    <div class="cols split">
+      <table class="mini">
+        <tr><td><span class="tag2">S</span> Situación</td><td>El contexto actual: cuántos pacientes, qué equipamiento, cómo operan. <strong>Pocas</strong> (2-4): mucho ya lo investigaste.</td></tr>
+        <tr><td><span class="tag2">P</span> Problema</td><td>Destapa dificultades y pain points. Abiertas, concretas, sin implicar el producto. (3-5)</td></tr>
+        <tr><td><span class="tag2">I</span> Implicación</td><td><strong>La más poderosa.</strong> Hace sentir las consecuencias del problema. Convierte "se puede vivir con él" en urgencia. (3-5)</td></tr>
+        <tr><td><span class="tag2">N</span> Necesidad-beneficio</td><td>El cliente articula él mismo el valor de resolverlo. Se vende solo. (2-4, hacia el final)</td></tr>
+      </table>
+      <div class="stats">
+        <div class="stat"><div class="big">4x</div><div class="cap">más preguntas de <b>Implicación</b> hacen los vendedores top que los promedio (Rackham). Es el único indicador que separa consistentemente a ambos grupos.</div></div>
+        <div class="stat orange"><div class="big">&lt;15%</div><div class="cap">del tiempo en preguntas de Situación: si haces demasiadas, el cliente se siente interrogado.</div></div>
+      </div>
+    </div>
+    <div class="pagefoot">Curso 2 · 09</div>
+  </section>
+
+  <!-- 10 -->
+  <section class="slide">
+    <div class="kicker"><span class="num">10</span> SPIN en acción</div>
+    <h2>De "se puede vivir con él" a urgencia</h2>
+    <p class="sub">La diferencia entre Problema e Implicación es lo que crea la venta. Mira el salto:</p>
+    <div class="cols split">
+      <div>
+        <div class="ex bad"><span class="tag">P · Pregunta de problema</span><div class="body">"¿Cuál es el mayor desafío en la transición de TEC severo a bipedestación?" → <em>"Tenemos casos lentos porque no contamos con bipedestador supino."</em> (el cliente aún lo tolera)</div></div>
+        <div class="ex"><span class="tag">✓ I · Preguntas de implicación</span><div class="body">"Y ese atraso en la verticalización, ¿cómo está impactando los <b>tiempos de hospitalización</b>?" · "¿Cómo afecta eso a sus <b>indicadores clínicos</b> frente a la dirección?" · "Si el patrón sigue 6 meses, ¿qué pasa con la <b>carga del equipo</b> y los costos?"</div></div>
+      </div>
+      <div>
+        <p style="font-size:13.5px; font-weight:800; color:var(--navy); margin-bottom:8px;">Las reglas de oro del discovery</p>
+        <table class="mini">
+          <tr><td>11-14 preguntas</td><td>Menos = superficial; más = interrogatorio.</td></tr>
+          <tr><td>Talk / listen 46 / 54</td><td>Escucha un poco más de lo que hablas. Sobre 50% hablando = pitcheas.</td></tr>
+          <tr><td>3-4 problemas</td><td>Profundiza en pocos, no disperses.</td></tr>
+          <tr><td>Monólogo máx 2:43</td><td>Rompe con una pregunta cada 60-90 seg.</td></tr>
+          <tr><td>&lt;9% en features</td><td>El resto del tiempo: entender al cliente.</td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="pagefoot">Curso 2 · 10</div>
+  </section>
+
+  <!-- 11 -->
+  <section class="slide">
+    <div class="kicker"><span class="num">11</span> Escuchar de verdad</div>
+    <h2>SPIN te da la pregunta; esto, qué hacer con la respuesta</h2>
+    <p class="sub">Preguntar bien y no escuchar es peor que no preguntar. La escucha es la otra mitad del discovery.</p>
+    <div class="cols split">
+      <div>
+        <ul class="points">
+          <li><span class="lead">Parafrasear</span>"Entonces, si le entiendo bien, lo que me dice es que [resumen]. ¿Es así?" — confirma, da confianza y el cliente suele agregar más.</li>
+          <li><span class="lead">Tirar del hilo</span>"Cuénteme más sobre eso", "¿a qué se refiere con [su palabra]?". No avances a tu siguiente pregunta: quédate donde el cliente abrió la puerta.</li>
+          <li><span class="lead">Reflejar la emoción</span>"Suena frustrante estar consciente del problema y no tener las herramientas." Solo si es genuino.</li>
+          <li><span class="lead">El silencio que hace hablar</span>Cuenta hasta 3 antes de responder. El cliente llena el vacío con lo más honesto.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="stat"><div class="big">41% vs 14%</div><div class="cap">cierran los que hablan <b>38-46%</b> del tiempo, contra los que hablan 65%+ (Prospeo). Triple de diferencia.</div></div>
+        <div class="ex" style="margin-top:13px;"><span class="tag">✓ Tirar del hilo destapa el problema real</span><div class="body">Cliente: "Con el equipamiento que tenemos vamos tirando." — Tú: "¿A qué se refiere con 'vamos tirando'?" — Cliente: "Tenemos dos bipedestadores para toda la unidad, hay pacientes que esperan días." <em>(4 palabras destaparon el problema real)</em></div></div>
+        <div class="ex"><span class="tag">✓ Parafrasear para confirmar</span><div class="body">"Entonces, si le entiendo bien, el problema no es solo clínico sino de <b>carga del personal</b>: el protocolo existe, pero la dotación no alcanza para cumplirlo. ¿Es así?"</div></div>
+      </div>
+    </div>
+    <div class="pagefoot">Curso 2 · 11</div>
+  </section>
+
+  <!-- 12 -->
+  <section class="slide">
+    <div class="kicker"><span class="num">12</span> Cuando hay resistencia</div>
+    <h2>Las 3 categorías de objeciones</h2>
+    <p class="sub">No todas las objeciones son iguales. El top 5 representa el 74% del total: no necesitas dominar veinte, sino cinco.</p>
+    <div class="cols split">
+      <table class="mini">
+        <tr><td>Dismisivas · 49,5%</td><td>"No me interesa", "mándeme info por correo". Reflejos automáticos al ser interrumpido, <strong>no</strong> rechazos reales.</td></tr>
+        <tr><td>Situacionales · 42,6%</td><td>"No hay presupuesto", "es muy caro", "no es el momento". Problemas reales que resolver.</td></tr>
+        <tr><td>De competencia · 7,9%</td><td>"Ya trabajamos con X". Estrategia de displacement, no de convencimiento.</td></tr>
+      </table>
+      <div class="rule" style="margin-top:0;">
+        <div class="lab">El marco universal — NUNCA defiendas</div>
+        <div class="txt">Defender pone al cliente de juez y lo aleja. Siempre 3 pasos: <strong>(1) validar</strong> lo que dijo · <strong>(2) preguntar</strong> para entender · <strong>(3) redirigir</strong> con una pregunta de implicación (al costo del problema, no del producto).</div>
+      </div>
+    </div>
+    <div class="pagefoot">Curso 2 · 12</div>
+  </section>
+
+  <!-- 13 -->
+  <section class="slide">
+    <div class="kicker"><span class="num">13</span> Objeciones · ejemplos</div>
+    <h2>Cómo responder a las 3 más frecuentes</h2>
+    <p class="sub">Validar, preguntar, redirigir — sin defender nunca.</p>
+    <div class="cols two">
+      <div>
+        <div class="ex"><span class="tag">✓ "Los productos son muy caros"</span><div class="body">"Entiendo, el precio es importante. Para entenderlo bien: ¿<b>caro comparado con qué</b> — otra cotización, el presupuesto, o lo que esperaban? Y antes de seguir con el precio: ¿<b>cuánto le está costando hoy el problema</b> que esto resolvería?" <em>(nunca "la calidad es superior")</em></div></div>
+        <div class="ex"><span class="tag">✓ "Ya trabajamos con otro proveedor"</span><div class="body">"Me parece bien, imagino que les funciona en lo central. ¿Hay algún ámbito en el que han pensado 'me gustaría que esto fuera distinto'? Tiempos de respuesta, equipamiento específico, capacitación…" <em>(displacement, sin atacar al competidor)</em></div></div>
+      </div>
+      <div>
+        <div class="ex"><span class="tag">✓ "Mándeme la info por correo" (la dismisiva #1)</span><div class="body">"Por supuesto, se la mando hoy. Para no enviarle un correo genérico que se pierde, ¿me permite una pregunta rápida? ¿Hoy con qué están trabajando para la transición a vertical?" […] "Entonces le mando justo eso. ¿Le parece si lo llamo el jueves para ver qué le pareció, así no queda en el aire?"</div></div>
+        <p style="font-size:12.5px; color:var(--soft);">Aceptas el correo (baja la guardia), consigues 1-2 datos para que sea relevante, y dejas un próximo paso concreto. Así un correo-al-limbo se vuelve una secuencia.</p>
+      </div>
+    </div>
+    <div class="pagefoot">Curso 2 · 13</div>
+  </section>
+
+  <!-- 14 -->
+  <section class="slide">
+    <div class="kicker"><span class="num">14</span> Del teléfono al Meet</div>
+    <h2>Cerrar con un próximo paso concreto</h2>
+    <p class="sub">El cierre tiene 3 movimientos. Y el error mortal es "le mando info y lo llamo la próxima semana".</p>
+    <div class="cols split">
+      <div class="flow">
+        <div class="step"><span class="ch">1 · Resumir</span><span class="name">Devuélvele en sus palabras lo que escuchaste: "Déjeme resumir para chequear si entendí bien… ¿capturé lo central?"</span></div>
+        <div class="step"><span class="ch">2 · Confirmar</span><span class="name">Validar que tiene sentido seguir. Si la respuesta es no, mejor saberlo ahora.</span></div>
+        <div class="step"><span class="ch">3 · Next step</span><span class="name">Reunión específica, con fecha concreta, agendada <b>ahora</b>: "Le propongo 30 min por Meet el martes a las 10:00 o el miércoles 15:30. ¿Cuál le acomoda?"</span></div>
+      </div>
+      <div>
+        <div class="stat orange"><div class="big">5 minutos</div><div class="cap">apenas cuelgas, <b>antes de la siguiente llamada</b>: registra en el CRM con quién hablaste, los problemas en sus palabras, el interés y el próximo paso. Lo que no registras ahí, se pierde.</div></div>
+        <div class="rule" style="margin-top:13px;">
+          <div class="lab">El follow-up de 24 horas (ideal 2-6h)</div>
+          <div class="txt">Email de recap: agradecimiento concreto + los 2-3 puntos clave que escuchaste + confirmación del Meet (fecha, hora, link) + 1-2 recursos. No el catálogo completo.</div>
+        </div>
+      </div>
+    </div>
+    <div class="pagefoot">Curso 2 · 14</div>
+  </section>
+
+  <!-- 15 -->
+  <section class="slide">
+    <div class="kicker"><span class="num">15</span> En el Meet · métricas</div>
+    <h2>Cómo aparecer, y cómo medirte</h2>
+    <p class="sub">En el teléfono nadie te ve; en el Meet sí. Los primeros 7 segundos condicionan todo lo que escuchen después.</p>
+    <div class="cols split">
+      <div>
+        <p style="font-size:13.5px; font-weight:800; color:var(--navy); margin-bottom:8px;">Reglas no negociables del Meet</p>
+        <ul class="points">
+          <li><strong>Cámara siempre encendida</strong>, encuadre cabeza y hombros, luz de frente (no ventana atrás), fondo limpio, audífonos.</li>
+          <li><strong>Mira a la cámara</strong>, no a la pantalla — ahí se crea el contacto visual.</li>
+          <li><strong>No leas:</strong> notas en viñetas cortas, no en oraciones. El cliente nota cuando lees.</li>
+          <li><strong>Comparte una ventana</strong>, no todo el escritorio; cierra notificaciones antes.</li>
+        </ul>
+      </div>
+      <div>
+        <p style="font-size:13.5px; font-weight:800; color:var(--navy); margin-bottom:8px;">Las 3 métricas del discovery</p>
+        <table class="mini">
+          <tr><td>Conexión</td><td>De 10 llamadas, ¿en cuántas hablaste con persona? Normal 10-20%. Bajo → prueba otras horas.</td></tr>
+          <tr><td>Conversación → reunión</td><td>De las conversaciones vivas, ¿cuántas agendan? Bajo → revisa SPIN, escucha y cierre.</td></tr>
+          <tr><td>Intentos por contacto</td><td>Si te rindes antes del 4º intento, dejas ir prospectos alcanzables.</td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="pagefoot">Curso 2 · 15</div>
+  </section>
+
+  <!-- 16 -->
+  <section class="slide">
+    <div class="kicker"><span class="num">16</span> WhatsApp</div>
+    <h2>El canal que en Chile abre puertas</h2>
+    <p class="sub">En Chile casi todo se coordina por WhatsApp. Vive entre la formalidad del correo y la inmediatez de la llamada — su gran momento es el <strong>seguimiento</strong>.</p>
+    <div class="cols split">
+      <ul class="points">
+        <li><span class="lead">Primero el permiso</span>Cierra la llamada con "¿te escribo por WhatsApp para coordinar?". Un WhatsApp esperado se abre con gusto; uno en frío se siente invasivo y te quema.</li>
+        <li><span class="lead">Corto, un solo tema</span>Identificación + contexto · motivo concreto · una pregunta fácil de responder en 5 segundos.</li>
+        <li><span class="lead">No perseguir</span>Respeta el horario laboral, no dispares "¿lo viste?" por el visto, espacia los seguimientos aportando algo. Audios: con criterio, nunca en un primer contacto.</li>
+      </ul>
+      <div>
+        <div class="ex"><span class="tag">✓ WhatsApp de seguimiento</span><div class="body">"Hola Andrea, soy Rayen de OpenCluster, conversamos el martes sobre las grúas de transferencia. Quería confirmar la reunión que agendamos para el jueves a las 11. ¿Te acomoda esa hora o la movemos?"</div></div>
+        <p style="font-size:12.5px; color:var(--soft);">Si necesitas mandar algo largo (cotización, ficha), avisa antes: "Te mando la ficha por acá, ¿te parece?". Nunca dispares un PDF sin contexto.</p>
+      </div>
+    </div>
+    <div class="pagefoot">Curso 2 · 16</div>
+  </section>
+
+  <!-- 17 · WHATSAPP DESDE EL CRM (1) -->
+  <section class="slide">
+    <div class="kicker"><span class="num">17</span> WhatsApp · desde el CRM</div>
+    <h2>No copies el número: escríbelo desde el CRM</h2>
+    <p class="sub">Todo está conectado. Desde la <strong>ficha del contacto</strong> mandas el WhatsApp sin salir del CRM ni copiar el teléfono a mano — y desde el computador, que es más rápido que el celular.</p>
+    <div class="cols two" style="align-items:start;">
+      <div>
+        <img src="./Curso2_capturas/whatsapp/wsp-1-tarjeta.png" alt="Ficha del contacto en el CRM con el botón verde WhatsApp junto a Llamar y correo" style="width:100%; border:1px solid #e3e3ea; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,.10); display:block;">
+        <p style="font-size:12.8px; color:var(--soft); margin-top:9px; line-height:1.45;"><strong style="color:var(--navy);">1.</strong> En la ficha del contacto, aprietas el botón verde <strong>WhatsApp</strong> (al lado de Llamar y del correo).</p>
+      </div>
+      <div>
+        <img src="./Curso2_capturas/whatsapp/wsp-2-modal.png" alt="Modal Enviar WhatsApp con la plantilla por etapa del pipeline y el mensaje editable" style="width:100%; border:1px solid #e3e3ea; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,.10); display:block;">
+        <p style="font-size:12.8px; color:var(--soft); margin-top:9px; line-height:1.45;"><strong style="color:var(--navy);">2.</strong> Se abre <strong>Enviar WhatsApp</strong>: eliges la <strong>plantilla según la etapa</strong> del pipeline y editas el mensaje. El nombre y los datos ya vienen reemplazados — solo personalizas el <strong>[[ … ]]</strong> con un dato real.</p>
+      </div>
+    </div>
+    <div class="pagefoot">Curso 2 · 17</div>
+  </section>
+
+  <!-- 18 · WHATSAPP DESDE EL CRM (2) -->
+  <section class="slide">
+    <div class="kicker"><span class="num">18</span> WhatsApp · desde el CRM</div>
+    <h2>Le das "Abrir WhatsApp" y lo mandas</h2>
+    <p class="sub">El último paso: el mensaje sale del CRM y se abre en tu WhatsApp con todo cargado. Revisas y envías.</p>
+    <div class="cols split" style="align-items:start;">
+      <div>
+        <img src="./Curso2_capturas/whatsapp/wsp-3-web.png" alt="WhatsApp en el computador con el mensaje y el número ya cargados, botones Abrir aplicación y Continuar en WhatsApp Web" style="width:100%; border:1px solid #e3e3ea; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,.10); display:block;">
+        <p style="font-size:12.8px; color:var(--soft); margin-top:9px; line-height:1.45;"><strong style="color:var(--navy);">3.</strong> Se abre WhatsApp con el <strong>mensaje y el número ya puestos</strong>. Eliges "Abrir aplicación" o "Continuar en WhatsApp Web", revisas y envías.</p>
+      </div>
+      <div>
+        <p style="font-size:13.5px; font-weight:800; color:var(--navy); margin-bottom:9px;">Por qué hacerlo desde el CRM</p>
+        <ul class="points">
+          <li><span class="lead">No copias números a mano</span>El teléfono sale solo de la ficha: cero errores de tipeo.</li>
+          <li><span class="lead">Plantillas por etapa del pipeline</span>No partes de cero: el CRM te sugiere el mensaje según en qué va el contacto (Seguimiento 1, etc.).</li>
+          <li><span class="lead">Editas antes de enviar</span>Personaliza el <strong>[[ … ]]</strong> con un dato concreto del cliente, igual que enseña este curso.</li>
+          <li><span class="lead">Desde el computador</span>Más rápido que escribir en el celular, y todo queda a un clic dentro del CRM, conectado al contacto.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="pagefoot">Curso 2 · 18</div>
+  </section>
+
+</div>
+</body>
+</html>

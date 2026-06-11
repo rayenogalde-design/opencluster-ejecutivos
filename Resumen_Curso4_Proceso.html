@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resumen · Curso 4 — El proceso completo</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#001A60; --sky:#06B3FD; --orange:#FF7E00; --ltblue:#D6EEFF;
+    --softblue:#ECF6FF; --cream:#FFF4EA; --text:#1F2937; --soft:#6B7280;
+    --mute:#9CA3AF; --divider:#D1D5DB; --border:rgba(0,0,0,0.08); --page:#EAEFF5;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'Manrope',-apple-system,system-ui,sans-serif;
+    background:var(--page); color:var(--text);
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
+
+  /* Barra de acciones (no se imprime) */
+  .toolbar{
+    position:sticky; top:0; z-index:50;
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    padding:12px 20px; background:#fff; border-bottom:1px solid var(--border);
+  }
+  .toolbar .brand{display:flex; align-items:center; gap:10px; font-weight:800; color:var(--navy); font-size:15px;}
+  .toolbar .brand .dot{width:10px; height:10px; border-radius:50%; background:var(--orange);}
+  .toolbar .hint{font-size:13px; color:var(--soft);}
+  .btn-print{
+    display:inline-flex; align-items:center; gap:8px;
+    background:var(--navy); color:#fff; border:none; border-radius:10px;
+    padding:10px 16px; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer;
+  }
+  .btn-print:hover{background:#00237d;}
+  .btn-print svg{width:16px; height:16px;}
+
+  /* Lienzo */
+  .deck{max-width:1040px; margin:0 auto; padding:28px 20px 60px;}
+
+  /* Diapositiva */
+  .slide{
+    position:relative;
+    background:#fff; border:1px solid var(--border); border-radius:18px;
+    box-shadow:0 10px 30px rgba(0,26,96,.08);
+    padding:42px 48px; margin-bottom:28px;
+    min-height:560px; display:flex; flex-direction:column;
+  }
+  .slide .kicker{
+    display:inline-flex; align-items:center; gap:9px;
+    font-size:12.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--sky); margin-bottom:14px;
+  }
+  .slide .kicker .num{
+    background:var(--navy); color:#fff; border-radius:7px;
+    padding:3px 9px; font-size:12px; letter-spacing:.02em;
+  }
+  .slide h2{
+    font-size:30px; font-weight:800; color:var(--navy); line-height:1.15; margin-bottom:6px;
+  }
+  .slide .sub{font-size:15.5px; color:var(--soft); margin-bottom:22px; max-width:62ch;}
+
+  .cols{display:grid; grid-template-columns:1fr; gap:26px; flex:1;}
+  .cols.with-img{grid-template-columns:1.05fr .95fr; align-items:start;}
+
+  ul.points{list-style:none; display:flex; flex-direction:column; gap:14px;}
+  ul.points li{position:relative; padding-left:30px; font-size:16px; line-height:1.5;}
+  ul.points li::before{
+    content:""; position:absolute; left:0; top:7px;
+    width:14px; height:14px; border-radius:4px; background:var(--softblue);
+    border:2px solid var(--sky);
+  }
+  ul.points li strong{color:var(--navy);}
+  ul.points li .lead{display:block; font-weight:800; color:var(--navy); font-size:15px; margin-bottom:2px;}
+
+  .shot{
+    width:100%; border:1px solid #e3e3ea; border-radius:14px;
+    box-shadow:0 8px 24px rgba(0,0,0,.10); display:block;
+  }
+  .shot-cap{font-size:12.5px; color:var(--mute); text-align:center; margin-top:9px;}
+
+  /* Ejemplo de cómo SÍ hacerlo */
+  .ex{background:#F4FAF7; border:1px solid #C8EAD8; border-left:4px solid #0E9F6E; border-radius:11px; padding:13px 16px; font-size:14px; line-height:1.5; color:var(--text);}
+  .ex .tag{display:block; font-size:11px; font-weight:800; color:#0E9F6E; text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px;}
+  .ex .body{font-style:italic;}
+  .ex .body b{font-style:normal; color:var(--navy);}
+  .ex.solid{background:var(--softblue); border-color:var(--ltblue); border-left-color:var(--sky);}
+  .ex.solid .tag{color:var(--sky);}
+  .ex.solid .body{font-style:normal;}
+
+  /* Cajita destacada */
+  .rule{
+    margin-top:auto; background:var(--cream); border-left:4px solid var(--orange);
+    border-radius:0 12px 12px 0; padding:16px 20px;
+  }
+  .rule .lab{font-size:12px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:var(--orange); margin-bottom:5px;}
+  .rule .txt{font-size:15px; line-height:1.5; color:var(--text);}
+  .rule .txt strong{color:var(--navy);}
+
+  /* Portada */
+  .cover{
+    background:linear-gradient(135deg,var(--navy) 0%,#002a8f 60%,#003bb5 100%);
+    color:#fff; align-items:flex-start; justify-content:center;
+    border:none; min-height:600px;
+  }
+  .cover .kicker{color:var(--sky);}
+  .cover h1{font-size:46px; font-weight:800; line-height:1.1; max-width:18ch; margin-bottom:14px;}
+  .cover .lead{font-size:18px; color:#cde3ff; max-width:54ch; line-height:1.5;}
+  .cover .meta{margin-top:auto; display:flex; align-items:center; gap:10px; font-weight:800; font-size:15px; color:#fff;}
+  .cover .meta .dot{width:11px; height:11px; border-radius:50%; background:var(--orange);}
+  .etapas{display:flex; flex-wrap:wrap; gap:8px; margin-top:26px;}
+  .etapas span{
+    background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.22);
+    color:#eaf3ff; font-size:13px; font-weight:700; padding:7px 13px; border-radius:999px;
+  }
+  .etapas span b{color:var(--sky); margin-right:5px;}
+
+  /* Mapa 7 etapas */
+  .flow{display:flex; flex-direction:column; gap:12px;}
+  .flow .step{
+    display:flex; align-items:center; gap:16px;
+    background:var(--softblue); border-radius:12px; padding:14px 18px;
+  }
+  .flow .step .n{
+    flex:none; width:34px; height:34px; border-radius:9px; background:var(--navy); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px;
+  }
+  .flow .step .name{font-weight:800; color:var(--navy); font-size:16px;}
+  .flow .step .tool{margin-left:auto; font-size:12.5px; font-weight:700; color:var(--sky); background:#fff; border:1px solid var(--ltblue); padding:5px 11px; border-radius:999px;}
+
+  .pagefoot{position:absolute; bottom:16px; right:24px; font-size:11.5px; color:var(--mute); font-weight:700;}
+
+  @media (max-width:860px){
+    .cols.with-img{grid-template-columns:1fr;}
+    .slide{padding:30px 26px;}
+    .slide h2{font-size:25px;}
+    .cover h1{font-size:34px;}
+  }
+
+  /* IMPRESIÓN / PDF — cada diapositiva una página horizontal */
+  @media print{
+    @page{size:A4 landscape; margin:11mm;}
+    body{background:#fff;}
+    .toolbar{display:none;}
+    .deck{max-width:none; margin:0; padding:0;}
+    .slide{
+      box-shadow:none; border:none; border-radius:0;
+      margin:0; min-height:183mm; page-break-after:always; break-after:page;
+      padding:8mm 6mm;
+    }
+    .slide:last-child{page-break-after:auto;}
+    .cover{min-height:183mm;}
+    .shot{box-shadow:none;}
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="brand"><span class="dot"></span> OpenCluster Academia · Resumen</div>
+  <div class="hint">Hoja con la tecla de scroll, o guárdalo como PDF&nbsp;→</div>
+  <button class="btn-print" onclick="window.print()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+    Guardar como PDF
+  </button>
+</div>
+
+<div class="deck">
+
+  <!-- PORTADA -->
+  <section class="slide cover">
+    <div class="kicker"><span class="num" style="background:var(--orange);">Curso 4</span> El proceso completo</div>
+    <h1>Del primer contacto al pago</h1>
+    <p class="lead">El hilo que une todo: cómo se conecta el proceso comercial de principio a fin, y cómo se hace en la práctica con el CRM, el cotizador y el catálogo.</p>
+    <div class="etapas">
+      <span><b>1</b>Primer contacto</span>
+      <span><b>2</b>Discovery</span>
+      <span><b>3</b>Reunión</span>
+      <span><b>4</b>Cotización</span>
+      <span><b>5</b>Cierre</span>
+      <span><b>6</b>Pago</span>
+      <span><b>7</b>Postventa</span>
+    </div>
+    <div class="meta"><span class="dot"></span> Resumen de repaso — no reemplaza el curso</div>
+  </section>
+
+  <!-- 1. EL MAPA -->
+  <section class="slide">
+    <div class="kicker"><span class="num">01</span> El mapa completo</div>
+    <h2>Las 7 etapas del proceso</h2>
+    <p class="sub">Todo negocio recorre las mismas etapas. Esta es la columna vertebral: en qué etapa estás, qué viene, y dónde se registra cada paso.</p>
+    <div class="flow">
+      <div class="step"><span class="n">1</span><span class="name">Primer contacto</span><span class="tool">CRM</span></div>
+      <div class="step"><span class="n">2</span><span class="name">Discovery / calificación</span><span class="tool">CRM</span></div>
+      <div class="step"><span class="n">3</span><span class="name">Reunión</span><span class="tool">Catálogo</span></div>
+      <div class="step"><span class="n">4</span><span class="name">Cotización</span><span class="tool">Cotizador</span></div>
+      <div class="step"><span class="n">5</span><span class="name">Cierre</span><span class="tool">CRM</span></div>
+      <div class="step"><span class="n">6</span><span class="name">Pago</span><span class="tool">CRM</span></div>
+      <div class="step"><span class="n">7</span><span class="name">Postventa</span><span class="tool">Curso 3</span></div>
+    </div>
+    <div class="pagefoot">Curso 4 · 01</div>
+  </section>
+
+  <!-- 2. EL CRM -->
+  <section class="slide">
+    <div class="kicker"><span class="num">02</span> El CRM</div>
+    <h2>Tu centro de operaciones</h2>
+    <p class="sub">El CRM es tu memoria y tu mapa. Si no está en el CRM, no existe.</p>
+    <div class="cols with-img">
+      <ul class="points">
+        <li><span class="lead">Registra todo, en el momento</span>Cada contacto, conversación y avance entra al CRM al toque. Lo que no se registra, se enfría y se pierde.</li>
+        <li><span class="lead">Mueve la tarjeta de etapa</span>Eso mantiene tu pipeline real y deja que la jefatura vea dónde te trabas y te ayude.</li>
+        <li><span class="lead">Que la nota sea relevante</span>No "mandé un correo": qué te dijeron, en qué quedaron, qué objeción salió. En un año vas a necesitar el gancho para retomar.</li>
+        <li><span class="lead">Empieza por "Toques de hoy"</span>Si partes el día por ahí, no se te enfría ningún contacto. El CRM te dice qué hacer; tú lo haces.</li>
+        <li><span class="lead">Plantillas</span>No escribes de cero y mantienes el tono OpenCluster. Personaliza siempre un poco.</li>
+      </ul>
+      <figure>
+        <img class="shot" src="./Curso4_capturas/1_te-contactan/e1-2-dashboard.png" alt="Dashboard del CRM con leads y toques del día">
+        <figcaption class="shot-cap">Tu día arranca en el Dashboard: leads urgentes y toques de hoy.</figcaption>
+      </figure>
+    </div>
+    <div class="ex" style="margin-top:18px;">
+      <span class="tag">✓ Así se ve una nota que de verdad sirve</span>
+      <div class="body">"Hablé con la jefa de enfermería. Le interesa el <b>colchón antiescaras</b> para 4 residentes postrados; pidió cotización para el presupuesto 2027. Le preocupa el plazo de entrega. <b>Próximo paso:</b> enviar cotización el lunes y llamar el 15 para confirmar."</div>
+    </div>
+    <div class="pagefoot">Curso 4 · 02</div>
+  </section>
+
+  <!-- 3. LOS 3 CAMINOS -->
+  <section class="slide">
+    <div class="kicker"><span class="num">03</span> Cómo te llega un contacto</div>
+    <h2>Los 3 caminos</h2>
+    <p class="sub">Según cómo entró, arranca distinto — pero todos terminan igual: registrado en el CRM y trabajado hasta el cierre.</p>
+    <div class="cols with-img">
+      <ul class="points">
+        <li><span class="lead">1 · Te contactan</span>El lead te llega <strong>ya creado</strong> y asignado por Rayen. No lo creas: tómalo, y rápido. Si trae teléfono, lo llamas.</li>
+        <li><span class="lead">2 · Te piden cotización</span>Entra directo a Cotización. En el cotizador, primero dices a quién le cotizas (existe en el CRM o lo creas).</li>
+        <li><span class="lead">3 · Prospección</span>Búsqueda activa, <strong>llamada primero</strong>. Muchas veces no llegas directo al decisor: registras a todos los que tocas en la empresa.</li>
+      </ul>
+      <figure>
+        <img class="shot" src="./Curso4_capturas/3_prospeccion/e3-1-miscontactos.png" alt="Vista Mis Contactos con el botón Nuevo contacto">
+        <figcaption class="shot-cap">El CRM organiza por empresa: hoy es la secretaria, mañana te abre al que decide.</figcaption>
+      </figure>
+    </div>
+    <div class="rule">
+      <div class="lab">La regla, pase lo que pase</div>
+      <div class="txt">Todo contacto, al CRM, en el momento. Cada cotización se envía <strong>con sus fichas técnicas adjuntas, sin excepción</strong>.</div>
+    </div>
+    <div class="pagefoot">Curso 4 · 03</div>
+  </section>
+
+  <!-- 4. REUNIÓN + OPORTUNIDAD -->
+  <section class="slide">
+    <div class="kicker"><span class="num">04</span> Oportunidad y reunión</div>
+    <h2>De la conversación a la reunión</h2>
+    <p class="sub">Cuando hay una necesidad clara que puedes resolver, eso es una oportunidad: se registra y se empuja hacia la cotización.</p>
+    <div class="cols">
+      <ul class="points">
+        <li><span class="lead">Una oportunidad bien registrada</span>Es un contacto en la <strong>etapa correcta</strong>, con su <strong>próximo paso agendado</strong>.</li>
+        <li><span class="lead">La reunión tiene un guion</span>Te presentas, das el motivo y quiénes son, y entras a los productos mostrando las familias del catálogo.</li>
+        <li><span class="lead">El error a evitar</span>Soltar el catálogo entero. Primero entiendes, después muestras <strong>solo lo que le sirve</strong>. El catálogo es apoyo, no el centro.</li>
+        <li><span class="lead">Preséntate como su ejecutivo</span>De aquí en adelante su contacto con OpenCluster pasa por ti, con nombre y cara.</li>
+      </ul>
+    </div>
+    <div class="cols" style="grid-template-columns:1fr 1fr; gap:16px;">
+      <div class="ex">
+        <span class="tag">✓ Cómo abrir la reunión</span>
+        <div class="body">"Gracias por recibirme. Soy [tu nombre], su ejecutivo en OpenCluster. La idea de hoy es <b>entender bien su realidad</b> y mostrarle las familias del catálogo que le calzan. ¿Le parece si parto preguntándole cómo están manejando hoy [el tema]?"</div>
+      </div>
+      <div class="ex solid">
+        <span class="tag">Una oportunidad bien registrada</span>
+        <div class="body">Un contacto en la <b>etapa correcta</b> del pipeline, con el <b>próximo paso agendado</b> y la fecha puesta. Sin próximo paso, no es oportunidad: es un contacto que se va a enfriar.</div>
+      </div>
+    </div>
+    <div class="pagefoot">Curso 4 · 04</div>
+  </section>
+
+  <!-- 5. EL CATÁLOGO -->
+  <section class="slide">
+    <div class="kicker"><span class="num">05</span> El catálogo</div>
+    <h2>Encontrar el producto correcto</h2>
+    <p class="sub">De los 72 productos, hay un catálogo por segmento — pero la meta es que los conozcas todos.</p>
+    <div class="cols with-img">
+      <ul class="points">
+        <li><span class="lead">Por familias</span>Navegas por la barra de familias y vas del <strong>problema del cliente</strong> al producto, no al revés.</li>
+        <li><span class="lead">Aprende todos los productos</span>Los de tu segmento son los del día a día, pero nunca sabes cuándo un cliente necesita algo de otra familia.</li>
+        <li><span class="lead">Precios por volumen</span>El catálogo muestra valores según la compra: <strong>1–9</strong>, <strong>10–19</strong> y <strong>20 o más</strong>.</li>
+        <li><span class="lead">Mejor el link que el PDF</span>Se presenta en vivo, siempre actualizado, con el botón Presentar para compartir agrandado.</li>
+      </ul>
+      <figure>
+        <img class="shot" src="./Curso4_capturas/6_catalogo/cat-navegador.png" alt="Catálogo en el navegador con la barra de familias y el botón Presentar">
+        <figcaption class="shot-cap">El catálogo en el navegador, con la barra de familias y el botón Presentar.</figcaption>
+      </figure>
+    </div>
+    <div class="ex" style="margin-top:18px;">
+      <span class="tag">✓ Del problema al producto</span>
+      <div class="body">El cliente dice "tengo residentes postrados con riesgo de heridas en la piel" → vas a la familia <b>Hospitalización Domiciliaria</b> → le muestras <b>colchón antiescaras + catre clínico + grúa de transferencia</b>. Partes del dolor, no del catálogo entero.</div>
+    </div>
+    <div class="pagefoot">Curso 4 · 05</div>
+  </section>
+
+  <!-- 6. COTIZADOR I · CLIENTE Y PRODUCTO -->
+  <section class="slide">
+    <div class="kicker"><span class="num">06</span> El cotizador · cliente y producto</div>
+    <h2>Armar la cotización: el cliente y el producto</h2>
+    <p class="sub">La cotización es la cara formal de tu propuesta. Bien armada transmite profesionalismo y evita ir y volver.</p>
+    <div class="cols with-img">
+      <ul class="points">
+        <li><span class="lead">Primero, a quién le cotizas</span>Antes que los productos, dices el cliente: existe en el CRM o lo creas, sin perder el vínculo para el seguimiento.</li>
+        <li><span class="lead">Nombre del producto EXACTO</span>Tiene que calzar con el nombre de la <strong>página web</strong> y asegurarte de que la <strong>ficha técnica</strong> diga exactamente lo mismo. Así evitas despachar un producto equivocado o confundirlo con uno similar.</li>
+        <li><span class="lead">La foto, con criterio</span>Clic en el cuadrado, subes la imagen de la web que mejor lo represente. Ajustas el tamaño con el control de abajo: ni muy grande ni muy chica. Arma tu banco de fotos.</li>
+        <li><span class="lead">Descripción breve</span>Bajo el título de cada producto. Si el cliente recalcó una especificación técnica, ponla ahí.</li>
+      </ul>
+      <figure>
+        <img class="shot" src="./Curso4_capturas/2_cotizacion/e2-1-cotizador.png" alt="Generador de cotizaciones de OpenCluster">
+        <figcaption class="shot-cap">El cotizador: primero el cliente, después los productos.</figcaption>
+      </figure>
+    </div>
+    <div class="pagefoot">Curso 4 · 06</div>
+  </section>
+
+  <!-- 7. COTIZADOR II · PRECIOS -->
+  <section class="slide">
+    <div class="kicker"><span class="num">07</span> El cotizador · precios</div>
+    <h2>Los precios: de dónde salen</h2>
+    <p class="sub">El punto donde más errores se cometen. Ojo con esto.</p>
+    <div class="cols with-img">
+      <ul class="points">
+        <li><span class="lead">Cómo se ingresan</span>Eliges NETO o IVA, escribes el valor y la cantidad, y el cálculo es automático. Al tipear: <strong>solo números</strong>, sin puntos ni signos.</li>
+        <li><span class="lead">Los valores: del CRM, NO de la web</span>Cada ejecutivo tiene en su CRM su lista de precios <strong>al día</strong>. Esos son los valores que tienes autorizado ingresar. Nunca de la página web.</li>
+        <li><span class="lead">Descuentos: se consultan</span>Si crees que corresponde un descuento por el tipo, la cantidad o la relación con el cliente, lo autoriza <strong>Rayen</strong> antes. Sin autorización, solo los precios del CRM.</li>
+        <li><span class="lead">Más productos</span>Con "Agregar producto" sumas los que necesites. Hay cotizaciones de 20-25 productos; la hoja crece sin problema.</li>
+      </ul>
+      <figure>
+        <img class="shot" src="./Curso4_capturas/5_cotizador-pasos/cot-precio.png" alt="Tarjeta de producto con el botón NETO/IVA y el valor">
+        <figcaption class="shot-cap">NETO o IVA, valor (solo números) y cantidad. El total se calcula solo.</figcaption>
+      </figure>
+    </div>
+    <div class="pagefoot">Curso 4 · 07</div>
+  </section>
+
+  <!-- 8. COTIZADOR III · ENVÍO -->
+  <section class="slide">
+    <div class="kicker"><span class="num">08</span> El cotizador · envío</div>
+    <h2>El costo de envío, según el despacho</h2>
+    <p class="sub">Eliges el tipo de despacho y, una vez calculado, el desglose aparece solo en la cotización.</p>
+    <div class="cols with-img">
+      <ul class="points">
+        <li><span class="lead">Los tipos</span>No incluido y Retiro en bodega → <strong>cero</strong>. Logística propia → calculadora. Courier externo → valor de la web.</li>
+        <li><span class="lead">Logística propia → calculadora</span>Origen ya viene en Belloto; eliges el destino de la lista. ¿Urgente? El costo es <strong>$200.000</strong> (solo Santiago y Quinta Región).</li>
+        <li><span class="lead">Courier externo → carrito de la web</span>Agregas el producto al carrito, le das verificar e ingresas el destino. Si hay varias opciones, usa <strong>Blue Express</strong> (valor promedio).</li>
+        <li><span class="lead">Si es más de un producto</span>El carrito calcula <strong>una unidad</strong>: toma ese valor y multiplícalo por la cantidad.</li>
+      </ul>
+      <figure>
+        <img class="shot" src="./Curso4_capturas/5_cotizador-pasos/cot-calculadora.png" alt="Calculadora de despacho con el destino desplegado y origen Belloto">
+        <figcaption class="shot-cap">La calculadora de logística propia: origen Belloto y destino de la lista.</figcaption>
+      </figure>
+    </div>
+    <div class="ex" style="margin-top:18px;">
+      <span class="tag">✓ Ejemplo: courier con más de una unidad</span>
+      <div class="body">El carrito de la web te da el envío de <b>1 unidad</b> a Temuco = <b>$32.085</b>. Para 3 unidades: $32.085 × 3 = <b>$96.255</b>. Ese total lo ingresas como neto de envío y aparece solo en la cotización.</div>
+    </div>
+    <div class="pagefoot">Curso 4 · 08</div>
+  </section>
+
+  <!-- 9. COTIZADOR IV · CASOS, CONDICIONES Y CIERRE -->
+  <section class="slide">
+    <div class="kicker"><span class="num">09</span> El cotizador · casos, condiciones y cierre</div>
+    <h2>Casos especiales y las condiciones</h2>
+    <p class="sub">Lo que se marca distinto según el caso, los datos que van casi siempre igual, y cómo cerrar.</p>
+    <div class="cols with-img">
+      <ul class="points">
+        <li><span class="lead">¿Sala multisensorial? ¿Fondo?</span>Si es sala, marcas Sí y eliges la región: aplica el costo de logística, capacitación e implementación. Si postula a un fondo (FNDR, Royalty, privado), lo marcas.</li>
+        <li><span class="lead">Ítem adicional</span>Para casos especiales (ej. un contenedor para la sala): valor neto + <strong>descripción completa</strong>. Consúltalo con <strong>Rayen</strong> antes para conseguir bien los valores.</li>
+        <li><span class="lead">Perfil y barras de oferta</span>Tus datos quedan grabados al pie. Oferta especial → clientes de volumen 10+. Envío gratuito → solo con autorización.</li>
+        <li><span class="lead">Condiciones (casi siempre igual)</span>Validez <strong>30 días</strong>, garantía <strong>9 meses</strong>, pago por <strong>transferencia</strong>; con privados <strong>50% con orden de compra y 50% contra entrega</strong>.</li>
+      </ul>
+      <figure>
+        <img class="shot" src="./Curso4_capturas/5_cotizador-pasos/cot-condiciones.png" alt="Sección Condiciones: validez, garantía, método y condiciones de pago, plazo">
+        <figcaption class="shot-cap">La sección Condiciones, con los valores que van casi siempre igual.</figcaption>
+      </figure>
+    </div>
+    <div class="rule">
+      <div class="lab">Revisar, registrar y guardar</div>
+      <div class="txt">Registrar <strong>no es opcional</strong>: la cotización entra a "Mis Cotizaciones" con su semáforo y arranca la cadencia <strong>0/3/7/14</strong>. Y se envía siempre <strong>con sus fichas técnicas adjuntas</strong>.</div>
+    </div>
+    <div class="pagefoot">Curso 4 · 09</div>
+  </section>
+
+  <!-- 10. CERRAR LA VENTA -->
+  <section class="slide">
+    <div class="kicker"><span class="num">10</span> Cerrar la venta</div>
+    <h2>Venta ganada: del cierre al pago</h2>
+    <p class="sub">Confirmas que la venta calza (orden de compra o transferencia), marcas Ganada y completas el panel de cierre.</p>
+    <div class="cols with-img">
+      <ul class="points">
+        <li><span class="lead">Marca Ganada y completa el cierre</span>Subes orden de compra y transferencia, confirmas <strong>dirección de despacho</strong> (sin ella no avanza) y boleta o factura.</li>
+        <li><span class="lead">Etiquetas a Ximena</span>Solo si es courier externo: la mayoría sale sola de la cotización, tú confirmas.</li>
+        <li><span class="lead">Llega solo a Finanzas</span>Al guardar, datos, imágenes y cotización llegan automáticamente. No reenvías nada.</li>
+        <li><span class="lead">Tu último trabajo: seguimiento</span>Avisas cuándo llega y confirmas cómo lo recibió. Ahí enganchas con la postventa.</li>
+      </ul>
+      <figure>
+        <img class="shot" src="./Curso4_capturas/8_Venta/venta-3-cierre-panel.png" alt="Panel Venta ganada - Cierre con comprobantes, documento y envío">
+        <figcaption class="shot-cap">El panel de cierre: comprobantes, documento y envío en un solo lugar.</figcaption>
+      </figure>
+    </div>
+    <div class="pagefoot">Curso 4 · 10</div>
+  </section>
+
+  <!-- 11. LICITACIÓN -->
+  <section class="slide">
+    <div class="kicker"><span class="num">11</span> Licitación pública</div>
+    <h2>Cuando entra el Estado</h2>
+    <p class="sub">No es un problema, es una oportunidad: muchas veces la institución arma la licitación con tu propia cotización de referencia.</p>
+    <div class="cols">
+      <ul class="points">
+        <li><span class="lead">El cambio de chip</span>Compites contra reglas escritas y plazos. Ganar depende de <strong>cumplir las bases al pie de la letra y ofertar a tiempo</strong>.</li>
+        <li><span class="lead">Avísale a Mario</span>Apenas sabes que va a licitación, le mandas la cotización: él maneja ChileCompra / mercadopublico.cl y la postulación formal.</li>
+        <li><span class="lead">Compra Ágil</span>Si el monto entra, una cotización rápida y prolija puede cerrar sin licitación larga.</li>
+        <li><span class="lead">No ganes solo bajando el precio</span>Mira cuánto pesa el precio en la evaluación. Oferta un precio sano y gana por la propuesta completa.</li>
+      </ul>
+    </div>
+    <div class="cols" style="grid-template-columns:1fr 1fr; gap:16px;">
+      <div class="ex solid">
+        <span class="tag">Tu cotización se vuelve la referencia</span>
+        <div class="body">Muchas veces la institución arma el presupuesto y las <b>especificaciones de las bases con TU cotización</b>. Tu trabajo se convirtió en la vara — una ventaja enorme si la sabes aprovechar.</div>
+      </div>
+      <div class="ex">
+        <span class="tag">✓ La cuenta antes de bajar el precio</span>
+        <div class="body">Si el <b>precio pesa 30%</b> y la <b>calidad técnica 50%</b>, regalar margen para ser el más barato es mal negocio: ganas 30 puntos y arriesgas los 50. Oferta un precio sano y gana por la propuesta completa.</div>
+      </div>
+    </div>
+    <div class="pagefoot">Curso 4 · 11</div>
+  </section>
+
+  <!-- 12. HERRAMIENTAS -->
+  <section class="slide">
+    <div class="kicker"><span class="num">12</span> Las herramientas</div>
+    <h2>Todo en un solo lugar</h2>
+    <p class="sub">Ya tienes el proceso completo. Todas las herramientas parten del mismo punto.</p>
+    <div class="cols with-img">
+      <ul class="points">
+        <li><span class="lead">Tu punto de partida</span>Cuando dudes dónde está algo, vuelve a la <strong>Central de Ejecutivos</strong> y busca la tarjeta que necesitas (CRM, Cotizador, Catálogo, Biblioteca de Fichas). Guárdala en favoritos.</li>
+        <li><span class="lead">Cada herramienta, en su etapa</span><strong>CRM</strong> para registrar y mover el negocio · <strong>Catálogo</strong> para mostrar la solución · <strong>Cotizador</strong> para la propuesta · <strong>Fichas técnicas</strong> para adjuntar siempre.</li>
+        <li><span class="lead">La vara está baja — aprovéchala</span>Muchos proveedores contestan sin presentarse ni hacer seguimiento. Siendo educado, atento y constante, destacas casi sin esfuerzo: muy pocos lo hacen.</li>
+      </ul>
+      <figure>
+        <img class="shot" src="./Curso4_capturas/7_central/central-tarjetas.png" alt="Tarjetas de la Central de Ejecutivos">
+        <figcaption class="shot-cap">La Central de Ejecutivos: todas las herramientas en un solo lugar.</figcaption>
+      </figure>
+    </div>
+    <div class="pagefoot">Curso 4 · 12</div>
+  </section>
+
+</div>
+</body>
+</html>

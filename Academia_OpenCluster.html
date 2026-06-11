@@ -130,6 +130,22 @@ body {
 .course.locked .cta { color: var(--oct-text-mute); cursor: not-allowed; }
 .course.unlocked:hover .cta { gap: 9px; }
 
+/* Botón "Descargar resumen del curso" */
+.resumen-row { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--oct-border); }
+.resumen-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: inherit; font-size: 13px; font-weight: 700;
+  padding: 9px 14px; border-radius: 9px; cursor: pointer;
+  background: var(--oct-navy); color: #fff; border: none; line-height: 1.2;
+  transition: background .15s ease;
+}
+.resumen-btn:hover { background: #00237d; }
+.resumen-btn svg { width: 15px; height: 15px; flex: none; }
+.resumen-btn.locked {
+  background: #F3F4F6; color: var(--oct-text-mute); cursor: not-allowed;
+}
+.resumen-btn.locked:hover { background: #F3F4F6; }
+
 .lock-overlay {
   position: absolute; top: 18px; right: 22px;
   display: inline-flex; align-items: center; justify-content: center;
@@ -195,6 +211,7 @@ const COURSES = [
     modules: 9,
     href: 'Academia_Curso_Outreach.html',
     storageKey: 'opencluster_academy_outreach',
+    resumen: 'Resumen_Curso1_Outreach.html',
     iconSvg:
       '<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>' +
       '<polyline points="22,6 12,13 2,6"/>'
@@ -207,6 +224,7 @@ const COURSES = [
     modules: 11,
     href: 'Academia_Curso_N2_Discovery.html',
     storageKey: 'opencluster_academy_discovery',
+    resumen: 'Resumen_Curso2_Discovery.html',
     iconSvg:
       '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>'
   },
@@ -218,6 +236,7 @@ const COURSES = [
     modules: 11,
     href: 'Academia_Curso_N3_Postventa.html',
     storageKey: 'opencluster_academy_postventa',
+    resumen: 'Resumen_Curso3_Postventa.html',
     iconSvg:
       '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline>'
   },
@@ -229,6 +248,7 @@ const COURSES = [
     modules: 11,
     href: 'Academia_Curso_N4_Proceso.html',
     storageKey: 'opencluster_academy_proceso',
+    resumen: 'Resumen_Curso4_Proceso.html',
     iconSvg:
       '<path d="M3 3v18h18"/><path d="M7 15l3-3 3 2 5-6"/>'
   }
@@ -276,6 +296,17 @@ const ICON_LOCK =
   '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
 const ICON_ARROW =
   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>';
+const ICON_DOWNLOAD =
+  '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+
+/* Abre el resumen del curso (solo si el curso está terminado).
+   Si url es null, el botón está bloqueado y no hace nada. */
+function ocAbrirResumen(ev, url) {
+  ev.preventDefault();
+  ev.stopPropagation();
+  if (!url) return;
+  window.open(url, '_blank', 'noopener');
+}
 
 function renderCard(item) {
   const c = item.course, st = item.state, ax = item.access;
@@ -312,6 +343,22 @@ function renderCard(item) {
       </div>`;
   }
 
+  // Botón "Descargar resumen del curso": habilitado solo si el curso está completo.
+  let resumenHtml = '';
+  if (c.resumen) {
+    resumenHtml = st.done
+      ? `<div class="resumen-row">
+        <span class="resumen-btn" onclick="ocAbrirResumen(event, '${c.resumen}')" title="Abrir el resumen del curso. Dentro puedes guardarlo como PDF.">
+          ${ICON_DOWNLOAD} Descargar resumen del curso
+        </span>
+      </div>`
+      : `<div class="resumen-row">
+        <span class="resumen-btn locked" onclick="ocAbrirResumen(event, null)" title="Disponible cuando termines el curso completo.">
+          ${ICON_LOCK} Resumen — termina el curso para descargarlo
+        </span>
+      </div>`;
+  }
+
   const body = `
     <div class="course-stripe"></div>
     <div class="course-body">
@@ -329,6 +376,7 @@ function renderCard(item) {
       </div>
       ${progressHtml}
       <div class="cta">${ctaText}${ax === 'locked' ? '' : ' ' + ICON_ARROW}</div>
+      ${resumenHtml}
     </div>`;
 
   if (ax === 'locked') {

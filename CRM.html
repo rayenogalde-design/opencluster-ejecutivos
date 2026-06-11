@@ -6254,8 +6254,8 @@ function resolverMensaje(c, stageKey){
   var pl = null;
   if(seg){ var sp = (window.__PLANTILLAS_SEG||{})[seg + '|' + stageKey]; if(sp && (String(sp.mensaje_whatsapp||'').trim() || String(sp.email_cuerpo||'').trim())) pl = sp; }
   if(!pl) pl = (window.__PLANTILLAS_PIPE||{})[stageKey];
-  // Fallback: seguimiento-3 (cadencia call-first nueva) aún no tiene plantilla propia → usa la de seguimiento-2.
-  if(!pl && stageKey === 'seguimiento-3'){
+  // Fallback de seguridad: si faltara la plantilla de seguimiento-3 o break-up, usa la de seguimiento-2.
+  if(!pl && (stageKey === 'seguimiento-3' || stageKey === 'break-up')){
     if(seg){ var sp3 = (window.__PLANTILLAS_SEG||{})[seg + '|seguimiento-2']; if(sp3 && (String(sp3.mensaje_whatsapp||'').trim() || String(sp3.email_cuerpo||'').trim())) pl = sp3; }
     if(!pl) pl = (window.__PLANTILLAS_PIPE||{})['seguimiento-2'];
   }
@@ -6371,7 +6371,7 @@ const CADENCIAS = {
     { dia:7,  canal:'Llamada', desc:'Segundo intento — avanzar o llegar al decisor' },
     { dia:8,  canal:'Email',   desc:'Seguimiento 2 — recurso útil',         msg:{ canal:'email', etapa:'seguimiento-2' } },
     { dia:16, canal:'Email',   desc:'Seguimiento 3 — pregunta consultiva',  msg:{ canal:'email', etapa:'seguimiento-3' } },
-    { dia:25, canal:'Email',   desc:'Break-up — email de cierre',           msg:{ canal:'email', etapa:'seguimiento-3' } }
+    { dia:25, canal:'Email',   desc:'Break-up — email de cierre',           msg:{ canal:'email', etapa:'break-up' } }
   ]},
   cotizacion: { nombre:'Post-cotización', pasos:[
     { dia:0,  canal:'Email',    desc:'Cotización enviada',                       msg:{ canal:'email', etapa:'cotizacion-entregada' } },
@@ -7013,7 +7013,7 @@ function _aplicarPipelineData(ejec, plan, seg){
 // ════════════════════════════════════════════════════════════════════════════
 var CFG_ETAPAS = [
   ['no-contactado','No contactado'], ['contactado','Contactado'],
-  ['seguimiento-1','Seguimiento 1'], ['seguimiento-2','Seguimiento 2'], ['seguimiento-3','Seguimiento 3'],
+  ['seguimiento-1','Seguimiento 1'], ['seguimiento-2','Seguimiento 2'], ['seguimiento-3','Seguimiento 3'], ['break-up','Break-up'],
   ['llamada','Llamada'], ['email','Email'], ['reunion','Reunión'],
   ['cotizacion-entregada','Cotización entregada'],
   ['seguimiento-cotizacion-1','Seguimiento cotización 1'],

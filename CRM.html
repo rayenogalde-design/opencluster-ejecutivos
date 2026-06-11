@@ -2140,6 +2140,10 @@ body{
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
         Productos Campaña
       </div>
+      <div class="side-tab" data-view="vListaPrecios" id="navListaPrecios" onclick="goView('vListaPrecios')">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        Lista de Precios
+      </div>
       <div class="side-tab" data-view="vMiTerritorio" id="navMiTerritorio" onclick="goView('vMiTerritorio')">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l3-3 12 12-3 3z"/><path d="M14 14l7 7"/></svg>
         Mi Territorio
@@ -2404,6 +2408,24 @@ body{
           <h3>Sin resultados</h3>
           <p>Probá con otra palabra o limpiá el filtro.</p>
         </div>
+      </div>
+
+      <!-- ═══ Lista de Precios ═══ -->
+      <div class="view" id="vListaPrecios">
+        <div class="sec-head">
+          <h1>Lista de Precios</h1>
+          <p>Busca un producto y mira su precio según la cantidad que se compra (con IVA).</p>
+        </div>
+        <div class="pc-buscador-bloque">
+          <div class="pc-buscador">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <input type="text" id="lpInput" placeholder="Buscar producto o SKU…" oninput="filtrarListaPrecios(this.value)" autocomplete="off">
+            <button type="button" class="pc-buscador-clear" id="lpClear" onclick="document.getElementById('lpInput').value='';filtrarListaPrecios('');" style="display:none;" aria-label="Limpiar">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+        </div>
+        <div id="lpListaContainer"></div>
       </div>
 
       <!-- ═══ Mi Territorio ═══ -->
@@ -4063,6 +4085,7 @@ function goView(id){
     case 'vImportar':        inicializarImportar(); break;
     case 'vCerrar':          cargarPorCerrar(); break;
     case 'vMisCotizaciones': cargarMisCotizaciones(); break;
+    case 'vListaPrecios':    cargarListaPrecios(); break;
     case 'vVentasMes':       cargarVentasMes(); break;
     case 'vRegistroXimena':  cargarRegistroXimena(); break;
     case 'vMetricas':        cargarMetricas(); break;
@@ -13275,6 +13298,47 @@ function pintarListasPrecios(){
     }
   }
   box.innerHTML = keys.map(renderListaPreciosCard).join('');
+}
+
+// ── Vista "Lista de Precios" del sidebar (con buscador) ──
+function cargarListaPrecios(){
+  const box = document.getElementById('lpListaContainer');
+  if(!box) return;
+  if(!window.__PRECIOS_SEG_LOADED){ box.innerHTML = '<div style="padding:24px;color:var(--subtle);font-size:14px;">Cargando precios…</div>'; return; }
+  let keys = [];
+  if(typeof hayDrillDown === 'function' && hayDrillDown()){
+    keys = _segKeysParaEjec(typeof DRILL_DOWN_EJEC !== 'undefined' ? DRILL_DOWN_EJEC : '');
+  } else {
+    const modoActivo = (typeof getModoVista === 'function') ? getModoVista() : '';
+    const verComoEjec = (typeof ROL === 'undefined') || ROL !== 'admin' || modoActivo === 'ejecutiva';
+    keys = verComoEjec ? _segKeysParaEjec(typeof USUARIO !== 'undefined' ? USUARIO : '')
+                       : ['educacion','rehabilitacion','mutuales','distribucion','adulto_mayor','surterapia'];
+  }
+  box.innerHTML = keys.map(renderListaPreciosCard).join('');
+  box.querySelectorAll('.lp-card.collapsed').forEach(c => c.classList.remove('collapsed')); // expandidas en esta vista
+  const q = (document.getElementById('lpInput') || {}).value || '';
+  if(q) filtrarListaPrecios(q);
+}
+function filtrarListaPrecios(q){
+  const clear = document.getElementById('lpClear'); if(clear) clear.style.display = q ? 'flex' : 'none';
+  const norm = s => String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+  const nq = norm(q);
+  const box = document.getElementById('lpListaContainer'); if(!box) return;
+  box.querySelectorAll('.lp-card').forEach(card => {
+    let cardAny = false;
+    card.querySelectorAll('.lp-familia').forEach(fam => {
+      let any = false;
+      fam.querySelectorAll('.lp-fila').forEach(fila => {
+        const show = !nq || norm(fila.textContent).includes(nq);
+        fila.style.display = show ? '' : 'none';
+        if(show) any = true;
+      });
+      fam.style.display = any ? '' : 'none';
+      if(any) cardAny = true;
+    });
+    card.style.display = cardAny ? '' : 'none';
+    if(nq) card.classList.remove('collapsed');
+  });
 }
 
 function toggleListaPrecios(segKey){

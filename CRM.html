@@ -2127,6 +2127,11 @@ body{
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg>
         Mis Contactos
       </div>
+      <div class="side-tab" data-view="vDup" id="navDup" onclick="goView('vDup')">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+        Duplicados a revisar
+        <span class="badge" id="badgeDup" style="display:none;background:#DB2777;">0</span>
+      </div>
       <div class="side-tab" data-view="vTodos" id="navTodos" onclick="goView('vTodos')">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         Todos los Contactos
@@ -2192,11 +2197,6 @@ body{
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6M12 18h.01"/></svg>
           Categorizar Urgente
           <span class="badge" id="badgeSinCat" style="display:none;">0</span>
-        </div>
-        <div class="side-tab admin" data-view="vDup" id="navDup" onclick="goView('vDup')">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
-          Duplicados Pendientes
-          <span class="badge" id="badgeDup" style="display:none;">0</span>
         </div>
         <div class="side-tab admin" data-view="vRegistroXimena" id="navRegistroXimena" onclick="goView('vRegistroXimena')">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -3911,6 +3911,8 @@ function initApp(user){
   setTimeout(() => cargarPipelineData(), 350);
   // Cargar notificaciones pendientes y abrir modal si hay
   setTimeout(() => cargarNotificacionesYAbrir(), 1500);
+  // Pop-up obligatorio de duplicados (primera tarea del día, solo ejecutivos)
+  setTimeout(() => chequearDuplicadosDelDia(), 2200);
   // Polling cada 60s para refrescar el contador
   setInterval(() => cargarNotificacionesYAbrir(true), 60000);
 }
@@ -11532,6 +11534,53 @@ async function aplicarCategorizacionInline(id){
   }
 }
 
+// ════ Pop-up BLOQUEANTE de duplicados — primera tarea del día (ejecutivos) ════
+// Al entrar al CRM, si el ejecutivo tiene contactos duplicados, le tapa la pantalla con un
+// aviso obligatorio que lo manda a fusionarlos. Una vez por día por usuario.
+let _DUP_POPUP_KEY = '';
+async function chequearDuplicadosDelDia(){
+  try {
+    // El admin (Rayen dirigiendo) no recibe el aviso; sí los ejecutivos (incl. modo ejecutiva).
+    if (ROL === 'admin' && (typeof getModoVista==='function' && getModoVista() === 'admin')) return;
+    const d = new Date();
+    const dia = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    const key = 'crm_dup_aviso_' + USUARIO + '_' + dia;
+    if (localStorage.getItem(key)) return;          // ya se le mostró hoy
+    const r = await fetchAPI('crm_duplicados_pendientes', { solicitante: USUARIO });
+    const n = (r && r.ok && Array.isArray(r.duplicados)) ? r.duplicados.length : 0;
+    if (!n) { try { localStorage.setItem(key, '1'); } catch(e){} return; }
+    mostrarPopupDuplicados(n, key);
+  } catch(e){}
+}
+function cerrarPopupDup(ir){
+  try { if(_DUP_POPUP_KEY) localStorage.setItem(_DUP_POPUP_KEY, '1'); } catch(e){}
+  const o = document.getElementById('popupDup'); if(o) o.remove();
+  if(ir){ try { goView('vDup'); } catch(e){} }
+}
+function mostrarPopupDuplicados(n, key){
+  if (document.getElementById('popupDup')) return;
+  _DUP_POPUP_KEY = key;
+  const ov = document.createElement('div');
+  ov.id = 'popupDup';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:2147483646;background:rgba(8,12,28,.80);display:flex;align-items:center;justify-content:center;padding:24px;font-family:var(--font-sans);';
+  ov.innerHTML =
+    '<div style="background:#fff;border-radius:20px;max-width:470px;width:100%;box-shadow:0 30px 90px rgba(0,0,0,.5);overflow:hidden;text-align:center;">'+
+      '<div style="background:linear-gradient(135deg,#DB2777,#9D174D);color:#fff;padding:26px 24px;">'+
+        '<svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;"><path d="M12 9v4M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>'+
+        '<div style="font-size:12.5px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;opacity:.92;">Tu primera tarea del día</div>'+
+        '<div style="font-size:21px;font-weight:800;margin-top:5px;">Tienes contactos duplicados</div>'+
+      '</div>'+
+      '<div style="padding:26px 28px;">'+
+        '<div style="font-size:56px;font-weight:800;color:#DB2777;line-height:1;">'+n+'</div>'+
+        '<div style="font-size:14px;color:var(--oct-navy,#001A60);margin-top:10px;line-height:1.55;">contactos repetidos <b>tuyos</b> que tienes que revisar y <b>fusionar</b>. Hay demasiados duplicados — y nadie mejor que tú para saber cuál es cuál. Pasa a la pestaña <b>Duplicados a revisar</b> y únelos.</div>'+
+        '<div style="display:flex;flex-direction:column;gap:10px;margin-top:24px;">'+
+          '<button onclick="cerrarPopupDup(true)" style="background:#DB2777;color:#fff;border:none;padding:15px;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;">Ir a fusionar mis duplicados</button>'+
+          '<button onclick="cerrarPopupDup(false)" style="background:#fff;color:var(--subtle);border:1px solid #E3E8EF;padding:11px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Lo haré más tarde hoy</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(ov);
+}
 async function cargarDuplicados(){
   const cont = document.getElementById('dupContainer');
   cont.innerHTML = '<div class="loading-state"><div class="spinner"></div>Buscando duplicados pendientes…</div>';

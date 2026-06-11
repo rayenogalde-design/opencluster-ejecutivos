@@ -3909,6 +3909,8 @@ function initApp(user){
   setTimeout(() => preCargarTodoEnBackground(), 200);
   // Cargar ejecutivos + plantillas de pipeline (para links nativos de las tarjetas v2)
   setTimeout(() => cargarPipelineData(), 350);
+  // Anuncio único bloqueante (catálogos/precios) — una vez por usuario hasta que dé Aceptar
+  setTimeout(() => mostrarAnuncioSiCorresponde(), 1300);
   // Cargar notificaciones pendientes y abrir modal si hay
   setTimeout(() => cargarNotificacionesYAbrir(), 1500);
   // Pop-up obligatorio de duplicados (primera tarea del día, solo ejecutivos)
@@ -11534,12 +11536,50 @@ async function aplicarCategorizacionInline(id){
   }
 }
 
+// ════ ANUNCIO único bloqueante — se muestra UNA vez y no vuelve tras Aceptar ════
+// Para postear un anuncio NUEVO a futuro: cambia ANUNCIO_ID (y el título/cuerpo). Al cambiar
+// el ID, vuelve a aparecer una vez para todos. La aceptación se guarda por usuario + ID, así
+// que una vez que le dan Aceptar no reaparece.
+const ANUNCIO_ID = 'catalogos-precios-2026-06-11';
+const ANUNCIO_TITULO = 'Actualización de catálogos y precios';
+const ANUNCIO_CUERPO = 'Hicimos cambios en los catálogos y en algunos precios de venta: se reasignaron productos según el segmento. Por favor revisa tu catálogo para trabajar siempre con la información actualizada. Cuando lo leas, dale Aceptar.';
+function _anuncioKey(){ return 'crm_anuncio_' + ANUNCIO_ID + '_' + (typeof USUARIO !== 'undefined' ? USUARIO : ''); }
+function mostrarAnuncioSiCorresponde(){
+  try {
+    if(localStorage.getItem(_anuncioKey())) return;             // ya lo aceptó
+    if(document.getElementById('modalAnuncio')) return;
+    const ov = document.createElement('div');
+    ov.id = 'modalAnuncio';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(8,12,28,.82);display:flex;align-items:center;justify-content:center;padding:24px;font-family:var(--font-sans);';
+    ov.innerHTML =
+      '<div style="background:#fff;border-radius:20px;max-width:480px;width:100%;box-shadow:0 30px 90px rgba(0,0,0,.5);overflow:hidden;">'+
+        '<div style="background:linear-gradient(135deg,#001A60,#0a2e8a);color:#fff;padding:22px 26px;display:flex;align-items:center;gap:12px;">'+
+          '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>'+
+          '<div style="font-size:18px;font-weight:800;">'+esc(ANUNCIO_TITULO)+'</div>'+
+        '</div>'+
+        '<div style="padding:24px 26px;">'+
+          '<div style="font-size:14.5px;color:#1a2535;line-height:1.65;">'+esc(ANUNCIO_CUERPO)+'</div>'+
+          '<div style="display:flex;justify-content:flex-end;margin-top:22px;">'+
+            '<button onclick="aceptarAnuncio()" style="background:#16A34A;color:#fff;border:none;padding:13px 22px;border-radius:11px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;">Aceptar, revisaré mi catálogo</button>'+
+          '</div>'+
+        '</div>'+
+      '</div>';
+    document.body.appendChild(ov);
+  } catch(e){}
+}
+function aceptarAnuncio(){
+  try { localStorage.setItem(_anuncioKey(), '1'); } catch(e){}
+  const o = document.getElementById('modalAnuncio'); if(o) o.remove();
+}
+
 // ════ Pop-up BLOQUEANTE de duplicados — primera tarea del día (ejecutivos) ════
 // Al entrar al CRM, si el ejecutivo tiene contactos duplicados, le tapa la pantalla con un
 // aviso obligatorio que lo manda a fusionarlos. Una vez por día por usuario.
 let _DUP_POPUP_KEY = '';
 async function chequearDuplicadosDelDia(){
   try {
+    // Si el anuncio bloqueante está abierto, no encimar otro modal: se mostrará en otra apertura.
+    if (document.getElementById('modalAnuncio')) return;
     // El admin (Rayen dirigiendo) no recibe el aviso; sí los ejecutivos (incl. modo ejecutiva).
     if (ROL === 'admin' && (typeof getModoVista==='function' && getModoVista() === 'admin')) return;
     const d = new Date();

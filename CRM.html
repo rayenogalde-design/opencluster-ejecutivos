@@ -8094,7 +8094,14 @@ const _RX_PERS_DOM = /@(gmail|hotmail|icloud|outlook|yahoo|live|me\.com)/i;
 const _RX_INST_KW = /colegio|escuela|liceo|centro|corporaci|municipal|fundaci|hospital|cesfam|clinic|clínic|universidad|instituto|jard[ií]n|sociedad|\bspa\b|ltda|eirl|s\.a|empresa|comercial|distribu|servicio|salud|senama|sename|telet[oó]n|mutual|\bachs\b|daem|sostenedor|comunidad|hogar|eleam|agrupaci|\bong\b/i;
 function _rxEsInst(c){ const e=String((c&&c.email)||''); if(e.indexOf('@')>=0 && !_RX_PERS_DOM.test(e)) return true; return _RX_INST_KW.test(String((c&&c.nombre)||'')); }
 function _rxEsPers(c){ return _RX_PERS_DOM.test(String((c&&c.email)||'')) && !_RX_INST_KW.test(String((c&&c.nombre)||'')); }
-function _rxTipoDe(c){ if(_rxEsInst(c)) return 'inst'; if(_rxEsPers(c)) return 'pers'; return 'sincorreo'; }  // 'sincorreo' = dudoso, a revisar
+function _rxTipoDe(c){
+  // Si ya tiene una categoría que NO es "Personas" (la cambiaste a mano), esa manda.
+  var cat = String((c&&c.tipo_categoria)||'').toLowerCase();
+  if(cat && cat.indexOf('persona') < 0) return 'inst';
+  if(_rxEsInst(c)) return 'inst';
+  if(_rxEsPers(c)) return 'pers';
+  return 'sincorreo';   // dudoso, a revisar
+}
 function _rxVendido(c){ return String((c&&c.pipeline_estado)||'').toLowerCase().indexOf('ganad')>=0 || /vendido/i.test(String((c&&c.notas_publicas)||'')); }
 async function cargarRegistroXimena(){
   const cont = document.getElementById('rxBody');
@@ -8148,6 +8155,13 @@ function _pintarRX(){
         '<select id="rxSelEj" style="padding:7px 10px;border:1px solid var(--smoke,#e5e7eb);border-radius:8px;font-size:13px;font-weight:700;">'+RX_EJECS.filter(n=>n!=='Ximena').map(n=>'<option>'+esc(n)+'</option>').join('')+'</select>'+
         '<button onclick="asignarRXSeleccionados()"'+(nSel?'':' disabled')+' style="background:'+(nSel?'#16A34A':'#cbd5e1')+';color:#fff;border:none;border-radius:8px;padding:8px 15px;font-weight:800;font-size:12.5px;cursor:'+(nSel?'pointer':'default')+';font-family:inherit;">Asignar seleccionados</button>'+
       '</span>'+
+    '</div>'+
+    '<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;width:100%;background:#F5F3FF;border:1px solid #DDD6FE;border-radius:10px;padding:8px 12px;margin-top:8px;">'+
+      '<span style="font-size:12.5px;font-weight:700;color:#5b21b6;">Cambiar categoría de los <b>'+nSel+'</b> seleccionados a:</span>'+
+      '<select id="rxCatSel" style="margin-left:auto;padding:7px 10px;border:1px solid var(--smoke,#e5e7eb);border-radius:8px;font-size:13px;font-weight:700;max-width:240px;">'+
+        Object.keys(TIPOS_ORG_CRM).map(k=>'<option'+(k==='Privados'?' selected':'')+'>'+esc(k)+'</option>').join('')+
+      '</select>'+
+      '<button onclick="cambiarCategoriaRXSeleccionados()"'+(nSel?'':' disabled')+' style="background:'+(nSel?'#5b21b6':'#cbd5e1')+';color:#fff;border:none;border-radius:8px;padding:8px 15px;font-weight:800;font-size:12.5px;cursor:'+(nSel?'pointer':'default')+';font-family:inherit;">Cambiar categoría</button>'+
     '</div>';
   if(!lista.length){ body.innerHTML = '<div class="loading-state" style="padding:30px;">Sin resultados en este filtro.</div>'; return; }
   const TOPE = 400;
@@ -8186,6 +8200,23 @@ async function asignarRXSeleccionados(){
   for(const c of ids){ try{ const r = await fetchAPI('crm_reasignar_contacto', null, { id:c.id, ejecutivo_nuevo:ej, solicitante:USUARIO }); if(r&&r.ok){ c.ejecutivo_asignado=ej; delete RX_SEL[c.id]; ok++; } }catch(e){} }
   _pintarRX();
   alert('Listo: '+ok+' de '+ids.length+' asignado'+(ids.length===1?'':'s')+' a '+ej+'.');
+}
+async function cambiarCategoriaRXSeleccionados(){
+  const cat = (document.getElementById('rxCatSel')||{}).value;
+  const ids = _rxListaFiltrada().filter(c=>RX_SEL[c.id]);
+  if(!ids.length){ alert('Marca al menos un contacto con la casilla.'); return; }
+  if(!confirm('¿Cambiar la categoría de '+ids.length+' contacto'+(ids.length===1?'':'s')+' a "'+cat+'"?')) return;
+  const btn = document.querySelector('#rxBar button[onclick="cambiarCategoriaRXSeleccionados()"]'); if(btn){ btn.disabled=true; btn.textContent='Cambiando…'; }
+  let ok=0;
+  for(const c of ids){
+    try{
+      const r = await fetchAPI('crm_editar_contacto', null, { id:c.id, nombre:c.nombre||'', tipo_categoria:cat, sub_categoria:'', ejecutivo_asignado:c.ejecutivo_asignado, solicitante:USUARIO });
+      if(r&&r.ok){ c.tipo_categoria=cat; c.sub_categoria=''; ok++; }
+    }catch(e){}
+  }
+  try{ localStorage.removeItem('crm_cache_contactos_v2_'+USUARIO); }catch(e){}
+  _pintarRX();
+  alert('Listo: '+ok+' de '+ids.length+' cambiado'+(ids.length===1?'':'s')+' a "'+cat+'".\n(Ahora aparecen como esa categoría; en "Todos los Contactos" ya no quedan como Personas.)');
 }
 /* ════ VENTAS DEL MES — ganadas por fecha de CIERRE (para comisiones) ════ */
 let VENTASMES_MES = '';   // 'YYYY-MM' del mes de cierre elegido

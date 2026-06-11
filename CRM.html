@@ -8088,14 +8088,22 @@ let RX_Q = '';
 let RX_FILTRO_TIPO = 'inst';   // 'todos' | 'inst' (instituciones) | 'pers' (personas) | 'sincorreo'
 let RX_SEL = {};               // ids marcados con casilla
 const RX_EJECS = ['Ximena','William','Roberto','Germán','Maximiliano','Rayen'];
-// Una "institución" se reconoce por correo corporativo (no gmail/hotmail/icloud/...).
-function _rxEsInst(c){ const e=String((c&&c.email)||''); return e.indexOf('@')>=0 && !/@(gmail|hotmail|icloud|outlook|yahoo|live|me\.com)/i.test(e); }
-function _rxTipoDe(c){ const e=String((c&&c.email)||'').trim(); if(!e) return 'sincorreo'; return _rxEsInst(c)?'inst':'pers'; }
+// Una "institución/empresa" se reconoce por correo corporativo (no gmail/hotmail/...) O por
+// el nombre (colegio, corporación, municipalidad, hospital, SpA, Ltda, etc.).
+const _RX_PERS_DOM = /@(gmail|hotmail|icloud|outlook|yahoo|live|me\.com)/i;
+const _RX_INST_KW = /colegio|escuela|liceo|centro|corporaci|municipal|fundaci|hospital|cesfam|clinic|clínic|universidad|instituto|jard[ií]n|sociedad|\bspa\b|ltda|eirl|s\.a|empresa|comercial|distribu|servicio|salud|senama|sename|telet[oó]n|mutual|\bachs\b|daem|sostenedor|comunidad|hogar|eleam|agrupaci|\bong\b/i;
+function _rxEsInst(c){ const e=String((c&&c.email)||''); if(e.indexOf('@')>=0 && !_RX_PERS_DOM.test(e)) return true; return _RX_INST_KW.test(String((c&&c.nombre)||'')); }
+function _rxEsPers(c){ return _RX_PERS_DOM.test(String((c&&c.email)||'')) && !_RX_INST_KW.test(String((c&&c.nombre)||'')); }
+function _rxTipoDe(c){ if(_rxEsInst(c)) return 'inst'; if(_rxEsPers(c)) return 'pers'; return 'sincorreo'; }  // 'sincorreo' = dudoso, a revisar
+function _rxVendido(c){ return String((c&&c.pipeline_estado)||'').toLowerCase().indexOf('ganad')>=0 || /vendido/i.test(String((c&&c.notas_publicas)||'')); }
 async function cargarRegistroXimena(){
   const cont = document.getElementById('rxBody');
-  cont.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando contactos del registro…</div>';
-  const cs = await fetchAPI('crm_contactos', { solicitante: USUARIO });
-  RX_DATA = ((cs && cs.contactos)||[]).filter(c => String(c.etiquetas||'').indexOf('Registro Ximena')>=0);
+  // Reusa los contactos ya cargados en el CRM (CACHE.vTodos / cache local) → instantáneo.
+  // Solo muestra spinner si de verdad no hay nada cacheado todavía.
+  if(!(CACHE.vTodos && CACHE.vTodos.length)) cont.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando contactos del registro…</div>';
+  let cs = [];
+  try { cs = await _cargarContactosBase(); } catch(e){ cs = (CACHE.vTodos||[]); }
+  RX_DATA = (cs||[]).filter(c => String(c.etiquetas||'').indexOf('Registro Ximena')>=0);
   RX_SEL = {};
   _pintarRX();
 }
@@ -8129,7 +8137,7 @@ function _pintarRX(){
   bar.innerHTML =
     '<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;width:100%;margin-bottom:9px;">'+
       '<select onchange="_rxSetTipo(this.value)" style="padding:8px 11px;border:1px solid var(--smoke,#e5e7eb);border-radius:8px;font-size:13px;font-weight:800;color:var(--oct-navy,#001A60);cursor:pointer;">'+
-        tipoOpt('inst','Solo instituciones ('+nInst+')')+tipoOpt('pers','Solo personas ('+nPers+')')+tipoOpt('sincorreo','Sin correo ('+nSin+')')+tipoOpt('todos','Todos ('+RX_DATA.length+')')+
+        tipoOpt('inst','Solo empresas/instituciones ('+nInst+')')+tipoOpt('pers','Solo personas ('+nPers+')')+tipoOpt('sincorreo','Dudosos · a revisar ('+nSin+')')+tipoOpt('todos','Todos ('+RX_DATA.length+')')+
       '</select>'+
       '<input type="text" oninput="_rxFiltro(this.value)" value="'+esc(RX_Q)+'" placeholder="Buscar nombre, email o producto…" style="flex:1;min-width:200px;max-width:320px;padding:8px 12px;border:1px solid var(--smoke,#e5e7eb);border-radius:8px;font-size:13px;font-family:inherit;">'+
       '<span style="font-size:13px;color:var(--subtle);">Repartidos: <b style="color:#16A34A;">'+repartidos+'</b> / '+RX_DATA.length+'</span>'+
@@ -8146,10 +8154,16 @@ function _pintarRX(){
   body.innerHTML = lista.slice(0,TOPE).map(c => {
     const hist = String(c.notas_publicas||'').replace(/^—\s*Migrado del registro de Ximena\s*—\n?/,'').trim();
     const sel = !!RX_SEL[c.id];
+    const tipo = _rxTipoDe(c);
+    const tipoPill = tipo==='inst' ? '<span style="font-size:10.5px;font-weight:800;color:#1D4ED8;background:#DBEAFE;border-radius:999px;padding:2px 8px;">Empresa</span>'
+                   : tipo==='pers' ? '<span style="font-size:10.5px;font-weight:800;color:#64748B;background:#F1F5F9;border-radius:999px;padding:2px 8px;">Persona</span>'
+                   : '<span style="font-size:10.5px;font-weight:800;color:#B45309;background:#FEF3C7;border-radius:999px;padding:2px 8px;">¿?</span>';
+    const vendidoBadge = _rxVendido(c) ? '<span style="font-size:10.5px;font-weight:800;color:#fff;background:#16A34A;border-radius:999px;padding:2px 8px;">VENDIDO</span>' : '';
     return '<div style="display:flex;gap:11px;align-items:flex-start;padding:11px 14px;border:1px solid '+(sel?'#86EFAC':'var(--smoke,#e5e7eb)')+';border-radius:10px;margin-bottom:8px;flex-wrap:wrap;background:'+(sel?'#F0FDF4':'#fff')+';">'+
       '<input type="checkbox" '+(sel?'checked':'')+' onclick="_rxToggleSel(\''+esc(c.id)+'\')" style="width:17px;height:17px;margin-top:2px;cursor:pointer;flex:0 0 auto;">'+
       '<div style="min-width:0;flex:1;">'+
-        '<div style="font-weight:700;color:var(--ink);font-size:14px;">'+esc(c.nombre||'(sin nombre)')+' <span style="font-weight:600;color:var(--subtle);font-size:12px;">'+esc(c.email||'(sin correo)')+'</span></div>'+
+        '<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;"><span style="font-weight:700;color:var(--ink);font-size:14px;">'+esc(c.nombre||'(sin nombre)')+'</span>'+tipoPill+vendidoBadge+'</div>'+
+        '<div style="font-weight:600;color:var(--subtle);font-size:12px;margin-top:1px;">'+esc(c.email||'(sin correo)')+'</div>'+
         (hist?'<div style="font-size:11.5px;color:var(--subtle);margin-top:3px;white-space:pre-wrap;">'+esc(hist)+'</div>':'')+
       '</div>'+
       '<div style="flex:0 0 auto;">'+_rxSel(c.id, c.ejecutivo_asignado)+'</div>'+

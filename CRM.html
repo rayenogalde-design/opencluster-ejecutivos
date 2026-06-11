@@ -4026,7 +4026,7 @@ function toggleTodosPersonas(){
   TODOS_VER_PERSONAS = !TODOS_VER_PERSONAS;
   const btn = document.getElementById('btnTodosPersonas');
   const lbl = document.getElementById('lblTodosPersonas');
-  if(lbl) lbl.textContent = TODOS_VER_PERSONAS ? 'Ocultar personas' : 'Ver personas';
+  if(lbl) lbl.textContent = TODOS_VER_PERSONAS ? 'Ver instituciones' : 'Ver personas';
   if(btn){
     btn.style.background = TODOS_VER_PERSONAS ? 'var(--oct-navy,#001A60)' : '#fff';
     btn.style.color = TODOS_VER_PERSONAS ? '#fff' : 'var(--subtle,#64748B)';
@@ -5980,11 +5980,13 @@ let TODOS_VER_PERSONAS = false;  // toggle SOLO admin en "Todos los Contactos"
 function renderLista(view){
   const container = document.getElementById(view === 'vMis' ? 'listMis' : 'listTodos');
   let cacheCompleto = CACHE[view] || [];
-  // "Todos los Contactos": las personas (consumidor final, sobre todo las de Ximena) NO se
-  // muestran porque abruman al equipo. Solo el admin puede verlas activando el toggle "Personas".
-  // Los ejecutivos nunca las ven aquí; Ximena igual las ve en SUS contactos (vMis).
-  if(view === 'vTodos' && !((typeof esActuandoComoAdmin==='function' && esActuandoComoAdmin()) && TODOS_VER_PERSONAS)){
-    cacheCompleto = cacheCompleto.filter(c => !_esContactoPersona(c));
+  // "Todos los Contactos": por defecto muestra SOLO instituciones (sin personas), porque las
+  // personas (consumidor final, sobre todo las 704 de Ximena) abruman al equipo. El admin puede
+  // tocar "Ver personas" para ver SOLO las personas (no todo mezclado). Los ejecutivos nunca las
+  // ven aquí; Ximena igual las ve en SUS contactos (vMis).
+  if(view === 'vTodos'){
+    const verSoloPersonas = (typeof esActuandoComoAdmin==='function' && esActuandoComoAdmin()) && TODOS_VER_PERSONAS;
+    cacheCompleto = cacheCompleto.filter(c => verSoloPersonas ? _esContactoPersona(c) : !_esContactoPersona(c));
   }
   // 1. Aplicar búsqueda
   const q = _busqNorm(FILTROS[view] || '').trim();

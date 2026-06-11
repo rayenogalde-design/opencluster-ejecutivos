@@ -2372,6 +2372,10 @@ body{
             <input type="text" id="searchTodos" oninput="filtrarLista('vTodos', this.value)" placeholder="Buscar en todo el equipo…">
           </div>
           <div style="color:var(--subtle);font-size:13.5px;font-weight:600;"><b id="cntTodos" style="color:var(--ink);">0</b> contactos totales</div>
+          <button id="btnTodosPersonas" onclick="toggleTodosPersonas()" title="Mostrar/ocultar los contactos Persona (consumidor final). Solo tú los ves aquí." style="display:none;align-items:center;gap:6px;background:#fff;border:1px solid #E3E8EF;border-radius:999px;padding:7px 13px;font-size:12.5px;font-weight:700;color:var(--subtle);cursor:pointer;font-family:var(--font-sans);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg>
+            <span id="lblTodosPersonas">Ver personas</span>
+          </button>
         </div>
         <div id="filtrosTodos" class="filtros-bloque"></div>
         <div id="listTodos"></div>
@@ -3955,6 +3959,9 @@ function aplicarVisibilidadPorRol(){
     const el = document.getElementById(id);
     if(el) el.style.display = verComoEjecutivo ? '' : 'none';
   });
+  // Botón "Ver personas" en Todos los Contactos: solo para el admin (Rayen).
+  const btnPers = document.getElementById('btnTodosPersonas');
+  if(btnPers) btnPers.style.display = verComoEjecutivo ? 'none' : 'inline-flex';
 
   // Si está en una vista admin y cambia a modo ejecutiva, redirigir al dashboard
   if (verComoEjecutivo) {
@@ -4014,6 +4021,19 @@ function esActuandoComoAdmin(){
   return ROL === 'admin' && getModoVista() === 'admin';
 }
 
+// Toggle (solo admin) para ver/ocultar los contactos Persona en "Todos los Contactos".
+function toggleTodosPersonas(){
+  TODOS_VER_PERSONAS = !TODOS_VER_PERSONAS;
+  const btn = document.getElementById('btnTodosPersonas');
+  const lbl = document.getElementById('lblTodosPersonas');
+  if(lbl) lbl.textContent = TODOS_VER_PERSONAS ? 'Ocultar personas' : 'Ver personas';
+  if(btn){
+    btn.style.background = TODOS_VER_PERSONAS ? 'var(--oct-navy,#001A60)' : '#fff';
+    btn.style.color = TODOS_VER_PERSONAS ? '#fff' : 'var(--subtle,#64748B)';
+    btn.style.borderColor = TODOS_VER_PERSONAS ? 'var(--oct-navy,#001A60)' : '#E3E8EF';
+  }
+  renderLista('vTodos');
+}
 // Colapsa/expande el grupo "Herramientas" del sidebar (mantenimiento / un solo uso).
 function toggleHerramientas(){
   const g = document.getElementById('grpHerramientas'); const ch = document.getElementById('chevHerr');
@@ -5954,9 +5974,18 @@ async function refrescarContactosBackground(view, cacheKey){
   } catch(e){}
 }
 
+// ¿Es un contacto "Persona" (consumidor final)? Casi todos son las 704 personas de Ximena.
+function _esContactoPersona(c){ return /persona/i.test(String((c&&c.tipo_categoria)||'')); }
+let TODOS_VER_PERSONAS = false;  // toggle SOLO admin en "Todos los Contactos"
 function renderLista(view){
   const container = document.getElementById(view === 'vMis' ? 'listMis' : 'listTodos');
-  const cacheCompleto = CACHE[view] || [];
+  let cacheCompleto = CACHE[view] || [];
+  // "Todos los Contactos": las personas (consumidor final, sobre todo las de Ximena) NO se
+  // muestran porque abruman al equipo. Solo el admin puede verlas activando el toggle "Personas".
+  // Los ejecutivos nunca las ven aquí; Ximena igual las ve en SUS contactos (vMis).
+  if(view === 'vTodos' && !((typeof esActuandoComoAdmin==='function' && esActuandoComoAdmin()) && TODOS_VER_PERSONAS)){
+    cacheCompleto = cacheCompleto.filter(c => !_esContactoPersona(c));
+  }
   // 1. Aplicar búsqueda
   const q = _busqNorm(FILTROS[view] || '').trim();
   let lista = !q ? cacheCompleto.slice() : cacheCompleto.filter(c =>

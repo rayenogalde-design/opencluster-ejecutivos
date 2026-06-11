@@ -6254,6 +6254,11 @@ function resolverMensaje(c, stageKey){
   var pl = null;
   if(seg){ var sp = (window.__PLANTILLAS_SEG||{})[seg + '|' + stageKey]; if(sp && (String(sp.mensaje_whatsapp||'').trim() || String(sp.email_cuerpo||'').trim())) pl = sp; }
   if(!pl) pl = (window.__PLANTILLAS_PIPE||{})[stageKey];
+  // Fallback: seguimiento-3 (cadencia call-first nueva) aún no tiene plantilla propia → usa la de seguimiento-2.
+  if(!pl && stageKey === 'seguimiento-3'){
+    if(seg){ var sp3 = (window.__PLANTILLAS_SEG||{})[seg + '|seguimiento-2']; if(sp3 && (String(sp3.mensaje_whatsapp||'').trim() || String(sp3.email_cuerpo||'').trim())) pl = sp3; }
+    if(!pl) pl = (window.__PLANTILLAS_PIPE||{})['seguimiento-2'];
+  }
   var repl = function(s){
     return String(s||'')
       .replace(/\{nombre_contacto\}/g, c.nombre || c.institucion || '')
@@ -6349,7 +6354,7 @@ function _lanzarMensaje(){
 // Self-contained: recibe el contacto y la vista, computa todo internamente.
 // ════════════════════════════════════════════════════════════════════════════
 // CADENCIA DE OUTREACH (frontend) — espejo del motor del Apps Script.
-// Combo Academia "5 toques en 3 semanas" (prospección) + secuencia post-cotización.
+// Cadencia Academia (Curso 1 / Outreach): prospección LLAMADA-FIRST 7 toques en ~3,5 semanas + post-cotización.
 // El backend escribe proxima_accion/nota_proxima; acá mostramos toque + canal y
 // damos el botón "Hecho" que avanza la cadencia. Aviso: tile en dashboard + toast.
 // ════════════════════════════════════════════════════════════════════════════
@@ -6358,13 +6363,15 @@ function _lanzarMensaje(){
 // El botón "Mensaje" abre esa plantilla real (segmentada por el segmento del ejecutivo),
 // NO un texto inventado. Los toques de llamada/LinkedIn no traen mensaje (su desc guía).
 const CADENCIAS = {
+  // LLAMADA-FIRST (alineado al Curso 1 / Outreach, doc maestro 5-jun). 7 toques en ~3,5 semanas.
   prospeccion: { nombre:'Prospección', pasos:[
-    { dia:0,  canal:'Email',    desc:'Cold email principal — arranque',          msg:{ canal:'email', etapa:'contactado' } },
-    { dia:2,  canal:'LinkedIn', desc:'Conexión en LinkedIn (sin mensaje o breve)' },
-    { dia:4,  canal:'Email',    desc:'Follow-up 1 — caso aplicado',              msg:{ canal:'email', etapa:'seguimiento-1' } },
-    { dia:7,  canal:'Llamada',  desc:'Llamada (Zadarma) — menciona el correo' },
-    { dia:12, canal:'Email',    desc:'Follow-up 2 — recurso útil',               msg:{ canal:'email', etapa:'seguimiento-2' } },
-    { dia:21, canal:'Email',    desc:'Break-up — email de cierre',               msg:{ canal:'email', etapa:'seguimiento-2' } }
+    { dia:0,  canal:'Llamada', desc:'Primer contacto. Sin datos: llamas a la institución (S1 recepción). Con decisor: S2/S3.' },
+    { dia:1,  canal:'Email',   desc:'Refuerzo: recap si hablaste / "te llamé" si no contestó', msg:{ canal:'email', etapa:'contactado' } },
+    { dia:3,  canal:'Email',   desc:'Seguimiento 1 — caso aplicado',        msg:{ canal:'email', etapa:'seguimiento-1' } },
+    { dia:7,  canal:'Llamada', desc:'Segundo intento — avanzar o llegar al decisor' },
+    { dia:8,  canal:'Email',   desc:'Seguimiento 2 — recurso útil',         msg:{ canal:'email', etapa:'seguimiento-2' } },
+    { dia:16, canal:'Email',   desc:'Seguimiento 3 — pregunta consultiva',  msg:{ canal:'email', etapa:'seguimiento-3' } },
+    { dia:25, canal:'Email',   desc:'Break-up — email de cierre',           msg:{ canal:'email', etapa:'seguimiento-3' } }
   ]},
   cotizacion: { nombre:'Post-cotización', pasos:[
     { dia:0,  canal:'Email',    desc:'Cotización enviada',                       msg:{ canal:'email', etapa:'cotizacion-entregada' } },
@@ -6496,7 +6503,7 @@ function _cadBannerInner(c, editable){
     : '<div style="font-size:13px;color:var(--v2-text-soft);margin:6px 0 10px;">Sin cadencia activa.</div>';
   return wrap('<div class="v2-block-head"><span class="v2-block-label">CADENCIA DE SEGUIMIENTO</span></div>'+
     _segLinea+
-    '<div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn primary" onclick="cadenciaIniciar(\''+id+'\',\'prospeccion\')">Iniciar prospección (5 toques)</button>'+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn primary" onclick="cadenciaIniciar(\''+id+'\',\'prospeccion\')">Iniciar prospección (7 toques)</button>'+
     '<button class="btn'+(_segVenc?' primary':'')+'" onclick="cadenciaIniciar(\''+id+'\',\'cotizacion\')">Iniciar post-cotización</button></div>', _segVenc ? '#ef4444' : '#cbd5e1');
 }
 function cadenciaBannerFicha(c, editable){ return '<div id="cadBannerFicha">'+_cadBannerInner(c, editable)+'</div>'; }
@@ -7006,7 +7013,7 @@ function _aplicarPipelineData(ejec, plan, seg){
 // ════════════════════════════════════════════════════════════════════════════
 var CFG_ETAPAS = [
   ['no-contactado','No contactado'], ['contactado','Contactado'],
-  ['seguimiento-1','Seguimiento 1'], ['seguimiento-2','Seguimiento 2'],
+  ['seguimiento-1','Seguimiento 1'], ['seguimiento-2','Seguimiento 2'], ['seguimiento-3','Seguimiento 3'],
   ['llamada','Llamada'], ['email','Email'], ['reunion','Reunión'],
   ['cotizacion-entregada','Cotización entregada'],
   ['seguimiento-cotizacion-1','Seguimiento cotización 1'],

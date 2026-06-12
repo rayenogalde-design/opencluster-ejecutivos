@@ -472,6 +472,12 @@ input,select,textarea{font-family:inherit; font-size:14px;}
   display:block; font-size:10px; color:var(--text-3,#9a93a8);
   font-weight:600; letter-spacing:.3px; margin-top:1px;
 }
+.lp-thumb{
+  width:44px; height:44px; flex-shrink:0; border-radius:9px;
+  border:1px solid #ece8f4; overflow:hidden;
+  background:#f7f6fb url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='%23c9c4d6' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2'/%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'/%3E%3Cpath d='M21 15l-5-5L5 21'/%3E%3C/svg%3E") center/22px no-repeat;
+}
+.lp-thumb img{ width:100%; height:100%; object-fit:contain; display:block; background:#fff; }
 .lp-tarifa{
   display:grid; grid-template-columns:repeat(3,82px); gap:6px;
   text-align:right; font-variant-numeric:tabular-nums;
@@ -13336,6 +13342,30 @@ function _segKeysParaEjec(nombre){
 var SVG_LP_TAG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>';
 var SVG_LP_CHEVRON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>';
 
+// ── Imágenes de producto para la Lista de Precios (mapa SKU→imagen, fuente Shopify OCT + TheraMart) ──
+window.__PROD_IMG = {};
+window.__PROD_IMG_LOADED = false;
+function _lpNorm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim(); }
+function _lpImgUrl(p){
+  var M = window.__PROD_IMG || {};
+  if(p && p.sku && M[p.sku]) return M[p.sku];
+  if(p && p.nombre){ var k = 'TIT::' + _lpNorm(p.nombre); if(M[k]) return M[k]; }
+  return null;
+}
+function _lpThumb(p){
+  var u = _lpImgUrl(p);
+  return '<span class="lp-thumb">' + (u ? '<img src="' + esc(u) + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '') + '</span>';
+}
+(function cargarProdImg(){
+  fetch('productos_img.json', { cache:'no-store' })
+    .then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); })
+    .then(function(d){ window.__PROD_IMG = d || {}; window.__PROD_IMG_LOADED = true;
+      try{ pintarListasPrecios(); }catch(e){}
+      try{ if(document.getElementById('lpListaContainer')) cargarListaPrecios(); }catch(e){}
+    })
+    .catch(function(){});
+})();
+
 function renderListaPreciosCard(segKey){
   const seg = (window.__PRECIOS_SEG || {})[segKey];
   if(!seg || !Array.isArray(seg.familias) || !seg.familias.length) return '';
@@ -13354,6 +13384,7 @@ function renderListaPreciosCard(segKey){
         ? '<div class="lp-monto">' + fmt(p.valor) + '</div>'
         : '<div class="lp-tarifa"><span>' + fmt(p.t1) + '</span><span>' + fmt(p.t2) + '</span><span>' + fmt(p.t3) + '</span></div>';
       return '<div class="lp-fila">' +
+          _lpThumb(p) +
           '<div class="lp-nombre">' + esc(p.nombre) + (p.sku ? '<span class="lp-sku">' + esc(p.sku) + '</span>' : '') + '</div>' +
           cols +
         '</div>';

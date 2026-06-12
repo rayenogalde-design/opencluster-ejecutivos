@@ -13384,7 +13384,8 @@ function _lpCatalogoSeg(){
     var seg = P[k]; if(!seg || !Array.isArray(seg.familias)) return;
     seg.familias.forEach(function(f){
       f.productos.forEach(function(p){
-        var id = p.sku ? ('S:' + p.sku) : ('N:' + _lpNorm(p.nombre));
+        // dedup por SKU + nombre: hay SKU compartidos por varios productos (bundles), no colapsarlos
+        var id = (p.sku || '') + '|' + _lpNorm(p.nombre);
         if(vistos[id]) return; vistos[id] = 1;
         if(!famMap[f.nombre]) famMap[f.nombre] = { nombre:f.nombre, productos:[] };
         famMap[f.nombre].productos.push(p);

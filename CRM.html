@@ -2397,6 +2397,9 @@ body{
         #vDashboard .dv3-bars .bar.me .ini{color:#ff7e00;font-weight:700;}
         #vDashboard .dv3-kpirow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px;}
         #vDashboard .dv3-mini{background:#fff;border:1px solid #e8ecf5;border-radius:15px;padding:14px 16px;box-shadow:0 6px 18px -14px rgba(0,26,96,.4);border-left:3px solid var(--c2);}
+        #vDashboard .dv3-clic{cursor:pointer;transition:transform .12s, box-shadow .12s;}
+        #vDashboard .dv3-clic:hover{transform:translateY(-2px);box-shadow:0 12px 26px -14px rgba(0,26,96,.45);}
+        #vDashboard .dv3-clic:active{transform:translateY(0);}
         #vDashboard .dv3-mini .dv3-lbl{margin-bottom:3px;}
         #vDashboard .dv3-mini .big{font-size:27px;font-weight:700;letter-spacing:-.025em;line-height:1;margin:7px 0 3px;color:#001a60;}
         #vDashboard .dv3-mini .big .u{font-size:13px;color:#727c98;font-weight:600;}
@@ -5786,7 +5789,7 @@ function _ringStops(c){
   };
   return m[String(c).toLowerCase()]||[c,c];
 }
-function _ringTile(color,center,pct,ico,label,big,small){
+function _ringTile(color,center,pct,ico,label,big,small,onClick){
   var p=Math.max(0,Math.min(100,(pct||0)));
   var st=_ringStops(color), gid='rg'+String(color).replace('#','');
   var ring='<div class="ringg" style="--c2:'+color+'">'+
@@ -5795,12 +5798,14 @@ function _ringTile(color,center,pct,ico,label,big,small){
     '<circle class="rg-track" cx="18" cy="18" r="15.915"/>'+
     '<circle class="rg-fill" cx="18" cy="18" r="15.915" stroke="url(#'+gid+')" stroke-dasharray="'+p+' 100"/></svg>'+
     '<b>'+center+'</b></div>';
-  return '<div class="dv3-tile dv3-ring" style="--c2:'+color+'">'+ring+
+  var attrs='class="dv3-tile dv3-ring'+(onClick?' dv3-clic':'')+'" style="--c2:'+color+'"'+(onClick?(' onclick="'+onClick+'" title="Ver detalle"'):'');
+  return '<div '+attrs+'>'+ring+
     '<div style="min-width:0"><div class="dv3-lbl">'+ico+esc(label)+'</div>'+
     '<div class="big">'+big+'</div><div class="small">'+small+'</div></div></div>';
 }
-function _miniTile(c,ico,label,big,small){
-  return '<div class="dv3-mini" style="--c2:'+c+'"><div class="dv3-lbl">'+ico+esc(label)+'</div><div class="big">'+big+'</div><div class="small">'+small+'</div></div>';
+function _miniTile(c,ico,label,big,small,onClick){
+  var attrs='class="dv3-mini'+(onClick?' dv3-clic':'')+'" style="--c2:'+c+'"'+(onClick?(' onclick="'+onClick+'" title="Ver detalle"'):'');
+  return '<div '+attrs+'><div class="dv3-lbl">'+ico+esc(label)+'</div><div class="big">'+big+'</div><div class="small">'+small+'</div></div>';
 }
 function _teamTile(vg){
   var arr=((vg&&vg.ranking_equipo)||[]).filter(function(x){return !_excluirRanking(x.ejec);});
@@ -5816,7 +5821,7 @@ function _teamTile(vg){
     var val=hasMonto?_montoCorto(x.v):x.v;
     return '<div class="bar'+me+'"><span class="val">'+val+'</span><div class="col" style="height:'+h+'px"></div><span class="ini">'+esc(x.n)+'</span></div>';
   }).join('');
-  return '<div class="dv3-tile dv3-team">'+
+  return '<div class="dv3-tile dv3-team dv3-clic" onclick="goView(\'vMetricas\')" title="Ver metricas del equipo">'+
     '<div class="thd"><div class="dv3-lbl">'+_DV3.bars+'Ventas del equipo</div><div class="tot">'+(hasMonto?_montoCorto(total):total)+'</div></div>'+
     '<div class="dv3-bars">'+(bars||'<span class="small" style="margin:auto;color:#9aa3bd">Sin datos del equipo</span>')+'</div></div>';
 }
@@ -5836,18 +5841,18 @@ function renderDashV3(r){
   var rings=document.getElementById('dshRings');
   if(rings){
     rings.innerHTML=
-      _ringTile('#16a34a',pctMeta+'%',pctMeta,_DV3.vent,'Ventas del mes',_montoCorto(ventasM),'meta '+_montoCorto(META))+
-      _ringTile('#ff7e00',tasaPct+'%',tasaPct,_DV3.close,'Tasa de cierre',deCada10+' <span class="u">de 10</span>','cotizaciones que ganas')+
-      _ringTile('#06b3fd',nuevos,pctCont,_DV3.users,'Contactos',nuevos+' <span class="u">/'+metaCont+'</span>','nuevos este mes')+
+      _ringTile('#16a34a',pctMeta+'%',pctMeta,_DV3.vent,'Ventas del mes',_montoCorto(ventasM),'meta '+_montoCorto(META),"abrirDetalleKpi('ventas_ganadas')")+
+      _ringTile('#ff7e00',tasaPct+'%',tasaPct,_DV3.close,'Tasa de cierre',deCada10+' <span class="u">de 10</span>','cotizaciones que ganas',"abrirDetalleKpi('cotizaciones')")+
+      _ringTile('#06b3fd',nuevos,pctCont,_DV3.users,'Contactos',nuevos+' <span class="u">/'+metaCont+'</span>','nuevos este mes',"abrirDetalleKpi('nuevos_contactos')")+
       _teamTile(k.ventas_ganadas);
   }
   var minis=document.getElementById('dshMinis');
   if(minis){
     minis.innerHTML=
-      _miniTile('#16a34a',_DV3.chart,'Pipeline en juego','<span id="dv3Pipeline">—</span>','cotizaciones abiertas')+
-      _miniTile('#ff7e00',_DV3.doc,'Cotizaciones',cotiz,'enviadas este mes')+
-      _miniTile('#7c3aed',_DV3.cal,'Reuniones',reun,'agendadas este mes')+
-      _miniTile('#e11d63',_DV3.bell,'Por trabajar','<span id="dv3PorTrabajar">—</span>','empresas sin contactar');
+      _miniTile('#16a34a',_DV3.chart,'Pipeline en juego','<span id="dv3Pipeline">—</span>','cotizaciones abiertas',"goView('vMisCotizaciones')")+
+      _miniTile('#ff7e00',_DV3.doc,'Cotizaciones',cotiz,'enviadas este mes',"abrirDetalleKpi('cotizaciones')")+
+      _miniTile('#7c3aed',_DV3.cal,'Reuniones',reun,'agendadas este mes',"abrirDetalleKpi('reuniones')")+
+      _miniTile('#e11d63',_DV3.bell,'Por trabajar','<span id="dv3PorTrabajar">—</span>','empresas sin contactar',"irAListaPartida(true)");
   }
   try{ _updatePipelineMini(); }catch(e){}
   // ranking (contactos de la semana)

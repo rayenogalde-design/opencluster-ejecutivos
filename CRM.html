@@ -478,6 +478,10 @@ input,select,textarea{font-family:inherit; font-size:14px;}
   background:#f7f6fb url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='%23c9c4d6' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2'/%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'/%3E%3Cpath d='M21 15l-5-5L5 21'/%3E%3C/svg%3E") center/22px no-repeat;
 }
 .lp-thumb img{ width:100%; height:100%; object-fit:contain; display:block; background:#fff; }
+.lp-toggle{ display:inline-flex; gap:4px; background:#eef1f8; border-radius:11px; padding:4px; margin-bottom:14px; }
+.lp-toggle-btn{ border:none; background:transparent; color:#5a6b8c; font-family:var(--font-sans); font-weight:700; font-size:12.5px; padding:7px 15px; border-radius:8px; cursor:pointer; transition:background .15s,color .15s,box-shadow .15s; }
+.lp-toggle-btn:hover{ color:#001a60; }
+.lp-toggle-btn.active{ background:#fff; color:#001a60; box-shadow:0 2px 6px -2px rgba(0,26,96,.25); }
 .lp-tarifa{
   display:grid; grid-template-columns:repeat(3,82px); gap:6px;
   text-align:right; font-variant-numeric:tabular-nums;
@@ -13366,6 +13370,53 @@ function _lpThumb(p){
     .catch(function(){});
 })();
 
+// ── Toggle "Mi segmento" / "Todo el catálogo" en la Lista de Precios ──
+try{ window.__LP_VER_TODO = (localStorage.getItem('crm_lp_vertodo') === '1'); }catch(e){ window.__LP_VER_TODO = false; }
+var _LP_FAM_ORDEN = ['Comunicación Aumentativa (CAA)','Switches y Pulsadores','Acceso al Computador','Movilidad','Posicionamiento y Baño','Confort y Cuidado Diario','Hospitalización Domiciliaria','Soporte Respiratorio'];
+// Catálogo completo = unión de los segmentos retail (mismo precio de catálogo estándar para todos),
+// deduplicado por SKU, agrupado por familia. Cubre los ~110 productos del catálogo.
+function _lpCatalogoSeg(){
+  var P = window.__PRECIOS_SEG || {};
+  if(P['__catalogo']) return P['__catalogo'];
+  var orden = ['educacion','rehabilitacion','mutuales','adulto_mayor']; // trío estándar primero (concuerdan), luego adulto mayor
+  var famMap = {}, vistos = {};
+  orden.forEach(function(k){
+    var seg = P[k]; if(!seg || !Array.isArray(seg.familias)) return;
+    seg.familias.forEach(function(f){
+      f.productos.forEach(function(p){
+        var id = p.sku ? ('S:' + p.sku) : ('N:' + _lpNorm(p.nombre));
+        if(vistos[id]) return; vistos[id] = 1;
+        if(!famMap[f.nombre]) famMap[f.nombre] = { nombre:f.nombre, productos:[] };
+        famMap[f.nombre].productos.push(p);
+      });
+    });
+  });
+  var familias = Object.keys(famMap).sort(function(a,b){
+    var ia = _LP_FAM_ORDEN.indexOf(a), ib = _LP_FAM_ORDEN.indexOf(b);
+    return (ia<0?99:ia) - (ib<0?99:ib);
+  }).map(function(n){ return famMap[n]; });
+  var seg = { key:'__catalogo', ejecutivo:'', segmento:'Todos los productos del catálogo', tipo:'retail', familias:familias };
+  P['__catalogo'] = seg;
+  return seg;
+}
+function _lpToggleBar(){
+  var todo = !!window.__LP_VER_TODO;
+  return '<div class="lp-toggle" role="tablist">' +
+      '<button type="button" class="lp-toggle-btn' + (todo?'':' active') + '" onclick="lpSetVerTodo(false)">Mi segmento</button>' +
+      '<button type="button" class="lp-toggle-btn' + (todo?' active':'') + '" onclick="lpSetVerTodo(true)">Todo el catálogo</button>' +
+    '</div>';
+}
+function _lpRenderCards(keys){
+  if(window.__LP_VER_TODO){ _lpCatalogoSeg(); return renderListaPreciosCard('__catalogo'); }
+  return keys.map(renderListaPreciosCard).join('');
+}
+function lpSetVerTodo(v){
+  window.__LP_VER_TODO = !!v;
+  try{ localStorage.setItem('crm_lp_vertodo', v?'1':'0'); }catch(e){}
+  try{ pintarListasPrecios(); }catch(e){}
+  try{ if(document.getElementById('lpListaContainer')) cargarListaPrecios(); }catch(e){}
+}
+
 function renderListaPreciosCard(segKey){
   const seg = (window.__PRECIOS_SEG || {})[segKey];
   if(!seg || !Array.isArray(seg.familias) || !seg.familias.length) return '';
@@ -13430,7 +13481,7 @@ function pintarListasPrecios(){
       keys = ['educacion','rehabilitacion','mutuales','distribucion','adulto_mayor','surterapia'];
     }
   }
-  box.innerHTML = keys.map(renderListaPreciosCard).join('');
+  box.innerHTML = _lpToggleBar() + _lpRenderCards(keys);
 }
 
 // ── Vista "Lista de Precios" del sidebar (con buscador) ──
@@ -13447,7 +13498,7 @@ function cargarListaPrecios(){
     keys = verComoEjec ? _segKeysParaEjec(typeof USUARIO !== 'undefined' ? USUARIO : '')
                        : ['educacion','rehabilitacion','mutuales','distribucion','adulto_mayor','surterapia'];
   }
-  box.innerHTML = keys.map(renderListaPreciosCard).join('');
+  box.innerHTML = _lpToggleBar() + _lpRenderCards(keys);
   box.querySelectorAll('.lp-card.collapsed').forEach(c => c.classList.remove('collapsed')); // expandidas en esta vista
   const q = (document.getElementById('lpInput') || {}).value || '';
   if(q) filtrarListaPrecios(q);

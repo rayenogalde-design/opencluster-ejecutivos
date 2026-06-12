@@ -77,6 +77,16 @@
 
   .card-body{flex:1;padding:16px 20px;display:flex;align-items:center;gap:16px;}
 
+  /* Catálogo asignado con botones Compartir / Copiar link al pie */
+  .card--cat{flex-direction:column;align-items:stretch;}
+  .cat-share-row{display:flex;gap:8px;padding:13px 18px 16px;margin-top:auto;border-top:1px solid rgba(0,26,96,.07);}
+  .cat-share-btn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 10px;border-radius:9px;
+    background:rgba(122,69,51,.08);color:#7A4533;font-weight:700;font-size:12.5px;cursor:pointer;border:1px solid rgba(122,69,51,.18);
+    transition:background .15s;user-select:none;}
+  .cat-share-btn:hover{background:rgba(122,69,51,.16);}
+  .cat-share-btn:active{transform:scale(.97);}
+  .cat-share-btn svg{width:15px;height:15px;flex-shrink:0;}
+
   .card-icon{width:44px;height:44px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;
     transition:transform .35s;}
   .icon-portal{background:linear-gradient(135deg,var(--pale),var(--ltblue));}
@@ -1292,6 +1302,50 @@ function clEnter(name){
     }
   }
 }
+
+// ════════════════════════════════════════════
+// CATÁLOGO — botones Compartir / Copiar link en la card "Catálogo asignado"
+// ════════════════════════════════════════════
+var _CAT_SVG_SHARE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>';
+var _CAT_SVG_LINK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
+function _catCardHref(el){ var a=el.closest('a'); return a?a.getAttribute('href'):location.href; }
+function _catAbsUrl(href){ try{ return new URL(href, location.href).href; }catch(e){ return href; } }
+function _catTitulo(el){ var a=el.closest('a'); var t=a&&a.querySelector('.card-title,.cat-title'); return t?t.textContent.trim():'Catálogo OpenCluster'; }
+function _catCopiar(t, ok){
+  if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(ok, function(){ _catCopiarFb(t, ok); }); }
+  else { _catCopiarFb(t, ok); }
+}
+function _catCopiarFb(t, ok){
+  try{ var ta=document.createElement('textarea'); ta.value=t; ta.style.position='fixed'; ta.style.top='-1000px'; document.body.appendChild(ta); ta.focus(); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); ok&&ok(); }
+  catch(e){ prompt('Copia este link del catálogo:', t); }
+}
+function compartirCatalogo(ev, el){
+  ev.preventDefault(); ev.stopPropagation();
+  var url=_catAbsUrl(_catCardHref(el)), titulo=_catTitulo(el);
+  if(navigator.share){ navigator.share({ title:titulo, text:titulo+' — OpenCluster Tech', url:url }).catch(function(){}); }
+  else { _catCopiar(url, function(){ alert('Tu navegador no permite compartir directo. Copiamos el link para que lo pegues en WhatsApp, correo o donde quieras.'); }); }
+}
+function copiarLinkCatalogo(ev, el){
+  ev.preventDefault(); ev.stopPropagation();
+  var url=_catAbsUrl(_catCardHref(el));
+  _catCopiar(url, function(){ var lab=el.querySelector('.cat-share-lbl'); if(lab){ var o=el.getAttribute('data-lbl')||lab.textContent; lab.textContent='¡Copiado!'; setTimeout(function(){ lab.textContent=o; },1700); } });
+}
+function _catMkShareRow(){
+  var d=document.createElement('div'); d.className='cat-share-row';
+  d.innerHTML=
+    '<span class="cat-share-btn" role="button" tabindex="0" onclick="compartirCatalogo(event,this)">'+_CAT_SVG_SHARE+'<span class="cat-share-lbl">Compartir</span></span>'+
+    '<span class="cat-share-btn" role="button" tabindex="0" data-lbl="Copiar link" onclick="copiarLinkCatalogo(event,this)">'+_CAT_SVG_LINK+'<span class="cat-share-lbl">Copiar link</span></span>';
+  return d;
+}
+(function _catInjectShare(){
+  function run(){
+    ['cardCatalogoWilliam','cardCatalogoMaxi','cardCatalogoGerman','cardCatalogoRoberto'].forEach(function(id){
+      var c=document.getElementById(id);
+      if(c && !c.querySelector('.cat-share-row')){ c.classList.add('card--cat'); c.appendChild(_catMkShareRow()); }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', run); else run();
+})();
 
 // ════════════════════════════════════════════
 // WEBINAR — sub-cards de regiones con resultados

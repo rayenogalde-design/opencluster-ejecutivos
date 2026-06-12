@@ -6140,18 +6140,72 @@ function resetPaginacion(){
 function exportarContactos(view){
   var lista = (window.__LISTA_VIEW || {})[view] || [];
   if(!lista.length){ alert('No hay contactos para exportar con el filtro actual.'); return; }
-  var cols = [['institucion','Institución'],['nombre','Contacto'],['cargo','Cargo'],['ciudad','Comuna/Ciudad'],['region','Región'],['telefono','Teléfono'],['email','Email'],['tipo_categoria','Categoría'],['sub_categoria','Subcategoría'],['etiquetas','Etiquetas'],['pipeline_estado','Estado'],['ejecutivo_asignado','Ejecutivo'],['tiene_cotizacion','¿Cotización?']];
+  // [clave del contacto, encabezado, ancho de columna en px]
+  var cols = [
+    ['institucion','Institución',230],
+    ['nombre','Contacto',180],
+    ['cargo','Cargo',170],
+    ['email','Email',220],
+    ['telefono','Teléfono',120],
+    ['ciudad','Comuna / Ciudad',150],
+    ['region','Región',140],
+    ['tipo_categoria','Categoría',150],
+    ['sub_categoria','Subcategoría',170],
+    ['etiquetas','Etiquetas',180],
+    ['pipeline_estado','Estado',140],
+    ['ejecutivo_asignado','Ejecutivo',130],
+    ['tiene_cotizacion','¿Cotización?',95]
+  ];
   var e = function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
-  var html = '<html><head><meta charset="utf-8"></head><body><table border="1"><tr>' +
-    cols.map(function(c){ return '<th style="background:#001A60;color:#fff;font-weight:bold;">'+e(c[1])+'</th>'; }).join('') + '</tr>';
-  lista.forEach(function(c){ html += '<tr>' + cols.map(function(col){ return '<td>'+e(c[col[0]])+'</td>'; }).join('') + '</tr>'; });
+  // Normaliza ciertos valores para que salgan legibles, no crudos
+  var val = function(c, key){
+    var v = c[key];
+    if(key === 'tiene_cotizacion'){
+      var truthy = (v === true || v === 1 || v === '1' || String(v).toLowerCase() === 'true' || String(v).toLowerCase() === 'sí' || String(v).toLowerCase() === 'si');
+      return truthy ? 'Sí' : 'No';
+    }
+    if(key === 'etiquetas' && Array.isArray(v)) return v.join(', ');
+    if(key === 'pipeline_estado'){ var s = String(v==null?'':v).trim(); return s ? (s.charAt(0).toUpperCase()+s.slice(1)) : 'Por contactar'; }
+    return v;
+  };
+  var hoy = (new Date()).toISOString().slice(0,10);
+  var nViews = { mios:'Mis contactos', todos:'Todos los contactos', agenda:'Agenda de hoy' };
+  var tituloVista = nViews[view] || 'Contactos';
+
+  // Estilos para que Excel respete fuentes, bordes y anchos de columna (mso-*)
+  var styleHead = 'background:#001A60;color:#FFFFFF;font-weight:bold;font-size:11px;'
+    + 'border:0.5pt solid #001A60;mso-pattern:solid #001A60;text-align:left;vertical-align:middle;height:26px;';
+  var styleCell = 'border:0.5pt solid #D6DDEA;font-size:10px;vertical-align:top;mso-number-format:"\\@";';
+  var styleAlt  = styleCell + 'background:#F3F6FC;';
+
+  // Columnas con ancho (Excel lee <col width="px">)
+  var colgroup = '<colgroup>' + cols.map(function(c){ return '<col width="'+c[2]+'">'; }).join('') + '</colgroup>';
+
+  var html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">'
+    + '<head><meta charset="utf-8"><style>'
+    + 'table{border-collapse:collapse;font-family:Calibri,Arial,sans-serif;} '
+    + 'td,th{padding:4px 8px;}'
+    + '</style></head><body>'
+    + '<table border="0">' + colgroup;
+  // Fila título (marca) — abarca todas las columnas
+  html += '<tr><td colspan="'+cols.length+'" style="background:#FFFFFF;color:#001A60;font-size:16px;font-weight:bold;height:34px;mso-number-format:\\@;">OpenCluster · CRM &nbsp;—&nbsp; ' + e(tituloVista) + '</td></tr>';
+  // Fila subtítulo (info de extracción)
+  html += '<tr><td colspan="'+cols.length+'" style="background:#FFFFFF;color:#5A6B8C;font-size:10px;height:20px;mso-number-format:\\@;">Exportado el ' + e(hoy) + ' &nbsp;·&nbsp; ' + lista.length + ' contacto(s) &nbsp;·&nbsp; según el filtro aplicado en pantalla</td></tr>';
+  // Fila vacía separadora
+  html += '<tr><td colspan="'+cols.length+'" style="height:6px;"></td></tr>';
+  // Encabezados
+  html += '<tr>' + cols.map(function(c){ return '<th style="'+styleHead+'">'+e(c[1])+'</th>'; }).join('') + '</tr>';
+  // Filas de datos con cebra
+  lista.forEach(function(c, i){
+    var st = (i % 2 === 0) ? styleCell : styleAlt;
+    html += '<tr>' + cols.map(function(col){ return '<td style="'+st+'">'+e(val(c, col[0]))+'</td>'; }).join('') + '</tr>';
+  });
   html += '</table></body></html>';
   try {
     var blob = new Blob(['﻿'+html], { type:'application/vnd.ms-excel;charset=utf-8' });
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
-    var hoy = (new Date()).toISOString().slice(0,10);
-    a.href = url; a.download = 'Contactos_CRM_' + hoy + '.xls';
+    a.href = url; a.download = 'Contactos_CRM_' + tituloVista.replace(/\s+/g,'_') + '_' + hoy + '.xls';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(function(){ URL.revokeObjectURL(url); }, 3000);
   } catch(err){ alert('No se pudo exportar: ' + err.message); }

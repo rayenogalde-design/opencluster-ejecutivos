@@ -13376,85 +13376,10 @@ function renderListaPreciosCard(segKey){
         '<span class="prod-card-chevron">' + SVG_LP_CHEVRON + '</span>' +
       '</div>' +
       '<div class="prod-card-body">' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">' +
-          '<div class="lp-subtitulo" style="margin:0;">' + subt + '</div>' +
-          '<button onclick="event.stopPropagation();exportarListaPrecios(\'' + segKey + '\')" title="Descargar esta lista de precios a Excel con diseño" style="display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:8px;border:none;background:var(--purple-dk);color:#fff;font-weight:700;font-size:12px;cursor:pointer;font-family:var(--font-sans);white-space:nowrap;">' +
-            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' +
-            'Exportar a Excel</button>' +
-        '</div>' +
+        '<div class="lp-subtitulo">' + subt + '</div>' +
         cuerpo +
       '</div>' +
     '</div>';
-}
-
-// Exporta una lista de precios de segmento a un .xls con diseño (marca, bandas por familia, cebra)
-function exportarListaPrecios(segKey){
-  var seg = (window.__PRECIOS_SEG || {})[segKey];
-  if(!seg || !Array.isArray(seg.familias) || !seg.familias.length){ alert('No hay precios para exportar en esta lista.'); return; }
-  var fmt = formatearPrecioCLP;
-  var tipo = seg.tipo;
-  var e = function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
-  var subt = tipo==='margen' ? 'Margen de distribución por volumen · IVA incluido'
-           : tipo==='distribuidor' ? 'Valor distribuidor · IVA incluido'
-           : 'Precio por volumen · IVA incluido';
-  var priceHeaders = (tipo==='distribuidor') ? ['Valor distribuidor']
-                   : [ (tipo==='margen'?'Margen 1–9 u.':'1–9 u.'), '10–19 u.', '20+ u.' ];
-  var nPrice = priceHeaders.length;
-  var nCols  = 2 + nPrice; // Producto + SKU + precios
-  var hoy = (new Date()).toISOString().slice(0,10);
-  var totalP = seg.familias.reduce(function(a,f){ return a + f.productos.length; }, 0);
-
-  // Estilos (mso-* para que Excel respete fuente, bordes, fondos y anchos)
-  var sTitle   = 'background:#001A60;color:#FFFFFF;font-size:17px;font-weight:bold;height:38px;mso-pattern:solid #001A60;vertical-align:middle;mso-number-format:\\@;';
-  var sSub     = 'background:#FFFFFF;color:#5A6B8C;font-size:10.5px;height:22px;mso-number-format:\\@;';
-  var sFam     = 'background:#EAF1FC;color:#001A60;font-size:12px;font-weight:bold;height:26px;border:0.5pt solid #C9D8F0;mso-pattern:solid #EAF1FC;mso-number-format:\\@;';
-  var sColTxt  = 'background:#001A60;color:#FFFFFF;font-size:10.5px;font-weight:bold;border:0.5pt solid #001A60;mso-pattern:solid #001A60;text-align:left;vertical-align:middle;height:24px;';
-  var sColNum  = sColTxt + 'text-align:right;';
-  var sCellTxt = 'border:0.5pt solid #DCE3F0;font-size:10.5px;vertical-align:middle;color:#1F2A44;mso-number-format:\\@;';
-  var sCellSku = 'border:0.5pt solid #DCE3F0;font-size:9.5px;vertical-align:middle;color:#7A879E;mso-number-format:\\@;';
-  var sCellNum = 'border:0.5pt solid #DCE3F0;font-size:10.5px;font-weight:bold;vertical-align:middle;color:#001A60;text-align:right;mso-number-format:\\@;';
-  var altBg    = 'background:#F3F6FC;';
-
-  // Anchos de columna
-  var widths = [ (nPrice===1?340:300), 130 ].concat(priceHeaders.map(function(){ return nPrice===1?160:120; }));
-  var colgroup = '<colgroup>' + widths.map(function(w){ return '<col width="'+w+'">'; }).join('') + '</colgroup>';
-
-  var html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">'
-    + '<head><meta charset="utf-8"><style>'
-    + 'table{border-collapse:collapse;font-family:Calibri,Arial,sans-serif;} td,th{padding:5px 10px;}'
-    + '</style></head><body><table border="0">' + colgroup;
-  // Cabecera de marca
-  html += '<tr><td colspan="'+nCols+'" style="'+sTitle+'">&nbsp;OpenCluster · Lista de Precios &nbsp;—&nbsp; ' + e(seg.segmento) + '</td></tr>';
-  html += '<tr><td colspan="'+nCols+'" style="'+sSub+'">&nbsp;' + e(subt) + ' &nbsp;·&nbsp; ' + totalP + ' productos &nbsp;·&nbsp; actualizado ' + e(hoy) + '</td></tr>';
-  html += '<tr><td colspan="'+nCols+'" style="height:8px;"></td></tr>';
-  // Familias
-  seg.familias.forEach(function(f){
-    html += '<tr><td colspan="'+nCols+'" style="'+sFam+'">&nbsp;' + e(f.nombre) + '  ·  ' + f.productos.length + ' producto' + (f.productos.length===1?'':'s') + '</td></tr>';
-    // encabezado de columnas
-    html += '<tr><th style="'+sColTxt+'">Producto</th><th style="'+sColTxt+'">SKU</th>'
-      + priceHeaders.map(function(h){ return '<th style="'+sColNum+'">'+e(h)+'</th>'; }).join('') + '</tr>';
-    f.productos.forEach(function(p, i){
-      var bg = (i % 2 === 1) ? altBg : '';
-      var precios = (tipo==='distribuidor')
-        ? '<td style="'+sCellNum+bg+'">' + e(fmt(p.valor)) + '</td>'
-        : '<td style="'+sCellNum+bg+'">' + e(fmt(p.t1)) + '</td><td style="'+sCellNum+bg+'">' + e(fmt(p.t2)) + '</td><td style="'+sCellNum+bg+'">' + e(fmt(p.t3)) + '</td>';
-      html += '<tr>'
-        + '<td style="'+sCellTxt+bg+'">' + e(p.nombre) + '</td>'
-        + '<td style="'+sCellSku+bg+'">' + e(p.sku || '') + '</td>'
-        + precios
-        + '</tr>';
-    });
-    html += '<tr><td colspan="'+nCols+'" style="height:6px;"></td></tr>';
-  });
-  html += '</table></body></html>';
-  try {
-    var blob = new Blob(['﻿'+html], { type:'application/vnd.ms-excel;charset=utf-8' });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url; a.download = 'Lista_Precios_' + String(seg.segmento).replace(/\s+/g,'_') + '_' + hoy + '.xls';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(function(){ URL.revokeObjectURL(url); }, 3000);
-  } catch(err){ alert('No se pudo exportar: ' + err.message); }
 }
 
 function pintarListasPrecios(){

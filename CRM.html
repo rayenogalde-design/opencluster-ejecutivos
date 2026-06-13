@@ -1800,6 +1800,14 @@ body{
 .toques-btn:disabled{ opacity:.55; cursor:default; }
 .toques-empty{ font-size:13px; color:var(--v2-text-soft,#5A6478); padding:6px 0; }
 .toques-more{ font-size:12px; color:var(--v2-text-soft,#5A6478); margin-top:10px; }
+/* En celular: el texto del toque queda completo y los botones bajan a su propia fila */
+@media(max-width:640px){
+  .toques-item{ flex-wrap:wrap; align-items:flex-start; }
+  .toques-info{ flex:1 1 calc(100% - 42px); min-width:0; }
+  .toques-desc{ white-space:normal; line-height:1.4; }
+  .toques-acc{ flex-basis:100%; width:100%; margin-top:9px; gap:6px; }
+  .toques-btn{ flex:1 1 0; min-width:0; padding:9px 4px; text-align:center; white-space:nowrap; }
+}
 .v2-tags{ display:flex; flex-wrap:wrap; gap:6px; }
 .v2-pill{ background:#fff; color:var(--v2-hl-text); font-size:11px; padding:4px 10px; border-radius:999px; border:0.5px solid var(--v2-hl-border); white-space:nowrap; }
 .v2-pill.cat{ color:var(--v2-text-soft); border-color:var(--v2-divider); }
@@ -5841,17 +5849,17 @@ function renderDashV3(r){
   var rings=document.getElementById('dshRings');
   if(rings){
     rings.innerHTML=
-      _ringTile('#16a34a',pctMeta+'%',pctMeta,_DV3.vent,'Ventas del mes',_montoCorto(ventasM),'meta '+_montoCorto(META),"abrirDetalleKpi('ventas_ganadas')")+
-      _ringTile('#ff7e00',tasaPct+'%',tasaPct,_DV3.close,'Tasa de cierre',deCada10+' <span class="u">de 10</span>','cotizaciones que ganas',"abrirDetalleKpi('cotizaciones')")+
-      _ringTile('#06b3fd',nuevos,pctCont,_DV3.users,'Contactos',nuevos+' <span class="u">/'+metaCont+'</span>','nuevos este mes',"abrirDetalleKpi('nuevos_contactos')")+
+      _ringTile('#16a34a',pctMeta+'%',pctMeta,_DV3.vent,'Ventas del mes',_montoCorto(ventasM),'meta '+_montoCorto(META),"abrirDetalleKpi('ventas_ganadas','mes')")+
+      _ringTile('#ff7e00',tasaPct+'%',tasaPct,_DV3.close,'Tasa de cierre',deCada10+' <span class="u">de 10</span>','cotizaciones que ganas',"abrirDetalleKpi('cotizaciones','mes')")+
+      _ringTile('#06b3fd',nuevos,pctCont,_DV3.users,'Contactos',nuevos+' <span class="u">/'+metaCont+'</span>','nuevos este mes',"abrirDetalleKpi('nuevos_contactos','mes')")+
       _teamTile(k.ventas_ganadas);
   }
   var minis=document.getElementById('dshMinis');
   if(minis){
     minis.innerHTML=
       _miniTile('#16a34a',_DV3.chart,'Pipeline en juego','<span id="dv3Pipeline">—</span>','cotizaciones abiertas',"goView('vMisCotizaciones')")+
-      _miniTile('#ff7e00',_DV3.doc,'Cotizaciones',cotiz,'enviadas este mes',"abrirDetalleKpi('cotizaciones')")+
-      _miniTile('#7c3aed',_DV3.cal,'Reuniones',reun,'agendadas este mes',"abrirDetalleKpi('reuniones')")+
+      _miniTile('#ff7e00',_DV3.doc,'Cotizaciones',cotiz,'enviadas este mes',"abrirDetalleKpi('cotizaciones','mes')")+
+      _miniTile('#7c3aed',_DV3.cal,'Reuniones',reun,'agendadas este mes',"abrirDetalleKpi('reuniones','mes')")+
       _miniTile('#e11d63',_DV3.bell,'Por trabajar','<span id="dv3PorTrabajar">—</span>','empresas sin contactar',"irAListaPartida(true)");
   }
   try{ _updatePipelineMini(); }catch(e){}
@@ -5963,8 +5971,8 @@ function cambiarPeriodoDash(p){
 }
 
 // Abre el modal de detalle de un KPI (lista de items individuales del período activo)
-async function abrirDetalleKpi(tipo){
-  const periodo = DASH_PERIODO;
+async function abrirDetalleKpi(tipo, periodoOverride){
+  const periodo = periodoOverride || DASH_PERIODO;
   const tituloMap = {
     nuevos_contactos: 'Nuevos contactos',
     cotizaciones: 'Cotizaciones',

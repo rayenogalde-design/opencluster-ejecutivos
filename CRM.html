@@ -14091,6 +14091,7 @@ function _esperarFichas(cb, intentos){
 function cargarProductosCampana(){
   window.__FICHA_SELECCIONADA = null;
   window.__FICHA_FAMILIA_FILTRO = null;
+  window.__PC_OPEN = {}; // familias plegadas por defecto al entrar (menos ruido visual)
   const input = document.getElementById('pcInput');
   if(input) input.value = '';
   _esperarFichas(() => {
@@ -14101,30 +14102,53 @@ function cargarProductosCampana(){
   });
 }
 
+window.__PC_OPEN = window.__PC_OPEN || {};
+
+// Lista de familias (con sus fichas), ordenadas por cantidad de productos.
+function _famListCampana(){
+  const map = {};
+  (window.__FICHAS || []).forEach(f => {
+    const fam = f.familia_nombre || 'Otros';
+    if(!map[fam]) map[fam] = { nombre: fam, color: f.color_primary || '#06b3fd', slug: f.familia_slug || '', fichas: [] };
+    map[fam].fichas.push(f);
+  });
+  return Object.values(map).sort((a,b) => b.fichas.length - a.fichas.length);
+}
+
+// Barra superior: conteo + botón Abrir/Cerrar todas
 function pintarChipsFamilias(){
   const box = document.getElementById('pcFamilias');
   if(!box) return;
-  const familias = {};
-  (window.__FICHAS || []).forEach(f => {
-    if(!f.familia_nombre) return;
-    if(!familias[f.familia_nombre]){
-      familias[f.familia_nombre] = { nombre: f.familia_nombre, color: f.color_primary, count: 0, slug: f.familia_slug };
-    }
-    familias[f.familia_nombre].count++;
-  });
-  const lista = Object.values(familias).sort((a,b) => b.count - a.count);
-  const activa = window.__FICHA_FAMILIA_FILTRO;
+  const fams = _famListCampana();
+  const totalProd = (window.__FICHAS || []).length;
+  const algunaAbierta = fams.some(f => window.__PC_OPEN[f.nombre]);
   box.innerHTML =
-    '<button type="button" class="pc-fam-chip ' + (!activa ? 'act' : '') + '" onclick="filtrarFamiliaCampana(null)">Todas <span class="pc-fam-count">' + (window.__FICHAS || []).length + '</span></button>' +
-    lista.map(f => {
-      const act = activa === f.nombre ? 'act' : '';
-      const style = activa === f.nombre ? ' style="background:' + f.color + ';border-color:' + f.color + ';color:white;"' : ' style="border-color:' + f.color + ';color:' + f.color + ';"';
-      return '<button type="button" class="pc-fam-chip ' + act + '"' + style + ' onclick="filtrarFamiliaCampana(\'' + f.nombre.replace(/'/g,"\\'") + '\')">' + esc(f.nombre) + ' <span class="pc-fam-count">' + f.count + '</span></button>';
-    }).join('');
+    '<div class="pc-toolbar">' +
+      '<span class="pc-hint">' + fams.length + ' familias · ' + totalProd + ' productos</span>' +
+      '<button type="button" class="pc-toggle-all" onclick="pcToggleTodas()">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>' +
+        (algunaAbierta ? 'Cerrar todas' : 'Abrir todas') +
+      '</button>' +
+    '</div>';
 }
 
+function pcToggleTodas(){
+  const fams = _famListCampana();
+  const algunaAbierta = fams.some(f => window.__PC_OPEN[f.nombre]);
+  fams.forEach(f => { window.__PC_OPEN[f.nombre] = !algunaAbierta; });
+  pintarChipsFamilias();
+  renderListaProductosCampana();
+}
+
+function pcToggleFamilia(nombre){
+  window.__PC_OPEN[nombre] = !window.__PC_OPEN[nombre];
+  pintarChipsFamilias();
+  renderListaProductosCampana();
+}
+
+// (compat) por si algo viejo llama a esto: abre esa familia.
 function filtrarFamiliaCampana(nombre){
-  window.__FICHA_FAMILIA_FILTRO = (window.__FICHA_FAMILIA_FILTRO === nombre) ? null : nombre;
+  if(nombre) window.__PC_OPEN[nombre] = true;
   pintarChipsFamilias();
   renderListaProductosCampana();
 }
@@ -14160,37 +14184,68 @@ function _filtrarFichas(){
   });
 }
 
+// Imagen del producto (reusa el mapa SKU->imagen de la Lista de Precios)
+function _pcImg(f){
+  const u = (typeof _lpImgUrl === 'function') ? _lpImgUrl({ sku: f.sku, nombre: f.nombre }) : null;
+  return u ? '<img src="' + esc(u) + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '';
+}
+
+function _pcCard(f){
+  const statusCls = (f.status || '').toLowerCase().includes('disponible') ? 'ok'
+                  : (f.status || '').toLowerCase().includes('bajo pedido') ? 'warn' : '';
+  return '<article class="pc-cat-card" onclick="abrirFichaCampanaDetalle(\'' + f.id + '\')">' +
+      '<div class="pc-cat-img">' + _pcImg(f) + '</div>' +
+      '<div class="pc-cat-body">' +
+        '<div class="pc-cat-nombre">' + esc(f.nombre || '') + '</div>' +
+        '<div class="pc-cat-foot">' +
+          (f.precio_v1 ? '<span class="pc-cat-precio"><span class="lbl">Desde</span><span class="val">' + formatearPrecioCLP(f.precio_v1) + '</span></span>' : '<span></span>') +
+          (f.status ? '<span class="pc-cat-status ' + statusCls + '">' + esc(f.status) + '</span>' : '') +
+        '</div>' +
+      '</div>' +
+    '</article>';
+}
+
+// Render por FAMILIAS plegables. De primero todas cerradas (solo se ven las familias).
+// Al desplegar una, aparecen sus productos con foto. Buscar abre las familias con match.
 function renderListaProductosCampana(){
   const grid = document.getElementById('pcGrid');
   const empty = document.getElementById('pcEmpty');
   const stats = document.getElementById('pcStats');
   if(!grid) return;
-  const fichas = _filtrarFichas();
-  if(stats) stats.textContent = fichas.length + (fichas.length === 1 ? ' producto' : ' productos');
-  if(!fichas.length){
+  const q = ((document.getElementById('pcInput') || {}).value || '').trim().toLowerCase();
+  const fams = _famListCampana();
+  const match = (f) => {
+    if(!q) return true;
+    return (f.nombre || '').toLowerCase().includes(q) ||
+           (f.marca || '').toLowerCase().includes(q) ||
+           (f.sku || '').toLowerCase().includes(q) ||
+           (f.familia_nombre || '').toLowerCase().includes(q) ||
+           (Array.isArray(f.indicado) && f.indicado.some(i => (i || '').toLowerCase().includes(q)));
+  };
+  let totalMatch = 0;
+  const html = fams.map(fam => {
+    const fichas = fam.fichas.filter(match);
+    if(!fichas.length) return '';
+    totalMatch += fichas.length;
+    const abierta = q ? true : !!window.__PC_OPEN[fam.nombre];
+    const body = abierta ? ('<div class="fam-body"><div class="pc-cat-grid">' + fichas.map(_pcCard).join('') + '</div></div>') : '';
+    return '<section class="fam' + (abierta ? ' open' : '') + '" style="--c:' + (fam.color || '#06b3fd') + ';">' +
+        '<div class="fam-head" onclick="pcToggleFamilia(\'' + esc(fam.nombre).replace(/'/g, "\\'") + '\')">' +
+          '<span class="fam-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span>' +
+          '<div class="fam-tx"><div class="fam-name">' + esc(fam.nombre) + '</div></div>' +
+          '<span class="fam-count">' + fichas.length + ' producto' + (fichas.length !== 1 ? 's' : '') + '</span>' +
+          '<svg class="fam-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>' +
+        '</div>' + body +
+      '</section>';
+  }).join('');
+  if(stats) stats.textContent = '';
+  if(!totalMatch){
     grid.innerHTML = '';
     if(empty) empty.style.display = '';
-    return;
+  } else {
+    if(empty) empty.style.display = 'none';
+    grid.innerHTML = html;
   }
-  if(empty) empty.style.display = 'none';
-  const seleccionado = window.__FICHA_SELECCIONADA;
-  grid.innerHTML = fichas.map(f => {
-    const sel = seleccionado && seleccionado === f.id ? 'sel' : '';
-    const color = f.color_primary || 'var(--oct-sky)';
-    const statusCls = (f.status || '').toLowerCase().includes('disponible') ? 'pc-status-ok'
-                    : (f.status || '').toLowerCase().includes('bajo pedido') ? 'pc-status-warn' : '';
-    return '<article class="pc-tarjeta ' + sel + '" onclick="abrirFichaCampanaDetalle(\'' + f.id + '\')">' +
-        '<div class="pc-tarjeta-color" style="background:' + color + ';"></div>' +
-        '<div class="pc-tarjeta-fam" style="color:' + color + ';">' + esc(f.familia_nombre || '') + '</div>' +
-        '<div class="pc-tarjeta-nombre">' + esc(f.nombre || '') + '</div>' +
-        '<div class="pc-tarjeta-marca">' + esc(f.marca || '') + '</div>' +
-        '<div class="pc-tarjeta-foot">' +
-          (f.status ? '<span class="pc-tarjeta-status ' + statusCls + '">' + esc(f.status) + '</span>' : '') +
-          (f.sku ? '<span class="pc-tarjeta-sku">' + esc(f.sku) + '</span>' : '') +
-        '</div>' +
-        ((f.precio_v1) ? '<div class="pc-tarjeta-precio">Desde <strong>' + formatearPrecioCLP(f.precio_v1) + '</strong></div>' : '') +
-      '</article>';
-  }).join('');
 }
 
 function abrirFichaCampanaDetalle(id){
@@ -14572,6 +14627,37 @@ document.addEventListener('click', function(e){
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 12px;
 }
+/* Productos Campaña v2 — familias plegables + tarjetas con foto */
+.pc-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;}
+.pc-hint{font-size:12px;color:var(--oct-text-soft,#6B7280);font-weight:600;}
+.pc-toggle-all{display:inline-flex;align-items:center;gap:7px;background:var(--oct-navy,#001a60);color:#fff;border:none;border-radius:9px;padding:8px 14px;font-family:var(--font-sans);font-size:12.5px;font-weight:600;cursor:pointer;}
+.pc-toggle-all svg{width:14px;height:14px;}
+.pc-toggle-all:hover{filter:brightness(1.1);}
+.fam{background:#fff;border:1px solid #e8ecf5;border-radius:14px;margin-bottom:11px;overflow:hidden;box-shadow:0 6px 18px -16px rgba(0,26,96,.4);}
+.fam-head{display:flex;align-items:center;gap:13px;padding:15px 18px;cursor:pointer;border-left:4px solid var(--c,#06b3fd);}
+.fam-ic{width:36px;height:36px;border-radius:10px;background:#f4f6fb;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.fam-ic svg{width:18px;height:18px;color:var(--c,#06b3fd);}
+.fam-tx{flex:1;min-width:0;}
+.fam-name{font-size:15.5px;font-weight:700;color:#001a60;letter-spacing:-.01em;}
+.fam-count{font-size:11px;color:#727c98;font-weight:700;background:#f4f6fb;padding:3px 11px;border-radius:999px;white-space:nowrap;}
+.fam-chev{width:18px;height:18px;color:#9ca3af;transition:transform .2s;flex-shrink:0;}
+.fam.open .fam-chev{transform:rotate(180deg);color:var(--c,#06b3fd);}
+.fam.open .fam-head{border-bottom:1px solid #eef2f8;}
+.fam-body{padding:16px 18px 18px;}
+.pc-cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:13px;}
+.pc-cat-card{background:#fff;border:1px solid #e8ecf5;border-radius:14px;overflow:hidden;box-shadow:0 4px 14px -12px rgba(0,26,96,.4);display:flex;flex-direction:column;cursor:pointer;transition:transform .16s, box-shadow .16s;}
+.pc-cat-card:hover{transform:translateY(-3px);box-shadow:0 16px 28px -18px rgba(0,26,96,.45);}
+.pc-cat-img{position:relative;height:140px;background:linear-gradient(160deg,#f8fafd,#eef2f9);display:flex;align-items:center;justify-content:center;padding:14px;}
+.pc-cat-img img{max-width:100%;max-height:100%;object-fit:contain;mix-blend-mode:multiply;}
+.pc-cat-body{padding:13px 14px 14px;display:flex;flex-direction:column;gap:3px;flex:1;}
+.pc-cat-nombre{font-size:16px;font-weight:800;color:#001a60;letter-spacing:-.02em;line-height:1.22;}
+.pc-cat-foot{margin-top:auto;padding-top:11px;display:flex;align-items:flex-end;justify-content:space-between;gap:8px;border-top:1px solid #eef2f8;}
+.pc-cat-precio .lbl{font-size:9.5px;color:#9ca3af;font-weight:500;display:block;}
+.pc-cat-precio .val{font-size:15px;font-weight:700;color:#001a60;letter-spacing:-.02em;}
+.pc-cat-status{font-size:9px;font-weight:600;padding:3px 8px;border-radius:999px;white-space:nowrap;}
+.pc-cat-status.ok{background:#e7f7ee;color:#15803d;}
+.pc-cat-status.warn{background:#fff4e6;color:#c2410c;}
+@media(max-width:640px){ .pc-cat-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));} }
 .pc-tarjeta{
   background: white;
   border: 1px solid var(--oct-border);

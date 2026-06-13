@@ -13684,10 +13684,22 @@ window.__FICHA_FAMILIA_FILTRO = null;
 function _indexarFichas(data){
   window.__FICHAS = Array.isArray(data) ? data : [];
   window.__FICHAS_BY_SKU = {};
+  // Una ficha puede cubrir varios SKU: lista separada por comas ("TM110, TM111")
+  // o rango ("OCTECH 535-537"). Indexamos cada SKU individual para que calce exacto.
+  const _addSku = (k, f) => {
+    k = String(k || '').trim(); if(!k) return;
+    if(!window.__FICHAS_BY_SKU[k]) window.__FICHAS_BY_SKU[k] = [];
+    if(window.__FICHAS_BY_SKU[k].indexOf(f) === -1) window.__FICHAS_BY_SKU[k].push(f);
+  };
   window.__FICHAS.forEach(f => {
     if(!f.sku) return;
-    if(!window.__FICHAS_BY_SKU[f.sku]) window.__FICHAS_BY_SKU[f.sku] = [];
-    window.__FICHAS_BY_SKU[f.sku].push(f);
+    String(f.sku).split(',').forEach(tok => {
+      tok = tok.trim(); if(!tok) return;
+      _addSku(tok, f);
+      const m = tok.match(/^(.*?)(\d+)\s*-\s*(\d+)$/); // "OCTECH 535-537" -> 535,536,537
+      if(m){ const pre = m[1], a = parseInt(m[2],10), b = parseInt(m[3],10);
+        if(b >= a && (b - a) <= 60){ for(let i = a; i <= b; i++) _addSku(pre + i, f); } }
+    });
   });
   window.__FICHAS_LOADED = true;
 }

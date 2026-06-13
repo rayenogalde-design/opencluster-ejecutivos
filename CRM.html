@@ -464,6 +464,10 @@ input,select,textarea{font-family:inherit; font-size:14px;}
   padding:7px 0; border-top:1px solid #f4f2f8;
 }
 .lp-fila:first-of-type{ border-top:none; }
+/* Fila clickeable: abre la ficha de producto (solo si existe ficha para ese SKU/nombre) */
+.lp-fila-link{ cursor:pointer; transition:background .12s; }
+.lp-fila-link:hover{ background:#f7f6fb; }
+.lp-fila-link:hover .lp-nombre{ color:var(--oct-navy,#001A60); text-decoration:underline; text-decoration-color:#d4c5ec; text-underline-offset:2px; }
 .lp-nombre{
   flex:1; min-width:0; font-family:var(--font-sans);
   font-size:12.5px; color:var(--oct-text,#2b2b33); line-height:1.3;
@@ -13814,7 +13818,7 @@ function renderListaPreciosCard(segKey){
       const cols = tipo==='distribuidor'
         ? '<div class="lp-monto">' + fmt(p.valor) + '</div>'
         : '<div class="lp-tarifa"><span>' + fmt(p.t1) + '</span><span>' + fmt(p.t2) + '</span><span>' + fmt(p.t3) + '</span></div>';
-      return '<div class="lp-fila">' +
+      return '<div class="lp-fila" data-sku="' + esc(p.sku || '') + '" data-nombre="' + esc(p.nombre || '') + '" onclick="abrirFichaDesdePrecio(this)">' +
           _lpThumb(p) +
           '<div class="lp-nombre">' + esc(p.nombre) + (p.sku ? '<span class="lp-sku">' + esc(p.sku) + '</span>' : '') + '</div>' +
           cols +
@@ -13844,6 +13848,53 @@ function renderListaPreciosCard(segKey){
     '</div>';
 }
 
+// ── Lista de Precios → abre la MISMA ficha de producto que la pestaña Productos ──
+// Resuelve el id de ficha para una fila de precio (por SKU; respaldo por nombre).
+// Devuelve null si las fichas aún no cargan o no hay match (la fila no será clickeable).
+function _fichaIdParaProducto(sku, nombre){
+  if(!window.__FICHAS_LOADED) return null;
+  if(sku && window.__FICHAS_BY_SKU && window.__FICHAS_BY_SKU[sku] && window.__FICHAS_BY_SKU[sku].length){
+    const arr = window.__FICHAS_BY_SKU[sku];
+    if(arr.length === 1) return arr[0].id;
+    const nn = _lpNorm(nombre);
+    const exact = arr.find(f => _lpNorm(f.nombre) === nn);
+    if(exact) return exact.id;
+    const inc = arr.find(f => { const fn = _lpNorm(f.nombre); return fn && nn && (fn.includes(nn) || nn.includes(fn)); });
+    return (inc || arr[0]).id;
+  }
+  // Respaldo por nombre (productos del catálogo sin SKU calzado en fichas)
+  const nn = _lpNorm(nombre);
+  if(nn){
+    let f = (window.__FICHAS || []).find(x => _lpNorm(x.nombre) === nn);
+    if(!f) f = (window.__FICHAS || []).find(x => { const xn = _lpNorm(x.nombre); return xn && (xn.includes(nn) || nn.includes(xn)); });
+    if(f) return f.id;
+  }
+  return null;
+}
+// Click en una fila de la Lista de Precios → abre la ficha del producto.
+function abrirFichaDesdePrecio(el){
+  if(!el) return;
+  const sku = el.getAttribute('data-sku') || '';
+  const nombre = el.getAttribute('data-nombre') || '';
+  _esperarFichas(() => {
+    const id = _fichaIdParaProducto(sku, nombre);
+    if(id && typeof abrirFichaCampanaDetalle === 'function') abrirFichaCampanaDetalle(id);
+  });
+}
+// Marca como clickeables solo las filas que tienen ficha (evita clics muertos).
+function _lpDecorarFichas(){
+  if(!window.__FICHAS_LOADED) return;
+  ['dshListasPrecios','lpListaContainer'].forEach(function(boxId){
+    const box = document.getElementById(boxId);
+    if(!box) return;
+    box.querySelectorAll('.lp-fila').forEach(function(fila){
+      const id = _fichaIdParaProducto(fila.getAttribute('data-sku') || '', fila.getAttribute('data-nombre') || '');
+      if(id){ fila.classList.add('lp-fila-link'); fila.setAttribute('title','Ver ficha del producto'); }
+      else { fila.classList.remove('lp-fila-link'); fila.removeAttribute('title'); }
+    });
+  });
+}
+
 function pintarListasPrecios(){
   const box = document.getElementById('dshListasPrecios');
   if(!box) return;
@@ -13862,6 +13913,7 @@ function pintarListasPrecios(){
     }
   }
   box.innerHTML = _lpToggleBar() + _lpRenderCards(keys);
+  _esperarFichas(_lpDecorarFichas);
 }
 
 // ── Vista "Lista de Precios" del sidebar (con buscador) ──
@@ -13880,6 +13932,7 @@ function cargarListaPrecios(){
   }
   box.innerHTML = _lpToggleBar() + _lpRenderCards(keys);
   box.querySelectorAll('.lp-card.collapsed').forEach(c => c.classList.remove('collapsed')); // expandidas en esta vista
+  _esperarFichas(_lpDecorarFichas);
   const q = (document.getElementById('lpInput') || {}).value || '';
   if(q) filtrarListaPrecios(q);
 }

@@ -4120,6 +4120,17 @@ function initApp(user){
       const drillGuardado = localStorage.getItem('crm_drill_ejec');
       if (drillGuardado) DRILL_DOWN_EJEC = drillGuardado;
     } catch(e){}
+    // Rayen abre el CRM viendo SUS propios numeros (ejecutiva). El boton ADMIN
+    // sigue ahi para ver al equipo cuando quiera. Recordamos su ultima eleccion.
+    let modoGuardado = 'ejecutiva';
+    try { modoGuardado = localStorage.getItem('crm_modo_vista') || 'ejecutiva'; } catch(e){}
+    MODO_VISTA = (modoGuardado === 'admin') ? 'admin' : 'ejecutiva';
+    document.querySelectorAll('.modo-btn').forEach(b => {
+      const activo = b.dataset.modo === MODO_VISTA;
+      b.classList.toggle('act', activo);
+      if (activo) { b.style.background = 'white'; b.style.color = '#001a60'; b.style.fontWeight = '800'; }
+      else { b.style.background = 'transparent'; b.style.color = 'rgba(255,255,255,.85)'; b.style.fontWeight = '700'; }
+    });
   }
   document.getElementById('loginMask').style.display = 'none';
   document.getElementById('appWrap').style.display = '';
@@ -4215,6 +4226,7 @@ function cambiarModo(modo){
   }
   // 1) Actualizar SIMULTÁNEAMENTE la variable JS y el class .act del DOM antes de cualquier otra cosa.
   MODO_VISTA = modo;
+  try { localStorage.setItem('crm_modo_vista', modo); } catch(e){}
   document.querySelectorAll('.modo-btn').forEach(b => {
     const activo = b.dataset.modo === modo;
     b.classList.toggle('act', activo);

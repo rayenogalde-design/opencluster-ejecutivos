@@ -13815,7 +13815,21 @@ function _lpToggleBar(){
     '</div>';
 }
 function _lpRenderCards(keys){
-  if(window.__LP_VER_TODO){ _lpCatalogoSeg(); return renderListaPreciosCard('__catalogo'); }
+  if(window.__LP_VER_TODO){
+    // "Todo el catálogo" consciente del canal: Roberto y Surterapia ven los 118 con SUS precios;
+    // los retail ven el catálogo estándar (unión retail). distribucion_todo/surterapia_todo vienen del JSON.
+    var P = window.__PRECIOS_SEG || {};
+    var cards = [], seen = {};
+    keys.forEach(function(k){
+      var target;
+      if(k==='distribucion' && P['distribucion_todo']) target='distribucion_todo';
+      else if(k==='surterapia' && P['surterapia_todo']) target='surterapia_todo';
+      else { _lpCatalogoSeg(); target='__catalogo'; }
+      if(seen[target]) return; seen[target]=1;
+      cards.push(renderListaPreciosCard(target));
+    });
+    return cards.join('');
+  }
   return keys.map(renderListaPreciosCard).join('');
 }
 function lpSetVerTodo(v){

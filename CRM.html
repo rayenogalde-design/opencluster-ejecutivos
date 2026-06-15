@@ -10384,6 +10384,16 @@ function ncLeadUrgenteToggle(){
       dl.value = d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes()); } }
 }
 
+// Normaliza un teléfono chileno: garantiza el prefijo +56 adelante (no lo duplica).
+function _telCL(t){
+  t = String(t||'').trim();
+  if(!t) return '';
+  if(t.charAt(0) === '+') return t;                            // ya trae código país
+  var d = t.replace(/\D/g,'');                                 // solo dígitos
+  if(!d) return t;
+  if(d.indexOf('56') === 0 && d.length >= 10) d = d.slice(2);  // evita "+56 56..."
+  return '+56 ' + d;
+}
 async function guardarNuevoContacto(forzar){
   const data = {
     nombre: document.getElementById('nc-nombre').value.trim(),
@@ -10405,6 +10415,9 @@ async function guardarNuevoContacto(forzar){
     origen: (document.getElementById('nc-lead-urgente') && document.getElementById('nc-lead-urgente').checked) ? 'inbound' : 'prospeccion',
     solicitante: USUARIO
   };
+  // El teléfono se guarda SIEMPRE con +56 adelante (sin duplicarlo si ya lo trae).
+  data.telefono = _telCL(data.telefono);
+  if (data.telefono_institucional) data.telefono_institucional = _telCL(data.telefono_institucional);
   // Asignación: si es el admin (Rayen), respeta el ejecutivo que eligió en el selector.
   // Si es un ejecutivo, NO mandamos el campo → el backend lo asigna a quien lo ingresa (solicitante),
   // normalizado a su primer nombre. Solo Rayen puede reasignar después.

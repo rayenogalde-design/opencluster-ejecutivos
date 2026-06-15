@@ -10504,6 +10504,20 @@ async function guardarNuevoContacto(forzar){
   if (view && (view.id === 'vMis' || view.id === 'vTodos')) {
     await cargarContactos(view.id);
   }
+  // Si el primer contacto fue una REUNIÓN, abrir de inmediato el panel de reunión ya enlazado
+  // al contacto nuevo, para registrar fecha + qué se conversó → queda como reunión REAL y cuenta.
+  const _medioReu = String(data.medio_primer_contacto || '').toLowerCase();
+  if (r.id && _medioReu.indexOf('reuni') >= 0 && typeof abrirModalNuevaReunion === 'function') {
+    abrirModalNuevaReunion(r.id);
+    // Garantizar el contacto preseleccionado aunque aún no esté en la caché local.
+    try {
+      const idEl = document.getElementById('nr-contacto-id');
+      if (idEl && !idEl.value && typeof seleccionarContactoReunion === 'function') {
+        seleccionarContactoReunion({ id: r.id, nombre: data.nombre, institucion: data.institucion, email: data.email, telefono: data.telefono });
+      }
+    } catch(e){}
+    return;
+  }
   // Abrir la ficha del nuevo contacto si tenemos su id
   if (r.id && view) abrirFicha(r.id, view.id);
 }

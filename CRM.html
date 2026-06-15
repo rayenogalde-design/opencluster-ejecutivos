@@ -8584,8 +8584,17 @@ async function guardarSeguimientoMC(num, btn){
   btn.disabled=true; btn.textContent='Guardando…';
   const r = await fetchAPI('crm_crear_seguimiento', { num_cotizacion:num, contacto_id:c.contacto_id||'', nombre:c.cliente||'', institucion:c.institucion||'', email:'', fecha:fecha, fecha_iso:fecha, resultado:res, medio:medio, notas:notas, solicitante:USUARIO });
   if(!r || !r.ok){ btn.disabled=false; btn.textContent='Guardar seguimiento'; alert('Error: '+((r&&r.error)||'desconocido')); return; }
+  // CONFIRMACIÓN DE GUARDADO: recargamos y verificamos que el seguimiento quedó de verdad.
+  // Si no se confirma, avisamos al instante y mostramos el texto para que NO se pierda.
   CACHE.vMisCot = null;
-  cargarMisCotizaciones(true);
+  await cargarMisCotizaciones(true);
+  if(notas){
+    const cc = (CACHE.vMisCot||[]).find(x=>x.cotizacion===num);
+    const confirmado = cc && (cc.seguimientos||[]).some(s=>String(s.notas||'').trim()===notas.trim());
+    if(!confirmado){
+      alert('OJO: no pude confirmar que el seguimiento quedó guardado.\n\nCopia tu texto para no perderlo:\n\n"'+notas+'"\n\nVuelve a apretar "Guardar seguimiento". Si falla otra vez, avísale a Rayen — no cierres sin guardar.');
+    }
+  }
 }
 // Ícono SVG breve según el medio del seguimiento (sin emojis).
 function _iconMedio(m){

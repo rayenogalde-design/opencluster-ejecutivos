@@ -3225,15 +3225,20 @@ body{
       </div>
       <div class="fld-row single">
         <div class="fld"><label>Acompañantes (opcional)</label>
-          <select id="nr-acompanantes" multiple size="4" style="font-size:13px;">
+          <select id="nr-acompanantes" multiple size="4" style="font-size:13px;" onchange="_toggleAcompOtro()">
             <option value="Rayen Ogalde">Rayen Ogalde</option>
             <option value="Maximiliano">Maximiliano</option>
             <option value="Roberto">Roberto</option>
             <option value="Germán">Germán</option>
             <option value="William">William</option>
             <option value="Ximena Romero">Ximena Romero</option>
+            <option value="Mario">Mario</option>
+            <option value="Hernán">Hernán</option>
+            <option value="Estefany">Estefany</option>
+            <option value="__OTRO__">Otro (escribir nombre)…</option>
           </select>
-          <div style="font-size:11px;color:var(--text-3);margin-top:3px;">Mantén Ctrl/Cmd para seleccionar varios. La reunión también aparecerá en su dashboard marcada como "Acompañante".</div>
+          <input id="nr-acomp-otro" type="text" placeholder="Nombre del otro acompañante" style="display:none;margin-top:6px;width:100%;padding:7px 9px;border:1px solid var(--smoke);border-radius:6px;font-size:13px;">
+          <div style="font-size:11px;color:var(--text-3);margin-top:3px;">Mantén Ctrl/Cmd para seleccionar varios. Usa "Otro" para escribir alguien que no esté en la lista. La reunión también aparecerá en su dashboard marcada como "Acompañante".</div>
         </div>
       </div>
       <div class="fld-row single">
@@ -10995,6 +11000,7 @@ function abrirModalNuevaReunion(contactoIdPreseleccionado){
   document.getElementById('nr-cambiar-pipeline').checked = true;
   const acompSel = document.getElementById('nr-acompanantes');
   if(acompSel) Array.from(acompSel.options).forEach(o => o.selected = false);
+  var _ao = document.getElementById('nr-acomp-otro'); if(_ao){ _ao.value=''; _ao.style.display='none'; }
   document.getElementById('modalNuevaReunion').classList.add('show');
 
   if(contactoIdPreseleccionado){
@@ -11012,6 +11018,15 @@ function abrirModalNuevaReunion(contactoIdPreseleccionado){
   }
 }
 function cerrarModalNuevaReunion(){ document.getElementById('modalNuevaReunion').classList.remove('show'); }
+// Muestra/oculta el campo de texto "Otro" según si esa opción está seleccionada en acompañantes.
+function _toggleAcompOtro(){
+  var sel = document.getElementById('nr-acompanantes');
+  var inp = document.getElementById('nr-acomp-otro');
+  if(!sel || !inp) return;
+  var hayOtro = Array.from(sel.selectedOptions).some(function(o){ return o.value === '__OTRO__'; });
+  inp.style.display = hayOtro ? '' : 'none';
+  if(hayOtro) inp.focus();
+}
 function _datetimeLocalDefault(){
   // Próxima hora en punto, en formato yyyy-MM-ddTHH:mm
   const d = new Date();
@@ -11083,7 +11098,11 @@ async function guardarNuevaReunion(){
   const btn = document.getElementById('nr-btn-guardar');
   btn.disabled = true; btn.textContent = 'Guardando…';
   const acompSelect = document.getElementById('nr-acompanantes');
-  const acompanantes = acompSelect ? Array.from(acompSelect.selectedOptions).map(o => o.value).filter(v => v !== USUARIO) : [];
+  let acompanantes = acompSelect ? Array.from(acompSelect.selectedOptions).map(o => o.value).filter(v => v !== USUARIO) : [];
+  // "Otro": reemplazar el marcador por el nombre escrito a mano.
+  acompanantes = acompanantes.filter(v => v !== '__OTRO__');
+  const _otroVal = (document.getElementById('nr-acomp-otro') || {}).value;
+  if(_otroVal && String(_otroVal).trim()) acompanantes.push(String(_otroVal).trim());
   const r = await fetchAPI('crm_crear_reunion', {
     contacto_id: contactoId,
     nombre: sel.dataset.nombre || '',

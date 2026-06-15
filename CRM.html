@@ -9379,7 +9379,17 @@ function renderFicha(container, data){
       histHtml = _timelineFallback(tl);
     }
   }
-  container.innerHTML = headerV2 + adminBtns + gestionContactoBar(c) + cadenciaBannerFicha(c, editable) + pillsDatos + '<div id="docsVentaFicha"></div>' + histHtml;
+  // Bloque INFORMACIÓN DEL CLIENTE — con qué llegó / qué pidió. Es la PRIMERA info y no debe
+  // perderse: vive en notas_publicas (campo persistente). Antes solo se veía en el aviso de
+  // "lead urgente", que se borra al completarlo → parecía que desaparecía. Ahora queda fija acá.
+  const _notaCli = String(c.notas_publicas||'').replace(/^—\s*Migrado del registro de Ximena\s*—\n?/,'').trim();
+  const infoClienteBlock = _notaCli
+    ? '<div class="v2-block" style="margin-bottom:22px;">' +
+        '<div class="v2-block-head"><span class="v2-block-label">INFORMACIÓN DEL CLIENTE · CÓMO LLEGÓ / QUÉ PIDIÓ</span></div>' +
+        '<div style="background:#fff;border:1px solid var(--smoke,#e3e3ea);border-left:3px solid var(--sky,#06b3fd);border-radius:8px;padding:11px 14px;font-size:13px;color:var(--ink,#1a1a2e);line-height:1.55;white-space:pre-wrap;">' + esc(_notaCli) + '</div>' +
+      '</div>'
+    : '';
+  container.innerHTML = headerV2 + adminBtns + gestionContactoBar(c) + cadenciaBannerFicha(c, editable) + pillsDatos + infoClienteBlock + '<div id="docsVentaFicha"></div>' + histHtml;
   try { cargarDocsVenta(c.id); } catch(e){}
 }
 

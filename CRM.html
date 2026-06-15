@@ -454,7 +454,7 @@ input,select,textarea{font-family:inherit; font-size:14px;}
 .lp-fam-cnt{ font-size:10.5px; font-weight:600; color:var(--text-3,#9a93a8); }
 .lp-fam-cnt::before{ content:'· '; }
 .lp-colhead{
-  margin-left:auto; display:grid; grid-template-columns:repeat(3,82px); gap:6px;
+  margin-left:auto; display:grid; grid-template-columns:repeat(2,82px); gap:6px;
   text-align:right; font-size:9.5px; font-weight:700; text-transform:uppercase;
   letter-spacing:.04em; color:var(--text-3,#9a93a8);
 }
@@ -487,7 +487,7 @@ input,select,textarea{font-family:inherit; font-size:14px;}
 .lp-toggle-btn:hover{ color:#001a60; }
 .lp-toggle-btn.active{ background:#fff; color:#001a60; box-shadow:0 2px 6px -2px rgba(0,26,96,.25); }
 .lp-tarifa{
-  display:grid; grid-template-columns:repeat(3,82px); gap:6px;
+  display:grid; grid-template-columns:repeat(2,82px); gap:6px;
   text-align:right; font-variant-numeric:tabular-nums;
   font-weight:700; font-size:12.5px; color:var(--oct-navy,#001A60); flex-shrink:0;
 }
@@ -497,7 +497,7 @@ input,select,textarea{font-family:inherit; font-size:14px;}
   font-weight:800; font-size:12.5px; color:var(--oct-navy,#001A60); flex-shrink:0;
 }
 @media (max-width:560px){
-  .lp-colhead,.lp-tarifa{ grid-template-columns:repeat(3,60px); }
+  .lp-colhead,.lp-tarifa{ grid-template-columns:repeat(2,60px); }
   .lp-colhead-1,.lp-monto{ width:auto; grid-template-columns:90px; }
   .lp-tarifa,.lp-monto{ font-size:11px; }
 }
@@ -13751,7 +13751,7 @@ function formatearPrecioCLP(v){
    LISTA DE PRECIOS POR SEGMENTO — precios oficiales por ejecutivo
    Carga precios_segmento.json (6 segmentos). Cada ejecutivo ve la
    lista que corresponde a SU segmento, con SU tipo de precio:
-   - retail (Rayen·AdultoMayor, Germán, Maximiliano, William): tramos 1–9 / 10–19 / 20+
+   - retail (Rayen·AdultoMayor, Germán, Maximiliano, William): tramos 1-10 / 11+
    - margen (Roberto): margen de distribución por volumen
    - distribuidor (Rayen·Surterapia): valor distribuidor único
    Rayen ve DOS listas: Adulto Mayor + Distribuidor Surterapia.
@@ -13874,12 +13874,12 @@ function renderListaPreciosCard(segKey){
              : 'Precio por volumen · IVA incluido';
   const head = tipo==='distribuidor'
     ? '<div class="lp-colhead lp-colhead-1"><span>Valor distrib.</span></div>'
-    : '<div class="lp-colhead"><span>' + (tipo==='margen'?'Margen 1–9':'1–9 u.') + '</span><span>10–19 u.</span><span>20+ u.</span></div>';
+    : '<div class="lp-colhead"><span>1-10 u.</span><span>11+ u.</span></div>';
   const cuerpo = seg.familias.map(function(f){
     const filas = f.productos.map(function(p){
       const cols = tipo==='distribuidor'
         ? '<div class="lp-monto">' + fmt(p.valor) + '</div>'
-        : '<div class="lp-tarifa"><span>' + fmt(p.t1) + '</span><span>' + fmt(p.t2) + '</span><span>' + fmt(p.t3) + '</span></div>';
+        : '<div class="lp-tarifa"><span>' + fmt(p.t1) + '</span><span>' + fmt(p.t2) + '</span></div>';
       return '<div class="lp-fila" data-sku="' + esc(p.sku || '') + '" data-nombre="' + esc(p.nombre || '') + '" onclick="abrirFichaDesdePrecio(this)">' +
           _lpThumb(p) +
           '<div class="lp-nombre">' + esc(p.nombre) + (p.sku ? '<span class="lp-sku">' + esc(p.sku) + '</span>' : '') + '</div>' +
@@ -14079,13 +14079,12 @@ function renderFichaCompleta(f){
       (tec.length ? '<div class="fch-seccion"><div class="fch-label">FICHA TÉCNICA</div><ul class="fch-lista">' + tec.map(t => '<li>' + escTxt(t) + '</li>').join('') + '</ul></div>' : '') +
       (ind.length ? '<div class="fch-seccion"><div class="fch-label">INDICADO PARA</div><div class="fch-pills">' + ind.map(i => '<span class="fch-pill">' + escTxt(i) + '</span>').join('') + '</div></div>' : '') +
       (f.si_te_preguntan ? '<div class="fch-seccion fch-seccion-tip"><div class="fch-label">SI TE PREGUNTAN</div><div class="fch-texto">' + escTxt(f.si_te_preguntan) + '</div></div>' : '') +
-      ((f.precio_v1 || f.precio_v2 || f.precio_v3) ?
+      ((f.precio_v1 || f.precio_v2) ?
         '<div class="fch-tarifa">' +
           '<div class="fch-label">TARIFA POR VOLUMEN</div>' +
           '<div class="fch-tarifa-grid">' +
-            '<div class="fch-tarifa-col"><div class="fch-tarifa-tier">1–9 u.</div><div class="fch-tarifa-monto">' + formatearPrecioCLP(f.precio_v1) + '</div></div>' +
-            '<div class="fch-tarifa-col"><div class="fch-tarifa-tier">10–19 u.</div><div class="fch-tarifa-monto">' + formatearPrecioCLP(f.precio_v2) + '</div></div>' +
-            '<div class="fch-tarifa-col"><div class="fch-tarifa-tier">20+ u.</div><div class="fch-tarifa-monto">' + formatearPrecioCLP(f.precio_v3) + '</div></div>' +
+            '<div class="fch-tarifa-col"><div class="fch-tarifa-tier">1-10 u.</div><div class="fch-tarifa-monto">' + formatearPrecioCLP(f.precio_v1) + '</div></div>' +
+            '<div class="fch-tarifa-col"><div class="fch-tarifa-tier">11+ u.</div><div class="fch-tarifa-monto">' + formatearPrecioCLP(f.precio_v2) + '</div></div>' +
           '</div>' +
         '</div>'
       : '') +
@@ -14478,7 +14477,7 @@ document.addEventListener('click', function(e){
 }
 .fch-tarifa-grid{
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
   margin-top: 4px;
 }

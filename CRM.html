@@ -8503,7 +8503,17 @@ function _cardMisCot(c){
   const numJS = String(c.cotizacion||'').replace(/'/g,"\\'");
   const prod = String(c.productos||'').trim();
   const listaProd = prod ? prod.split(/[\r\n]+|;|•/).map(p=>p.trim()).filter(p=>p.length>1) : [];
-  const segs = Array.isArray(c.seguimientos) ? c.seguimientos : [];
+  // Mostrar solo seguimientos con contenido real y sin repetidos. Las filas-fantasma
+  // (N°/Institución pero sin fecha de seguimiento, estado, medio ni notas) se pintaban
+  // como cajas amarillas vacías con la "×"; aquí no se muestran. (Defensa en el cliente:
+  // el Apps Script ya las filtra, pero esto funciona también antes del redeploy.)
+  const _segConTexto = s => ((s.fecha||'')+'').trim() || ((s.notas||'')+'').trim() || ((s.estado||'')+'').trim() || ((s.medio||'')+'').trim();
+  const _segVistos = {};
+  const segs = (Array.isArray(c.seguimientos) ? c.seguimientos : []).filter(s=>{
+    if(!_segConTexto(s)) return false;
+    const k = (((s.fecha||'')+'|'+(s.notas||'')+'|'+(s.estado||'')+'|'+(s.medio||''))+'').toLowerCase().trim();
+    if(_segVistos[k]) return false; _segVistos[k]=1; return true;
+  });
   // Detalle desplegado
   let det = '<div style="font-size:11.5px;color:var(--subtle);margin:10px 0;">Cotización del ' + esc(c.fecha||'—') + (c.ejecutivo?' · por ' + esc(String(c.ejecutivo).split(' ')[0]):'') + (monto?' · ' + esc(monto):'') + '</div>';
   if(listaProd.length){
@@ -9468,10 +9478,15 @@ function renderHistorialAgrupado(tl, contacto){
     else otras.push(ev);
   });
 
-  // Para cada cotización, encontrar sus seguimientos asociados (mismo N°)
-  const seguimientos = tl.filter(esSeguimiento);
+  // Para cada cotización, encontrar sus seguimientos asociados (mismo N°).
+  // Solo seguimientos con texto real: los creados por un sync viejo quedaban con detalle
+  // vacío (medio "seguimiento" y nada más) → se veían como líneas fantasma. Se omiten.
+  const seguimientos = tl.filter(s => esSeguimiento(s) && String(s.detalle||'').trim());
   const segPorCot = {};
+  const _segDup = {};
   seguimientos.forEach(s => {
+    const _k = (String(s.fecha||'')+'|'+String(s.detalle||'')).toLowerCase().trim();
+    if (_segDup[_k]) return; _segDup[_k] = 1;   // colapsar seguimientos idénticos repetidos
     const num = extraerNumCot(s.detalle) || extraerNumCot(s.titulo);
     if (num) {
       if (!segPorCot[num]) segPorCot[num] = [];

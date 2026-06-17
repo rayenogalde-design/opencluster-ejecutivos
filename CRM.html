@@ -2448,6 +2448,11 @@ body{
           <div id="dshStreak"></div>
         </div>
 
+        <!-- Selector admin "Ver dashboard de" (visible). El #dshCampana viejo quedó oculto en el rediseño. -->
+        <div id="dshAdminVer"></div>
+        <!-- Leads urgentes: persisten ARRIBA hasta que el ejecutivo los marque contactados. -->
+        <div id="dshLeads"></div>
+
         <div id="dshFoco"></div>
 
         <div class="dv3-bento">
@@ -2471,7 +2476,7 @@ body{
         <!-- contenedores legacy (ocultos) que algunas funciones aún tocan -->
         <div style="display:none">
           <div class="kpis" id="dshKpis"></div>
-          <div id="dshLeads"></div><div id="dshCampana"></div>
+          <div id="dshCampana"></div>
           <div id="dshProductosCampanaCard"></div><div id="dshListaPartida"></div>
           <div id="dshFunnel"></div><span id="dshFunnelTotal"></span>
           <div id="dshListasPrecios"></div><div id="scriptBanner"></div>
@@ -5626,6 +5631,7 @@ async function cargarDashboard(){
   pintarToquesHoy();
   pintarLeadsDashboard();
   // ── rediseño v3 ──
+  try{ pintarAdminVerDashboard(); }catch(e){}
   try{ pintarStreakDash(); }catch(e){}
   try{ pintarFocoDash(); }catch(e){}
   try{ pintarPorCerrarDash(); }catch(e){}
@@ -5949,6 +5955,34 @@ function pintarFocoDash(){
   box.innerHTML='<div class="dv3-pin"'+(msg?'':' style="opacity:.8"')+'><div class="pic">'+_DV3.pin+'</div><div class="tx"><div class="eye">Foco de la semana</div><div class="msg">'+esc(texto)+'</div></div>'+(msg?'<div class="by">— '+esc(_yoNombre()||'Líder')+'</div>':'')+edit+'</div>';
 }
 function editarFocoSemana(){ var cur=''; try{cur=localStorage.getItem('crm_foco_semana')||'';}catch(e){} var v=prompt('Foco de la semana (lo verá todo el equipo):',cur); if(v===null)return; try{localStorage.setItem('crm_foco_semana',String(v).trim());}catch(e){} pintarFocoDash(); }
+
+// Selector admin "Ver dashboard de" — VISIBLE arriba del dashboard.
+// El #dshCampana original quedó dentro del bloque oculto del rediseño v3, así que
+// el selector se pintaba invisible. Esta versión lo pinta en #dshAdminVer (visible).
+// Reutiliza renderSelectorDrillDown + cambiarDrillDown (que re-pinta el dashboard).
+// Pedido Rayen 2026-06-17.
+function pintarAdminVerDashboard(){
+  var box=document.getElementById('dshAdminVer'); if(!box) return;
+  var esAdmin=(typeof ROL!=='undefined'&&ROL==='admin');
+  var modo=(typeof getModoVista==='function')?getModoVista():'admin';
+  // Solo admin en modo admin ve el selector; en modo ejecutiva ve su propio dashboard.
+  if(!esAdmin || modo==='ejecutiva'){ box.innerHTML=''; return; }
+  var drill=(typeof hayDrillDown==='function')&&hayDrillDown();
+  var sel=renderSelectorDrillDown('Ver dashboard de:');
+  if(drill){
+    box.innerHTML='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#faf6ff;border:1px solid var(--purple-lt,#d4c5ec);border-radius:12px;padding:10px 16px;margin-bottom:14px;">'+
+      '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--purple-dk)" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M21 12c0 4-4 8-9 8s-9-4-9-8 4-8 9-8 9 4 9 8z"/></svg>'+
+      '<b style="font-size:13px;color:var(--purple-dk);font-weight:700;">Viendo el dashboard de '+esc(DRILL_DOWN_EJEC)+'</b>'+
+      sel+
+      '<button onclick="cambiarDrillDown(\'__equipo__\')" style="padding:6px 13px;background:var(--purple-dk);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Volver al equipo</button>'+
+    '</div>';
+  } else {
+    box.innerHTML='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid #e8ecf5;border-radius:12px;padding:10px 16px;margin-bottom:14px;box-shadow:0 6px 18px -14px rgba(0,26,96,.4);">'+
+      '<span style="font-size:12.5px;font-weight:700;color:#001a60;">Dashboard del equipo</span>'+
+      sel+
+    '</div>';
+  }
+}
 
 function _updatePipelineMini(){ var el=document.getElementById('dv3Pipeline'); if(el && window.__dv3Pipe!=null) el.textContent=_montoCorto(window.__dv3Pipe); }
 async function pintarPorCerrarDash(){

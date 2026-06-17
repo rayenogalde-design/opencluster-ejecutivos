@@ -360,9 +360,12 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
      bordes 1px en items flex, que Chrome a veces no pinta al generar el PDF. */
   display:flex;
   flex-wrap:wrap;
-  gap:1px;
+  /* 2px (no 1px): las líneas separadoras son este fondo celeste asomando por
+     el gap; con 1px el auto-zoom de las cotizaciones largas lo dejaba en
+     ~0.7px y Chrome lo redondeaba a 0 → desaparecían. 2px sobrevive al zoom. */
+  gap:2px;
   background:#c8d8f8;
-  border:1.5px solid #c8d8f8;
+  border:2px solid #c8d8f8;
   border-radius:8px;
   overflow:hidden;
   margin-bottom:7px;
@@ -3588,6 +3591,19 @@ function upd() {
     const inner = buildPageInner(g, g.isLast);
     const numBadge = totalPags > 1 ? `<div class="page-num-badge">Pág ${idx+1}/${totalPags}</div>` : "";
     page.innerHTML = `${numBadge}<div class="page-inner">${inner}</div><div class="page-bottom"></div>`;
+    // Auto-ajuste anti-corte: si la hoja se pasa del alto de la carta (caso
+    // típico: 1 producto con descripción muy larga + pie, que no se puede
+    // partir en dos), achicar apenas lo justo SOLO el contenido interior
+    // (.page-inner) para que el pie y la firma no queden cortados ni salten a
+    // una 2ª hoja. Se zoomea el interior y NO la hoja completa, así la hoja
+    // mantiene su alto y la banda degradada del pie queda pegada al borde de
+    // abajo (igual que la del header arriba). Mide con renderAndMeasure (misma
+    // unidad px@96dpi que MAX_INNER_H). Tope 0.72 para no dejar texto ilegible.
+    const realH = renderAndMeasure(g.rows, g.isFirst, g.isLast);
+    if(realH > MAX_INNER_H){
+      const innerEl = page.querySelector(".page-inner");
+      if(innerEl) innerEl.style.zoom = Math.max(0.72, MAX_INNER_H / realH);
+    }
     container.appendChild(page);
   });
 

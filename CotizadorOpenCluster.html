@@ -3963,19 +3963,21 @@ async function fetchYAsignarNumero() {
     return numFinal;
   } catch(e) {
     console.warn("Error obteniendo número:", e);
-    // Fallback: usar timestamp para garantizar unicidad
-    const sufijo = getSufijoCot();
-    const ahora = new Date();
-    const ts = String(ahora.getHours()).padStart(2,"0") + String(ahora.getMinutes()).padStart(2,"0");
-    const fallback = "OC26-" + INICIO_DIF + ts + "-" + sufijo;
+    // Si falla la consulta al servidor, NO inventamos un número local.
+    // Antes: "OC26-" + INICIO_DIF + ts  ->  concatenaba 3500 + HHMM como texto
+    // (ej. "3500"+"1851" = "OC26-35001851-AT"), y ese número gigante envenenaba la
+    // secuencia (Math.max lo tomaba y seguía contando desde los 35 millones).
+    // Ahora: dejamos el campo en blanco y el backend asigna el correlativo correcto
+    // al registrar (ya tiene lógica de asignación + anti-colisión).
     const numEl = document.getElementById("eNum");
-    if(numEl) { 
-      numEl.value = fallback; 
-      numEl.style.color = "#e67e22"; 
-      numEl.style.fontStyle = "normal";
-      upd(); 
+    if(numEl) {
+      numEl.value = "";
+      numEl.placeholder = "🔓 Se asignará al registrar";
+      numEl.style.color = "#e67e22";
+      numEl.style.fontStyle = "italic";
+      upd();
     }
-    return fallback;
+    return "";
   }
 }
 
@@ -4147,12 +4149,11 @@ async function registrarCotizacion() {
       return;
     }
   } else {
+    // Intentar pre-cargar el correlativo. Si el servidor no responde, fetchYAsignarNumero
+    // devuelve "" y NO bloqueamos: seguimos con el número en blanco y el backend asigna el
+    // correlativo correcto al registrar (antes acá el fallback inventaba OC26-3500HHMM, que
+    // envenenaba la numeración). El POST de registro confirma el número final y actualiza la UI.
     numAsignado = await fetchYAsignarNumero();
-    if(!numAsignado) {
-      alert("❌ No se pudo obtener el número de cotización. Revisa tu conexión.");
-      liberar();
-      return;
-    }
   }
 
   const num       = numAsignado;
@@ -4296,11 +4297,12 @@ async function registrarCotizacion() {
     showToast("⚠️ " + num + " ya estaba en el registro — no se creó fila nueva.", "warning");
   }
 
-  // Si el servidor reasignó el número (porque el original estaba duplicado), actualizar UI
+  // Si el servidor asignó/reasignó el número (original duplicado, vacío o inválido), actualizar UI
   if(respData.num && respData.num !== num) {
     const numEl2 = document.getElementById("eNum");
     if(numEl2) numEl2.value = respData.num;
-    showToast("ℹ️ Número reasignado a " + respData.num + " por colisión con otro registro. El PDF debe regenerarse.", "warning");
+    const motivo = num ? "por colisión con otro registro" : "(lo asignó el servidor)";
+    showToast("ℹ️ Número de cotización: " + respData.num + " " + motivo + ". Si ya generaste el PDF, regenéralo con este número.", "warning");
   }
 
   // Éxito real confirmado por servidor → recién ahora marcamos localStorage y mostramos "registrada ✓"

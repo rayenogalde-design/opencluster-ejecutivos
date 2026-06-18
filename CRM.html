@@ -8391,12 +8391,16 @@ let MISCOT_PERIODO = (function(){ try { return localStorage.getItem('crm_miscot_
 function setMisCotPeriodo(p){ MISCOT_PERIODO = p || 'anio'; try{ localStorage.setItem('crm_miscot_periodo', MISCOT_PERIODO); }catch(e){} renderMisCotizaciones(); }
 function _kpisDeMisCot(arr, anio){
   const per = MISCOT_PERIODO; // 'anio' o un mes 'YYYY-MM'
-  // TODO se cuenta por la fecha de la COTIZACIÓN (c.mes), igual que el listado por mes,
-  // para que el KPI y la lista digan SIEMPRE lo mismo (no por fecha de cierre).
-  const enPer = c => (per==='anio') ? (String(c.mes||'').substring(0,4)===anio) : (String(c.mes||'')===per);
+  // Cotizaciones y monto cotizado: por el mes en que se COTIZÓ (c.mes).
+  const enPerCot = c => (per==='anio') ? (String(c.mes||'').substring(0,4)===anio) : (String(c.mes||'')===per);
+  // Ganadas y monto ganado: por el mes de la VENTA (mes de cierre = cuando se marcó Ganada).
+  // Si una ganada vieja no tiene fecha de cierre, cae a su mes de cotización para no perderla.
+  const mesGan = c => String(c.mes_cierre || c.mes || '');
+  const enPerGan = c => (per==='anio') ? (mesGan(c).substring(0,4)===anio) : (mesGan(c)===per);
   let t=0,g=0,s=0,m=0,mg=0;
   (arr||[]).forEach(c=>{
-    if(enPer(c)){ t++; m += (c.monto||0); if(c.ganada && c.tipo_venta!=='persona'){ g++; mg += (c.neto || c.monto || 0); } }
+    if(enPerCot(c)){ t++; m += (c.monto||0); }
+    if(enPerGan(c) && c.ganada && c.tipo_venta!=='persona'){ g++; mg += (c.neto || c.monto || 0); }
     if(!c.cerrada && (c.estado_seguimiento==='pendiente'||c.estado_seguimiento==='vencido')) s++;
   });
   return {total_anio:t, ganadas_anio:g, sin_seguimiento:s, monto_cotizado_anio:m, monto_ganado:mg};

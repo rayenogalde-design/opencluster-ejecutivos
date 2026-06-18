@@ -3941,17 +3941,33 @@ function getSufijoCot() {
 
 async function fetchYAsignarNumero() {
   const equipo = getEquipo();
-  const esDifusion = true;
-  const INICIO_DIF = 3500;
+  const esDifusion = equipo !== "mercadopublico";
+  const prefijo = esDifusion ? "OC26-" : "MP26-";
+  const INICIO = esDifusion ? 3500 : 2000;
+  const sufijo = getSufijoCot();
 
   try {
-    const url = SHEET_URL + "?equipo=" + equipo;
-    const resp = await fetch(url, {mode: "cors"});
+    // El número se calcula AQUÍ (en la página), leyendo la lista real de cotizaciones
+    // (get_datos) e IGNORANDO correlativos absurdos (>=100000). Esos números gigantes
+    // (ej. OC26-35001851) son residuo de un bug viejo del fallback ("OC26-"+3500+HHMM).
+    // Antes pedíamos ?equipo= al servidor, pero ese endpoint hace Math.max SIN filtro y
+    // quedaba envenenado contando desde los 35 millones. Esto lo evita sin tocar el servidor.
+    const resp = await fetch(SHEET_URL, {
+      method: "POST",
+      headers: {"Content-Type": "text/plain;charset=utf-8"},
+      body: JSON.stringify({ accion: "get_datos", equipo: equipo })
+    });
     const data = await resp.json();
-
-    const correlativo = data.siguiente || INICIO_DIF;
-    const sufijo = getSufijoCot();
-    const numFinal = "OC26-" + correlativo + "-" + sufijo;
+    const filas = (data && Array.isArray(data.cotizaciones)) ? data.cotizaciones : [];
+    let maxCorr = INICIO - 1;
+    for(let i = 0; i < filas.length; i++) {
+      const v = String((filas[i] && filas[i][0]) || "").trim();
+      if(v.indexOf(prefijo) !== 0) continue;          // solo correlativos de este equipo
+      const n = parseInt(v.split("-")[1], 10) || 0;
+      if(n > maxCorr && n < 100000) maxCorr = n;       // ignora correlativos corruptos
+    }
+    const correlativo = maxCorr + 1;
+    const numFinal = prefijo + correlativo + "-" + sufijo;
 
     const numEl = document.getElementById("eNum");
     if(numEl) {

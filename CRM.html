@@ -5842,6 +5842,20 @@ function _miniTile(c,ico,label,big,small,onClick){
   var attrs='class="dv3-mini'+(onClick?' dv3-clic':'')+'" style="--c2:'+c+'"'+(onClick?(' onclick="'+onClick+'" title="Ver detalle"'):'');
   return '<div '+attrs+'><div class="dv3-lbl">'+ico+esc(label)+'</div><div class="big">'+big+'</div><div class="small">'+small+'</div></div>';
 }
+// Tarjeta GESTIONES — total del mes + desglose por medio (ocupa 2 columnas de la fila de minis).
+// Reemplaza a las tarjetas sueltas "Llamadas" y "Seguimientos": toda gestión (llamada, correo,
+// whatsapp, reunión, presencial, y los seguimientos de cotización con su medio) suma acá.
+function _gestTile(g){
+  var total = g ? (g.mes||0) : 0;
+  var pm = (g && g.por_medio) || {};
+  var orden = ['WhatsApp','Correo','Llamada','Reunión','Presencial'];
+  var cols = {'WhatsApp':'#16a34a','Correo':'#d9920a','Llamada':'#06b3fd','Reunión':'#7c3aed','Presencial':'#0ea5a5'};
+  var chips = orden.map(function(md){
+    var v = (pm[md] && pm[md].mes) || 0;
+    return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:#4a5577;font-weight:600;margin-right:11px;white-space:nowrap;"><i style="width:7px;height:7px;border-radius:50%;background:'+cols[md]+';display:inline-block;"></i>'+esc(md)+' <b style="color:#001a60;">'+v+'</b></span>';
+  }).join('');
+  return '<div class="dv3-mini" style="--c2:#0ea5a5;grid-column:span 2;"><div class="dv3-lbl">'+_DV3.bars+'Gestiones</div><div class="big">'+total+'</div><div style="margin-top:7px;line-height:1.8;">'+chips+'</div></div>';
+}
 function _teamTile(vg){
   var arr=((vg&&vg.ranking_equipo)||[]).filter(function(x){return !_excluirRanking(x.ejec);});
   var hasMonto=arr.some(function(x){return x&&x.monto_mes!=null;});
@@ -5889,9 +5903,8 @@ function renderDashV3(r){
     minis.innerHTML=
       _miniTile('#16a34a',_DV3.chart,'Pipeline en juego','<span id="dv3Pipeline">—</span>','cotizaciones abiertas',"goView('vMisCotizaciones')")+
       _miniTile('#ff7e00',_DV3.doc,'Cotizaciones',cotiz,'enviadas este mes',"abrirDetalleKpi('cotizaciones','mes')")+
-      _miniTile('#06b3fd',_icoLlam,'Llamadas',llam,'este mes',"abrirDetalleKpi('llamadas','mes')")+
+      _gestTile(k.gestiones)+
       _miniTile('#7c3aed',_DV3.cal,'Reuniones',reun,'agendadas este mes',"abrirDetalleKpi('reuniones','mes')")+
-      _miniTile('#92580e',_icoSegui,'Seguimientos',segui,'hechos este mes',"abrirDetalleKpi('seguimientos','mes')")+
       _miniTile('#e11d63',_DV3.bell,'Por trabajar','<span id="dv3PorTrabajar">—</span>','empresas sin contactar',"irAListaPartida(true)");
   }
   try{ _updatePipelineMini(); }catch(e){}
@@ -5904,7 +5917,13 @@ function renderDashV3(r){
 // Ximena es de Finanzas: no entra en los rankings de venta/contactos del equipo.
 function _excluirRanking(ejec){ return String(ejec||'').toLowerCase().indexOf('ximena')>=0; }
 function _rankingDash(k){
-  var arr=((k&&k.nuevos_contactos&&k.nuevos_contactos.ranking_equipo)||[]).filter(function(x){return !_excluirRanking(x.ejec);});
+  // Ranking por GESTIONES (actividad total). Si el backend aún no trae gestiones
+  // (no redesplegado), cae de vuelta a contactos nuevos para no quedar vacío.
+  var gRank = (k&&k.gestiones&&k.gestiones.ranking_equipo)||[];
+  var usarGest = gRank.length > 0;
+  var fuente = usarGest ? gRank : ((k&&k.nuevos_contactos&&k.nuevos_contactos.ranking_equipo)||[]);
+  var _tituloRank = usarGest ? 'Ranking · gestiones (semana)' : 'Ranking · contactos nuevos (semana)';
+  var arr=fuente.filter(function(x){return !_excluirRanking(x.ejec);});
   var items=arr.map(function(x){return {n:String(x.ejec||'').split(' ')[0], v:(x.semana!=null?x.semana:(x.mes||0))};});
   items.sort(function(a,b){return b.v-a.v;}); items=items.slice(0,6);
   var max=items.reduce(function(m,x){return Math.max(m,x.v);},0)||1;
@@ -5918,7 +5937,7 @@ function _rankingDash(k){
       '<span class="v">'+x.v+'</span></div>';
   }).join('');
   var box=document.getElementById('dshRanking');
-  if(box) box.innerHTML='<div class="dv3-cardhd"><h3>Ranking · contactos semana</h3><span class="lnk">Equipo</span></div>'+(rows||'<div class="dv3-empty">Aún sin datos del equipo</div>');
+  if(box) box.innerHTML='<div class="dv3-cardhd"><h3>'+_tituloRank+'</h3><span class="lnk">Equipo</span></div>'+(rows||'<div class="dv3-empty">Aún sin datos del equipo</div>');
 }
 
 async function _porTrabajarDash(){
@@ -9812,6 +9831,8 @@ function renderHistorialAgrupado(tl, contacto){
                 '<option>Posible cierre</option>' +
                 '<option>Rechazada</option>' +
                 '<option>Postulado a FNDR (en concurso)</option>' +
+                '<option>Postulado a otro concurso (en espera)</option>' +
+                '<option>No adjudicado (FNDR/concurso)</option>' +
               '</select>' +
               '<input type="date" id="seg-fecha-' + esc(num) + '" value="' + _hoyISO() + '" style="padding:6px 9px;border:1px solid var(--smoke);border-radius:6px;font-size:12px;flex:0 0 140px;">' +
             '</div>' +

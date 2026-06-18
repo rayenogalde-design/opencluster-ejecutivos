@@ -3447,7 +3447,7 @@ function upd() {
     } else {
       inner += makeHeader();
     }
-    inner += makeTableHTML(g.rows);
+    if(g.rows && g.rows.length) inner += makeTableHTML(g.rows);
     if(includeFinal) {
       inner += totalesHTML;
       inner += `<div style="flex:1"></div>`;
@@ -3539,41 +3539,42 @@ function upd() {
   let remaining = [...allProdRows];
   let isFirstPage = true;
 
+  // Tolerancia: si TODO cabe en una hoja con una compactación mínima (el zoom
+  // automático de más abajo la aplica, hasta ~0.91 = imperceptible), preferimos
+  // UNA sola hoja antes que mandar el bloque final solo a una 2ª hoja casi vacía.
+  const TOL_UNA_PAGINA = MAX_INNER_H * 1.10;
+
   while(remaining.length > 0) {
     const maxPerPage = isFirstPage ? Math.max(PRODS_H1, allProdRows.length) : allProdRows.length;
-    let lo = 1, hi = Math.min(maxPerPage, remaining.length);
-    let bestFit = lo;
+    const hiMax = Math.min(maxPerPage, remaining.length);
 
-    // Probar si la última página (con todos los restantes) cabe con el bloque final
-    const isLastChunk = true; // siempre intentamos incluir final
-    const hAll = renderAndMeasure(remaining.slice(0, hi), isFirstPage, true);
-    
-    if(hAll <= MAX_INNER_H) {
-      // Todo lo restante cabe en esta página con footer final — tomar todo
+    // ¿Cabe TODO lo restante + el bloque final en esta hoja? (con tolerancia de zoom)
+    const hAll = renderAndMeasure(remaining.slice(0, hiMax), isFirstPage, true);
+    if(hiMax === remaining.length && hAll <= TOL_UNA_PAGINA) {
       finalGrupos.push({rows: remaining, isFirst: isFirstPage, isLast: true});
       remaining = [];
     } else {
-      // No cabe todo — buscar cuántos caben sin bloque final (binary search)
-      lo = 1; hi = Math.min(maxPerPage, remaining.length); bestFit = 1;
+      // No cabe todo junto — ¿cuántos PRODUCTOS caben en esta hoja SIN el final? (binary search)
+      let lo = 1, hi = hiMax, bestFit = 1;
       while(lo <= hi) {
         const mid = Math.floor((lo + hi) / 2);
         const h = renderAndMeasure(remaining.slice(0, mid), isFirstPage, false);
         if(h <= MAX_INNER_H) { bestFit = mid; lo = mid + 1; }
         else { hi = mid - 1; }
       }
-      // Asegurarse de al menos 1 producto
       bestFit = Math.max(1, bestFit);
-      // Si el binary search se tragó TODO pero sabemos por hAll que con el
-      // bloque final no cabía, dejar 1 producto para la hoja siguiente.
-      // Si no, terminaríamos con hoja 1 marcada isLast=true (renderiza con
-      // final), Chrome auto-corta físicamente, y queda una hoja 2 huérfana
-      // con solo el final y sin header.
-      if(bestFit === remaining.length && bestFit > 1) {
-        bestFit--;
-      }
       const chunk = remaining.slice(0, bestFit);
       remaining = remaining.slice(bestFit);
-      finalGrupos.push({rows: chunk, isFirst: isFirstPage, isLast: remaining.length === 0});
+      if(remaining.length === 0) {
+        // Todos los productos caben en esta hoja (sin el final), pero el final NO
+        // cabe junto a ellos. En vez de partir un producto suelto a otra hoja
+        // (lo que dejaba hueco feo), dejamos TODOS los productos juntos aquí y
+        // mandamos el bloque final a una hoja propia (con su encabezado).
+        finalGrupos.push({rows: chunk, isFirst: isFirstPage, isLast: false});
+        finalGrupos.push({rows: [], isFirst: false, isLast: true});
+      } else {
+        finalGrupos.push({rows: chunk, isFirst: isFirstPage, isLast: false});
+      }
     }
     isFirstPage = false;
   }

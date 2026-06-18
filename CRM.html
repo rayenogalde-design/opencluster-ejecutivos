@@ -8651,6 +8651,11 @@ async function guardarSeguimientoMC(num, btn){
   btn.disabled=true; btn.textContent='Guardando…';
   const r = await fetchAPI('crm_crear_seguimiento', { num_cotizacion:num, contacto_id:c.contacto_id||'', nombre:c.cliente||'', institucion:c.institucion||'', email:'', fecha:fecha, fecha_iso:fecha, resultado:res, medio:medio, notas:notas, solicitante:USUARIO });
   if(!r || !r.ok){ btn.disabled=false; btn.textContent='Guardar seguimiento'; alert('Error: '+((r&&r.error)||'desconocido')); return; }
+  // Si el resultado es "No adjudicado": no se adjudicaron los fondos, el proyecto ya no se
+  // ejecuta → la cotización se marca PERDIDA automáticamente (mismo endpoint que "Marcar perdida").
+  if(res === 'No adjudicado (FNDR/concurso)'){
+    try { await fetchAPI('crm_marcar_cotizacion', { solicitante:USUARIO, num:num, estado:'Perdida' }); } catch(e){}
+  }
   // CONFIRMACIÓN DE GUARDADO: recargamos y verificamos que el seguimiento quedó de verdad.
   // Si no se confirma, avisamos al instante y mostramos el texto para que NO se pierda.
   CACHE.vMisCot = null;
@@ -10750,6 +10755,10 @@ async function guardarSeguimientoInline(numCot, contactoId, btn){
   });
   btn.disabled = false; btn.textContent = 'Guardar seguimiento';
   if(!r.ok){ alert('Error: ' + (r.error || 'desconocido')); return; }
+  // "No adjudicado": no se adjudicaron los fondos → la cotización se marca PERDIDA sola.
+  if(resultado === 'No adjudicado (FNDR/concurso)' && numCot){
+    try { await fetchAPI('crm_marcar_cotizacion', { solicitante: USUARIO, num: numCot, estado: 'Perdida' }); } catch(e){}
+  }
   try {
     localStorage.removeItem('crm_cache_contactos_v2_' + USUARIO);
     CACHE.vMis = null; CACHE.vTodos = null;

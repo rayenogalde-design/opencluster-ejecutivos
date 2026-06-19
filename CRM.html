@@ -3082,7 +3082,8 @@ body{
       <div class="fld-row single" id="nc-row-telinst" style="display:none;">
         <div class="fld"><label>Teléfono institucional <span style="color:var(--smoke);font-weight:400;">(de la empresa, para llamar)</span></label><input type="tel" id="nc-telefono-institucional" value="+56 " placeholder="+56 ..." oninput="tel56(this)" onfocus="tel56(this)"></div>
       </div>
-      <div class="fld-row single">
+      <div class="fld-row">
+        <div class="fld"><label>RUT <span style="color:var(--smoke);font-weight:400;">(persona o empresa)</span></label><input type="text" id="nc-rut" placeholder="Ej: 12.345.678-9"></div>
         <div class="fld"><label>Dirección</label><input type="text" id="nc-direccion" placeholder="Ej: Av. Providencia 1234, of. 5"></div>
       </div>
       <div class="fld-row">
@@ -8577,6 +8578,13 @@ function renderMisCotizaciones(){
   });
   container.innerHTML = html;
 }
+function _copiarTxt(txt, btn){
+  var s = String(txt||'');
+  function ok(){ if(btn){ var o=btn.textContent; btn.textContent='Copiado'; setTimeout(function(){ btn.textContent=o; },1200); } }
+  try { navigator.clipboard.writeText(s).then(ok, function(){ _copiarFallback(s); ok(); }); }
+  catch(e){ _copiarFallback(s); ok(); }
+}
+function _copiarFallback(s){ var ta=document.createElement('textarea'); ta.value=s; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); }catch(_){ } document.body.removeChild(ta); }
 function _cardMisCot(c){
   const sem = _SEM_MISCOT[c.estado_seguimiento] || _SEM_MISCOT.sin_fecha;
   const monto = (c.monto && c.monto>0) ? fmtCLP(c.monto) : '';
@@ -8599,6 +8607,18 @@ function _cardMisCot(c){
   });
   // Detalle desplegado
   let det = '<div style="font-size:11.5px;color:var(--subtle);margin:10px 0;">Cotización del ' + esc(c.fecha||'—') + (c.ejecutivo?' · por ' + esc(String(c.ejecutivo).split(' ')[0]):'') + (monto?' · ' + esc(monto):'') + '</div>';
+  // Contacto: email (copiable) + acciones rápidas WhatsApp / Email / Llamar.
+  var _tel = String(c.telefono||'').replace(/\D/g,'');
+  var _waNum = _tel ? (_tel.indexOf('56')===0 ? _tel : '56'+_tel) : '';
+  if(c.email || _tel){
+    det += '<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:0 0 12px;padding:9px 11px;background:#f7f9ff;border:1px solid var(--smoke);border-radius:8px;">' +
+      (c.email ? '<span style="font-size:12.5px;color:var(--ink);font-weight:600;word-break:break-all;">'+esc(c.email)+'</span>' +
+                 '<button onclick="_copiarTxt(\''+esc(c.email)+'\',this)" style="background:#fff;border:1px solid var(--smoke);color:var(--oct-navy,#001A60);border-radius:6px;padding:5px 10px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;">Copiar</button>' +
+                 '<a href="mailto:'+esc(c.email)+'" style="background:#EEF2FF;border:1px solid #C7D2FE;color:#3730A3;border-radius:6px;padding:5px 10px;font-size:11.5px;font-weight:700;text-decoration:none;">Email</a>' : '') +
+      (_waNum ? '<a href="https://wa.me/'+_waNum+'" target="_blank" rel="noopener" style="background:#DCFCE7;border:1px solid #86EFAC;color:#166534;border-radius:6px;padding:5px 10px;font-size:11.5px;font-weight:700;text-decoration:none;">WhatsApp</a>' : '') +
+      (_tel ? '<a href="tel:+'+_waNum+'" style="background:#E0F2FE;border:1px solid #7DD3FC;color:#075985;border-radius:6px;padding:5px 10px;font-size:11.5px;font-weight:700;text-decoration:none;">Llamar</a>' : '') +
+    '</div>';
+  }
   if(listaProd.length){
     det += '<div style="background:#fafbfc;border:1px solid var(--smoke);border-radius:8px;padding:10px 13px;margin-bottom:10px;"><div style="font-size:10.5px;font-weight:800;color:var(--purple-dk,#5b21b6);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Productos</div><ul style="margin:0;padding-left:18px;font-size:12.5px;color:var(--ink);line-height:1.6;">' + listaProd.map(p=>'<li>'+esc(p)+'</li>').join('') + '</ul></div>';
   }
@@ -10300,7 +10320,7 @@ async function guardarEdicionContacto(){
 function abrirModalNuevoContacto(opts){
   opts = opts || {};
   // Reset form
-  ['nc-nombre','nc-institucion','nc-cargo','nc-email','nc-telefono','nc-telefono-institucional','nc-ciudad','nc-direccion','nc-notas']
+  ['nc-nombre','nc-institucion','nc-cargo','nc-email','nc-telefono','nc-telefono-institucional','nc-ciudad','nc-direccion','nc-notas','nc-rut']
     .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   { const tel = document.getElementById('nc-telefono'); if(tel) tel.value = '+56 '; }   // +56 obligatorio para Zadarma
   { const ti = document.getElementById('nc-telefono-institucional'); if(ti) ti.value = '+56 '; }
@@ -10511,6 +10531,7 @@ async function guardarNuevoContacto(forzar){
     ciudad: document.getElementById('nc-ciudad').value.trim(),
     region: document.getElementById('nc-region').value,
     direccion: document.getElementById('nc-direccion').value.trim(),
+    rut: (document.getElementById('nc-rut') ? document.getElementById('nc-rut').value.trim() : ''),
     tipo_categoria: document.getElementById('nc-tipo-categoria').value,
     sub_categoria: document.getElementById('nc-sub-categoria').value,
     pipeline_estado: document.getElementById('nc-pipeline').value,
@@ -10947,7 +10968,7 @@ function _vcToggleNoViarly(){
 // El ejecutivo elige a quién mandar (por defecto el de siempre) y dispara WhatsApp con un clic.
 var VC_WA_DESTINATARIOS = [
   { n:'Ximena (etiquetas)', wa:'56931495928' },
-  { n:'Viarly (finanzas)',  wa:'56973277277' },
+  { n:'Finanzas',           wa:'56973277277' },
   { n:'William',            wa:'56998748982' },
   { n:'Roberto',            wa:'56934619240' },
   { n:'Maximiliano',        wa:'56940213164' },
@@ -11012,7 +11033,7 @@ function abrirPanelCierreVenta(num, contacto){
       '<div style="padding:22px 24px;">' +
         '<label style="display:flex;align-items:flex-start;gap:9px;background:#FFF7ED;border:1px solid #FED7AA;border-radius:12px;padding:12px 14px;margin-bottom:16px;cursor:pointer;">' +
           '<input type="checkbox" id="vc-no-viarly" onchange="_vcToggleNoViarly()" style="margin-top:2px;width:16px;height:16px;accent-color:#C2410C;">' +
-          '<span style="font-size:13px;color:#7C2D12;font-weight:600;line-height:1.4;">Esta venta <b>ya fue procesada</b> — la estoy marcando tarde. <span style="font-weight:800;">No informar a Viarly.</span><br><span style="font-weight:400;color:#9A6A4A;font-size:12px;">Se registra como ganada y te llega el correo a ti con la nota, sin pedir comprobantes ni avisar a finanzas.</span></span>' +
+          '<span style="font-size:13px;color:#7C2D12;font-weight:600;line-height:1.4;">Esta venta <b>ya fue procesada</b> — la estoy marcando tarde.<br><span style="font-weight:400;color:#9A6A4A;font-size:12px;">Solo se registra como ganada, sin reenviar el aviso ni pedir comprobantes.</span></span>' +
         '</label>' +
         '<div id="vc-detalle">' +
         '<div style="font-weight:800;color:#111;margin-bottom:8px;">1. Comprobantes</div>' +
@@ -11044,12 +11065,12 @@ function abrirPanelCierreVenta(num, contacto){
               '<span style="font-size:12px;color:#9D174D;">a:</span>' + _vcSelectorDest('vc-wa-etq','56931495928') +
             '</div>' +
           '</div></div>' +
-        '<div style="font-weight:800;color:#111;margin:18px 0 8px;">4. WhatsApp a Viarly <span style="font-weight:600;color:#6b7280;font-size:12px;">(opcional — además del correo)</span></div>' +
+        '<div style="font-weight:800;color:#111;margin:18px 0 8px;">4. Enviar por WhatsApp <span style="font-weight:600;color:#6b7280;font-size:12px;">(opcional)</span></div>' +
         '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px;">' +
           '<button type="button" onclick="_vcAbrirWa(\'vc-wa-venta\', _vcMsgVenta())" style="background:#25D366;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;">Enviar venta por WhatsApp →</button>' +
           '<span style="font-size:12px;color:#374151;">a:</span>' + _vcSelectorDest('vc-wa-venta','56973277277') +
         '</div>' +
-        '<div style="font-size:12px;color:#6b7280;">El correo a Viarly y a Rayen se envía solo al guardar la venta.</div>' +
+        '<div style="font-size:12px;color:#6b7280;">El aviso se envía solo al guardar la venta.</div>' +
       '</div>' +
       '</div>' +
       '<div style="padding:16px 24px;border-top:1px solid #eee;display:flex;gap:10px;justify-content:flex-end;">' +

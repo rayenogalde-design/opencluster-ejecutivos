@@ -10927,6 +10927,15 @@ function _vcChk(){
   if(campos){ var vis = !!(chk && chk.checked); campos.style.display = vis ? '' : 'none'; if(vis) _vcAutollenarEtiqueta(); }
 }
 function _vcCerrar(){ var ov = document.getElementById('panelCierreVenta'); if(ov) ov.remove(); }
+// "No informar a Viarly": venta ya procesada que se marca tarde. Oculta los datos
+// (comprobantes/envío/etiquetas) y habilita guardar sin pedir nada.
+function _vcToggleNoViarly(){
+  var on = (document.getElementById('vc-no-viarly')||{}).checked;
+  var det = document.getElementById('vc-detalle'); if(det) det.style.display = on ? 'none' : '';
+  var btn = document.getElementById('vc-enviar'); if(!btn) return;
+  if(on){ btn.disabled=false; btn.style.cursor='pointer'; btn.style.opacity='1'; btn.textContent='Registrar (sin avisar a Viarly)'; }
+  else { btn.textContent='Guardar venta'; _vcChk(); }
+}
 
 // ── Notificaciones por WhatsApp del cierre de venta (etiquetas a Ximena, venta a Viarly) ──
 // El ejecutivo elige a quién mandar (por defecto el de siempre) y dispara WhatsApp con un clic.
@@ -10995,6 +11004,11 @@ function abrirPanelCierreVenta(num, contacto){
         '<div style="font-size:19px;font-weight:800;margin-top:2px;">Cotización ' + e2(num) + (c.nombre||c.institucion ? ' · ' + e2(c.nombre||c.institucion) : '') + '</div>' +
       '</div>' +
       '<div style="padding:22px 24px;">' +
+        '<label style="display:flex;align-items:flex-start;gap:9px;background:#FFF7ED;border:1px solid #FED7AA;border-radius:12px;padding:12px 14px;margin-bottom:16px;cursor:pointer;">' +
+          '<input type="checkbox" id="vc-no-viarly" onchange="_vcToggleNoViarly()" style="margin-top:2px;width:16px;height:16px;accent-color:#C2410C;">' +
+          '<span style="font-size:13px;color:#7C2D12;font-weight:600;line-height:1.4;">Esta venta <b>ya fue procesada</b> — la estoy marcando tarde. <span style="font-weight:800;">No informar a Viarly.</span><br><span style="font-weight:400;color:#9A6A4A;font-size:12px;">Se registra como ganada y te llega el correo a ti con la nota, sin pedir comprobantes ni avisar a finanzas.</span></span>' +
+        '</label>' +
+        '<div id="vc-detalle">' +
         '<div style="font-weight:800;color:#111;margin-bottom:8px;">1. Comprobantes</div>' +
         '<div style="display:flex;gap:12px;flex-wrap:wrap;">' + _vcUploadBox('oc','Orden de compra') + _vcUploadBox('transf','Transferencia') + '</div>' +
         '<div style="margin-top:12px;"><label style="font-size:13px;font-weight:700;color:#374151;">Monto recibido</label>' +
@@ -11031,6 +11045,7 @@ function abrirPanelCierreVenta(num, contacto){
         '</div>' +
         '<div style="font-size:12px;color:#6b7280;">El correo a Viarly y a Rayen se envía solo al guardar la venta.</div>' +
       '</div>' +
+      '</div>' +
       '<div style="padding:16px 24px;border-top:1px solid #eee;display:flex;gap:10px;justify-content:flex-end;">' +
         '<button onclick="_vcCerrar()" style="background:#f3f4f6;color:#374151;border:none;border-radius:9px;padding:11px 18px;font-weight:700;cursor:pointer;font-family:inherit;">Después</button>' +
         '<button id="vc-enviar" onclick="guardarCierreVenta()" disabled style="background:#16A34A;color:#fff;border:none;border-radius:9px;padding:11px 20px;font-weight:800;cursor:not-allowed;opacity:.5;font-family:inherit;">Guardar venta</button>' +
@@ -11040,8 +11055,9 @@ function abrirPanelCierreVenta(num, contacto){
   _vcToggleEtiquetas(); _vcChk();
 }
 async function guardarCierreVenta(){
+  var noViarly = (document.getElementById('vc-no-viarly')||{}).checked;
   var dir = (document.getElementById('vc-direccion')||{}).value || '';
-  if(dir.trim().length < 4){ alert('La dirección de despacho es obligatoria.'); return; }
+  if(!noViarly && dir.trim().length < 4){ alert('La dirección de despacho es obligatoria.'); return; }
   var btn = document.getElementById('vc-enviar'); if(btn){ btn.disabled = true; btn.textContent = 'Enviando…'; }
   var docSel = document.querySelector('input[name="vc-doc"]:checked');
   var quiereEtq = (document.getElementById('vc-etiquetas')||{}).checked || false;
@@ -11052,7 +11068,8 @@ async function guardarCierreVenta(){
     documento: docSel ? docSel.value : 'Factura',
     forma_envio: (document.getElementById('vc-forma')||{}).value || '',
     costo_envio: String((document.getElementById('vc-costo-envio')||{}).value||'').replace(/[^0-9]/g,''),
-    direccion_despacho: dir.trim(),
+    direccion_despacho: noViarly ? (dir.trim() || '—') : dir.trim(),
+    no_informar_viarly: noViarly,
     productos: (window.__vcContacto||{}).__productos || '',
     solicita_etiquetas: quiereEtq,
     etiqueta: quiereEtq ? {
@@ -11069,7 +11086,9 @@ async function guardarCierreVenta(){
     if(!r || !r.ok){ alert('No se pudo enviar a Finanzas: ' + ((r&&r.error)||'error')); if(btn){ btn.disabled=false; btn.textContent='Enviar a Finanzas'; } return; }
     _vcCerrar();
     try { celebrarVenta(Number(payload.monto_recibido) || window.__vcTotalCot || 0); } catch(e){}
-    alert('Venta guardada y enviada a Finanzas (correo automático a Viarly y Rayen' + (quiereEtq ? ', y etiquetas a Ximena' : '') + ').\n\nSi quieres, manda también los WhatsApp con los botones del panel.');
+    alert(noViarly
+      ? 'Venta registrada como ganada.\n\nNO se avisó a Viarly (la venta ya estaba procesada). Te llegó el correo a ti con la nota.'
+      : 'Venta guardada y enviada a Finanzas (correo automático a Viarly y Rayen' + (quiereEtq ? ', y etiquetas a Ximena' : '') + ').\n\nSi quieres, manda también los WhatsApp con los botones del panel.');
     var cid = (window.__vcContacto||{}).id; if(cid) abrirFichaModal(cid, true);
   } catch(e){ alert('Error: ' + e.message); if(btn){ btn.disabled=false; btn.textContent='Enviar a Finanzas'; } }
 }

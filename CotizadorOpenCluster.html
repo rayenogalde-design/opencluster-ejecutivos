@@ -1661,6 +1661,15 @@ const normTel = v => {
   d = d.replace(/^0+/,"");
   return d ? "+56"+d : "";
 };
+// Para INPUTS de teléfono: el "+56" queda FIJO y no se puede borrar (la app de llamada
+// lo necesita para marcar). El usuario solo escribe los dígitos; el prefijo siempre vuelve.
+function tel56(el){
+  if(!el) return;
+  let d = String(el.value||"").replace(/\D/g,"");
+  if(d.indexOf("56")===0) d = d.slice(2);
+  d = d.replace(/^0+/,"");
+  el.value = "+56 " + d;
+}
 let pid = 0;
 const imgStore = {};
 
@@ -5399,7 +5408,7 @@ function abrirModalCrearContactoCotizador(nombrePreLlenado){
   document.getElementById("ncc-region").value = "";
   // Dirección: se prellena con la del cliente ya tipeada en la cotización (editable).
   { const d = document.getElementById("ncc-direccion"); if(d) d.value = document.getElementById("eCDireccion")?.value.trim() || ""; }
-  { const ti = document.getElementById("ncc-telefono-institucional"); if(ti) ti.value = ""; }
+  { const ti = document.getElementById("ncc-telefono-institucional"); if(ti) ti.value = "+56 "; }
   // Ejecutivo a cargo: por defecto el del perfil del cotizador (primer nombre), si calza con la lista.
   try {
     const selEj = document.getElementById("ncc-ejecutivo");
@@ -5460,8 +5469,8 @@ async function guardarNuevoContactoCotizador(){
     institucion: document.getElementById("ncc-institucion").value.trim(),
     cargo: document.getElementById("ncc-cargo").value.trim(),
     email: document.getElementById("ncc-email").value.trim(),
-    telefono: document.getElementById("ncc-telefono").value.trim(),
-    telefono_institucional: (esInst ? (document.getElementById("ncc-telefono-institucional")?.value.trim() || "") : ""),
+    telefono: normTel(document.getElementById("ncc-telefono").value),
+    telefono_institucional: (esInst ? normTel(document.getElementById("ncc-telefono-institucional")?.value || "") : ""),
     ciudad: document.getElementById("ncc-ciudad").value.trim(),
     region: document.getElementById("ncc-region").value,
     // Dirección del contacto: la que se escribe en este modal (viene prellenada desde la cotización, editable).
@@ -5589,7 +5598,7 @@ document.addEventListener("click", (e) => {
         <div class="fld"><label>Institución</label><input type="text" id="r2Inst" placeholder="Organización"></div>
         <div class="g2">
           <div class="fld"><label>Cargo</label><input type="text" id="r2Cargo" placeholder="Cargo"></div>
-          <div class="fld"><label>Teléfono</label><input type="tel" id="r2Tel" placeholder="+569..."></div>
+          <div class="fld"><label>Teléfono</label><input type="tel" id="r2Tel" value="+56 " placeholder="+56 9 XXXX XXXX" oninput="tel56(this)" onfocus="tel56(this)"></div>
         </div>
         <div class="fld"><label>Email</label><input type="email" id="r2Email" placeholder="correo@ejemplo.cl"></div>
       </div>
@@ -5751,12 +5760,12 @@ const COMUNAS_CHILE = [
       </div>
       <div style="margin-bottom:10px;">
         <label id="ncc-label-telefono" style="font-size:11px;font-weight:700;color:#1a1208;display:block;margin-bottom:4px;">Teléfono</label>
-        <input id="ncc-telefono" type="tel" placeholder="+569XXXXXXXX" oninput="this.value=normTel(this.value)" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;">
+        <input id="ncc-telefono" type="tel" value="+56 " placeholder="+56 9 XXXX XXXX" oninput="tel56(this)" onfocus="tel56(this)" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;">
       </div>
 
       <div id="ncc-row-telinst" style="margin-top:12px;display:none;">
         <label style="font-size:11px;font-weight:700;color:#1a1208;display:block;margin-bottom:4px;">Teléfono institucional <span style="font-weight:400;color:#888;">(de la empresa, para llamar)</span></label>
-        <input id="ncc-telefono-institucional" type="tel" placeholder="+56 ..." oninput="this.value=normTel(this.value)" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;">
+        <input id="ncc-telefono-institucional" type="tel" value="+56 " placeholder="+56 ..." oninput="tel56(this)" onfocus="tel56(this)" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;">
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">

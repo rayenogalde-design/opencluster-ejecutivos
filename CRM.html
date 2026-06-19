@@ -2940,8 +2940,8 @@ body{
         <div class="fld"><label>Email</label><input type="email" id="edEmail"></div>
       </div>
       <div class="fld-row">
-        <div class="fld"><label>Teléfono personal <span style="color:var(--smoke);font-weight:400;">(WhatsApp)</span></label><input type="tel" id="edTelefono"></div>
-        <div class="fld"><label>Teléfono institucional <span style="color:var(--smoke);font-weight:400;">(empresa, para llamar)</span></label><input type="tel" id="edTelefonoInstitucional" placeholder="+56 ..."></div>
+        <div class="fld"><label>Teléfono personal <span style="color:var(--smoke);font-weight:400;">(WhatsApp)</span></label><input type="tel" id="edTelefono" oninput="tel56(this)" onfocus="tel56(this)"></div>
+        <div class="fld"><label>Teléfono institucional <span style="color:var(--smoke);font-weight:400;">(empresa, para llamar)</span></label><input type="tel" id="edTelefonoInstitucional" placeholder="+56 ..." oninput="tel56(this)" onfocus="tel56(this)"></div>
       </div>
       <div class="fld-row">
         <div class="fld"><label>Ciudad</label><input type="text" id="edCiudad"></div>
@@ -3076,11 +3076,11 @@ body{
         <div class="fld"><label>Email <span style="color:var(--ruby);">*</span></label><input type="email" id="nc-email" placeholder="correo@..." required></div>
       </div>
       <div class="fld-row">
-        <div class="fld"><label id="nc-label-telefono">Teléfono</label><input type="tel" id="nc-telefono" placeholder="+56 9..."></div>
+        <div class="fld"><label id="nc-label-telefono">Teléfono</label><input type="tel" id="nc-telefono" value="+56 " placeholder="+56 9 XXXX XXXX" oninput="tel56(this)" onfocus="tel56(this)"></div>
         <div class="fld"><label>Ciudad</label><input type="text" id="nc-ciudad" placeholder="Santiago, Talca..."></div>
       </div>
       <div class="fld-row single" id="nc-row-telinst" style="display:none;">
-        <div class="fld"><label>Teléfono institucional <span style="color:var(--smoke);font-weight:400;">(de la empresa, para llamar)</span></label><input type="tel" id="nc-telefono-institucional" placeholder="+56 ..."></div>
+        <div class="fld"><label>Teléfono institucional <span style="color:var(--smoke);font-weight:400;">(de la empresa, para llamar)</span></label><input type="tel" id="nc-telefono-institucional" value="+56 " placeholder="+56 ..." oninput="tel56(this)" onfocus="tel56(this)"></div>
       </div>
       <div class="fld-row single">
         <div class="fld"><label>Dirección</label><input type="text" id="nc-direccion" placeholder="Ej: Av. Providencia 1234, of. 5"></div>
@@ -10189,7 +10189,7 @@ async function abrirModalEditarContacto(id){
   document.getElementById('edCargo').value = c.cargo || '';
   document.getElementById('edEmail').value = c.email || '';
   document.getElementById('edTelefono').value = c.telefono || '+56 ';   // +56 obligatorio para Zadarma
-  document.getElementById('edTelefonoInstitucional').value = c.telefono_institucional || '';
+  document.getElementById('edTelefonoInstitucional').value = c.telefono_institucional || '+56 ';
   document.getElementById('edCiudad').value = c.ciudad || '';
   document.getElementById('edRegion').value = c.region || '';
   document.getElementById('edDireccion').value = c.direccion || '';
@@ -10257,8 +10257,8 @@ async function guardarEdicionContacto(){
     institucion: document.getElementById('edInstitucion').value.trim(),
     cargo: document.getElementById('edCargo').value.trim(),
     email: document.getElementById('edEmail').value.trim(),
-    telefono: document.getElementById('edTelefono').value.trim(),
-    telefono_institucional: document.getElementById('edTelefonoInstitucional').value.trim(),
+    telefono: normTel56(document.getElementById('edTelefono').value),
+    telefono_institucional: normTel56(document.getElementById('edTelefonoInstitucional').value),
     ciudad: document.getElementById('edCiudad').value.trim(),
     region: document.getElementById('edRegion').value.trim(),
     direccion: document.getElementById('edDireccion').value.trim(),
@@ -10303,6 +10303,7 @@ function abrirModalNuevoContacto(opts){
   ['nc-nombre','nc-institucion','nc-cargo','nc-email','nc-telefono','nc-telefono-institucional','nc-ciudad','nc-direccion','nc-notas']
     .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   { const tel = document.getElementById('nc-telefono'); if(tel) tel.value = '+56 '; }   // +56 obligatorio para Zadarma
+  { const ti = document.getElementById('nc-telefono-institucional'); if(ti) ti.value = '+56 '; }
   document.getElementById('nc-region').value = '';
   document.getElementById('nc-tipo-categoria').value = '';
   document.getElementById('nc-sub-categoria').innerHTML = '<option value="">— Selecciona categoría primero —</option>';
@@ -10348,6 +10349,11 @@ function abrirModalNuevoContacto(opts){
   document.getElementById('modalNuevoContacto').classList.add('show');
   setTimeout(() => document.getElementById('nc-nombre').focus(), 100);
 }
+
+// Teléfonos con "+56" FIJO (no se puede borrar) — la app de llamada (Zadarma) lo necesita.
+// tel56: para inputs (oninput/onfocus). normTel56: para guardar (vacío si no hay número).
+function tel56(el){ if(!el) return; var d=String(el.value||'').replace(/\D/g,''); if(d.indexOf('56')===0) d=d.slice(2); d=d.replace(/^0+/,''); el.value='+56 '+d; }
+function normTel56(v){ var d=String(v||'').replace(/\D/g,''); if(d.indexOf('56')===0) d=d.slice(2); d=d.replace(/^0+/,''); return d?('+56'+d):''; }
 
 function actualizarTipoContacto(){
   const esPersona = document.getElementById('nc-tipo-persona').checked;
@@ -10500,8 +10506,8 @@ async function guardarNuevoContacto(forzar){
     institucion: document.getElementById('nc-institucion').value.trim(),
     cargo: document.getElementById('nc-cargo').value.trim(),
     email: document.getElementById('nc-email').value.trim(),
-    telefono: document.getElementById('nc-telefono').value.trim(),
-    telefono_institucional: (document.getElementById('nc-tipo-institucion').checked ? document.getElementById('nc-telefono-institucional').value.trim() : ''),
+    telefono: normTel56(document.getElementById('nc-telefono').value),
+    telefono_institucional: (document.getElementById('nc-tipo-institucion').checked ? normTel56(document.getElementById('nc-telefono-institucional').value) : ''),
     ciudad: document.getElementById('nc-ciudad').value.trim(),
     region: document.getElementById('nc-region').value,
     direccion: document.getElementById('nc-direccion').value.trim(),

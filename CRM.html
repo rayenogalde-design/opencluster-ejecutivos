@@ -2947,6 +2947,9 @@ body{
         <div class="fld"><label>Ciudad</label><input type="text" id="edCiudad"></div>
         <div class="fld"><label>Dirección</label><input type="text" id="edDireccion" placeholder="Ej: Av. Providencia 1234, of. 5"></div>
       </div>
+      <div class="fld-row single">
+        <div class="fld"><label>RUT <span style="color:var(--smoke);font-weight:400;">(persona o empresa)</span></label><input type="text" id="edRut" placeholder="Ej: 12.345.678-9"></div>
+      </div>
       <div class="fld-row">
         <div class="fld"><label>Región</label><input type="text" id="edRegion"></div>
         <div class="fld"><label>Ejecutivo asignado</label>
@@ -8551,13 +8554,23 @@ function renderMisCotizaciones(){
   else if(filtro === 'activas') lista = lista.filter(c => !c.cerrada);
   else if(filtro === 'ganada') lista = lista.filter(c => c.ganada);
   else if(filtro === 'perdida') lista = lista.filter(c => c.cerrada && !c.ganada);
+  // Respetar el periodo elegido (Año/Mes) también en la LISTA, no solo en los KPIs.
+  // Las GANADAS se ubican por mes de VENTA (mes_cierre); el resto por mes de cotización.
+  // Así la lista coincide con los KPIs de arriba (ej. "Ganadas Junio = 2" → 2 en la lista).
+  if(MISCOT_PERIODO !== 'anio'){
+    lista = lista.filter(function(c){ var m = (c.ganada && c.mes_cierre) ? c.mes_cierre : (c.mes||''); return String(m) === MISCOT_PERIODO; });
+  }
   if(cnt) cnt.textContent = lista.length;
   if(!lista.length){
     container.innerHTML = metaHtml + kpiHtml + '<div class="loading-state" style="padding:30px 20px;">' + (q||filtro ? 'Ninguna cotización coincide.' : 'No hay cotizaciones registradas.') + '</div>';
     return;
   }
   const grupos = {};
-  lista.forEach(c => { const kk = c.mes || '0000-00'; (grupos[kk] = grupos[kk] || []).push(c); });
+  if(MISCOT_PERIODO !== 'anio'){
+    grupos[MISCOT_PERIODO] = lista.slice();   // un solo grupo = el mes elegido (ganadas por mes de venta)
+  } else {
+    lista.forEach(c => { const kk = c.mes || '0000-00'; (grupos[kk] = grupos[kk] || []).push(c); });
+  }
   const peso = { vencido:0, pendiente:1, al_dia:2, fndr:2, sin_fecha:3, ganada:4, perdida:5 };
   const pw = s => (peso[s]!==undefined ? peso[s] : 9);
   let html = metaHtml + kpiHtml;
@@ -10266,6 +10279,7 @@ async function abrirModalEditarContacto(id){
   document.getElementById('edCiudad').value = c.ciudad || '';
   document.getElementById('edRegion').value = c.region || '';
   document.getElementById('edDireccion').value = c.direccion || '';
+  { const er = document.getElementById('edRut'); if(er) er.value = c.rut || ''; }
   { const selEjEd = document.getElementById('edEjecutivoAsignado');
     selEjEd.value = c.ejecutivo_asignado || '';
     // Solo Rayen (admin) puede reasignar. Para el resto queda visible pero bloqueado.
@@ -10335,6 +10349,7 @@ async function guardarEdicionContacto(){
     ciudad: document.getElementById('edCiudad').value.trim(),
     region: document.getElementById('edRegion').value.trim(),
     direccion: document.getElementById('edDireccion').value.trim(),
+    rut: (document.getElementById('edRut') ? document.getElementById('edRut').value.trim() : ''),
     ejecutivo_asignado: document.getElementById('edEjecutivoAsignado').value,
     tipo_categoria: document.getElementById('edTipoCategoria').value,
     sub_categoria: document.getElementById('edSubCategoria').value,
@@ -11086,6 +11101,9 @@ function abrirPanelCierreVenta(num, contacto){
           '<input type="checkbox" id="vc-no-viarly" onchange="_vcToggleNoViarly()" style="margin-top:2px;width:16px;height:16px;accent-color:#C2410C;">' +
           '<span style="font-size:13px;color:#7C2D12;font-weight:600;line-height:1.4;">Esta venta <b>ya fue procesada</b> — la estoy marcando tarde.<br><span style="font-weight:400;color:#9A6A4A;font-size:12px;">Solo se registra como ganada, sin reenviar el aviso ni pedir comprobantes.</span></span>' +
         '</label>' +
+        '<div style="margin-bottom:16px;"><label style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:4px;">Fecha de la venta</label>' +
+          '<input id="vc-fecha-venta" type="date" value="'+_hoyISO()+'" style="padding:9px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;">' +
+          '<div style="font-size:11.5px;color:#6b7280;margin-top:3px;">Por defecto hoy. Cámbiala si la venta se cerró en otro mes — la venta cuenta en el mes que pongas aquí.</div></div>' +
         '<div id="vc-detalle">' +
         '<div style="font-weight:800;color:#111;margin-bottom:8px;">1. Comprobantes</div>' +
         '<div style="display:flex;gap:12px;flex-wrap:wrap;">' + _vcUploadBox('oc','Orden de compra') + _vcUploadBox('transf','Transferencia') + '</div>' +
@@ -11162,6 +11180,9 @@ async function guardarCierreVenta(){
   try {
     var r = await fetchAPI('crm_venta_cerrar', payload);
     if(!r || !r.ok){ alert('No se pudo enviar a Finanzas: ' + ((r&&r.error)||'error')); if(btn){ btn.disabled=false; btn.textContent='Enviar a Finanzas'; } return; }
+    // Fecha de la venta elegida → fija el mes en que cuenta la venta (re-estampa la fecha de cierre).
+    var _fv = (document.getElementById('vc-fecha-venta')||{}).value || '';
+    if(_fv){ try{ await fetchAPI('crm_marcar_cotizacion', { solicitante:USUARIO, num: window.__vcNum, estado:'Ganada', fecha_ganada:_fv }); }catch(e){} }
     _vcCerrar();
     try { celebrarVenta(Number(payload.monto_recibido) || window.__vcTotalCot || 0); } catch(e){}
     alert(noViarly

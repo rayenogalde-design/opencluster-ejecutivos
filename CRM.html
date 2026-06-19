@@ -8561,10 +8561,12 @@ function renderMisCotizaciones(){
   const peso = { vencido:0, pendiente:1, al_dia:2, fndr:2, sin_fecha:3, ganada:4, perdida:5 };
   const pw = s => (peso[s]!==undefined ? peso[s] : 9);
   let html = metaHtml + kpiHtml;
+  window.__MC_ORDEN = [];   // orden de N° de cotización en pantalla → navegar Anterior/Siguiente en el modal
   const abrirBusqueda = !!(q || filtro);  // si está buscando, abrir los meses para que vea resultados
   Object.keys(grupos).sort((a,b)=> b.localeCompare(a)).forEach(ym => {
     const arr = grupos[ym];
     arr.sort((a,b)=> pw(a.estado_seguimiento)-pw(b.estado_seguimiento) || (b.dias_sin_gestion||0)-(a.dias_sin_gestion||0));
+    arr.forEach(function(cc){ window.__MC_ORDEN.push(cc.cotizacion); });
     const nGan = arr.filter(c=>c.ganada).length;
     const nVenc = arr.filter(c=>c.estado_seguimiento==='vencido').length;
     html += '<details class="mc-mes"' + (abrirBusqueda?' open':'') + ' style="margin-bottom:10px;border:1px solid var(--smoke,#e5e7eb);border-radius:10px;overflow:hidden;">' +
@@ -8585,7 +8587,7 @@ function _copiarTxt(txt, btn){
   catch(e){ _copiarFallback(s); ok(); }
 }
 function _copiarFallback(s){ var ta=document.createElement('textarea'); ta.value=s; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); }catch(_){ } document.body.removeChild(ta); }
-function _cardMisCot(c){
+function _detalleCotHTML(c){
   const sem = _SEM_MISCOT[c.estado_seguimiento] || _SEM_MISCOT.sin_fecha;
   const monto = (c.monto && c.monto>0) ? fmtCLP(c.monto) : '';
   const diasTxt = (c.dias_sin_gestion!=null && !c.cerrada) ? (c.dias_sin_gestion + 'd sin gestión') : '';
@@ -8605,8 +8607,8 @@ function _cardMisCot(c){
     const k = (((s.fecha||'')+'|'+(s.notas||'')+'|'+(s.estado||'')+'|'+(s.medio||''))+'').toLowerCase().trim();
     if(_segVistos[k]) return false; _segVistos[k]=1; return true;
   });
-  // Detalle desplegado
-  let det = '<div style="font-size:11.5px;color:var(--subtle);margin:10px 0;">Cotización del ' + esc(c.fecha||'—') + (c.ejecutivo?' · por ' + esc(String(c.ejecutivo).split(' ')[0]):'') + (monto?' · ' + esc(monto):'') + '</div>';
+  // Detalle (se muestra dentro del modal de la cotización; el encabezado del modal ya trae N°/cliente/fecha/monto)
+  let det = '';
   // Contacto: email (copiable) + acciones rápidas WhatsApp / Email / Llamar.
   var _tel = String(c.telefono||'').replace(/\D/g,'');
   var _waNum = _tel ? (_tel.indexOf('56')===0 ? _tel : '56'+_tel) : '';
@@ -8655,8 +8657,16 @@ function _cardMisCot(c){
   if(c.contacto_id) acc += '<button onclick="abrirFichaModal(\''+esc(c.contacto_id)+'\')" style="background:var(--oct-navy,#001A60);color:#fff;border:none;padding:7px 13px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;">Ver contacto</button>';
   det += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">' + acc + '</div>';
 
-  return '<details style="border:1px solid var(--smoke,#e5e7eb);border-left:4px solid '+sem.dot+';border-radius:9px;margin-bottom:8px;background:#fff;">' +
-    '<summary style="list-style:none;cursor:pointer;padding:11px 13px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">' +
+  return det;
+}
+// Fila compacta de cotización: clic abre la tarjeta-modal con todo el detalle.
+function _cardMisCot(c){
+  const sem = _SEM_MISCOT[c.estado_seguimiento] || _SEM_MISCOT.sin_fecha;
+  const monto = (c.monto && c.monto>0) ? fmtCLP(c.monto) : '';
+  const diasTxt = (c.dias_sin_gestion!=null && !c.cerrada) ? (c.dias_sin_gestion + 'd sin gestión') : '';
+  const adminEjec = (typeof esActuandoComoAdmin==='function' && esActuandoComoAdmin() && c.ejecutivo) ? '<span style="font-size:11px;color:var(--subtle);">· ' + esc(String(c.ejecutivo).split(' ')[0]) + '</span>' : '';
+  const numJS = String(c.cotizacion||'').replace(/'/g,"\\'");
+  return '<div onclick="abrirCotModal(\''+esc(numJS)+'\')" style="cursor:pointer;border:1px solid var(--smoke,#e5e7eb);border-left:4px solid '+sem.dot+';border-radius:9px;margin-bottom:7px;background:#fff;padding:11px 13px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;transition:box-shadow .12s;" onmouseover="this.style.boxShadow=\'0 3px 12px rgba(0,0,0,.09)\'" onmouseout="this.style.boxShadow=\'none\'">' +
       '<div style="flex:1;min-width:190px;">' +
         '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
           '<span style="font-family:Courier New,monospace;font-weight:800;color:var(--purple-dk,#5b21b6);font-size:12.5px;">' + esc(c.cotizacion||'—') + '</span>' +
@@ -8668,9 +8678,41 @@ function _cardMisCot(c){
         (monto ? '<div style="font-weight:800;color:var(--gold-dk,#92580e);font-size:14px;">' + esc(monto) + '</div>' : '') +
         '<div style="font-size:11px;font-weight:700;color:'+sem.color+';margin-top:2px;">' + esc(c.cerrada ? sem.txt : (sem.txt + (diasTxt?' · '+diasTxt:''))) + '</div>' +
       '</div>' +
-    '</summary>' +
-    '<div style="padding:2px 14px 14px;border-top:1px solid var(--paper,#f3f4f6);">' + det + '</div>' +
-  '</details>';
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--mist,#9aa3af)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>' +
+  '</div>';
+}
+function _cerrarCotModal(){ var o=document.getElementById('cotModalOv'); if(o) o.remove(); }
+function _navCot(dir){ var o=window.__MC_ORDEN||[]; var i=o.indexOf(window.__MC_CUR)+dir; if(i>=0 && i<o.length) abrirCotModal(o[i]); }
+function abrirCotModal(num){
+  var c = (CACHE.vMisCot||[]).find(function(x){return x.cotizacion===num;}); if(!c) return;
+  window.__MC_CUR = num;
+  var orden = window.__MC_ORDEN||[]; var idx = orden.indexOf(num);
+  var sem = _SEM_MISCOT[c.estado_seguimiento] || _SEM_MISCOT.sin_fecha;
+  var monto = (c.monto && c.monto>0) ? fmtCLP(c.monto) : '';
+  var ov = document.getElementById('cotModalOv') || document.createElement('div');
+  ov.id='cotModalOv';
+  ov.style.cssText='position:fixed;inset:0;z-index:2147483500;background:rgba(0,0,0,.5);display:flex;align-items:flex-start;justify-content:center;padding:22px;overflow:auto;font-family:inherit;';
+  ov.onclick=function(e){ if(e.target===ov) _cerrarCotModal(); };
+  var nav = (orden.length>1) ?
+    ('<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 18px;border-top:1px solid var(--smoke);background:#fafbfc;">' +
+      '<button onclick="_navCot(-1)" '+(idx<=0?'disabled':'')+' style="background:#fff;border:1px solid var(--smoke);border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;font-family:inherit;cursor:'+(idx<=0?'not-allowed':'pointer')+';opacity:'+(idx<=0?'.45':'1')+';">&larr; Anterior</button>' +
+      '<span style="font-size:12px;color:var(--subtle);">'+(idx+1)+' de '+orden.length+'</span>' +
+      '<button onclick="_navCot(1)" '+(idx>=orden.length-1?'disabled':'')+' style="background:#fff;border:1px solid var(--smoke);border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;font-family:inherit;cursor:'+(idx>=orden.length-1?'not-allowed':'pointer')+';opacity:'+(idx>=orden.length-1?'.45':'1')+';">Siguiente &rarr;</button>' +
+    '</div>') : '';
+  ov.innerHTML =
+    '<div style="background:#fff;border-radius:16px;max-width:680px;width:100%;margin:auto;box-shadow:0 24px 70px rgba(0,0,0,.35);overflow:hidden;">' +
+      '<div style="background:'+sem.dot+';color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">' +
+        '<div style="min-width:0;">' +
+          '<div style="font-family:Courier New,monospace;font-weight:800;font-size:15px;">'+esc(c.cotizacion||'—')+' · <span style="font-weight:700;">'+esc(c.estado||sem.txt)+'</span></div>' +
+          '<div style="font-size:13.5px;font-weight:600;margin-top:3px;">'+esc(c.cliente||c.institucion||'')+(c.cliente&&c.institucion?' · '+esc(c.institucion):'')+'</div>' +
+          '<div style="font-size:12px;opacity:.92;margin-top:2px;">Cotización del '+esc(c.fecha||'—')+(c.ejecutivo?' · por '+esc(String(c.ejecutivo).split(' ')[0]):'')+(monto?' · '+esc(monto):'')+'</div>' +
+        '</div>' +
+        '<button onclick="_cerrarCotModal()" title="Cerrar" style="background:rgba(255,255,255,.22);color:#fff;border:none;border-radius:8px;width:34px;height:34px;font-size:20px;line-height:1;cursor:pointer;flex-shrink:0;font-family:inherit;">&times;</button>' +
+      '</div>' +
+      '<div style="padding:18px 20px;">' + _detalleCotHTML(c) + '</div>' +
+      nav +
+    '</div>';
+  if(!ov.parentNode) document.body.appendChild(ov);
 }
 async function guardarSeguimientoMC(num, btn){
   const c = (CACHE.vMisCot||[]).find(x=>x.cotizacion===num) || {};
@@ -8696,6 +8738,7 @@ async function guardarSeguimientoMC(num, btn){
   // Si no se confirma, avisamos al instante y mostramos el texto para que NO se pierda.
   CACHE.vMisCot = null;
   await cargarMisCotizaciones(true);
+  try{ if(document.getElementById('cotModalOv') && window.__MC_CUR===num) abrirCotModal(num); }catch(e){}
   if(notas){
     const cc = (CACHE.vMisCot||[]).find(x=>x.cotizacion===num);
     const confirmado = cc && (cc.seguimientos||[]).some(s=>String(s.notas||'').trim()===notas.trim());
@@ -8722,7 +8765,8 @@ async function borrarSeguimiento(num, fila, btn){
   const r = await fetchAPI('crm_borrar_seguimiento', { fila:fila, num_cotizacion:num, comentario:s.notas||'', solicitante:USUARIO });
   if(!r || !r.ok){ if(btn){ btn.disabled=false; btn.textContent='×'; } alert('No se pudo borrar: '+((r&&r.error)||'error')); return; }
   CACHE.vMisCot = null;
-  cargarMisCotizaciones(true);
+  await cargarMisCotizaciones(true);
+  try{ if(document.getElementById('cotModalOv') && window.__MC_CUR===num) abrirCotModal(num); }catch(e){}
 }
 async function marcarEstadoCotMC(num, estado, btn){
   // Sin confirmación: marca al instante y refresca la vista sola (antes re-pintaba de caché viejo).
@@ -8730,6 +8774,7 @@ async function marcarEstadoCotMC(num, estado, btn){
   const r = await fetchAPI('crm_marcar_cotizacion', { solicitante:USUARIO, num:num, estado:estado });
   if(!r || !r.ok){ btn.disabled=false; btn.textContent=prev; alert('No se pudo: '+((r&&r.error)||'error desconocido')); return; }
   try { Object.keys(localStorage).forEach(kk=>{ if(kk.indexOf('crm_perfil_')===0||kk.indexOf('crm_kpis_cache')===0||kk.indexOf('crm_dash')===0) localStorage.removeItem(kk); }); } catch(e){}
+  try{ _cerrarCotModal(); }catch(e){}
   if(estado==='Ganada'){
     const cc=(CACHE.vMisCot||[]).find(x=>x.cotizacion===num) || {};
     const totalNum = Number(String(cc.total!=null?cc.total:(cc.monto||'')).replace(/[^0-9]/g,''));

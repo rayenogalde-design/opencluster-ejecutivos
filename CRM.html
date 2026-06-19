@@ -13576,9 +13576,22 @@ function actFeedRow(f, showEjec){
   '</div>';
 }
 
+// Clasifica el medio de un seguimiento a su bucket (igual que el backend) para que el detalle
+// de los KPI por medio incluya las gestiones hechas dentro de seguimientos de cotización.
+function _catMedioAct(medio){
+  var m = String(medio||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  if(m.indexOf('entrante')>=0||m.indexOf('redes')>=0||m.indexOf('social')>=0||m.indexOf('formulario')>=0) return 'entrantes';
+  if(m.indexOf('llam')>=0||m.indexOf('telefon')>=0) return 'llamadas';
+  if(m.indexOf('whatsapp')>=0||m.indexOf('wsp')>=0||m.indexOf('wasap')>=0) return 'whatsapp';
+  if(m.indexOf('email')>=0||m.indexOf('correo')>=0||m.indexOf('mail')>=0) return 'emails';
+  if(m.indexOf('reun')>=0) return 'reuniones';
+  if(m.indexOf('visita')>=0||m.indexOf('presencial')>=0) return 'visitas';
+  return 'otros';
+}
 function abrirActKpi(tipo, soloGanadas){
   const d = ACT_DATA; if(!d){ cargarActividadEquipo(); return; }
-  let evs = (d.eventos || []).filter(ev=>ev.tipo===tipo);
+  const _mergeMedio = (tipo==='llamadas'||tipo==='emails'||tipo==='whatsapp');
+  let evs = (d.eventos || []).filter(ev=> ev.tipo===tipo || (_mergeMedio && ev.tipo==='seguimiento' && _catMedioAct(ev.medio)===tipo));
   if(soloGanadas) evs = evs.filter(ev=>ev.ganada);
   // Si hay un ejecutivo en foco, el detalle del KPI también se limita a él.
   const foco = ACT_EJEC_FILTRO ? (d.ejecutivos||[]).find(x=>String(x.nombre).split(' ')[0].toLowerCase()===ACT_EJEC_FILTRO.toLowerCase() || String(x.nombre).toLowerCase().indexOf(ACT_EJEC_FILTRO.toLowerCase())>=0) : null;

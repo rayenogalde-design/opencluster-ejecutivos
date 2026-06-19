@@ -5434,6 +5434,10 @@ function actualizarTipoNCC(){
   lblInst.innerHTML = esPersona
     ? 'Institución <span style="color:#888;font-weight:500;font-size:11px;">(opcional)</span>'
     : 'Institución <span style="color:#e74c3c;">*</span>';
+  var lblNom = document.getElementById("ncc-label-nombre");
+  if (lblNom) lblNom.innerHTML = esPersona
+    ? 'Nombre persona <span style="color:#e74c3c;">*</span>'
+    : 'Nombre persona <span style="color:#888;font-weight:500;font-size:11px;">(opcional)</span>';
   document.getElementById("ncc-aviso-persona").style.display = esPersona ? "" : "none";
   document.getElementById("ncc-aviso-institucion").style.display = esPersona ? "none" : "";
   // Teléfono institucional: solo para empresas (el personal es para WhatsApp).
@@ -5462,6 +5466,7 @@ async function guardarNuevoContactoCotizador(){
     region: document.getElementById("ncc-region").value,
     // Dirección del contacto: la que se escribe en este modal (viene prellenada desde la cotización, editable).
     direccion: (document.getElementById("ncc-direccion")?.value.trim() || document.getElementById("eCDireccion")?.value.trim() || ""),
+    rut: (document.getElementById("ncc-rut")?.value.trim() || ""),
     ejecutivo_asignado: document.getElementById("ncc-ejecutivo").value,
     tipo_contacto: esInst ? "Institución" : "Persona Natural",
     // Campos replicados del formulario de contacto del CRM (antes quedaban vacíos):
@@ -5478,7 +5483,7 @@ async function guardarNuevoContactoCotizador(){
 
   const mostrarErr = m => { errEl.textContent = m; errEl.style.whiteSpace = "pre-line"; errEl.style.display = "block"; };
 
-  if (!data.nombre) return mostrarErr("El nombre de la persona es obligatorio.");
+  if (!esInst && !data.nombre) return mostrarErr("El nombre de la persona es obligatorio.");
   if (!data.email) return mostrarErr("El email es obligatorio para hacer seguimiento.");
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) return mostrarErr("El email no tiene formato válido (debe contener @ y dominio).");
   if (esInst && !data.institucion) return mostrarErr("Para Institución/Empresa, el campo Institución es obligatorio.");
@@ -5726,7 +5731,7 @@ const COMUNAS_CHILE = [
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px;">
         <div>
-          <label style="font-size:11px;font-weight:700;color:#1a1208;display:block;margin-bottom:4px;">Nombre persona <span style="color:#e74c3c;">*</span></label>
+          <label id="ncc-label-nombre" style="font-size:11px;font-weight:700;color:#1a1208;display:block;margin-bottom:4px;">Nombre persona <span style="color:#e74c3c;">*</span></label>
           <input id="ncc-nombre" type="text" placeholder="Ej: María González" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;">
         </div>
         <div>
@@ -5744,11 +5749,28 @@ const COMUNAS_CHILE = [
           <input id="ncc-email" type="email" placeholder="correo@..." style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;">
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:10px;">
+      <div style="margin-bottom:10px;">
+        <label id="ncc-label-telefono" style="font-size:11px;font-weight:700;color:#1a1208;display:block;margin-bottom:4px;">Teléfono</label>
+        <input id="ncc-telefono" type="tel" placeholder="+569XXXXXXXX" oninput="this.value=normTel(this.value)" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;">
+      </div>
+
+      <div id="ncc-row-telinst" style="margin-top:12px;display:none;">
+        <label style="font-size:11px;font-weight:700;color:#1a1208;display:block;margin-bottom:4px;">Teléfono institucional <span style="font-weight:400;color:#888;">(de la empresa, para llamar)</span></label>
+        <input id="ncc-telefono-institucional" type="tel" placeholder="+56 ..." oninput="this.value=normTel(this.value)" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;">
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
         <div>
-          <label id="ncc-label-telefono" style="font-size:11px;font-weight:700;color:#1a1208;display:block;margin-bottom:4px;">Teléfono</label>
-          <input id="ncc-telefono" type="tel" placeholder="+569XXXXXXXX" oninput="this.value=normTel(this.value)" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;">
+          <label style="font-size:11px;font-weight:700;color:#1a1208;display:block;margin-bottom:4px;">RUT <span style="color:#888;font-weight:500;font-size:10px;">(persona o empresa)</span></label>
+          <input id="ncc-rut" type="text" placeholder="Ej: 12.345.678-9" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;">
         </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#1a1208;display:block;margin-bottom:4px;">Dirección</label>
+          <input id="ncc-direccion" type="text" placeholder="Ej: Av. Providencia 1234, of. 5" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;">
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
         <div>
           <label style="font-size:11px;font-weight:700;color:#1a1208;display:block;margin-bottom:4px;">Ciudad</label>
           <input id="ncc-ciudad" type="text" placeholder="Santiago, Talca..." style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;">
@@ -5764,16 +5786,6 @@ const COMUNAS_CHILE = [
             <option>Los Ríos</option><option>Los Lagos</option><option>Aysén</option><option>Magallanes</option>
           </select>
         </div>
-      </div>
-
-      <div id="ncc-row-telinst" style="margin-top:12px;display:none;">
-        <label style="font-size:11px;font-weight:700;color:#1a1208;display:block;margin-bottom:4px;">Teléfono institucional <span style="font-weight:400;color:#888;">(de la empresa, para llamar)</span></label>
-        <input id="ncc-telefono-institucional" type="tel" placeholder="+56 ..." oninput="this.value=normTel(this.value)" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;">
-      </div>
-
-      <div style="margin-top:12px;">
-        <label style="font-size:11px;font-weight:700;color:#1a1208;display:block;margin-bottom:4px;">Dirección</label>
-        <input id="ncc-direccion" type="text" placeholder="Ej: Av. Providencia 1234, of. 5" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;">
       </div>
 
       <div style="margin-top:12px;">

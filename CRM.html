@@ -8725,8 +8725,7 @@ async function borrarSeguimiento(num, fila, btn){
   cargarMisCotizaciones(true);
 }
 async function marcarEstadoCotMC(num, estado, btn){
-  const etq = estado==='Ganada'?'GANADA':estado==='Perdida'?'PERDIDA':'EN GESTIÓN (reabrir)';
-  if(!confirm('¿Marcar la cotización '+num+' como '+etq+'?\n\nLa venta se acredita al ejecutivo que la hizo.')) return;
+  // Sin confirmación: marca al instante y refresca la vista sola (antes re-pintaba de caché viejo).
   const prev = btn.textContent; btn.disabled=true; btn.textContent='Guardando…';
   const r = await fetchAPI('crm_marcar_cotizacion', { solicitante:USUARIO, num:num, estado:estado });
   if(!r || !r.ok){ btn.disabled=false; btn.textContent=prev; alert('No se pudo: '+((r&&r.error)||'error desconocido')); return; }
@@ -8734,12 +8733,13 @@ async function marcarEstadoCotMC(num, estado, btn){
   if(estado==='Ganada'){
     const cc=(CACHE.vMisCot||[]).find(x=>x.cotizacion===num) || {};
     const totalNum = Number(String(cc.total!=null?cc.total:(cc.monto||'')).replace(/[^0-9]/g,''));
-    cargarMisCotizaciones();
     const _cont=(CACHE.vTodos||[]).find(x=>x.id===cc.contacto_id)||{};
+    CACHE.vMisCot = null; cargarMisCotizaciones(true);
     abrirPanelCierreVenta(num, { id: cc.contacto_id||cc.id||'', nombre: cc.cliente||_cont.nombre||'', institucion: cc.institucion||_cont.institucion||'', email:_cont.email||'', rut:_cont.rut||'', __totalCotActiva: totalNum, __productos: cc.productos||'' });
     return;
   }
-  cargarMisCotizaciones();
+  CACHE.vMisCot = null;
+  await cargarMisCotizaciones(true);
 }
 
 /* ════ Vista MÉTRICAS — Muro de Honor + gráficos anuales del equipo (replica el Portal) ════ */
@@ -10868,8 +10868,6 @@ async function marcarEstadoCotizacion(num, estado, btn){
   // etiquetas, Finanzas ni WhatsApp). Solo elige persona/empresa. Empresa → cuenta en Ventas
   // del Mes + avisa a Rayen por correo; persona → no se hace nada (vive en su sistema aparte).
   if(estado === 'Ganada' && /ximena/i.test(USUARIO||'')){ abrirPanelVentaXimena(num, window.__CONTACTO_ACTIVO || {}); return; }
-  const etq = estado === 'Ganada' ? 'GANADA' : estado === 'Perdida' ? 'PERDIDA' : 'EN GESTIÓN (reabrir)';
-  if(!confirm('¿Marcar la cotización ' + num + ' como ' + etq + '?\n\nLa venta se acredita al ejecutivo que hizo la cotización.')) return;
   const c = window.__CONTACTO_ACTIVO || {};
   let prev = '';
   if(btn){ prev = btn.textContent; btn.disabled = true; btn.textContent = 'Guardando…'; }

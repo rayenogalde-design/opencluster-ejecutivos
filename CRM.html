@@ -5902,7 +5902,18 @@ function renderDashV3(r){
   var k=(r&&r.kpis)||{};
   var pv=function(d){ return d?(d.mes||0):0; };
   var pm=function(d){ return d?(d.monto_mes||0):0; };
-  var ventasM=pm(k.ventas_ganadas), ventasC=pv(k.ventas_ganadas);
+  // Para admin, las ventas del mes del EQUIPO se suman desde el ranking por ejecutivo
+  // (excluyendo a Ximena/Finanzas, igual que la tarjeta "Ventas del equipo"); así el anillo
+  // muestra el monto REAL y no un total inflado. El ejecutivo individual ve lo suyo.
+  var _esAdminDash = (typeof esActuandoComoAdmin==='function') && esActuandoComoAdmin();
+  var ventasM, ventasC;
+  if(_esAdminDash){
+    var _vgArr = ((k.ventas_ganadas && k.ventas_ganadas.ranking_equipo) || []).filter(function(x){ return !_excluirRanking(x.ejec); });
+    ventasM = _vgArr.reduce(function(s,x){ return s + (x.monto_mes||0); }, 0);
+    ventasC = _vgArr.reduce(function(s,x){ return s + (x.mes||0); }, 0);
+  } else {
+    ventasM = pm(k.ventas_ganadas); ventasC = pv(k.ventas_ganadas);
+  }
   var cotiz=pv(k.cotizaciones), reun=pv(k.reuniones), nuevos=pv(k.nuevos_contactos);
   var META=(r&&r.meta_mes)||window.__META_MES_DEFAULT||5000000;
   var pctMeta=META>0?Math.min(100,Math.round(ventasM/META*100)):0;

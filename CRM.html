@@ -11003,6 +11003,8 @@ function _vcValidarMonto(){
     else { msg.textContent = '⚠ No coincide con el total de la cotización ($' + total.toLocaleString('es-CL') + '). Revísalo.'; msg.style.color = '#B45309'; }
   } else { msg.textContent = ''; }
 }
+// Formatea el monto a $X.XXX al salir del campo (al guardar igual se limpia a solo dígitos).
+function _vcFmtMonto(el){ if(!el) return; var d = String(el.value||'').replace(/[^0-9]/g,''); el.value = d ? (typeof fmtCLP==='function' ? fmtCLP(Number(d)) : ('$'+d)) : ''; }
 function _vcToggleEtiquetas(){
   var forma = (document.getElementById('vc-forma')||{}).value;
   var box = document.getElementById('vc-etiquetas-box');
@@ -11106,7 +11108,7 @@ function abrirPanelCierreVenta(num, contacto){
   var e2 = (typeof esc==='function') ? esc : function(s){ return String(s==null?'':s); };
   window.__vcImgOC = null; window.__vcImgTransf = null; window.__vcNum = num; window.__vcContacto = c;
   window.__vcTotalCot = Number(c.__totalCotActiva || 0);
-  var _mtPrefill = window.__vcTotalCot > 0 ? String(window.__vcTotalCot) : '';
+  var _mtPrefill = window.__vcTotalCot > 0 ? (typeof fmtCLP==='function' ? fmtCLP(window.__vcTotalCot) : String(window.__vcTotalCot)) : '';
   var ov = document.createElement('div');
   ov.id = 'panelCierreVenta';
   ov.style.cssText = 'position:fixed;inset:0;z-index:2147483600;background:rgba(0,0,0,.55);display:flex;align-items:flex-start;justify-content:center;padding:24px;overflow:auto;font-family:inherit;';
@@ -11130,8 +11132,11 @@ function abrirPanelCierreVenta(num, contacto){
           '<div style="font-size:11.5px;color:#6b7280;margin-top:3px;">Por defecto hoy. Cámbiala si la venta se cerró en otro mes — la venta cuenta en el mes que pongas aquí.</div></div>' +
         // Monto recibido: SIEMPRE visible (también en modo "ya procesada"). Autocompletado con el total de la cotización.
         '<div style="margin-bottom:16px;"><label style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:4px;">Monto recibido</label>' +
-          '<input id="vc-monto" type="text" placeholder="Solo números" value="' + _mtPrefill + '" oninput="_vcValidarMonto()" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;">' +
+          '<input id="vc-monto" type="text" placeholder="$0" value="' + _mtPrefill + '" oninput="_vcValidarMonto()" onblur="_vcFmtMonto(this)" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;">' +
           '<div id="vc-monto-msg" style="font-size:12px;margin-top:4px;color:#6b7280;"></div></div>' +
+        // Productos de la cotización (solo lectura) — para revisar sin tener que abrir la cotización.
+        '<div style="margin-bottom:16px;"><label style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:4px;">Productos de la cotización</label>' +
+          '<div style="background:#F9FAFB;border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;font-size:13px;color:#374151;line-height:1.45;white-space:pre-wrap;max-height:150px;overflow:auto;">' + (c.__productos ? e2(c.__productos) : '<span style="color:#9ca3af;">(la cotización no trae el detalle de productos)</span>') + '</div></div>' +
         '<div id="vc-detalle">' +
         '<div style="font-weight:800;color:#111;margin-bottom:8px;">1. Comprobantes</div>' +
         '<div style="display:flex;gap:12px;flex-wrap:wrap;">' + _vcUploadBox('oc','Orden de compra') + _vcUploadBox('transf','Transferencia') + '</div>' +

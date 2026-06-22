@@ -8809,7 +8809,7 @@ async function marcarEstadoCotMC(num, estado, btn){
     const totalNum = Number(String(cc.total!=null?cc.total:(cc.monto||'')).replace(/[^0-9]/g,''));
     const _cont=(CACHE.vTodos||[]).find(x=>x.id===cc.contacto_id)||{};
     CACHE.vMisCot = null; cargarMisCotizaciones(true);
-    abrirPanelCierreVenta(num, { id: cc.contacto_id||cc.id||'', nombre: cc.cliente||_cont.nombre||'', institucion: cc.institucion||_cont.institucion||'', email:_cont.email||'', rut:_cont.rut||'', __totalCotActiva: totalNum, __productos: cc.productos||'' });
+    abrirPanelCierreVenta(num, { id: cc.contacto_id||cc.id||'', nombre: cc.cliente||_cont.nombre||'', institucion: cc.institucion||_cont.institucion||'', email:_cont.email||'', rut:_cont.rut||'', __totalCotActiva: totalNum, __productos: cc.productos||'', __transporte: cc.transporte||'', __region: cc.region||'', __ciudad: cc.ciudad||'' });
     return;
   }
   CACHE.vMisCot = null;
@@ -11028,8 +11028,9 @@ function _vcChk(){
   if(campos){ var vis = !!(chk && chk.checked); campos.style.display = vis ? '' : 'none'; if(vis) _vcAutollenarEtiqueta(); }
 }
 function _vcCerrar(){ var ov = document.getElementById('panelCierreVenta'); if(ov) ov.remove(); }
-// "No informar a Viarly": venta ya procesada que se marca tarde. Oculta los datos
-// (comprobantes/envío/etiquetas) y habilita guardar sin pedir nada.
+// "No informar a Viarly": venta ya procesada que se marca tarde. Oculta el detalle
+// (comprobantes/envío/etiquetas) pero deja visible el Monto recibido (cuenta para Ventas
+// del Mes y comisiones), y habilita guardar.
 function _vcToggleNoViarly(){
   var on = (document.getElementById('vc-no-viarly')||{}).checked;
   var det = document.getElementById('vc-detalle'); if(det) det.style.display = on ? 'none' : '';
@@ -11089,12 +11090,23 @@ function _vcMsgVenta(){
     'Dirección: '+String((document.getElementById('vc-direccion')||{}).value||'').trim()+'\n'+
     'Ejecutivo: '+(USUARIO||'');
 }
+// Deduce la "Forma de envío" del panel a partir del campo transporte de la cotización
+// (ej. "$5.980 (Courrier externo)" / "No incluido"). Si no se reconoce, devuelve '' (no fuerza).
+function _vcFormaDeTransporte(t){
+  var s = String(t||'').toLowerCase();
+  if(s.indexOf('courr')>=0 || s.indexOf('courier')>=0) return 'Courier externo';
+  if(s.indexOf('retiro')>=0) return 'Retiro en bodega';
+  if(s.indexOf('propia')>=0 || s.indexOf('logíst')>=0 || s.indexOf('logist')>=0) return 'Logística propia';
+  if(s.indexOf('no incl')>=0) return 'No incluido';
+  return '';
+}
 function abrirPanelCierreVenta(num, contacto){
   if(document.getElementById('panelCierreVenta')) return;
   var c = contacto || window.__CONTACTO_ACTIVO || {};
   var e2 = (typeof esc==='function') ? esc : function(s){ return String(s==null?'':s); };
   window.__vcImgOC = null; window.__vcImgTransf = null; window.__vcNum = num; window.__vcContacto = c;
   window.__vcTotalCot = Number(c.__totalCotActiva || 0);
+  var _mtPrefill = window.__vcTotalCot > 0 ? String(window.__vcTotalCot) : '';
   var ov = document.createElement('div');
   ov.id = 'panelCierreVenta';
   ov.style.cssText = 'position:fixed;inset:0;z-index:2147483600;background:rgba(0,0,0,.55);display:flex;align-items:flex-start;justify-content:center;padding:24px;overflow:auto;font-family:inherit;';
@@ -11105,6 +11117,10 @@ function abrirPanelCierreVenta(num, contacto){
         '<div style="font-size:19px;font-weight:800;margin-top:2px;">Cotización ' + e2(num) + (c.nombre||c.institucion ? ' · ' + e2(c.nombre||c.institucion) : '') + '</div>' +
       '</div>' +
       '<div style="padding:22px 24px;">' +
+        '<div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:12px;padding:13px 16px;margin-bottom:16px;display:flex;align-items:center;gap:11px;">' +
+          '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#B45309" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>' +
+          '<span style="font-size:14.5px;font-weight:800;color:#92400E;line-height:1.35;">Revisa bien que todo esté correcto antes de guardar. Varios datos vienen precargados de la cotización.</span>' +
+        '</div>' +
         '<label style="display:flex;align-items:flex-start;gap:9px;background:#FFF7ED;border:1px solid #FED7AA;border-radius:12px;padding:12px 14px;margin-bottom:16px;cursor:pointer;">' +
           '<input type="checkbox" id="vc-no-viarly" onchange="_vcToggleNoViarly()" style="margin-top:2px;width:16px;height:16px;accent-color:#C2410C;">' +
           '<span style="font-size:13px;color:#7C2D12;font-weight:600;line-height:1.4;">Esta venta <b>ya fue procesada</b> — la estoy marcando tarde.<br><span style="font-weight:400;color:#9A6A4A;font-size:12px;">Solo se registra como ganada, sin reenviar el aviso ni pedir comprobantes.</span></span>' +
@@ -11112,12 +11128,13 @@ function abrirPanelCierreVenta(num, contacto){
         '<div style="margin-bottom:16px;"><label style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:4px;">Fecha de la venta</label>' +
           '<input id="vc-fecha-venta" type="date" value="'+_hoyISO()+'" style="padding:9px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;">' +
           '<div style="font-size:11.5px;color:#6b7280;margin-top:3px;">Por defecto hoy. Cámbiala si la venta se cerró en otro mes — la venta cuenta en el mes que pongas aquí.</div></div>' +
+        // Monto recibido: SIEMPRE visible (también en modo "ya procesada"). Autocompletado con el total de la cotización.
+        '<div style="margin-bottom:16px;"><label style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:4px;">Monto recibido</label>' +
+          '<input id="vc-monto" type="text" placeholder="Solo números" value="' + _mtPrefill + '" oninput="_vcValidarMonto()" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;">' +
+          '<div id="vc-monto-msg" style="font-size:12px;margin-top:4px;color:#6b7280;"></div></div>' +
         '<div id="vc-detalle">' +
         '<div style="font-weight:800;color:#111;margin-bottom:8px;">1. Comprobantes</div>' +
         '<div style="display:flex;gap:12px;flex-wrap:wrap;">' + _vcUploadBox('oc','Orden de compra') + _vcUploadBox('transf','Transferencia') + '</div>' +
-        '<div style="margin-top:12px;"><label style="font-size:13px;font-weight:700;color:#374151;">Monto recibido</label>' +
-          '<input id="vc-monto" type="text" placeholder="Solo números" oninput="_vcValidarMonto()" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;margin-top:4px;">' +
-          '<div id="vc-monto-msg" style="font-size:12px;margin-top:4px;color:#6b7280;"></div></div>' +
         '<div style="font-weight:800;color:#111;margin:18px 0 8px;">2. Documento</div>' +
         '<label style="margin-right:18px;font-size:14px;"><input type="radio" name="vc-doc" value="Factura" checked> Factura</label>' +
         '<label style="font-size:14px;"><input type="radio" name="vc-doc" value="Boleta"> Boleta</label>' +
@@ -11156,11 +11173,24 @@ function abrirPanelCierreVenta(num, contacto){
       '</div>' +
     '</div>';
   document.body.appendChild(ov);
-  _vcToggleEtiquetas(); _vcChk();
+  // Precargar despacho desde la cotización (todo editable). Dirección = ciudad/región como
+  // punto de partida; el ejecutivo la corrige si despachan a otra dirección.
+  try {
+    var _forma = _vcFormaDeTransporte(c.__transporte);
+    if(_forma){ var _fs = document.getElementById('vc-forma'); if(_fs) _fs.value = _forma; }
+    var _costo = String(c.__transporte||'').replace(/[^0-9]/g,'');
+    if(_costo){ var _ce = document.getElementById('vc-costo-envio'); if(_ce && !_ce.value) _ce.value = _costo; }
+    var _dirPre = [c.__ciudad, c.__region].filter(function(x){ return x && String(x).trim(); }).join(', ');
+    if(_dirPre){ var _dd = document.getElementById('vc-direccion'); if(_dd && !_dd.value) _dd.value = _dirPre; }
+  } catch(e){}
+  _vcToggleEtiquetas(); _vcChk(); _vcValidarMonto();
 }
 async function guardarCierreVenta(){
   var noViarly = (document.getElementById('vc-no-viarly')||{}).checked;
   var dir = (document.getElementById('vc-direccion')||{}).value || '';
+  // Monto obligatorio SIEMPRE (también en venta tardía): lo trae la cotización, pero no se guarda vacío.
+  var _montoVal = String((document.getElementById('vc-monto')||{}).value||'').replace(/[^0-9]/g,'');
+  if(!_montoVal){ alert('El monto recibido es obligatorio. Lo trae la cotización; revísalo si hace falta.'); var _m=document.getElementById('vc-monto'); if(_m) _m.focus(); return; }
   if(!noViarly && dir.trim().length < 4){ alert('La dirección de despacho es obligatoria.'); return; }
   var btn = document.getElementById('vc-enviar'); if(btn){ btn.disabled = true; btn.textContent = 'Enviando…'; }
   var docSel = document.querySelector('input[name="vc-doc"]:checked');
@@ -11168,7 +11198,8 @@ async function guardarCierreVenta(){
   var payload = {
     solicitante: USUARIO, num: window.__vcNum, contacto_id: (window.__vcContacto||{}).id || '',
     cliente: (window.__vcContacto||{}).nombre || '', institucion: (window.__vcContacto||{}).institucion || '',
-    monto_recibido: String((document.getElementById('vc-monto')||{}).value||'').replace(/[^0-9]/g,''),
+    fecha_venta: (document.getElementById('vc-fecha-venta')||{}).value || '',
+    monto_recibido: _montoVal,
     documento: docSel ? docSel.value : 'Factura',
     forma_envio: (document.getElementById('vc-forma')||{}).value || '',
     costo_envio: String((document.getElementById('vc-costo-envio')||{}).value||'').replace(/[^0-9]/g,''),

@@ -8750,7 +8750,7 @@ function abrirCotModal(num){
         '</div>' +
         '<button onclick="_cerrarCotModal()" title="Cerrar" style="background:rgba(255,255,255,.18);color:#fff;border:none;border-radius:9px;width:34px;height:34px;font-size:20px;line-height:1;cursor:pointer;flex-shrink:0;font-family:inherit;">&times;</button>' +
       '</div>' +
-      '<div style="padding:18px 22px;max-height:62vh;overflow:auto;">' + _detalleCotHTML(c) + '</div>' +
+      '<div style="padding:18px 22px;max-height:62vh;overflow:auto;">' + ((String(c.estado||'').toLowerCase().indexOf('perd')>=0 && c.motivo_perdida) ? '<div style="background:#FEF2F2;border:1px solid #FCA5A5;border-radius:9px;padding:10px 13px;margin-bottom:14px;font-size:13px;color:#7F1D1D;"><b>Motivo de pérdida:</b> '+esc(c.motivo_perdida)+'</div>' : '') + _detalleCotHTML(c) + '</div>' +
       foot +
     '</div>';
   if(!ov.parentNode) document.body.appendChild(ov);
@@ -8809,10 +8809,47 @@ async function borrarSeguimiento(num, fila, btn){
   await cargarMisCotizaciones(true);
   try{ if(document.getElementById('cotModalOv') && window.__MC_CUR===num) abrirCotModal(num); }catch(e){}
 }
-async function marcarEstadoCotMC(num, estado, btn){
-  // Sin confirmación: marca al instante y refresca la vista sola (antes re-pintaba de caché viejo).
+// Modal: al marcar una cotización como Perdida, pide el MOTIVO. Llama cb(motivo) o cb(null) si cancela.
+function pedirMotivoPerdida(cb){
+  if(document.getElementById('motivoPerdidaOv')) return;
+  var motivos = ['Precio (muy caro)','Eligió a la competencia','Sin presupuesto / no había fondos','No era el momento (lo postergaron)','No respondió / se perdió contacto','Eligió otra alternativa','Proyecto cancelado','Otro'];
+  var opts = motivos.map(function(m){ return '<label style="display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid #E6E8EF;border-radius:9px;margin-bottom:6px;cursor:pointer;font-size:13.5px;color:#1a1a2e;"><input type="radio" name="mp-motivo" value="'+esc(m)+'" style="accent-color:#B91C1C;"> '+esc(m)+'</label>'; }).join('');
+  var ov = document.createElement('div');
+  ov.id='motivoPerdidaOv';
+  ov.style.cssText='position:fixed;inset:0;z-index:2147483600;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:24px;font-family:inherit;';
+  ov.onclick=function(e){ if(e.target===ov) _cerrarMotivoPerdida(); };
+  ov.innerHTML =
+    '<div style="background:#fff;border-radius:16px;max-width:460px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,.4);overflow:hidden;">' +
+      '<div style="background:#B91C1C;color:#fff;padding:16px 22px;"><div style="font-size:11.5px;font-weight:800;letter-spacing:.08em;opacity:.92;">COTIZACIÓN PERDIDA</div><div style="font-size:18px;font-weight:800;margin-top:2px;">¿Por qué se perdió?</div></div>' +
+      '<div style="padding:18px 22px;">' + opts +
+        '<textarea id="mp-detalle" rows="2" placeholder="Detalle (opcional · obligatorio si eliges Otro)" style="width:100%;box-sizing:border-box;margin-top:8px;padding:9px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:inherit;"></textarea>' +
+        '<div id="mp-msg" style="font-size:12px;color:#B91C1C;margin-top:6px;min-height:14px;"></div>' +
+      '</div>' +
+      '<div style="padding:14px 22px;border-top:1px solid #eee;display:flex;gap:10px;justify-content:flex-end;">' +
+        '<button onclick="_cerrarMotivoPerdida()" style="background:#f3f4f6;color:#374151;border:none;border-radius:9px;padding:10px 18px;font-weight:700;cursor:pointer;font-family:inherit;">Cancelar</button>' +
+        '<button onclick="_confirmarMotivoPerdida()" style="background:#B91C1C;color:#fff;border:none;border-radius:9px;padding:10px 20px;font-weight:800;cursor:pointer;font-family:inherit;">Marcar perdida</button>' +
+      '</div>' +
+    '</div>';
+  window.__motivoPerdidaCb = cb;
+  document.body.appendChild(ov);
+}
+function _cerrarMotivoPerdida(){ var o=document.getElementById('motivoPerdidaOv'); if(o) o.remove(); var cb=window.__motivoPerdidaCb; window.__motivoPerdidaCb=null; if(cb) cb(null); }
+function _confirmarMotivoPerdida(){
+  var sel = document.querySelector('input[name="mp-motivo"]:checked');
+  var msg = document.getElementById('mp-msg');
+  if(!sel){ if(msg) msg.textContent='Elige un motivo.'; return; }
+  var det = String((document.getElementById('mp-detalle')||{}).value||'').trim();
+  if(sel.value==='Otro' && !det){ if(msg) msg.textContent='Escribe el motivo en el detalle.'; return; }
+  var motivo = sel.value + (det ? ' — ' + det : '');
+  var cb = window.__motivoPerdidaCb; window.__motivoPerdidaCb=null;
+  var o=document.getElementById('motivoPerdidaOv'); if(o) o.remove();
+  if(cb) cb(motivo);
+}
+async function marcarEstadoCotMC(num, estado, btn, motivo){
+  // Al marcar Perdida, pedir primero el motivo (modal); recién ahí continúa.
+  if(estado==='Perdida' && !motivo){ pedirMotivoPerdida(function(m){ if(m) marcarEstadoCotMC(num, estado, btn, m); }); return; }
   const prev = btn.textContent; btn.disabled=true; btn.textContent='Guardando…';
-  const r = await fetchAPI('crm_marcar_cotizacion', { solicitante:USUARIO, num:num, estado:estado });
+  const r = await fetchAPI('crm_marcar_cotizacion', { solicitante:USUARIO, num:num, estado:estado, motivo_perdida: motivo||'' });
   if(!r || !r.ok){ btn.disabled=false; btn.textContent=prev; alert('No se pudo: '+((r&&r.error)||'error desconocido')); return; }
   try { Object.keys(localStorage).forEach(kk=>{ if(kk.indexOf('crm_perfil_')===0||kk.indexOf('crm_kpis_cache')===0||kk.indexOf('crm_dash')===0) localStorage.removeItem(kk); }); } catch(e){}
   try{ _cerrarCotModal(); }catch(e){}
@@ -10950,16 +10987,18 @@ async function ventaXimenaTipo(num, tipo){
   } catch(e){}
   if(c.id) abrirFichaModal(c.id, true);
 }
-async function marcarEstadoCotizacion(num, estado, btn){
+async function marcarEstadoCotizacion(num, estado, btn, motivo){
   if(!num){ alert('Esta cotización no tiene N° en el Registro, no se puede marcar.'); return; }
   // Excepción Ximena: su venta ganada NO corre el proceso de ejecutivos (sin panel de cierre,
   // etiquetas, Finanzas ni WhatsApp). Solo elige persona/empresa. Empresa → cuenta en Ventas
   // del Mes + avisa a Rayen por correo; persona → no se hace nada (vive en su sistema aparte).
   if(estado === 'Ganada' && /ximena/i.test(USUARIO||'')){ abrirPanelVentaXimena(num, window.__CONTACTO_ACTIVO || {}); return; }
+  // Al marcar Perdida, pedir el motivo primero.
+  if(estado==='Perdida' && !motivo){ pedirMotivoPerdida(function(m){ if(m) marcarEstadoCotizacion(num, estado, btn, m); }); return; }
   const c = window.__CONTACTO_ACTIVO || {};
   let prev = '';
   if(btn){ prev = btn.textContent; btn.disabled = true; btn.textContent = 'Guardando…'; }
-  const r = await fetchAPI('crm_marcar_cotizacion', { solicitante: USUARIO, num: num, estado: estado });
+  const r = await fetchAPI('crm_marcar_cotizacion', { solicitante: USUARIO, num: num, estado: estado, motivo_perdida: motivo||'' });
   if(!r || !r.ok){
     if(btn){ btn.disabled = false; btn.textContent = prev; }
     alert('No se pudo marcar: ' + ((r && r.error) || 'error desconocido'));

@@ -4006,7 +4006,7 @@ const ACCIONES_POST = [
   'crm_actualizar_etiquetas','crm_toggle_favorito','crm_actualizar_proxima','crm_snooze_contacto',
   'crm_iniciar_cadencia','crm_avanzar_cadencia','crm_pausar_cadencia',
   'crm_set_pipeline','crm_reasignar_contacto','crm_marcar_cotizacion',
-  'crm_venta_cerrar','crm_venta_estado',
+  'crm_venta_cerrar','crm_venta_estado','crm_felicitar',
   'crm_importar_csv','crm_reasignar_contactos',
   'crm_marcar_notif_leida','crm_crear_notificacion',
   'crm_fusionar','crm_asignar_ejecutivo_cuenta','crm_crear_cuenta','crm_editar_cuenta',
@@ -5647,6 +5647,7 @@ async function cargarDashboard(){
   try{ pintarStreakDash(); }catch(e){}
   try{ pintarFocoDash(); }catch(e){}
   try{ pintarPorCerrarDash(); }catch(e){}
+  try{ cargarCelebraciones(); }catch(e){}
 
   // Token único de esta carga — descartamos respuestas de fetches anteriores
   const miToken = ++window.__DASH_FETCH_TOKEN;
@@ -8550,6 +8551,117 @@ function _kpiMisCotFiltrar(filtro){
   renderMisCotizaciones();
 }
 // Celebración al ganar una venta: cartel "¡Felicitaciones!" + confeti.
+// ═══════════════ CELEBRACIONES DEL EQUIPO (venta/meta/racha) + felicitaciones ═══════════════
+var _CEL_COLA = [];
+function _celSeenKey(){ return 'crm_cel_vistos_'+(typeof USUARIO!=='undefined'?USUARIO:''); }
+function _celSeen(){ try{ return JSON.parse(localStorage.getItem(_celSeenKey())||'{}'); }catch(e){ return {}; } }
+function _celMarcar(id){ try{ var s=_celSeen(); s[id]=Date.now(); localStorage.setItem(_celSeenKey(), JSON.stringify(s)); }catch(e){} }
+function _celColor(nombre){ var m={rayen:'#DB2777',william:'#06B3FD',german:'#16A34A','germán':'#16A34A',roberto:'#F59E0B',maximiliano:'#5b21b6',ximena:'#0891B2'}; return m[String(nombre||'').toLowerCase().split(' ')[0]]||'#64748B'; }
+function _celCerrar(){ var o=document.getElementById('celOverlay'); if(o) o.remove(); _celCola(); }
+function _celCola(){ if(document.getElementById('celOverlay')) return; var it=_CEL_COLA.shift(); if(!it) return; if(it.__feli) _celTeFelicitaron(it.__feli); else _celMostrar(it); }
+// Motor de confeti: billetes verdes + monedas con $ + caritas felices + confeti (party), o solo confeti.
+function _celConfetti(cv, cols, party){
+  var ctx=cv.getContext('2d'), W,H, P=[];
+  function pick(){ if(!party) return 'conf'; var r=Math.random(); if(r<0.34)return'conf'; if(r<0.60)return'bill'; if(r<0.80)return'coin'; return'smile'; }
+  function size(){ var r=cv.getBoundingClientRect(); W=cv.width=Math.max(1,r.width); H=cv.height=Math.max(1,r.height); }
+  function reset(p){ p.t=pick(); p.x=Math.random()*W; p.y=Math.random()*-H-10; p.vy=0.9+Math.random()*1.7; p.vx=(Math.random()-.5)*0.9; p.a=Math.random()*6.28; p.va=(p.t==='conf')?(Math.random()-.5)*0.22:(Math.random()-.5)*0.05; p.s=(p.t==='conf')?(5+Math.random()*7):(p.t==='bill'?(9+Math.random()*4):(7+Math.random()*4)); p.c=cols[(Math.random()*cols.length)|0]; p.round=Math.random()<0.3; }
+  function init(){ size(); var n=Math.max(22, Math.round(W/8)); P=[]; for(var i=0;i<n;i++){ var p={}; reset(p); p.y=Math.random()*H; P.push(p);} }
+  function rr(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+  function bill(s){ var w=s*2.1,h=s*1.25; ctx.fillStyle='#1FA85A'; rr(-w/2,-h/2,w,h,2.5); ctx.fill(); ctx.strokeStyle='rgba(255,255,255,.6)'; ctx.lineWidth=1; rr(-w/2+1.6,-h/2+1.6,w-3.2,h-3.2,2); ctx.stroke(); ctx.fillStyle='rgba(255,255,255,.92)'; ctx.beginPath(); ctx.arc(0,0,h*0.22,0,6.28); ctx.fill(); }
+  function coin(s){ var r=s*0.62; ctx.fillStyle='#F4C842'; ctx.beginPath(); ctx.arc(0,0,r,0,6.28); ctx.fill(); ctx.strokeStyle='#C99700'; ctx.lineWidth=1.4; ctx.stroke(); ctx.fillStyle='#A5790A'; ctx.font='bold '+Math.round(s*0.9)+'px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('$',0,1); }
+  function smile(s){ var r=s*0.66; ctx.fillStyle='#FFD93D'; ctx.beginPath(); ctx.arc(0,0,r,0,6.28); ctx.fill(); ctx.fillStyle='#7A5300'; ctx.beginPath(); ctx.arc(-r*0.34,-r*0.16,r*0.14,0,6.28); ctx.arc(r*0.34,-r*0.16,r*0.14,0,6.28); ctx.fill(); ctx.strokeStyle='#7A5300'; ctx.lineWidth=Math.max(1,r*0.16); ctx.beginPath(); ctx.arc(0,r*0.04,r*0.42,0.15*Math.PI,0.85*Math.PI); ctx.stroke(); }
+  function tick(){ if(!document.body.contains(cv)) return; ctx.clearRect(0,0,W,H); for(var i=0;i<P.length;i++){ var p=P[i]; p.y+=p.vy; p.x+=p.vx+Math.sin((p.y+p.x)/32)*0.3; p.a+=p.va; if(p.y>H+14) reset(p); ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.a); ctx.globalAlpha=.96; if(p.t==='bill')bill(p.s); else if(p.t==='coin')coin(p.s); else if(p.t==='smile')smile(p.s); else{ ctx.fillStyle=p.c; if(p.round){ctx.beginPath();ctx.arc(0,0,p.s*0.45,0,6.28);ctx.fill();}else ctx.fillRect(-p.s/2,-p.s/2,p.s,p.s*0.6);} ctx.restore(); } requestAnimationFrame(tick); }
+  init(); tick(); window.addEventListener('resize', init);
+}
+// Celebración GRANDE al centro: logro de un compañero, para felicitarlo.
+function _celMostrar(ev){
+  if(document.getElementById('celOverlay')){ _CEL_COLA.push(ev); return; }
+  window.__CEL_EV = ev;
+  var T = ev.tipo==='venta' ? {bg:'radial-gradient(135% 130% at 18% -15%,#34C66A,#16A34A 46%,#0A6630)',acc:'#16A34A',cols:'#FFD93D,#FF5FA2,#3DD9FF,#FFFFFF,#A77BFF,#7BE3A6',party:1,eyebrow:'VENTA GANADA DEL EQUIPO'}
+        : ev.tipo==='meta' ? {bg:'radial-gradient(120% 95% at 50% 0%,#16224D,#0C1330)',acc:'#C99700',cols:'#E9C24A,#FFFFFF,#FFD96B,#C99700',party:0,eyebrow:'META DEL MES CUMPLIDA'}
+        : {bg:'linear-gradient(120deg,#C25A00,#FF7E00)',acc:'#FF7E00',cols:'#FFD96B,#FFFFFF,#FFB066,#FF7E00',party:0,eyebrow:'RACHA DE LA SEMANA'};
+  var nFeli=(ev.felicitaciones||[]).length;
+  var titulo = ev.tipo==='meta' ? esc(ev.ejecutivo)+' cumplió su meta del mes' : ev.tipo==='racha' ? esc(ev.ejecutivo)+' va imparable' : esc(ev.ejecutivo)+' cerró una venta';
+  var sub = ev.tipo==='meta' ? esc(ev.mes||'') : ev.tipo==='racha' ? esc(ev.detalle||'esta semana') : esc(ev.institucion||ev.cliente||'');
+  var montoTxt = ev.monto ? fmtCLP(ev.monto) : '';
+  var nudge = nFeli>0 ? '¡No dejes de felicitarlo! Somos un equipo y compartimos los logros.' : 'Sé el primero en felicitarlo.';
+  var avs = (ev.felicitaciones||[]).slice(0,5).map(function(f){ return '<span style="display:inline-flex;width:26px;height:26px;border-radius:50%;background:'+_celColor(f.de)+';color:#fff;font-size:10px;font-weight:700;align-items:center;justify-content:center;border:2px solid #fff;margin-left:-7px;">'+esc(String(f.de||'?').slice(0,2).toUpperCase())+'</span>'; }).join('');
+  var ov=document.createElement('div'); ov.id='celOverlay';
+  ov.style.cssText='position:fixed;inset:0;z-index:2147483646;background:rgba(8,12,28,.62);display:flex;align-items:center;justify-content:center;padding:22px;font-family:inherit;';
+  ov.innerHTML='<div style="position:relative;background:#fff;border-radius:20px;max-width:440px;width:100%;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.5);">'+
+      '<canvas id="celCanvas" style="position:absolute;inset:0;width:100%;height:100%;z-index:9;pointer-events:none;"></canvas>'+
+      '<div style="background:'+T.bg+';color:#fff;padding:26px 24px 22px;text-align:center;">'+
+        '<div style="font-size:11px;font-weight:800;letter-spacing:.12em;opacity:.92;">'+T.eyebrow+'</div>'+
+        '<div style="font-size:21px;font-weight:800;margin-top:5px;letter-spacing:-.01em;">'+titulo+'</div>'+
+        (montoTxt?'<div style="font-size:32px;font-weight:800;letter-spacing:-.02em;margin-top:7px;">'+esc(montoTxt)+'</div>':'')+
+        (sub?'<div style="font-size:13.5px;opacity:.92;margin-top:5px;">'+sub+'</div>':'')+
+      '</div>'+
+      '<div style="padding:18px 22px 18px;position:relative;z-index:2;">'+
+        '<p style="font-size:14px;color:#1a1a2e;margin:0 0 12px;font-weight:600;">'+nudge+'</p>'+
+        '<div style="display:flex;gap:8px;">'+
+          '<input id="celMsg" placeholder="Escríbele algo lindo…" style="flex:1;min-width:0;border:1px solid #e2e8f4;border-radius:10px;padding:11px 13px;font-size:13.5px;font-family:inherit;">'+
+          '<button onclick="felicitarEvento()" style="background:'+T.acc+';color:#fff;border:none;border-radius:10px;padding:11px 18px;font-weight:800;font-size:13.5px;cursor:pointer;font-family:inherit;white-space:nowrap;">Felicitar</button>'+
+        '</div>'+
+        (nFeli?'<div style="display:flex;align-items:center;margin-top:13px;">'+avs+'<span style="font-size:12px;color:#5A6685;margin-left:13px;">'+nFeli+' ya '+(nFeli===1?'felicitó':'felicitaron')+'</span></div>':'')+
+        '<div style="text-align:center;margin-top:14px;"><button onclick="_celCerrar()" style="background:none;border:none;color:#9aa3bd;font-size:13px;cursor:pointer;font-family:inherit;">Cerrar</button></div>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(ov);
+  try{ _celConfetti(document.getElementById('celCanvas'), T.cols.split(','), !!T.party); }catch(e){}
+  _celMarcar(ev.id);
+}
+async function felicitarEvento(){
+  var ev=window.__CEL_EV; if(!ev) return;
+  var msg=String((document.getElementById('celMsg')||{}).value||'').trim();
+  var btn=document.querySelector('#celOverlay button[onclick="felicitarEvento()"]'); if(btn){ btn.disabled=true; btn.textContent='Enviando…'; }
+  try{ var r=await fetchAPI('crm_felicitar', null, { evento_id:ev.id, evento_tipo:ev.tipo, ejecutivo_logro:ev.ejecutivo_full||ev.ejecutivo, mensaje:msg, solicitante:USUARIO }); }catch(e){}
+  _celCerrar();
+  try{ if(typeof toast==='function') toast('Felicitación enviada a '+(ev.ejecutivo||''), 'jade'); }catch(e){}
+}
+// "¡Te felicitaron!" — lo que le llegó a ESTE usuario.
+function _celTeFelicitaron(msgs){
+  if(document.getElementById('celOverlay')){ _CEL_COLA.push({__feli:msgs}); return; }
+  var lista=(msgs||[]).slice(0,10).map(function(m){ return '<div style="display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-top:1px solid #f1f1f4;font-size:13px;"><span style="flex-shrink:0;display:inline-flex;width:26px;height:26px;border-radius:50%;background:'+_celColor(m.de)+';color:#fff;font-size:10px;font-weight:700;align-items:center;justify-content:center;">'+esc(String(m.de||'?').slice(0,2).toUpperCase())+'</span><div><b>'+esc(m.de||'')+'</b>'+(m.mensaje?' <span style="color:#5A6685;">· '+esc(m.mensaje)+'</span>':'')+'</div></div>'; }).join('');
+  var ov=document.createElement('div'); ov.id='celOverlay';
+  ov.style.cssText='position:fixed;inset:0;z-index:2147483646;background:rgba(8,12,28,.62);display:flex;align-items:center;justify-content:center;padding:22px;font-family:inherit;';
+  ov.innerHTML='<div style="position:relative;background:#fff;border-radius:20px;max-width:440px;width:100%;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.5);">'+
+    '<canvas id="celCanvas" style="position:absolute;inset:0;width:100%;height:100%;z-index:9;pointer-events:none;"></canvas>'+
+    '<div style="background:radial-gradient(135% 130% at 18% -15%,#34C66A,#16A34A 46%,#0A6630);color:#fff;padding:26px 24px 22px;text-align:center;">'+
+      '<div style="font-size:11px;font-weight:800;letter-spacing:.12em;opacity:.92;">TU EQUIPO TE FELICITA</div>'+
+      '<div style="font-size:23px;font-weight:800;margin-top:5px;">¡Te felicitaron!</div>'+
+      '<div style="font-size:13.5px;opacity:.92;margin-top:4px;">'+(msgs||[]).length+' '+((msgs||[]).length===1?'mensaje':'mensajes')+' de tu equipo</div>'+
+    '</div>'+
+    '<div style="padding:12px 22px 6px;position:relative;z-index:2;max-height:44vh;overflow:auto;">'+lista+'</div>'+
+    '<div style="text-align:center;padding:12px 0 16px;position:relative;z-index:2;"><button onclick="_celCerrar()" style="background:#16A34A;color:#fff;border:none;border-radius:10px;padding:10px 22px;font-weight:800;cursor:pointer;font-family:inherit;">¡Gracias equipo!</button></div>'+
+  '</div>';
+  document.body.appendChild(ov);
+  try{ _celConfetti(document.getElementById('celCanvas'), ['#FFD93D','#FF5FA2','#3DD9FF','#FFFFFF','#7BE3A6'], true); }catch(e){}
+}
+async function cargarCelebraciones(){
+  if(window.__CEL_RAN) return; window.__CEL_RAN=true;
+  if(typeof USUARIO==='undefined' || !USUARIO) return;
+  var prim=String(USUARIO||'').split(' ')[0].toLowerCase();
+  // 1) ¿me felicitaron?
+  try{
+    var rf=await fetchAPI('crm_mis_felicitaciones',{solicitante:USUARIO});
+    if(rf&&rf.ok){ var msgs=[]; (rf.eventos||[]).forEach(function(e){ (e.mensajes||[]).forEach(function(m){ msgs.push(m); }); });
+      var prev=parseInt(localStorage.getItem('crm_feli_recibidas_'+USUARIO)||'0',10);
+      if(msgs.length>prev){ _celTeFelicitaron(msgs); localStorage.setItem('crm_feli_recibidas_'+USUARIO, String(msgs.length)); } }
+  }catch(e){}
+  // 2) logros del equipo para felicitar
+  try{
+    var re=await fetchAPI('crm_eventos_equipo',{solicitante:USUARIO});
+    if(re&&re.ok){ var seen=_celSeen();
+      (re.eventos||[]).forEach(function(ev){
+        if(String(ev.ejecutivo||'').toLowerCase()===prim) return;
+        if(seen[ev.id]) return;
+        if((ev.felicitaciones||[]).some(function(f){ return String(f.de||'').toLowerCase()===prim; })) return;
+        _CEL_COLA.push(ev);
+      });
+      _celCola();
+    }
+  }catch(e){}
+}
 function celebrarVenta(monto){
   const colores = ['#16A34A','#F59E0B','#06B3FD','#DB2777','#5b21b6','#FBBF24'];
   let ov = document.getElementById('celebraOverlay');

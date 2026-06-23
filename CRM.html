@@ -12709,7 +12709,7 @@ async function cargarDuplicados(){
   // UI lado-a-lado: cada duplicado muestra A y B con sus datos. Botones: Fusionar (mantener A) / Fusionar (mantener B) / No son duplicados.
   cont.innerHTML =
     '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;background:#F0FDF4;border:1px solid #bbf0cf;border-radius:10px;padding:11px 15px;">' +
-      '<div style="font-size:12.5px;color:#065F46;"><b>'+lista.length+'</b> posibles duplicados. Los del mismo correo y mismo nombre los puedo fusionar de una.</div>' +
+      '<div style="font-size:12.5px;color:#065F46;"><b>'+lista.length+'</b> posibles duplicados. Los de la misma persona (nombre que coincide) los fusiono de una; los de instituciones/sedes quedan para revisar a mano.</div>' +
       '<button class="btn primary" onclick="fusionarSegurosEnLote()" style="background:#16A34A;">Fusionar en lote los seguros</button>' +
     '</div>' +
     lista.map((d, idx) => {
@@ -12764,22 +12764,26 @@ async function cargarDuplicados(){
 // compartido = personas distintas), NO se considera seguro → queda para revisión manual.
 function _mismaPersonaSegura(a, b){
   var nm = function(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim(); };
-  var ea = nm(a.email), eb = nm(b.email);
-  if(!ea || ea !== eb) return false;
-  var na = nm(a.nombre), nb = nm(b.nombre);
+  var na = nm(a.nombre), nb = nm(b.nombre), ia = nm(a.institucion), ib = nm(b.institucion);
+  // Ambos deben tener un nombre de PERSONA real. Si el "nombre" es la institución (registro-empresa
+  // sin persona) o falta, queda para revisión manual — ahí están las sedes de una misma institución
+  // (ej. Fundación Las Rosas) que NO hay que fusionar a ciegas.
   if(!na || !nb) return false;
-  if(na === nb) return true;
-  if(na.indexOf(nb) >= 0 || nb.indexOf(na) >= 0) return true;
-  var fa = na.split(' ')[0], fb = nb.split(' ')[0];
-  return (fa === fb && fa.length >= 4);
+  if(na === ia || nb === ib) return false;
+  // Son par candidato (el backend ya los emparejó por correo/teléfono/nombre+institución). Si además
+  // los NOMBRES de persona coinciden, es la misma persona.
+  if(na === nb) return true;                                   // nombre idéntico
+  if(na.indexOf(nb) >= 0 || nb.indexOf(na) >= 0) return true;  // uno contiene al otro
+  var fa = na.split(' ')[0], fb = nb.split(' ')[0];            // mismo 1er nombre + corroborado (correo/institución)
+  return (fa === fb && fa.length >= 4 && (nm(a.email) === nm(b.email) || (ia && ia === ib)));
 }
 // Fusiona en lote SOLO los pares seguros. Combina sin perder datos (crm_fusionar coalesce + mueve interacciones).
 async function fusionarSegurosEnLote(){
   var pares = (window.__DUP_DATA||[]).map(function(d){ return { a: d.a||d.contacto_a||{}, b: d.b||d.contacto_b||{} }; });
   var seguros = pares.filter(function(p){ return p.a.id && p.b.id && _mismaPersonaSegura(p.a, p.b); });
   var dudosos = pares.length - seguros.length;
-  if(!seguros.length){ alert('No hay pares SEGUROS para fusionar solos (mismo correo + mismo nombre).\n\nLos '+pares.length+' que quedan tienen diferencias (correo compartido, nombres distintos) y hay que revisarlos a mano con "Fusionar (elegir datos)".'); return; }
-  if(!confirm('Voy a fusionar automáticamente '+seguros.length+' par'+(seguros.length===1?'':'es')+' SEGUROS (mismo correo y mismo nombre). No se pierde nada: se combinan los datos y la actividad.\n\nLos '+dudosos+' dudosos quedan para revisar a mano.\n\n¿Continúo?')) return;
+  if(!seguros.length){ alert('No hay pares SEGUROS para fusionar solos (la misma persona, con el nombre que coincide).\n\nLos '+pares.length+' que quedan son registros sin nombre de persona o de instituciones/sedes — hay que revisarlos a mano con "Fusionar (elegir datos)".'); return; }
+  if(!confirm('Voy a fusionar automáticamente '+seguros.length+' par'+(seguros.length===1?'':'es')+' SEGUROS (la misma persona — el nombre coincide). No se pierde nada: se combinan los datos y la actividad.\n\nLos '+dudosos+' dudosos quedan para revisar a mano.\n\n¿Continúo?')) return;
   var cont = document.getElementById('dupContainer');
   var ok=0, err=0;
   for(var i=0;i<seguros.length;i++){

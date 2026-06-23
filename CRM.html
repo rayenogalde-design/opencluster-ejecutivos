@@ -12698,15 +12698,24 @@ async function cargarDuplicados(){
   cont.innerHTML = '<div class="loading-state"><div class="spinner"></div>Buscando duplicados pendientes…</div>';
   const r = await fetchAPI('crm_duplicados_pendientes', { solicitante: USUARIO });
   if(!r.ok){ cont.innerHTML = '<div class="error-state">' + esc(r.error || '') + '</div>'; return; }
-  const lista = r.duplicados || [];
-  window.__DUP_DATA = lista;   // guardamos el par para la Fusión inteligente (los onclick solo pasan ids)
-  document.getElementById('badgeDup').textContent = lista.length;
-  document.getElementById('badgeDup').style.display = lista.length ? '' : 'none';
-  if(!lista.length){
-    cont.innerHTML = '<div class="loading-state">Sin duplicados pendientes. Todo limpio.</div>';
-    return;
-  }
-  // UI lado-a-lado: cada duplicado muestra A y B con sus datos. Botones: Fusionar (mantener A) / Fusionar (mantener B) / No son duplicados.
+  window.__DUP_DATA = r.duplicados || [];
+  _pintarDuplicados();
+}
+// Quita de la lista local un par ya resuelto (fusionado/rechazado) y re-pinta AL INSTANTE,
+// sin re-pedir la lista lenta al servidor (así no "reaparecen" los que ya tocaste).
+function _quitarParDuplicado(idA, idB){
+  window.__DUP_DATA = (window.__DUP_DATA||[]).filter(function(d){
+    var x=String((d.a||d.contacto_a||{}).id), y=String((d.b||d.contacto_b||{}).id);
+    return !((x===String(idA)&&y===String(idB)) || (x===String(idB)&&y===String(idA)));
+  });
+  _pintarDuplicados();
+}
+function _pintarDuplicados(){
+  const cont = document.getElementById('dupContainer'); if(!cont) return;
+  const lista = window.__DUP_DATA || [];
+  const _bd = document.getElementById('badgeDup'); if(_bd){ _bd.textContent = lista.length; _bd.style.display = lista.length ? '' : 'none'; }
+  if(!lista.length){ cont.innerHTML = '<div class="loading-state">Sin duplicados pendientes. Todo limpio.</div>'; return; }
+  // UI lado-a-lado: cada duplicado muestra A y B con sus datos.
   cont.innerHTML =
     '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;background:#F0FDF4;border:1px solid #bbf0cf;border-radius:10px;padding:11px 15px;">' +
       '<div style="font-size:12.5px;color:#065F46;"><b>'+lista.length+'</b> posibles duplicados. Los de la misma persona (nombre que coincide) los fusiono de una; los de instituciones/sedes quedan para revisar a mano.</div>' +
@@ -12786,17 +12795,20 @@ async function fusionarSegurosEnLote(){
   if(!seguros.length){ alert('No hay pares SEGUROS para fusionar solos (la misma persona, con el nombre que coincide).\n\nLos '+pares.length+' que quedan son registros sin nombre de persona o de instituciones/sedes — hay que revisarlos a mano con "Fusionar (elegir datos)".'); return; }
   if(!confirm('Voy a fusionar automáticamente '+seguros.length+' par'+(seguros.length===1?'':'es')+' SEGUROS (la misma persona — el nombre coincide). No se pierde nada: se combinan los datos y la actividad.\n\nLos '+dudosos+' dudosos quedan para revisar a mano.\n\n¿Continúo?')) return;
   var cont = document.getElementById('dupContainer');
-  var ok=0, err=0;
+  var ok=0, err=0, fusionados=[];
   for(var i=0;i<seguros.length;i++){
     if(cont) cont.innerHTML = '<div class="loading-state"><div class="spinner"></div>Fusionando '+(i+1)+' de '+seguros.length+'… No cierres esta pestaña.</div>';
     try{
       var r = await fetchAPI('crm_fusionar', null, { id_a: seguros[i].a.id, id_b: seguros[i].b.id, solicitante: USUARIO });
-      if(r && r.ok) ok++; else err++;
+      if(r && r.ok){ ok++; fusionados.push([String(seguros[i].a.id), String(seguros[i].b.id)].sort().join('|')); } else err++;
     }catch(e){ err++; }
   }
   try { localStorage.removeItem('crm_cache_contactos_v2_' + USUARIO); } catch(e){}
   CACHE.vMis = null; CACHE.vTodos = null;
-  await cargarDuplicados();
+  // Quitar de la pantalla solo los que se fusionaron OK (sin re-pedir la lista lenta).
+  var _fk = {}; fusionados.forEach(function(k){ _fk[k]=1; });
+  window.__DUP_DATA = (window.__DUP_DATA||[]).filter(function(d){ var x=String((d.a||d.contacto_a||{}).id), y=String((d.b||d.contacto_b||{}).id); return !_fk[[x,y].sort().join('|')]; });
+  _pintarDuplicados();
   alert('Listo: '+ok+' fusionado'+(ok===1?'':'s')+(err?(' · '+err+' con error'):'')+'.\n\nLos dudosos (si quedan) están abajo para revisar a mano.');
 }
 // Fusión simple de UN par: junta todo automáticamente, sin elegir campo por campo.
@@ -12807,7 +12819,7 @@ async function fusionarAutomatico(idA, idB){
   if(!r || !r.ok){ alert('No se pudo fusionar: ' + ((r && r.error) || 'desconocido')); return; }
   try { localStorage.removeItem('crm_cache_contactos_v2_' + USUARIO); } catch(e){}
   CACHE.vMis = null; CACHE.vTodos = null;
-  await cargarDuplicados();
+  _quitarParDuplicado(idA, idB);
 }
 async function fusionarParDuplicado(idA, idB, mantener){
   if (!confirm('Confirmá la fusión. Los datos no marcados se perderán.')) return;
@@ -12816,13 +12828,13 @@ async function fusionarParDuplicado(idA, idB, mantener){
   // Invalidar cache de contactos para que se vea la fusión
   try { localStorage.removeItem('crm_cache_contactos_v2_' + USUARIO); } catch(e){}
   CACHE.vMis = null; CACHE.vTodos = null;
-  await cargarDuplicados();
+  _quitarParDuplicado(idA, idB);
 }
 
 async function rechazarFusion(idA, idB){
   const r = await fetchAPI('crm_rechazar_fusion', null, { id_a: idA, id_b: idB, solicitante: USUARIO });
   if (!r || !r.ok) { alert('Error: ' + ((r && r.error) || 'desconocido')); return; }
-  await cargarDuplicados();
+  _quitarParDuplicado(idA, idB);
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -12925,7 +12937,7 @@ async function confirmarFusionInteligente(){
   CACHE.vMis = null; CACHE.vTodos = null;
   cerrarFusionInteligente();
   if(typeof toastCfg === 'function') toastCfg('Contactos fusionados en uno');
-  await cargarDuplicados();
+  _quitarParDuplicado(P.idA, P.idB);
 }
 
 // ════════════════════════════════════════════════════════════════════════════

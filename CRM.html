@@ -8647,12 +8647,22 @@ function _detalleCotHTML(c){
   let det = '';
   // 1. Contacto
   var _tel = String(c.telefono||'').replace(/\D/g,'');
+  var _emailCot = c.email || '';
+  // Si la cotización no trae teléfono/email, tomarlos del CONTACTO vinculado (celular o tel. de empresa).
+  if((!_tel || !_emailCot) && c.contacto_id){
+    var _ct = (CACHE.vTodos||[]).find(function(x){ return String(x.id)===String(c.contacto_id); });
+    if(_ct){
+      if(!_tel) _tel = String(_ct.telefono||_ct.telefono_institucional||'').replace(/\D/g,'');
+      if(!_emailCot) _emailCot = _ct.email || '';
+    }
+  }
   var _waNum = _tel ? (_tel.indexOf('56')===0 ? _tel : '56'+_tel) : '';
-  if(c.email || _tel){
+  if(_emailCot || _tel){
     det += '<div style="'+SEC+'"><div style="'+LBL+'">Contacto</div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
-      (c.email ? '<span style="font-size:13px;color:#1a2440;font-weight:600;word-break:break-all;margin-right:2px;">'+esc(c.email)+'</span>' +
-                 '<button onclick="_copiarTxt(\''+esc(c.email)+'\',this)" style="'+ACT+'color:#001A60;">Copiar</button>' +
-                 '<a href="mailto:'+esc(c.email)+'" style="'+ACT+'border-color:#cdd9f7;color:#2840a0;">Email</a>' : '') +
+      (_emailCot ? '<span style="font-size:13px;color:#1a2440;font-weight:600;word-break:break-all;margin-right:2px;">'+esc(_emailCot)+'</span>' +
+                 '<button onclick="_copiarTxt(\''+esc(_emailCot)+'\',this)" style="'+ACT+'color:#001A60;">Copiar</button>' +
+                 '<a href="mailto:'+esc(_emailCot)+'" style="'+ACT+'border-color:#cdd9f7;color:#2840a0;">Email</a>' : '') +
+      (_tel ? '<span style="font-size:13px;color:#1a2440;font-weight:700;margin-right:2px;">+'+esc(_waNum)+'</span>' : '') +
       (_waNum ? '<a href="https://wa.me/'+_waNum+'" target="_blank" rel="noopener" style="'+ACT+'border-color:#bbf0cf;color:#0f7a3d;">WhatsApp</a>' : '') +
       (_tel ? '<a href="tel:+'+_waNum+'" style="'+ACT+'border-color:#bfe6f6;color:#0a5e85;">Llamar</a>' : '') +
     '</div></div>';

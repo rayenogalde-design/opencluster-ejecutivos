@@ -6904,7 +6904,10 @@ function construirLinksContacto(c, g){
     if(cuerpo) qs.push('body='+encodeURIComponent(cuerpo));
     mailLink = 'mailto:'+c.email + (qs.length ? '?'+qs.join('&') : '');
   }
-  return { tel:telLink, wa:waLink, mail:mailLink, hasTel:!!callRaw, hasWa:!!telPers, hasMail:!!c.email, telDisplay:callRaw, waDisplay:telPers };
+  return { tel:telLink, wa:waLink, mail:mailLink, hasTel:!!callRaw, hasWa:!!telPers, hasMail:!!c.email, telDisplay:callRaw, waDisplay:telPers,
+    // Teléfonos separados: institución (empresa) y celular (personal) → para poder LLAMAR a ambos.
+    telInstLink: telInst ? 'tel:'+cleanPhone(telInst) : '', telInstDisplay: telInst, hasTelInst: !!telInst,
+    telPersLink: telPers ? 'tel:'+cleanPhone(telPers) : '', telPersDisplay: telPers, hasTelPers: !!telPers };
 }
 
 // ── Selector de mensaje con preview (WhatsApp / Gmail) ──
@@ -9653,8 +9656,9 @@ function renderFicha(container, data){
     '<div class="v2-block" style="margin-bottom:22px;">' +
       '<div class="v2-block-head">' + icoUser + '<span class="v2-block-label">DATOS DE CONTACTO</span><span class="v2-block-aside">toca para contactar</span></div>' +
       '<div class="v2-cpills" style="max-width:460px;">' +
-        (LF.hasTel ? '<a href="' + LF.tel + '" class="v2-cpill phone"><span class="v2-cpill-icon">' + icoPhone + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">Llamar' + (String(c.telefono_institucional||'').trim() ? ' (institución)' : '') + '</span><span class="v2-cpill-value">' + esc(LF.telDisplay) + '</span></span></a>' : '') +
-        (LF.hasWa ? '<div onclick="abrirSelectorMensaje(\'' + esc(c.id) + '\',\'whatsapp\')" class="v2-cpill wa" style="cursor:pointer;"><span class="v2-cpill-icon">' + icoWaFill + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">WhatsApp</span><span class="v2-cpill-value">' + esc(LF.waDisplay) + '</span></span></div>' : '') +
+        (LF.hasTelInst ? '<a href="' + LF.telInstLink + '" class="v2-cpill phone"><span class="v2-cpill-icon">' + icoPhone + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">Llamar (institución)</span><span class="v2-cpill-value">' + esc(LF.telInstDisplay) + '</span></span></a>' : '') +
+        (LF.hasTelPers && LF.telPersDisplay !== LF.telInstDisplay ? '<a href="' + LF.telPersLink + '" class="v2-cpill phone" style="background:#0891B2;"><span class="v2-cpill-icon">' + icoPhone + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">Llamar (celular)</span><span class="v2-cpill-value">' + esc(LF.telPersDisplay) + '</span></span></a>' : '') +
+        (LF.hasWa ? '<div onclick="abrirSelectorMensaje(\'' + esc(c.id) + '\',\'whatsapp\')" class="v2-cpill wa" style="cursor:pointer;"><span class="v2-cpill-icon">' + icoWaFill + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">WhatsApp (celular)</span><span class="v2-cpill-value">' + esc(LF.waDisplay) + '</span></span></div>' : '') +
         (LF.hasMail ? '<div onclick="abrirSelectorMensaje(\'' + esc(c.id) + '\',\'email\')" class="v2-cpill email" style="cursor:pointer;"><span class="v2-cpill-icon">' + V2_SVG.gmail + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">Gmail</span><span class="v2-cpill-value">' + esc(c.email) + '</span></span></div>' : '') +
         (dir ? '<div class="v2-cpill static"><span class="v2-cpill-icon">' + icoPin + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">Dirección</span><span class="v2-cpill-value">' + esc(dir) + '</span></span></div>' : '') +
       '</div>' +

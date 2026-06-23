@@ -12753,7 +12753,8 @@ async function cargarDuplicados(){
       '</div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">' +
         '<button class="btn" onclick="rechazarFusion(\'' + esc(a.id) + '\',\'' + esc(b.id) + '\')" style="background:white;">No son duplicados</button>' +
-        '<button class="btn primary" onclick="abrirFusionInteligente(\'' + esc(a.id) + '\',\'' + esc(b.id) + '\')">Fusionar (elegir datos)</button>' +
+        '<button class="btn" onclick="abrirFusionInteligente(\'' + esc(a.id) + '\',\'' + esc(b.id) + '\')">Elegir datos…</button>' +
+        '<button class="btn primary" onclick="fusionarAutomatico(\'' + esc(a.id) + '\',\'' + esc(b.id) + '\')" style="background:#16A34A;">Fusionar (juntar todo)</button>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -12797,6 +12798,16 @@ async function fusionarSegurosEnLote(){
   CACHE.vMis = null; CACHE.vTodos = null;
   await cargarDuplicados();
   alert('Listo: '+ok+' fusionado'+(ok===1?'':'s')+(err?(' · '+err+' con error'):'')+'.\n\nLos dudosos (si quedan) están abajo para revisar a mano.');
+}
+// Fusión simple de UN par: junta todo automáticamente, sin elegir campo por campo.
+// crm_fusionar combina los datos (rellena los huecos de A con los de B) y mueve toda la actividad de B a A.
+async function fusionarAutomatico(idA, idB){
+  if(!confirm('Voy a juntar los dos contactos en uno solo. Se combinan todos los datos y la actividad — no se pierde nada (si un mismo dato choca, queda el del más antiguo).\n\n¿Continúo?')) return;
+  const r = await fetchAPI('crm_fusionar', null, { id_a: idA, id_b: idB, solicitante: USUARIO });
+  if(!r || !r.ok){ alert('No se pudo fusionar: ' + ((r && r.error) || 'desconocido')); return; }
+  try { localStorage.removeItem('crm_cache_contactos_v2_' + USUARIO); } catch(e){}
+  CACHE.vMis = null; CACHE.vTodos = null;
+  await cargarDuplicados();
 }
 async function fusionarParDuplicado(idA, idB, mantener){
   if (!confirm('Confirmá la fusión. Los datos no marcados se perderán.')) return;
@@ -12844,10 +12855,12 @@ function _fusRow(field, label, aVal, bVal){
       '<input type="radio" name="fus-' + field + '" value="' + lado + '"' + (lado==='a'?' checked':'') + ' style="margin-top:2px;">' +
       '<span><span style="font-size:10px;font-weight:800;color:' + col + ';text-transform:uppercase;">' + lbl + '</span><br><span style="font-size:13px;color:var(--text-1);">' + esc(val) + '</span></span></label>';
     let extra = '';
-    if(field === 'notas_publicas'){
+    // Campos donde tiene sentido QUEDARSE CON LAS DOS (se concatenan), ej. Institución: nombre común + razón social.
+    var _combinables = { nombre:1, institucion:1, cargo:1, notas_publicas:1 };
+    if(_combinables[field]){
       extra = '<label style="display:flex;gap:7px;align-items:flex-start;cursor:pointer;padding:7px 10px;border:1px solid var(--border-subtle,#e2e8f0);border-radius:8px;flex:1;min-width:160px;">' +
         '<input type="radio" name="fus-' + field + '" value="ambas" style="margin-top:2px;">' +
-        '<span><span style="font-size:10px;font-weight:800;color:#0f766e;text-transform:uppercase;">Las dos</span><br><span style="font-size:13px;color:var(--text-1);">' + esc(aVal + ' · ' + bVal) + '</span></span></label>';
+        '<span><span style="font-size:10px;font-weight:800;color:#0f766e;text-transform:uppercase;">Las dos (junta ambas)</span><br><span style="font-size:13px;color:var(--text-1);">' + esc(aVal + ' · ' + bVal) + '</span></span></label>';
     }
     right = '<div style="display:flex;gap:8px;flex-wrap:wrap;">' + opt('a', aVal, 'A', '#3a4d75') + opt('b', bVal, 'B', '#5b21b6') + extra + '</div>';
   }

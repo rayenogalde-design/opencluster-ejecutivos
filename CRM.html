@@ -8652,12 +8652,10 @@ async function cargarCelebraciones(){
   try{
     var re=await fetchAPI('crm_eventos_equipo',{solicitante:USUARIO});
     if(re&&re.ok){ var seen=_celSeen();
-      (re.eventos||[]).forEach(function(ev){
-        if(String(ev.ejecutivo||'').toLowerCase()===prim) return;
-        if(seen[ev.id]) return;
-        if((ev.felicitaciones||[]).some(function(f){ return String(f.de||'').toLowerCase()===prim; })) return;
-        _CEL_COLA.push(ev);
-      });
+      var nuevos=(re.eventos||[]).filter(function(ev){ return String(ev.ejecutivo||'').toLowerCase()!==prim && !seen[ev.id] && !(ev.felicitaciones||[]).some(function(f){ return String(f.de||'').toLowerCase()===prim; }); });
+      nuevos.sort(function(a,b){ return String(b.fecha||'').localeCompare(String(a.fecha||'')); });
+      nuevos.slice(0,2).forEach(function(ev){ _CEL_COLA.push(ev); });      // muestra solo las 2 más recientes
+      nuevos.slice(2).forEach(function(ev){ _celMarcar(ev.id); });          // las viejas: vistas sin mostrar (no floodea)
       _celCola();
     }
   }catch(e){}

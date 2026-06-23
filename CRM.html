@@ -14099,7 +14099,7 @@ const SEG_POR_EJEC = {
   'Germán':['rehabilitacion'], 'German':['rehabilitacion'],
   'Maximiliano':['mutuales'],
   'Roberto':['distribucion'],
-  'Rayen':['adulto_mayor','surterapia'], 'Rayen Ogalde':['adulto_mayor','surterapia']
+  'Rayen':['adulto_mayor','surterapia','clickmedical'], 'Rayen Ogalde':['adulto_mayor','surterapia','clickmedical']
 };
 function _segKeysParaEjec(nombre){
   if(!nombre) return [];
@@ -14197,6 +14197,64 @@ function lpSetVerTodo(v){
   try{ if(document.getElementById('lpListaContainer')) cargarListaPrecios(); }catch(e){}
 }
 
+// ── Pestañas por ejecutivo: "Mi catálogo · {segmento}" + "Resto de productos de campaña" ──
+var _LP_SEG_LABEL = { educacion:'Escuelas', adulto_mayor:'Hogares de Adulto Mayor', rehabilitacion:'Rehabilitación', mutuales:'Mutuales', distribucion:'Distribuidor', surterapia:'Surterapia', clickmedical:'ClickMedical' };
+function _lpSegLabel(k){ return _LP_SEG_LABEL[k] || (((window.__PRECIOS_SEG||{})[k]||{}).segmento) || k; }
+try{ window.__LP_EJEC_TAB = localStorage.getItem('crm_lp_ejectab') || ''; }catch(e){ window.__LP_EJEC_TAB = ''; }
+// "Resto de productos de campaña": los productos del catálogo de campaña (del canal) que NO están en
+// la selección del segmento, mostrados a SU precio. Se calcula del "_todo" del canal menos lo curado.
+function _lpRestoSeg(segKey){
+  var P = window.__PRECIOS_SEG || {};
+  var ck = '__resto_' + segKey;
+  if(P[ck]) return P[ck];
+  var curated = P[segKey]; if(!curated || !Array.isArray(curated.familias)) return null;
+  var todo;
+  if(segKey==='distribucion') todo = P['distribucion_todo'];
+  else if(segKey==='surterapia') todo = P['surterapia_todo'];
+  else if(segKey==='clickmedical') todo = P['clickmedical'];
+  else todo = _lpInstSeg(); // universo institución (mismo precio para los 4 retail)
+  if(!todo || !Array.isArray(todo.familias)) return null;
+  var inCur = {};
+  curated.familias.forEach(function(f){ (f.productos||[]).forEach(function(p){ inCur[(p.sku||'')+'|'+_lpNorm(p.nombre)] = 1; }); });
+  var fams = todo.familias.map(function(f){
+    var prods = (f.productos||[]).filter(function(p){ return !inCur[(p.sku||'')+'|'+_lpNorm(p.nombre)]; });
+    return prods.length ? { nombre:f.nombre, productos:prods } : null;
+  }).filter(Boolean);
+  var seg = { key:ck, ejecutivo:curated.ejecutivo, segmento:'Resto de productos de campaña', tipo:curated.tipo, familias:fams };
+  P[ck] = seg;
+  return seg;
+}
+function _lpEjecPanels(keys){
+  var P = window.__PRECIOS_SEG || {};
+  var panels = [];
+  if(keys && keys.length === 1){
+    var k = keys[0];
+    if(P[k]) panels.push({ id:k, label:'Mi catálogo · ' + _lpSegLabel(k), key:k });
+    var resto = _lpRestoSeg(k);
+    if(resto && resto.familias.length) panels.push({ id:'resto_'+k, label:'Resto de productos de campaña', key:resto.key });
+  } else {
+    (keys||[]).forEach(function(k){ if(P[k]) panels.push({ id:k, label:_lpSegLabel(k), key:k }); });
+  }
+  return panels;
+}
+function _lpEjecRender(keys){
+  var panels = _lpEjecPanels(keys);
+  if(!panels.length) return '';
+  var act = window.__LP_EJEC_TAB;
+  if(!panels.some(function(p){ return p.id===act; })) act = panels[0].id;
+  var bar = '<div class="lp-toggle" role="tablist">' + panels.map(function(p){
+    return '<button type="button" class="lp-toggle-btn' + (p.id===act?' active':'') + '" onclick="lpSetEjecTab(\'' + p.id + '\')">' + esc(p.label) + '</button>';
+  }).join('') + '</div>';
+  var panel = panels.filter(function(p){ return p.id===act; })[0] || panels[0];
+  return bar + renderListaPreciosCard(panel.key);
+}
+function lpSetEjecTab(id){
+  window.__LP_EJEC_TAB = id;
+  try{ localStorage.setItem('crm_lp_ejectab', id); }catch(e){}
+  try{ pintarListasPrecios(); }catch(e){}
+  try{ if(document.getElementById('lpListaContainer')) cargarListaPrecios(); }catch(e){}
+}
+
 // ── Vista ADMIN de Lista de Precios: pestañas por canal (solo Rayen/admin) ──
 // Instituciones (catálogo institución) · ClickMedical · Distribuidor (Roberto) · Surterapia
 function _lpInstSeg(){
@@ -14241,7 +14299,7 @@ function renderListaPreciosCard(segKey){
              : tipo==='distribuidor' ? 'Valor distribuidor · IVA incluido'
              : 'Precio por volumen · IVA incluido';
   // Columna "Precio público referencial" (transferencia) para canales de distribución — herramienta del vendedor
-  const pub = /^(distribucion|surterapia|clickmedical)/.test(segKey);
+  const pub = /(distribucion|surterapia|clickmedical)/.test(segKey);
   const pubH = pub ? '<span>Público ref.</span>' : '';
   const head = tipo==='distribuidor'
     ? '<div class="lp-colhead ' + (pub?'lp-colhead-2p':'lp-colhead-1') + '">' + pubH + '<span>Valor distrib.</span></div>'
@@ -14348,7 +14406,7 @@ function pintarListasPrecios(){
       return;
     }
   }
-  box.innerHTML = _lpToggleBar() + _lpRenderCards(keys);
+  box.innerHTML = _lpEjecRender(keys);
   _esperarFichas(_lpDecorarFichas);
 }
 
@@ -14373,7 +14431,7 @@ function cargarListaPrecios(){
     }
     keys = _segKeysParaEjec(typeof USUARIO !== 'undefined' ? USUARIO : '');
   }
-  box.innerHTML = _lpToggleBar() + _lpRenderCards(keys);
+  box.innerHTML = _lpEjecRender(keys);
   box.querySelectorAll('.lp-card.collapsed').forEach(c => c.classList.remove('collapsed')); // expandidas en esta vista
   _esperarFichas(_lpDecorarFichas);
   const q = (document.getElementById('lpInput') || {}).value || '';

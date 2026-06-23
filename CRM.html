@@ -8705,25 +8705,28 @@ function _detalleCotHTML(c){
   var ACT = 'display:inline-flex;align-items:center;gap:5px;border-radius:8px;padding:6px 11px;font-size:12px;font-weight:700;text-decoration:none;cursor:pointer;font-family:inherit;border:1px solid #E6E8EF;background:#fff;';
   let det = '';
   // 1. Contacto
-  var _tel = String(c.telefono||'').replace(/\D/g,'');
+  // Teléfonos: de la cotización (c.telefono) y, de respaldo, del CONTACTO vinculado (celular + empresa).
+  var _telPers = String(c.telefono||'').replace(/\D/g,'');
+  var _telInst = '';
   var _emailCot = c.email || '';
-  // Si la cotización no trae teléfono/email, tomarlos del CONTACTO vinculado (celular o tel. de empresa).
-  if((!_tel || !_emailCot) && c.contacto_id){
+  if(c.contacto_id){
     var _ct = (CACHE.vTodos||[]).find(function(x){ return String(x.id)===String(c.contacto_id); });
     if(_ct){
-      if(!_tel) _tel = String(_ct.telefono||_ct.telefono_institucional||'').replace(/\D/g,'');
+      if(!_telPers) _telPers = String(_ct.telefono||'').replace(/\D/g,'');
+      _telInst = String(_ct.telefono_institucional||'').replace(/\D/g,'');
       if(!_emailCot) _emailCot = _ct.email || '';
     }
   }
-  var _waNum = _tel ? (_tel.indexOf('56')===0 ? _tel : '56'+_tel) : '';
-  if(_emailCot || _tel){
+  var _fmt56 = function(t){ return t ? (t.indexOf('56')===0 ? t : '56'+t) : ''; };
+  var _waNum = _fmt56(_telPers); var _callInst = _fmt56(_telInst);
+  if(_emailCot || _telPers || _telInst){
     det += '<div style="'+SEC+'"><div style="'+LBL+'">Contacto</div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
       (_emailCot ? '<span style="font-size:13px;color:#1a2440;font-weight:600;word-break:break-all;margin-right:2px;">'+esc(_emailCot)+'</span>' +
                  '<button onclick="_copiarTxt(\''+esc(_emailCot)+'\',this)" style="'+ACT+'color:#001A60;">Copiar</button>' +
                  '<a href="mailto:'+esc(_emailCot)+'" style="'+ACT+'border-color:#cdd9f7;color:#2840a0;">Email</a>' : '') +
-      (_tel ? '<span style="font-size:13px;color:#1a2440;font-weight:700;margin-right:2px;">+'+esc(_waNum)+'</span>' : '') +
       (_waNum ? '<a href="https://wa.me/'+_waNum+'" target="_blank" rel="noopener" style="'+ACT+'border-color:#bbf0cf;color:#0f7a3d;">WhatsApp</a>' : '') +
-      (_tel ? '<a href="tel:+'+_waNum+'" style="'+ACT+'border-color:#bfe6f6;color:#0a5e85;">Llamar</a>' : '') +
+      (_telPers ? '<a href="tel:+'+_waNum+'" style="'+ACT+'border-color:#bfe6f6;color:#0a5e85;">Llamar celular</a>' : '') +
+      (_telInst && _telInst!==_telPers ? '<a href="tel:+'+_callInst+'" style="'+ACT+'border-color:#bfe6f6;color:#0a5e85;">Llamar institución</a>' : '') +
     '</div></div>';
   }
   // 2. Registrar seguimiento (acción principal — acento celeste)
@@ -12704,7 +12707,12 @@ async function cargarDuplicados(){
     return;
   }
   // UI lado-a-lado: cada duplicado muestra A y B con sus datos. Botones: Fusionar (mantener A) / Fusionar (mantener B) / No son duplicados.
-  cont.innerHTML = lista.map((d, idx) => {
+  cont.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;background:#F0FDF4;border:1px solid #bbf0cf;border-radius:10px;padding:11px 15px;">' +
+      '<div style="font-size:12.5px;color:#065F46;"><b>'+lista.length+'</b> posibles duplicados. Los del mismo correo y mismo nombre los puedo fusionar de una.</div>' +
+      '<button class="btn primary" onclick="fusionarSegurosEnLote()" style="background:#16A34A;">Fusionar en lote los seguros</button>' +
+    '</div>' +
+    lista.map((d, idx) => {
     const a = d.a || d.contacto_a || {};
     const b = d.b || d.contacto_b || {};
     const motivo = d.motivo || d.razon || 'Mismo email/teléfono';
@@ -12751,6 +12759,41 @@ async function cargarDuplicados(){
   }).join('');
 }
 
+// ¿A y B son la MISMA persona con seguridad? = mismo correo exacto + nombres compatibles.
+// Conservador a propósito: si comparten correo pero los nombres son distintos (buzón institucional
+// compartido = personas distintas), NO se considera seguro → queda para revisión manual.
+function _mismaPersonaSegura(a, b){
+  var nm = function(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim(); };
+  var ea = nm(a.email), eb = nm(b.email);
+  if(!ea || ea !== eb) return false;
+  var na = nm(a.nombre), nb = nm(b.nombre);
+  if(!na || !nb) return false;
+  if(na === nb) return true;
+  if(na.indexOf(nb) >= 0 || nb.indexOf(na) >= 0) return true;
+  var fa = na.split(' ')[0], fb = nb.split(' ')[0];
+  return (fa === fb && fa.length >= 4);
+}
+// Fusiona en lote SOLO los pares seguros. Combina sin perder datos (crm_fusionar coalesce + mueve interacciones).
+async function fusionarSegurosEnLote(){
+  var pares = (window.__DUP_DATA||[]).map(function(d){ return { a: d.a||d.contacto_a||{}, b: d.b||d.contacto_b||{} }; });
+  var seguros = pares.filter(function(p){ return p.a.id && p.b.id && _mismaPersonaSegura(p.a, p.b); });
+  var dudosos = pares.length - seguros.length;
+  if(!seguros.length){ alert('No hay pares SEGUROS para fusionar solos (mismo correo + mismo nombre).\n\nLos '+pares.length+' que quedan tienen diferencias (correo compartido, nombres distintos) y hay que revisarlos a mano con "Fusionar (elegir datos)".'); return; }
+  if(!confirm('Voy a fusionar automáticamente '+seguros.length+' par'+(seguros.length===1?'':'es')+' SEGUROS (mismo correo y mismo nombre). No se pierde nada: se combinan los datos y la actividad.\n\nLos '+dudosos+' dudosos quedan para revisar a mano.\n\n¿Continúo?')) return;
+  var cont = document.getElementById('dupContainer');
+  var ok=0, err=0;
+  for(var i=0;i<seguros.length;i++){
+    if(cont) cont.innerHTML = '<div class="loading-state"><div class="spinner"></div>Fusionando '+(i+1)+' de '+seguros.length+'… No cierres esta pestaña.</div>';
+    try{
+      var r = await fetchAPI('crm_fusionar', null, { id_a: seguros[i].a.id, id_b: seguros[i].b.id, solicitante: USUARIO });
+      if(r && r.ok) ok++; else err++;
+    }catch(e){ err++; }
+  }
+  try { localStorage.removeItem('crm_cache_contactos_v2_' + USUARIO); } catch(e){}
+  CACHE.vMis = null; CACHE.vTodos = null;
+  await cargarDuplicados();
+  alert('Listo: '+ok+' fusionado'+(ok===1?'':'s')+(err?(' · '+err+' con error'):'')+'.\n\nLos dudosos (si quedan) están abajo para revisar a mano.');
+}
 async function fusionarParDuplicado(idA, idB, mantener){
   if (!confirm('Confirmá la fusión. Los datos no marcados se perderán.')) return;
   const r = await fetchAPI('crm_fusionar', null, { id_a: idA, id_b: idB, mantener: mantener, solicitante: USUARIO });

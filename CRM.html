@@ -5865,7 +5865,7 @@ function _gestTile(g){
   var max = orden.reduce(function(m,md){ return Math.max(m,(pm[md]&&pm[md].mes)||0); },0) || 1;
   var rows = orden.map(function(md){
     var v=(pm[md]&&pm[md].mes)||0;
-    return '<div style="display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;margin-top:7px;">'+
+    return '<div onclick="abrirDetalleGestion(\''+md+'\')" title="Ver a quiénes contactaste por '+md+'" style="display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;margin-top:7px;cursor:pointer;border-radius:7px;padding:2px 4px;transition:background .12s;" onmouseover="this.style.background=\'#f4f7fc\'" onmouseout="this.style.background=\'transparent\'">'+
       '<div><div style="font-size:11.5px;font-weight:600;color:#4a5577;display:flex;align-items:center;gap:6px;"><i style="width:8px;height:8px;border-radius:50%;background:'+cols[md]+';display:inline-block;"></i>'+esc(md)+'</div>'+
       '<div style="height:5px;border-radius:99px;background:#eef1f8;margin-top:4px;overflow:hidden;"><i style="display:block;height:100%;width:'+Math.round(v/max*100)+'%;background:'+cols[md]+';border-radius:99px;"></i></div></div>'+
       '<span style="font-size:14px;font-weight:700;color:#001a60;min-width:18px;text-align:right;">'+v+'</span></div>';
@@ -5878,6 +5878,60 @@ function _gestTile(g){
       '<span style="font-size:32px;font-weight:800;color:#001a60;line-height:1;letter-spacing:-.02em;">'+total+'</span>'+
     '</div>'+
     rows+'</div>';
+}
+// Detalle al hacer clic en una barra de "Gestiones del mes": a quiénes contactó por ese medio
+// este mes. Usa crm_actividad_equipo (eventos vivos), sin redeploy.
+async function abrirDetalleGestion(label){
+  var catMap = {'WhatsApp':'whatsapp','Correo':'emails','Llamada':'llamadas','Reunión':'reuniones'};
+  var cat = catMap[label] || '';
+  var overlay = document.getElementById('kpiDetalleOverlay');
+  if(!overlay){ overlay=document.createElement('div'); overlay.id='kpiDetalleOverlay'; overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;'; overlay.onclick=function(e){ if(e.target===overlay) cerrarDetalleKpi(); }; document.body.appendChild(overlay); }
+  overlay.innerHTML =
+    '<div style="background:white;border-radius:14px;max-width:760px;width:100%;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 12px 48px rgba(0,0,0,0.28);">' +
+      '<div style="padding:16px 20px;border-bottom:1px solid var(--border-subtle);display:flex;justify-content:space-between;align-items:center;"><div><div style="font-size:20px;font-weight:800;color:#001a60;">'+esc(label)+' — a quiénes contactaste este mes</div><div id="kdgTot" style="font-size:12px;color:var(--subtle);margin-top:2px;">Cargando…</div></div><button onclick="cerrarDetalleKpi()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--subtle);width:32px;height:32px;border-radius:6px;">×</button></div>' +
+      '<div id="kdgBody" style="overflow-y:auto;padding:12px 20px;flex:1;"><div class="loading-state"><div class="spinner"></div></div></div>' +
+    '</div>';
+  var r = await fetchAPI('crm_actividad_equipo', { solicitante: USUARIO, periodo: 'mes' });
+  var body=document.getElementById('kdgBody'), tot=document.getElementById('kdgTot');
+  if(!r || !r.ok){ if(body) body.innerHTML='<div class="error-state">No se pudo cargar el detalle.</div>'; return; }
+  var evs = r.eventos || [];
+  var esAdminEquipo = (typeof esActuandoComoAdmin==='function' && esActuandoComoAdmin() && !(typeof hayDrillDown==='function' && hayDrillDown()));
+  var pn = function(s){ return String(s||'').toLowerCase().split(' ')[0]; };
+  var yo = esAdminEquipo ? '' : ((typeof getEjecutivoEfectivo==='function' ? getEjecutivoEfectivo() : USUARIO) || USUARIO);
+  if(yo) evs = evs.filter(function(ev){ return pn(ev.ejecutivo)===pn(yo) || String(ev.ejecutivo||'').toLowerCase().indexOf(pn(yo))>=0; });
+  evs = evs.filter(function(ev){ return (cat==='reuniones') ? (ev.tipo==='reuniones' || _catMedioAct(ev.medio)==='reuniones') : (_catMedioAct(ev.medio)===cat || ev.tipo===cat); });
+  if(tot) tot.textContent = evs.length + ' ' + (evs.length===1?'gestión':'gestiones') + (esAdminEquipo?' · todo el equipo':'');
+  if(body) body.innerHTML = evs.length
+    ? ('<div style="background:#fff;border:1px solid var(--oct-border,#eee);border-radius:12px;overflow:hidden;">'+evs.map(function(ev){return actFeedRow(ev, esAdminEquipo);}).join('')+'</div>')
+    : '<div style="padding:26px;text-align:center;color:var(--subtle);font-size:13px;">No hay '+esc(label.toLowerCase())+' registrados este mes.</div>';
+}
+// Vista de MOTIVOS DE PÉRDIDA: agrupa las cotizaciones perdidas por su motivo, para decidir con datos.
+function abrirMotivosPerdida(){
+  var perdidas = (CACHE.vMisCot||[]).filter(function(c){ return String(c.estado||'').toLowerCase().indexOf('perd')>=0; });
+  var grupos = {};
+  perdidas.forEach(function(c){ var m=((String(c.motivo_perdida||'').split(' — ')[0])||'').trim() || 'Sin motivo registrado'; (grupos[m]=grupos[m]||[]).push(c); });
+  var claves = Object.keys(grupos).sort(function(a,b){ return grupos[b].length-grupos[a].length; });
+  var maxN = claves.reduce(function(m,k){ return Math.max(m,grupos[k].length); },0)||1;
+  var COLS=['#B91C1C','#D97706','#7C3AED','#0891B2','#16A34A','#DB2777','#001A60','#64748B'];
+  var esAdm = (typeof esActuandoComoAdmin==='function' && esActuandoComoAdmin());
+  var cuerpo = claves.length ? claves.map(function(k,i){
+    var col=COLS[i%COLS.length]; var arr=grupos[k];
+    var items = arr.map(function(c){
+      var det = (String(c.motivo_perdida||'').indexOf(' — ')>=0) ? String(c.motivo_perdida).split(' — ').slice(1).join(' — ') : '';
+      return '<div style="padding:8px 13px;border-top:1px solid #f1f1f4;display:flex;justify-content:space-between;gap:10px;font-size:12.5px;align-items:baseline;">' +
+        '<span style="color:#1a1a2e;min-width:0;">'+esc(c.cliente||c.institucion||'(sin nombre)')+' <span style="color:#9aa3bd;">· '+esc(c.cotizacion||'')+(esAdm&&c.ejecutivo?(' · '+esc(String(c.ejecutivo).split(' ')[0])):'')+'</span></span>' +
+        (det?'<span style="color:#7F1D1D;text-align:right;">'+esc(det)+'</span>':'') +
+      '</div>';
+    }).join('');
+    return '<div style="border:1px solid #E6E8EF;border-radius:12px;margin-bottom:12px;overflow:hidden;">' +
+      '<div style="background:#FEF2F2;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;"><span style="font-weight:800;color:#7F1D1D;font-size:13.5px;">'+esc(k)+'</span><span style="font-weight:800;color:'+col+';font-size:15px;">'+arr.length+'</span></div>' +
+      '<div style="height:5px;background:#f1f1f4;"><i style="display:block;height:100%;width:'+Math.round(arr.length/maxN*100)+'%;background:'+col+';"></i></div>' + items + '</div>';
+  }).join('') : '<div style="padding:26px;text-align:center;color:var(--subtle);font-size:13px;">Aún no hay cotizaciones perdidas con motivo registrado.</div>';
+  var overlay = document.getElementById('kpiDetalleOverlay');
+  if(!overlay){ overlay=document.createElement('div'); overlay.id='kpiDetalleOverlay'; overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;'; overlay.onclick=function(e){ if(e.target===overlay) cerrarDetalleKpi(); }; document.body.appendChild(overlay); }
+  overlay.innerHTML = '<div style="background:white;border-radius:14px;max-width:760px;width:100%;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 12px 48px rgba(0,0,0,0.28);">' +
+    '<div style="padding:16px 20px;border-bottom:1px solid var(--border-subtle);display:flex;justify-content:space-between;align-items:center;"><div><div style="font-size:20px;font-weight:800;color:#001a60;">Motivos de pérdida</div><div style="font-size:12px;color:var(--subtle);margin-top:2px;">'+perdidas.length+' cotizaciones perdidas'+(esAdm?' · todo el equipo':'')+'</div></div><button onclick="cerrarDetalleKpi()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--subtle);width:32px;height:32px;border-radius:6px;">×</button></div>' +
+    '<div style="overflow-y:auto;padding:14px 20px;flex:1;">'+cuerpo+'</div></div>';
 }
 function _teamTile(vg){
   var arr=((vg&&vg.ranking_equipo)||[]).filter(function(x){return !_excluirRanking(x.ejec);});
@@ -8553,9 +8607,11 @@ function renderMisCotizaciones(){
   const _mesesData = Array.from(new Set((base||[]).map(c=>String(c.mes||'')).filter(x=>x.indexOf('-')>0))).sort().reverse();
   const _perLbl = (MISCOT_PERIODO==='anio') ? anio : ((_MES_NOMBRE[parseInt(MISCOT_PERIODO.split('-')[1],10)-1]||'') + ' ' + (MISCOT_PERIODO.split('-')[0]||anio));
   const _chip = (val,txt)=> '<button onclick="setMisCotPeriodo(\''+val+'\')" style="padding:5px 12px;border:1px solid var(--smoke,#e5e7eb);background:'+(MISCOT_PERIODO===val?'#001A60':'#fff')+';color:'+(MISCOT_PERIODO===val?'#fff':'var(--subtle)')+';font-size:11.5px;font-weight:700;border-radius:7px;cursor:pointer;">'+txt+'</button>';
-  let _selHtml = '<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center;margin-bottom:10px;"><span style="font-size:11px;color:var(--mist,#9aa3af);font-weight:700;">Ver:</span>' + _chip('anio','Año '+anio);
+  let _selHtml = '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
+    '<button onclick="abrirMotivosPerdida()" style="background:#fff;border:1px solid #FCA5A5;color:#B91C1C;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;">Motivos de pérdida</button>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;"><span style="font-size:11px;color:var(--mist,#9aa3af);font-weight:700;">Ver:</span>' + _chip('anio','Año '+anio);
   _mesesData.forEach(function(ym){ var mi=parseInt(ym.split('-')[1],10)-1; _selHtml += _chip(ym, (_MES_NOMBRE[mi]||'').substring(0,3)+' '+ym.split('-')[0].substring(2)); });
-  _selHtml += '</div>';
+  _selHtml += '</div></div>';
   const kpiHtml = _selHtml + '<div style="display:flex;gap:11px;flex-wrap:wrap;margin-bottom:18px;">' +
     kpiCard('Cotizaciones '+_perLbl, k.total_anio, '#001A60') +
     kpiCard('Ganadas '+_perLbl, k.ganadas_anio, '#16A34A', 'ganada') +

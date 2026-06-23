@@ -10789,20 +10789,23 @@ async function guardarNuevoContacto(forzar){
     const dw = document.getElementById('nc-dup-warning');
     dw.style.display = 'block';
     dw.innerHTML =
-      '<b style="font-size:14px;display:block;margin-bottom:8px;">Se encontraron contactos similares en el CRM:</b>' +
+      '<b style="font-size:14px;display:block;margin-bottom:8px;">Ya existe un contacto parecido — revisa si es el mismo antes de crear otro:</b>' +
       '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">' +
-        r.duplicados.slice(0, 5).map(d =>
-          '<div style="background:white;border:1px solid var(--smoke);padding:8px 12px;border-radius:7px;font-size:12.5px;">' +
-            '<b>' + esc(d.nombre || '(sin nombre)') + '</b> · ' + esc(d.institucion || '') +
-            (d.email ? ' · ' + esc(d.email) : '') +
-            (d.telefono ? ' · ' + esc(d.telefono) : '') +
-            (d.ejecutivo_asignado ? ' · <span style="color:var(--purple-dk);font-weight:700;">' + esc(d.ejecutivo_asignado) + '</span>' : '') +
-          '</div>'
-        ).join('') +
+        r.duplicados.slice(0, 5).map(function(d){
+          var dc = d.contacto || d;
+          var tel = dc.telefono || dc.telefono_institucional || '';
+          return '<div style="background:white;border:1px solid var(--smoke);padding:9px 12px;border-radius:7px;font-size:12.5px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;">' +
+            '<div style="min-width:0;">' +
+              '<b>' + esc(dc.nombre || '(sin nombre)') + '</b>' + (dc.institucion ? ' · ' + esc(dc.institucion) : '') + (dc.cargo ? ' · ' + esc(dc.cargo) : '') +
+              '<div style="color:var(--subtle);margin-top:2px;">' + (dc.email ? esc(dc.email) : '(sin email)') + (tel ? ' · ' + esc(tel) : '') + (dc.ejecutivo_asignado ? ' · <span style="color:var(--purple-dk);font-weight:700;">' + esc(dc.ejecutivo_asignado) + '</span>' : '') + '</div>' +
+            '</div>' +
+            (dc.id ? '<button class="btn" style="flex-shrink:0;" onclick="abrirFichaModal(\'' + esc(dc.id) + '\')">Ver contacto</button>' : '') +
+          '</div>';
+        }).join('') +
       '</div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
-        '<button class="btn" onclick="cerrarModalNuevoContacto()">Cancelar</button>' +
-        '<button class="btn primary" onclick="guardarNuevoContacto(true)">Crear igualmente</button>' +
+        '<button class="btn" onclick="cerrarModalNuevoContacto()">Cancelar (es el mismo)</button>' +
+        '<button class="btn primary" onclick="guardarNuevoContacto(true)">Crear igualmente (es otro)</button>' +
       '</div>';
     btn.disabled = false; btn.textContent = 'Guardar contacto';
     return;

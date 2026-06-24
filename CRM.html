@@ -14508,6 +14508,28 @@ function lpSetVerTodo(v){
 // ── Pestañas por ejecutivo: "Mi catálogo · {segmento}" + "Resto de productos de campaña" ──
 var _LP_SEG_LABEL = { educacion:'Escuelas', adulto_mayor:'Hogares de Adulto Mayor', rehabilitacion:'Rehabilitación', mutuales:'Mutuales', distribucion:'Distribuidor', surterapia:'Surterapia', clickmedical:'ClickMedical' };
 function _lpSegLabel(k){ return _LP_SEG_LABEL[k] || (((window.__PRECIOS_SEG||{})[k]||{}).segmento) || k; }
+// ── Listas de DESCUENTOS por segmento (uso interno) descargables en PDF ──
+var _LP_DESC_PDF = {
+  educacion:'listas-descuento/Descuento_Escuelas_William.pdf',
+  adulto_mayor:'listas-descuento/Descuento_Hogares_Rayen.pdf',
+  rehabilitacion:'listas-descuento/Descuento_Rehabilitacion_German.pdf',
+  mutuales:'listas-descuento/Descuento_Mutuales_Maximiliano.pdf',
+  distribucion:'listas-descuento/Descuento_Distribuidor_Roberto.pdf',
+  surterapia:'listas-descuento/Descuento_Surterapia.pdf',
+  clickmedical:'listas-descuento/Descuento_ClickMedical.pdf'
+};
+var _SVG_DL = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+function _lpDescuentoBox(segs){
+  var links = (segs||[]).filter(function(k){ return _LP_DESC_PDF[k]; }).map(function(k){
+    return '<a href="' + _LP_DESC_PDF[k] + '" download target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;background:#001A60;color:#fff;text-decoration:none;font-size:12px;font-weight:700;padding:7px 12px;border-radius:8px;">' + _SVG_DL + 'Descargar PDF · ' + esc(_lpSegLabel(k)) + '</a>';
+  }).join('');
+  if(!links) return '';
+  return '<div style="background:#f4f7fc;border:1px solid #d6e0f0;border-left:4px solid #06B3FD;border-radius:10px;padding:12px 14px;margin:0 0 14px;">' +
+      '<div style="font-size:11.5px;font-weight:800;color:#001A60;letter-spacing:.05em;">LISTAS DE DESCUENTOS POR SEGMENTO · USO INTERNO</div>' +
+      '<div style="font-size:12.5px;color:#42506b;margin:5px 0 9px;line-height:1.45;">Muestran el <b>% de descuento por tramo</b> sobre el precio web — para que armes tus estrategias de venta. Disponibles para descargar en PDF:</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:8px;">' + links + '</div>' +
+    '</div>';
+}
 try{ window.__LP_EJEC_TAB = localStorage.getItem('crm_lp_ejectab') || ''; }catch(e){ window.__LP_EJEC_TAB = ''; }
 // "Resto de productos de campaña": los productos del catálogo de campaña (del canal) que NO están en
 // la selección del segmento, mostrados a SU precio. Se calcula del "_todo" del canal menos lo curado.
@@ -14554,7 +14576,7 @@ function _lpEjecRender(keys){
     return '<button type="button" class="lp-toggle-btn' + (p.id===act?' active':'') + '" onclick="lpSetEjecTab(\'' + p.id + '\')">' + esc(p.label) + '</button>';
   }).join('') + '</div>';
   var panel = panels.filter(function(p){ return p.id===act; })[0] || panels[0];
-  return bar + renderListaPreciosCard(panel.key);
+  return _lpDescuentoBox(keys) + bar + renderListaPreciosCard(panel.key);
 }
 function lpSetEjecTab(id){
   window.__LP_EJEC_TAB = id;
@@ -14594,7 +14616,7 @@ function _lpAdminRender(){
   else if(act==='distribucion') segKey = P['distribucion_todo'] ? 'distribucion_todo' : 'distribucion';
   else if(act==='surterapia')   segKey = P['surterapia_todo'] ? 'surterapia_todo' : 'surterapia';
   else segKey = act; // clickmedical ya trae todo el catálogo
-  return _lpAdminTabsBar() + renderListaPreciosCard(segKey);
+  return _lpDescuentoBox(['educacion','adulto_mayor','rehabilitacion','mutuales','distribucion','surterapia','clickmedical']) + _lpAdminTabsBar() + renderListaPreciosCard(segKey);
 }
 
 function renderListaPreciosCard(segKey){

@@ -6862,6 +6862,20 @@ function ejecutivoDeContacto(c){
 
 // Arma los links nativos {tel, wa, mail} usando la plantilla del estado + datos del ejecutivo.
 // Sin plantilla → links genéricos (sin texto). Sin tel/email → ese botón se deshabilita.
+// Segmento del CONTACTO según su rubro (sub_categoría) → para que la plantilla salga por el rubro
+// del contacto y NO por el segmento del ejecutivo (un ejecutivo puede atender varios rubros, ej.
+// Germán: rehabilitación + adulto mayor). Devuelve la clave EXACTA del segmento de plantillas.
+function _segmentoDeContacto(c){
+  var s = String((c&&(c.sub_categoria||c.subcategoria||c.segmento))||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  var t = String((c&&c.tipo_categoria)||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  var hay=function(re){ return re.test(s)||re.test(t); };
+  if(hay(/ancian|reposo|residencia|eleam|adulto mayor|memoria|alzheimer|senior|comunidad/)) return 'hogares de ancianos';
+  if(hay(/rehabilitac|kinesiolog|neurolog|terapia ocupac|fonoaud|fisioterap/)) return 'centros de rehabilitación';
+  if(hay(/colegio|escuela|jardin|\bpie\b|educac|universidad|instituto|aprendizaje|estimulac/)) return 'colegios';
+  if(hay(/ortoped|distribuid|comercio|farmacia|tienda/)) return 'distribuidores y ortopedias';
+  if(hay(/teleton|mutual|achs|\bist\b|cchc|clinica|hospital|crit/)) return 'teletón, mutuales y clínicas';
+  return '';
+}
 function construirLinksContacto(c, g){
   // Dos teléfonos: el personal (c.telefono) sirve para WhatsApp; el institucional
   // (c.telefono_institucional) para llamar a la empresa. Si no hay institucional,
@@ -6875,7 +6889,7 @@ function construirLinksContacto(c, g){
   // Selección de dos niveles: si el ejecutivo tiene segmento y existe plantilla
   // segmentada con contenido para (segmento, estado) → usarla; si no → genérica.
   var pl = null;
-  var seg = (ej && ej.segmento) ? String(ej.segmento).toLowerCase().trim() : '';
+  var seg = _segmentoDeContacto(c) || ((ej && ej.segmento) ? String(ej.segmento).toLowerCase().trim() : '');
   if(seg){
     var sp = (window.__PLANTILLAS_SEG||{})[seg + '|' + g.key];
     if(sp && (String(sp.mensaje_whatsapp||'').trim() || String(sp.email_cuerpo||'').trim())) pl = sp;
@@ -6923,7 +6937,7 @@ function _buscarContactoCache(id){
 }
 function resolverMensaje(c, stageKey){
   var ej = ejecutivoDeContacto(c);
-  var seg = (ej && ej.segmento) ? String(ej.segmento).toLowerCase().trim() : '';
+  var seg = _segmentoDeContacto(c) || ((ej && ej.segmento) ? String(ej.segmento).toLowerCase().trim() : '');
   var pl = null;
   if(seg){ var sp = (window.__PLANTILLAS_SEG||{})[seg + '|' + stageKey]; if(sp && (String(sp.mensaje_whatsapp||'').trim() || String(sp.email_cuerpo||'').trim())) pl = sp; }
   if(!pl) pl = (window.__PLANTILLAS_PIPE||{})[stageKey];

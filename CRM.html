@@ -6426,8 +6426,16 @@ function renderReunionesDashboard(reuniones, modo, container, cntEl){
     const fechaTxt = f && !isNaN(f.getTime())
       ? f.toLocaleDateString('es-CL', {weekday:'short', day:'numeric', month:'short'}) + (r.fallback ? '' : ' · ' + f.toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit'}))
       : (r.fallback ? 'Próxima (sin fecha)' : 'Sin fecha');
-    return '<div class="reunion-item" onclick="abrirFichaModal(\'' + esc(r.contacto_id) + '\')">' +
-      '<div class="ri-fecha">' + esc(fechaTxt) + '</div>' +
+    // Eventos que vienen de Google Calendar (no del CRM): llevan badge y solo son clickeables si
+    // se pudo asociar un contacto por el correo de algún invitado.
+    const esCal = r.fuente === 'calendar';
+    const badge = esCal
+      ? ' <span style="font-size:9.5px;font-weight:700;color:#1a73e8;background:#e8f0fe;border-radius:5px;padding:1px 5px;vertical-align:middle;">Calendar</span>'
+      : '';
+    const clickeable = !!r.contacto_id;
+    const onclick = clickeable ? ' onclick="abrirFichaModal(\'' + esc(r.contacto_id) + '\')"' : '';
+    return '<div class="reunion-item"' + onclick + (clickeable ? '' : ' style="cursor:default;"') + '>' +
+      '<div class="ri-fecha">' + esc(fechaTxt) + badge + '</div>' +
       '<div class="ri-nombre">' + esc(r.nombre) + '</div>' +
       '<div class="ri-inst">' + esc(r.institucion) + '</div>' +
     '</div>';

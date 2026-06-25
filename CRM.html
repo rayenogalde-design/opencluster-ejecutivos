@@ -13953,14 +13953,29 @@ function actFeedRow(f, showEjec){
   const ejecLine = showEjec && f.ejecutivo
     ? '<span style="font-size:11px;font-weight:700;color:'+(actEjecMeta(f.ejecutivo).color||'#64748B')+';">'+esc(actEjecMeta(f.ejecutivo).full||f.ejecutivo)+'</span> · '
     : '';
-  return '<div style="display:flex;align-items:flex-start;gap:11px;padding:11px 15px;border-bottom:1px solid var(--smoke,#F1F5F9);">'+
+  // Cada gestión es clickeable: abre la ficha del contacto involucrado (ejecutivo o admin, en cualquier
+  // listado donde aparezca este feed). Solo si el backend pudo resolver el contacto_id de esa gestión.
+  const cid = String(f.contacto_id || '');
+  const clic = cid
+    ? ' onclick="abrirFichaDesdeFeed(\''+cid+'\')" title="Ver la ficha de '+esc(f.contacto||'este contacto').replace(/"/g,'&quot;')+'" style="cursor:pointer;" onmouseover="this.style.background=\'#f4f7fc\'" onmouseout="this.style.background=\'transparent\'"'
+    : '';
+  return '<div'+clic+' style="display:flex;align-items:flex-start;gap:11px;padding:11px 15px;border-bottom:1px solid var(--smoke,#F1F5F9);transition:background .12s;'+(cid?'cursor:pointer;':'')+'">'+
     '<span style="width:30px;height:30px;border-radius:8px;background:#F9FAFB;border:1px solid var(--oct-border,#eee);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">'+actIcon(meta.ico,meta.color,15)+'</span>'+
     '<div style="flex:1;min-width:0;">'+
       '<div style="font-size:13px;color:var(--oct-navy,#001A60);">'+ejecLine+'<b>'+esc(meta.label)+'</b>'+(f.contacto?(' · '+esc(f.contacto)):'')+'</div>'+
       (f.texto?'<div style="font-size:12px;color:var(--subtle);margin-top:2px;">'+esc(String(f.texto).substring(0,120))+'</div>':'')+
     '</div>'+
+    (cid?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9aa3bd" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:3px;"><polyline points="9 18 15 12 9 6"/></svg>':'')+
     '<span style="font-size:11px;color:var(--subtle);white-space:nowrap;flex-shrink:0;">'+esc(f.fecha||'')+'</span>'+
   '</div>';
+}
+// Abre la ficha del contacto desde cualquier fila del feed de actividad. Cierra antes el modal
+// de detalle del KPI (z-index alto) para que la ficha no quede tapada por detrás.
+function abrirFichaDesdeFeed(id){
+  if(!id) return;
+  try{ if(typeof cerrarDetalleKpi==='function') cerrarDetalleKpi(); }catch(e){}
+  if(typeof abrirFichaModal==='function') abrirFichaModal(id);
+  else if(typeof abrirFicha==='function') abrirFicha(id);
 }
 
 // Clasifica el medio de un seguimiento a su bucket (igual que el backend) para que el detalle

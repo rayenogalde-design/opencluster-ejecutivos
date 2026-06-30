@@ -1393,6 +1393,7 @@ function renderGoals() {
     const isFixed = goal.alloc && goal.alloc.mode === 'fixed';
     if (isFixed) {
       // Sobre de ahorro fijo (sin meta de monto, recurrente)
+      // GRANDE = lo apartado este mes; chico y etiquetado = el acumulado.
       return `
         <div class="goal-card" onclick="openGoalDetail('${goal.id}')">
           <div class="goal-header">
@@ -1401,20 +1402,20 @@ function renderGoals() {
           </div>
           <div class="goal-amounts">
             <div>
-              <div class="goal-current">${fmtUSD(current)}</div>
-              <div class="goal-target" style="margin-top:2px">${refDOP(current)}</div>
+              <div class="goal-current">${fmtUSD(thisMonth)}</div>
+              <div class="goal-target" style="margin-top:2px">${refDOP(thisMonth)}</div>
             </div>
-            <div class="goal-target">acumulado</div>
+            <div class="goal-target">apartado en ${MONTHS[currentMonth]}</div>
           </div>
           <div class="goal-meta">
-            <span class="goal-progress">${fmtUSDShort(goal.alloc.usd)}/mes · fijo</span>
-            <span>este mes +${fmtUSDShort(thisMonth)}</span>
+            <span class="goal-progress">Ahorro acumulado ${fmtUSD(current)}</span>
+            <span>${fmtUSDShort(goal.alloc.usd)}/mes · fijo</span>
           </div>
         </div>`;
     }
     // Meta grande con target y % del sobrante
+    // GRANDE = lo apartado este mes; chico y etiquetado = el acumulado + progreso.
     const pct = goal.target > 0 ? (current / goal.target) * 100 : 0;
-    const pctRule = goal.alloc && goal.alloc.mode === 'percent' ? `${goal.alloc.pct}% del sobrante` : '';
     return `
       <div class="goal-card" onclick="openGoalDetail('${goal.id}')">
         <div class="goal-header">
@@ -1423,17 +1424,17 @@ function renderGoals() {
         </div>
         <div class="goal-amounts">
           <div>
-            <div class="goal-current">${fmtUSD(current)}</div>
-            <div class="goal-target" style="margin-top:2px">${refDOP(current)}</div>
+            <div class="goal-current">${fmtUSD(thisMonth)}</div>
+            <div class="goal-target" style="margin-top:2px">${refDOP(thisMonth)}</div>
           </div>
-          <div class="goal-target">de ${fmtUSDShort(goal.target)}</div>
+          <div class="goal-target">apartado en ${MONTHS[currentMonth]}</div>
         </div>
         <div class="goal-bar">
           <div class="goal-bar-fill" style="width:${Math.min(pct, 100)}%"></div>
         </div>
         <div class="goal-meta">
-          <span class="goal-progress">${pct.toFixed(0)}% · ${pctRule}</span>
-          <span>este mes +${fmtUSDShort(thisMonth)}</span>
+          <span class="goal-progress">Ahorro acumulado ${fmtUSD(current)}</span>
+          <span>${pct.toFixed(0)}% de ${fmtUSDShort(goal.target)}</span>
         </div>
       </div>`;
   }).join('');

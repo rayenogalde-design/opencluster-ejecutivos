@@ -2737,6 +2737,11 @@ body{
             <option value="AT">Ayudas Técnicas (AT)</option>
             <option value="SM">Salas Multisensoriales (SM)</option>
           </select>
+          <select id="ordenMisCot" onchange="setMisCotOrden(this.value)" style="padding:8px 12px;border:1px solid var(--border-subtle);border-radius:8px;font-size:13px;font-family:var(--font-sans);">
+            <option value="seguimiento">Orden: urgencia</option>
+            <option value="fecha_desc">Orden: fecha (recientes primero)</option>
+            <option value="fecha_asc">Orden: fecha (antiguas primero)</option>
+          </select>
           <div style="color:var(--subtle);font-size:13.5px;font-weight:600;"><b id="cntMisCot" style="color:var(--ink);">0</b> cotizaciones</div>
         </div>
         <div id="listMisCot"><div class="loading-state"><div class="spinner"></div>Cargando…</div></div>
@@ -8592,6 +8597,19 @@ function _mesLabel(ym){
 // Periodo de los KPIs de Cotizaciones: 'anio' (año completo) o 'mes' (mes actual).
 let MISCOT_PERIODO = (function(){ try { return localStorage.getItem('crm_miscot_periodo') || 'anio'; } catch(e){ return 'anio'; } })();
 function setMisCotPeriodo(p){ MISCOT_PERIODO = p || 'anio'; try{ localStorage.setItem('crm_miscot_periodo', MISCOT_PERIODO); }catch(e){} renderMisCotizaciones(); }
+let MISCOT_ORDEN = (function(){ try{ return localStorage.getItem('crm_miscot_orden')||'seguimiento'; }catch(e){ return 'seguimiento'; } })();
+function setMisCotOrden(o){ MISCOT_ORDEN = o||'seguimiento'; try{ localStorage.setItem('crm_miscot_orden', MISCOT_ORDEN); }catch(e){} renderMisCotizaciones(); }
+function _fechaCotTs(c){
+  var s = String(c && c.fecha || '').trim();
+  if(!s) return (c && c.mes) ? new Date(c.mes+'-15').getTime() : 0;
+  var iso = s.match(/(\d{4})-(\d{2})-(\d{2})/); if(iso) return new Date(+iso[1],+iso[2]-1,+iso[3]).getTime();
+  var dmy = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); if(dmy){ var y=+dmy[3]; if(y<100)y+=2000; return new Date(y,+dmy[2]-1,+dmy[1]).getTime(); }
+  var mm={enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,julio:6,agosto:7,septiembre:8,setiembre:8,octubre:9,noviembre:10,diciembre:11};
+  var m = s.toLowerCase().match(/(\d{1,2})\s+de\s+([a-záéíóú]+)\.?,?\s+(\d{4})/);
+  if(m){ var mn=m[2].normalize('NFD').replace(/[̀-ͯ]/g,''); if(mm[mn]!==undefined) return new Date(+m[3], mm[mn], +m[1]).getTime(); }
+  var t = Date.parse(s); if(!isNaN(t)) return t;
+  return (c && c.mes) ? new Date(c.mes+'-15').getTime() : 0;
+}
 function _kpisDeMisCot(arr, anio){
   const per = MISCOT_PERIODO; // 'anio' o un mes 'YYYY-MM'
   // Cotizaciones y monto cotizado: por el mes en que se COTIZÓ (c.mes).
@@ -8805,6 +8823,7 @@ function _lineaCot(num){
 function renderMisCotizaciones(){
   const container = document.getElementById('listMisCot');
   const cnt = document.getElementById('cntMisCot');
+  try{ var _ordSel=document.getElementById('ordenMisCot'); if(_ordSel && _ordSel.value!==MISCOT_ORDEN) _ordSel.value=MISCOT_ORDEN; }catch(e){}
   const anio = CACHE.vMisCotAnio || String(new Date().getFullYear());
   // Base tras el filtro de ejecutivo (los KPIs reflejan al ejecutivo elegido, NO la búsqueda).
   let base = (CACHE.vMisCot || []).slice();
@@ -8876,7 +8895,9 @@ function renderMisCotizaciones(){
   const abrirBusqueda = !!(q || filtro);  // si está buscando, abrir los meses para que vea resultados
   Object.keys(grupos).sort((a,b)=> b.localeCompare(a)).forEach(ym => {
     const arr = grupos[ym];
-    arr.sort((a,b)=> pw(a.estado_seguimiento)-pw(b.estado_seguimiento) || (b.dias_sin_gestion||0)-(a.dias_sin_gestion||0));
+    if(MISCOT_ORDEN==='fecha_desc'){ arr.sort((a,b)=> _fechaCotTs(b)-_fechaCotTs(a)); }
+    else if(MISCOT_ORDEN==='fecha_asc'){ arr.sort((a,b)=> _fechaCotTs(a)-_fechaCotTs(b)); }
+    else { arr.sort((a,b)=> pw(a.estado_seguimiento)-pw(b.estado_seguimiento) || (b.dias_sin_gestion||0)-(a.dias_sin_gestion||0)); }
     arr.forEach(function(cc){ window.__MC_ORDEN.push(cc.cotizacion); });
     const nGan = arr.filter(c=>c.ganada).length;
     const nVenc = arr.filter(c=>c.estado_seguimiento==='vencido').length;
@@ -8992,6 +9013,7 @@ function _cardMisCot(c){
           '<span style="font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px;background:'+sem.bg+';color:'+sem.color+';">' + esc(c.estado||sem.txt) + '</span>' + adminEjec +
         '</div>' +
         '<div style="font-size:12.5px;color:var(--subtle);margin-top:3px;">' + esc(c.cliente || c.institucion || '(sin nombre)') + (c.cliente && c.institucion ? ' · ' + esc(c.institucion) : '') + '</div>' +
+        '<div style="font-size:11px;color:var(--mist,#9aa3af);margin-top:2px;font-weight:600;">Cotizada: ' + esc(c.fecha || '—') + '</div>' +
       '</div>' +
       '<div style="text-align:right;">' +
         (monto ? '<div style="font-weight:800;color:var(--gold-dk,#92580e);font-size:14px;">' + esc(monto) + '</div>' : '') +

@@ -3272,6 +3272,21 @@ body{
   </div>
 </div>
 
+<!-- ════ Modal Costos pendientes ════ -->
+<div class="modal-backdrop" id="modalCostosPend">
+  <div class="modal-box" style="max-width:660px;">
+    <div class="modal-head">
+      <h2>Costos pendientes</h2>
+      <button class="modal-close" onclick="cerrarCostosPend()" aria-label="Cerrar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="costosPendBody" style="max-height:70vh;overflow-y:auto;">
+      <div class="loading-state"><div class="spinner"></div></div>
+    </div>
+  </div>
+</div>
+
 <!-- ════ Modal Todas las próximas reuniones ════ -->
 <div class="modal-backdrop" id="modalTodasReuniones">
   <div class="modal-box" style="max-width:620px;">
@@ -9316,7 +9331,10 @@ function _pintarVentasMes(){
     const ejecs = Array.from(new Set(ventas.map(v=>String(v.ejecutivo||'').trim().split(' ')[0]).filter(Boolean))).sort();
     barH += '<select onchange="setVentasMesEjec(this.value)" style="margin-left:8px;padding:7px 10px;border:1px solid var(--smoke,#e5e7eb);border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;"><option value="">Todos los ejecutivos</option>'+
       ejecs.map(n=>'<option value="'+esc(n)+'"'+(VENTASMES_EJEC===n?' selected':'')+'>'+esc(n)+'</option>').join('')+'</select>';
-    barH += '<button onclick="enviarResumenVentasMario()" style="margin-left:auto;background:#001A60;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-weight:800;font-size:13px;cursor:pointer;">Enviar resumen del mes a Mario →</button>';
+    barH += '<span style="margin-left:auto;display:inline-flex;gap:8px;">'+
+      '<button onclick="abrirCostosPendientes()" style="background:#b45309;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-weight:800;font-size:13px;cursor:pointer;">Costos pendientes</button>'+
+      '<button onclick="extraerPlanillaMes()" style="background:#001A60;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-weight:800;font-size:13px;cursor:pointer;">Extraer planilla del mes →</button>'+
+      '</span>';
   }
   bar.innerHTML = barH;
   let delMes = ventas.filter(v => _mesCierreDe(v) === VENTASMES_MES);
@@ -9353,6 +9371,44 @@ async function enviarResumenVentasMario(){
   const r = await fetchAPI('crm_resumen_ventas_mes', { solicitante: USUARIO, mes: VENTASMES_MES });
   if(r && r.ok){ alert('Resumen de '+mesLbl+' enviado a Mario, con copia a ti. ('+(r.cantidad||0)+' ventas).'); }
   else { alert('No se pudo enviar: '+((r&&r.error)||'error')); }
+}
+// ── Costos pendientes + Extraer planilla (comisiones del mes) ──
+async function abrirCostosPendientes(){
+  const m=document.getElementById('modalCostosPend'), body=document.getElementById('costosPendBody'); if(!m||!body) return;
+  m.classList.add('show'); body.innerHTML='<div class="loading-state"><div class="spinner"></div>Buscando productos sin costo…</div>';
+  const r=await fetchAPI('crm_costos_pendientes',{mes:VENTASMES_MES});
+  if(!r||!r.ok){ body.innerHTML='<div style="padding:18px;color:#b91c1c;">No se pudo cargar.'+((r&&r.error)?' '+esc(r.error):'')+'</div>'; return; }
+  if(!r.pendientes||!r.pendientes.length){ body.innerHTML='<div style="padding:24px;text-align:center;color:#16A34A;font-weight:700;">¡Todo al día! No hay productos sin costo.</div>'; return; }
+  body.innerHTML = r.pendientes.map(function(p,idx){
+    var cand=(p.candidatos||[]).map(function(c){ return '<button onclick="_setCostoPend('+idx+','+Math.round(c.costo)+')" style="display:block;width:100%;text-align:left;margin:3px 0;padding:6px 9px;border:1px solid #d1d5db;border-radius:6px;background:#fff;cursor:pointer;font-size:12px;">'+esc(c.titulo)+' — <b>'+fmtCLP(c.costo)+'</b></button>'; }).join('');
+    return '<div id="cp-card-'+idx+'" style="border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-bottom:12px;">'+
+      '<div style="font-weight:700;font-size:13.5px;color:var(--ink);">'+esc(p.producto)+'</div>'+
+      '<div style="font-size:11.5px;color:var(--subtle);margin:2px 0 8px;">En: '+esc((p.ventas||[]).join(', '))+'</div>'+
+      (cand? '<div style="font-size:11px;font-weight:700;color:#b45309;margin-bottom:4px;">Candidatos en Shopify (elige el correcto):</div>'+cand
+            : '<div style="font-size:12px;color:#b91c1c;font-weight:700;margin-bottom:6px;">No está en Shopify — consíguelo por otra parte e ingrésalo abajo.</div>')+
+      '<div style="display:flex;gap:6px;margin-top:8px;align-items:center;">'+
+        '<input id="cp-in-'+idx+'" type="text" placeholder="Costo neto $" data-prod="'+esc(p.producto)+'" style="flex:1;padding:7px 9px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">'+
+        '<button onclick="guardarCostoPend('+idx+')" style="background:#16A34A;color:#fff;border:none;border-radius:6px;padding:7px 14px;font-weight:700;font-size:13px;cursor:pointer;">Guardar</button>'+
+      '</div></div>';
+  }).join('');
+}
+function _setCostoPend(idx,costo){ var el=document.getElementById('cp-in-'+idx); if(el) el.value=fmtCLP(costo); }
+async function guardarCostoPend(idx){
+  var el=document.getElementById('cp-in-'+idx); if(!el) return;
+  var prod=el.getAttribute('data-prod'), costo=String(el.value||'').replace(/[^0-9]/g,'');
+  if(!costo){ alert('Elige un candidato o escribe el costo.'); return; }
+  var r=await fetchAPI('crm_guardar_costo',{producto:prod, costo:costo, origen:'rayen'});
+  if(r&&r.ok){ var card=document.getElementById('cp-card-'+idx); if(card){ card.style.background='#F0FDF4'; card.innerHTML='<div style="padding:6px 2px;color:#16A34A;font-weight:700;font-size:13px;">Guardado: '+esc(prod)+' → '+fmtCLP(Number(costo))+'</div>'; } }
+  else alert('No se pudo guardar: '+((r&&r.error)||'error'));
+}
+function cerrarCostosPend(){ var m=document.getElementById('modalCostosPend'); if(m) m.classList.remove('show'); }
+async function extraerPlanillaMes(){
+  if(!VENTASMES_MES){ alert('Elige un mes primero.'); return; }
+  var mesLbl=_MES_NOMBRE[parseInt(VENTASMES_MES.split('-')[1],10)-1]+' '+VENTASMES_MES.split('-')[0];
+  if(!confirm('¿Generar la planilla de '+mesLbl+' con los costos ya ingresados?\n(Se abre en una hoja de Google nueva que puedes descargar y subir al Drive de Mario.)')) return;
+  var r=await fetchAPI('crm_generar_planilla_mes',{mes:VENTASMES_MES});
+  if(r&&r.ok&&r.url){ window.open(r.url,'_blank'); }
+  else alert('No se pudo generar: '+((r&&r.error)||'error'));
 }
 async function cargarMetricas(){
   const cont = document.getElementById('metricasCharts');

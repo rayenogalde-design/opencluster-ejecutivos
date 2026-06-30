@@ -5949,6 +5949,7 @@ function _gestTile(g){
         'Gestiones del mes</span>'+
       '<span style="font-size:32px;font-weight:800;color:#001a60;line-height:1;letter-spacing:-.02em;">'+total+'</span>'+
     '</div>'+
+    ((typeof esActuandoComoAdmin==='function'&&esActuandoComoAdmin())?'<div onclick="abrirGestionesPorEjecutivo()" style="font-size:11px;font-weight:800;color:#0ea5a5;cursor:pointer;margin-bottom:6px;">Ver por ejecutivo →</div>':'')+
     rows+'</div>';
 }
 // Detalle al hacer clic en una barra de "Gestiones del mes": a quiénes contactó por ese medio
@@ -5976,6 +5977,31 @@ async function abrirDetalleGestion(label){
   if(body) body.innerHTML = evs.length
     ? ('<div style="background:#fff;border:1px solid var(--oct-border,#eee);border-radius:12px;overflow:hidden;">'+evs.map(function(ev){return actFeedRow(ev, esAdminEquipo);}).join('')+'</div>')
     : '<div style="padding:26px;text-align:center;color:var(--subtle);font-size:13px;">No hay '+esc(label.toLowerCase())+' registrados este mes.</div>';
+}
+// Resumen de "Gestiones del mes" POR EJECUTIVO y por canal (tabla con los números de cada uno).
+async function abrirGestionesPorEjecutivo(){
+  var overlay=document.getElementById('kpiDetalleOverlay');
+  if(!overlay){ overlay=document.createElement('div'); overlay.id='kpiDetalleOverlay'; overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;'; overlay.onclick=function(e){ if(e.target===overlay) cerrarDetalleKpi(); }; document.body.appendChild(overlay); }
+  overlay.innerHTML='<div style="background:white;border-radius:14px;max-width:720px;width:100%;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 12px 48px rgba(0,0,0,0.28);">'+
+    '<div style="padding:16px 20px;border-bottom:1px solid var(--border-subtle);display:flex;justify-content:space-between;align-items:center;"><div style="font-size:20px;font-weight:800;color:#001a60;">Gestiones del mes — por ejecutivo</div><button onclick="cerrarDetalleKpi()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--subtle);width:32px;height:32px;border-radius:6px;">×</button></div>'+
+    '<div id="kdgBody" style="overflow-y:auto;padding:14px 20px;flex:1;"><div class="loading-state"><div class="spinner"></div></div></div></div>';
+  var r=await fetchAPI('crm_actividad_equipo',{solicitante:USUARIO, periodo:'mes'});
+  var body=document.getElementById('kdgBody');
+  if(!r||!r.ok){ if(body) body.innerHTML='<div class="error-state">No se pudo cargar el detalle.</div>'; return; }
+  var evs=r.eventos||[];
+  var cats=['whatsapp','emails','llamadas','reuniones'];
+  var lbl={whatsapp:'WhatsApp',emails:'Correo',llamadas:'Llamada',reuniones:'Reunión'};
+  var g={};
+  evs.forEach(function(ev){
+    var ej=String(ev.ejecutivo||'(sin ejecutivo)').split(' ')[0]; if(_excluirRanking(ej)) return;
+    var cat=(ev.tipo==='reuniones')?'reuniones':_catMedioAct(ev.medio); if(cats.indexOf(cat)<0) cat=ev.tipo; if(cats.indexOf(cat)<0) return;
+    g[ej]=g[ej]||{whatsapp:0,emails:0,llamadas:0,reuniones:0,total:0}; g[ej][cat]++; g[ej].total++;
+  });
+  var ejs=Object.keys(g).sort(function(a,b){return g[b].total-g[a].total;});
+  if(!ejs.length){ if(body) body.innerHTML='<div style="padding:26px;text-align:center;color:var(--subtle);">Sin gestiones registradas este mes.</div>'; return; }
+  var th='<th style="text-align:left;padding:9px 10px;">Ejecutivo</th>'+cats.map(function(c){return '<th style="text-align:right;padding:9px 10px;">'+lbl[c]+'</th>';}).join('')+'<th style="text-align:right;padding:9px 10px;">Total</th>';
+  var rows=ejs.map(function(ej){ var d=g[ej]; return '<tr style="border-top:1px solid #eef0f5;"><td style="padding:9px 10px;font-weight:700;color:#001a60;">'+esc(ej)+'</td>'+cats.map(function(c){return '<td style="text-align:right;padding:9px 10px;color:#4a5577;">'+d[c]+'</td>';}).join('')+'<td style="text-align:right;padding:9px 10px;font-weight:800;color:#001a60;">'+d.total+'</td></tr>'; }).join('');
+  if(body) body.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="background:#f4f7fc;color:#4a5577;font-size:11px;text-transform:uppercase;letter-spacing:.04em;">'+th+'</tr></thead><tbody>'+rows+'</tbody></table>';
 }
 // Vista de MOTIVOS DE PÉRDIDA: agrupa las cotizaciones perdidas por su motivo, para decidir con datos.
 function abrirMotivosPerdida(){
@@ -6076,15 +6102,18 @@ function renderDashV3(r){
 
 // Ximena es de Finanzas: no entra en los rankings de venta/contactos del equipo.
 function _excluirRanking(ejec){ return String(ejec||'').toLowerCase().indexOf('ximena')>=0; }
+var RANK_PERIODO = (function(){ try{ return localStorage.getItem('crm_rank_periodo')||'semana'; }catch(e){ return 'semana'; } })();
+function setRankPeriodo(p){ RANK_PERIODO=(p==='mes'?'mes':'semana'); try{ localStorage.setItem('crm_rank_periodo',RANK_PERIODO); }catch(e){} try{ _rankingDash(window.__RANK_K||{}); }catch(e){} }
 function _rankingDash(k){
-  // Ranking por GESTIONES (actividad total). Si el backend aún no trae gestiones
-  // (no redesplegado), cae de vuelta a contactos nuevos para no quedar vacío.
+  // Ranking por GESTIONES (actividad total). Toggle semana/mes (el backend trae ambos).
+  if(k && (k.gestiones||k.nuevos_contactos)) window.__RANK_K=k; else k=window.__RANK_K||{};
+  var per = (typeof RANK_PERIODO!=='undefined'?RANK_PERIODO:'semana');
   var gRank = (k&&k.gestiones&&k.gestiones.ranking_equipo)||[];
   var usarGest = gRank.length > 0;
   var fuente = usarGest ? gRank : ((k&&k.nuevos_contactos&&k.nuevos_contactos.ranking_equipo)||[]);
-  var _tituloRank = usarGest ? 'Ranking · gestiones (semana)' : 'Ranking · contactos nuevos (semana)';
+  var _tituloRank = (usarGest ? 'Ranking · gestiones' : 'Ranking · contactos nuevos') + ' (' + (per==='mes'?'mes':'semana') + ')';
   var arr=fuente.filter(function(x){return !_excluirRanking(x.ejec);});
-  var items=arr.map(function(x){return {n:String(x.ejec||'').split(' ')[0], v:(x.semana!=null?x.semana:(x.mes||0))};});
+  var items=arr.map(function(x){return {n:String(x.ejec||'').split(' ')[0], v:(per==='mes'?(x.mes||0):(x.semana!=null?x.semana:(x.mes||0)))};});
   items.sort(function(a,b){return b.v-a.v;}); items=items.slice(0,6);
   var max=items.reduce(function(m,x){return Math.max(m,x.v);},0)||1;
   var yo=_yoNombre().toLowerCase();
@@ -6096,8 +6125,11 @@ function _rankingDash(k){
       '<span class="barw"><i style="width:'+Math.round(x.v/max*100)+'%"></i></span>'+
       '<span class="v">'+x.v+'</span></div>';
   }).join('');
+  var _tog = '<span style="display:inline-flex;gap:5px;">'+
+    '<button onclick="setRankPeriodo(\'semana\')" style="font-family:inherit;font-size:10.5px;font-weight:700;border:none;border-radius:7px;padding:3px 9px;cursor:pointer;background:'+(per==='semana'?'#001A60':'#eef1f8')+';color:'+(per==='semana'?'#fff':'#5A6478')+';">Semana</button>'+
+    '<button onclick="setRankPeriodo(\'mes\')" style="font-family:inherit;font-size:10.5px;font-weight:700;border:none;border-radius:7px;padding:3px 9px;cursor:pointer;background:'+(per==='mes'?'#001A60':'#eef1f8')+';color:'+(per==='mes'?'#fff':'#5A6478')+';">Mes</button></span>';
   var box=document.getElementById('dshRanking');
-  if(box) box.innerHTML='<div class="dv3-cardhd"><h3>'+_tituloRank+'</h3><span class="lnk">Equipo</span></div>'+(rows||'<div class="dv3-empty">Aún sin datos del equipo</div>');
+  if(box) box.innerHTML='<div class="dv3-cardhd"><h3>'+_tituloRank+'</h3>'+_tog+'</div>'+(rows||'<div class="dv3-empty">Aún sin datos del equipo</div>');
 }
 
 async function _porTrabajarDash(){

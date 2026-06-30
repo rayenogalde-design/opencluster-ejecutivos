@@ -3277,6 +3277,19 @@ body{
   </div>
 </div>
 
+<!-- ════ Modal Toques pendientes por ejecutivo ════ -->
+<div class="modal-backdrop" id="modalToquesEjec">
+  <div class="modal-box" style="max-width:640px;">
+    <div class="modal-head">
+      <h2>Toques pendientes por ejecutivo</h2>
+      <button class="modal-close" onclick="cerrarToquesEjec()" aria-label="Cerrar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="toquesEjecBody" style="max-height:72vh;overflow-y:auto;"></div>
+  </div>
+</div>
+
 <!-- ════ Modal Costos pendientes ════ -->
 <div class="modal-backdrop" id="modalCostosPend">
   <div class="modal-box" style="max-width:660px;">
@@ -7339,6 +7352,7 @@ async function pintarToquesHoy(){
   items.sort((a,b) => a.diff - b.diff);
   const atrasados = items.filter(i => i.diff < 0).length;
   const deHoy = items.filter(i => i.diff === 0).length;
+  window.__TOQUES_ALL = items;
   const badge = document.getElementById('badgeToques');
   if(badge){ badge.textContent = items.length; badge.style.display = items.length>0 ? 'inline-flex' : 'none'; }
   if(!items.length){
@@ -7355,6 +7369,9 @@ async function pintarToquesHoy(){
   const filas = items.slice(0, MAX).map(it => {
     const c = it.c, cad = it.cad;
     const canal = cad ? cad.paso.canal : _canalDeNota(c.nota_proxima);
+    const esAdmT = (typeof esActuandoComoAdmin==='function' && esActuandoComoAdmin());
+    const ejNomT = String(c.ejecutivo_asignado || c.ejecutivo_creador || '').trim().split(' ')[0] || 'Sin asignar';
+    const ejBadge = esAdmT ? ' <span style="font-weight:800;font-size:10.5px;color:#fff;background:#001A60;border-radius:6px;padding:1px 7px;vertical-align:middle;">'+esc(ejNomT)+'</span>' : '';
     const nom = esc(c.nombre || c.institucion || '(sin nombre)');
     const cuando = it.diff < 0 ? '<span class="atr">Atrasado '+Math.abs(it.diff)+'d</span> · ' : '';
     const desc = cad
@@ -7365,7 +7382,7 @@ async function pintarToquesHoy(){
     return '<div class="toques-item">' +
       '<div class="toques-ico '+esc(canal)+'">'+cadCanalIco(canal)+'</div>' +
       '<div class="toques-info">' +
-        '<div class="toques-nom" onclick="abrirFichaModal(\''+esc(c.id)+'\')">'+nom+'</div>' +
+        '<div class="toques-nom" onclick="abrirFichaModal(\''+esc(c.id)+'\')">'+nom+ejBadge+'</div>' +
         '<div class="toques-desc">'+cuando+desc+'</div>' +
       '</div>' +
       '<div class="toques-acc">' +
@@ -7383,6 +7400,7 @@ async function pintarToquesHoy(){
       '<div class="toques-sum">' +
         (atrasados ? '<span class="toques-pill atr">'+atrasados+' atrasado'+(atrasados>1?'s':'')+'</span>' : '') +
         (deHoy ? '<span class="toques-pill hoy">'+deHoy+' hoy</span>' : '') +
+        ((typeof esActuandoComoAdmin==='function' && esActuandoComoAdmin()) ? '<button onclick="abrirToquesPorEjecutivo()" style="font-size:11px;font-weight:700;background:#001A60;color:#fff;border:none;border-radius:999px;padding:4px 11px;cursor:pointer;font-family:inherit;">Ver todos por ejecutivo</button>' : '') +
       '</div>' +
     '</div>' + filas + sobra +
     '<button class="dv3-empezar" onclick="irAListaPartida(true)">Empezar mi día <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>' +
@@ -7398,6 +7416,32 @@ function toastToques(n){
     setTimeout(() => { t.style.transition='opacity .4s'; t.style.opacity='0'; setTimeout(()=>t.remove(), 420); }, 6500);
   } catch(e){}
 }
+// Panel admin: todos los toques pendientes agrupados por ejecutivo (quién está atrasado).
+function abrirToquesPorEjecutivo(){
+  var items = window.__TOQUES_ALL || [];
+  var m=document.getElementById('modalToquesEjec'), body=document.getElementById('toquesEjecBody'); if(!m||!body) return;
+  m.classList.add('show');
+  if(!items.length){ body.innerHTML='<div style="padding:24px;text-align:center;color:#16A34A;font-weight:700;">Sin toques pendientes en el equipo. ¡Todos al día!</div>'; return; }
+  var g={};
+  items.forEach(function(it){ var ej=String(it.c.ejecutivo_asignado||it.c.ejecutivo_creador||'Sin asignar').trim().split(' ')[0]||'Sin asignar'; (g[ej]=g[ej]||[]).push(it); });
+  var ejs=Object.keys(g).sort(function(a,b){ var aa=g[a].filter(function(i){return i.diff<0;}).length, bb=g[b].filter(function(i){return i.diff<0;}).length; return bb-aa || g[b].length-g[a].length; });
+  body.innerHTML = ejs.map(function(ej){
+    var arr=g[ej].slice().sort(function(a,b){return a.diff-b.diff;});
+    var atr=arr.filter(function(i){return i.diff<0;}).length, hoy=arr.filter(function(i){return i.diff===0;}).length;
+    var filas=arr.map(function(it){ var c=it.c; var cad=it.cad; var canal=cad?cad.paso.canal:_canalDeNota(c.nota_proxima);
+      var d=cad?('Toque '+(cad.toque+1)+'/'+cad.total+' · '+esc(canal)):esc(canal);
+      var when=it.diff<0?('<span style="color:#B91C1C;font-weight:700;">Atrasado '+Math.abs(it.diff)+'d</span>'):'<span style="color:#0369A1;font-weight:700;">Hoy</span>';
+      return '<div onclick="cerrarToquesEjec();abrirFichaModal(\''+esc(c.id)+'\')" style="cursor:pointer;padding:7px 11px;border-top:1px solid #f1f1f4;display:flex;justify-content:space-between;gap:10px;align-items:center;">'+
+        '<span style="font-size:13px;color:#001A60;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+esc(c.nombre||c.institucion||'(sin nombre)')+'</span>'+
+        '<span style="font-size:11.5px;white-space:nowrap;">'+when+' · '+d+'</span></div>'; }).join('');
+    return '<div style="border:1px solid #e5e7eb;border-radius:10px;margin-bottom:12px;overflow:hidden;">'+
+      '<div style="background:'+(atr?'#FEE2E2':'#F0F9FF')+';padding:9px 13px;display:flex;justify-content:space-between;align-items:center;">'+
+        '<span style="font-weight:800;color:#001A60;font-size:14px;">'+esc(ej)+'</span>'+
+        '<span style="font-size:12px;font-weight:700;">'+(atr?('<span style="color:#B91C1C;">'+atr+' atrasado'+(atr>1?'s':'')+'</span>'):'')+((atr&&hoy)?' · ':'')+(hoy?('<span style="color:#0369A1;">'+hoy+' hoy</span>'):'')+'</span>'+
+      '</div>'+filas+'</div>';
+  }).join('');
+}
+function cerrarToquesEjec(){ var m=document.getElementById('modalToquesEjec'); if(m) m.classList.remove('show'); }
 
 // ════ Agendar próxima gestión desde una COTIZACIÓN ════
 // Un solo paso deja: (1) una TAREA en "Mis Tareas" y (2) la PRÓXIMA ACCIÓN del contacto,

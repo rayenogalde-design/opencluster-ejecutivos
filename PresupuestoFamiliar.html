@@ -288,7 +288,17 @@
   }
 
   /* Category cards */
-  .categories { display: flex; flex-direction: column; gap: 10px; }
+  .categories { display: flex; flex-wrap: wrap; gap: 8px; }
+  .cat-chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 14px; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--surface);
+    color: var(--ink); font-family: var(--sans); font-size: 14px; font-weight: 500;
+    cursor: pointer; box-shadow: var(--shadow-sm);
+    transition: transform 0.12s ease, background 0.15s ease;
+  }
+  .cat-chip:active { transform: scale(0.95); background: var(--bg-2); }
+  .cat-chip .cat-emoji { font-size: 15px; }
   .cat-card {
     background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
     padding: 14px 16px; cursor: pointer; transition: all 0.2s ease;
@@ -1347,52 +1357,13 @@ function renderSavingsHighlight() {
 
 function renderCategories() {
   const container = document.getElementById('categoriesList');
-  container.innerHTML = state.categories.map(cat => {
-    const spent = getCategorySpent(cat.id);        // RD$
-    const hasBudget = cat.budget > 0;
-    // Categoría sin presupuesto fijo (ej: EPS, Amazon): solo muestra lo gastado,
-    // sin estado "excedido". Igual descuenta del ahorro porque es gasto real.
-    if (!hasBudget) {
-      const isZero = spent === 0;
-      return `
-        <div class="cat-card" onclick="openCategoryDetail('${cat.id}')">
-          <div class="cat-row-1">
-            <div class="cat-name"><span class="cat-emoji">${cat.emoji}</span>${cat.name}</div>
-            <div class="cat-amount ${isZero ? 'zero' : ''}">
-              <div class="remaining">RD$ ${Math.round(spent).toLocaleString('en-US')}</div>
-              <div class="dop">${refUSD(spent)}</div>
-            </div>
-          </div>
-          <div class="cat-row-2">
-            <span>Sin presupuesto fijo</span>
-            <span>Gastado este mes</span>
-          </div>
-        </div>`;
-    }
-    const budgetDop = usdToDop(cat.budget);        // US$ fijo → RD$ del mes
-    const remaining = budgetDop - spent;
-    const pct = budgetDop > 0 ? (spent / budgetDop) * 100 : 0;
-    const isOver = remaining < 0;
-    const isWarn = pct >= 80 && pct < 100;
-    const isZero = spent === 0;
-    return `
-      <div class="cat-card ${isOver ? 'over' : isWarn ? 'warn' : ''}" onclick="openCategoryDetail('${cat.id}')">
-        <div class="cat-row-1">
-          <div class="cat-name"><span class="cat-emoji">${cat.emoji}</span>${cat.name}</div>
-          <div class="cat-amount ${isOver ? 'over' : isZero ? 'zero' : ''}">
-            <div class="remaining">${isOver ? '<span class="neg">-</span>RD$ ' : 'RD$ '}${Math.round(Math.abs(remaining)).toLocaleString('en-US')}</div>
-            <div class="dop">${refUSD(remaining)}</div>
-          </div>
-        </div>
-        <div class="cat-bar">
-          <div class="cat-bar-fill ${isOver ? 'over' : isWarn ? 'warn' : ''}" style="width:${Math.min(pct, 100)}%"></div>
-        </div>
-        <div class="cat-row-2">
-          <span>Gastado <span class="spent-value">${fmtDOP(spent)}</span></span>
-          <span>de ${fmtDOP(budgetDop)}</span>
-        </div>
-      </div>`;
-  }).join('');
+  // Vista compacta (pensada para celular): solo botoncitos emoji + nombre, uno al
+  // lado del otro. Al tocar uno se abre su detalle con los números y el botón para
+  // agregar gasto. Así la pantalla no se llena de cifras y barras.
+  container.innerHTML = state.categories.map(cat => `
+    <button class="cat-chip" onclick="openCategoryDetail('${cat.id}')">
+      <span class="cat-emoji">${cat.emoji}</span>${cat.name}
+    </button>`).join('');
 }
 
 function renderGoals() {

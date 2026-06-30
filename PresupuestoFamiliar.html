@@ -756,7 +756,10 @@
     <div class="note" id="savingsNote"></div>
   </div>
 
-  <div class="section-header"><div class="section-title">por <em>categoría</em></div></div>
+  <div class="section-header">
+    <div class="section-title">por <em>categoría</em></div>
+    <button class="section-action" onclick="openCatModal()">+ categoría</button>
+  </div>
   <div class="categories" id="categoriesList"></div>
 
   <div class="section-header">
@@ -893,6 +896,26 @@
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('savingsModal')">Cancelar</button>
       <button class="btn btn-primary gold" onclick="saveSaving()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="catModal" onclick="if(event.target===this) closeModal('catModal')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Nueva <em>categoría</em></div>
+    <div class="form-group">
+      <label class="form-label">Nombre</label>
+      <input type="text" class="form-input" id="catName" placeholder="Ej: EPS, Amazon">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Presupuesto mensual en US$ (opcional)</label>
+      <input type="number" inputmode="decimal" step="1" class="form-input" id="catBudget" placeholder="Déjalo vacío si no tiene presupuesto fijo">
+      <div class="form-amount-dop">Si lo dejas vacío, solo registra lo gastado y se descuenta del ahorro.</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('catModal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveNewCategory()">Guardar</button>
     </div>
   </div>
 </div>
@@ -1315,6 +1338,26 @@ function renderCategories() {
   const container = document.getElementById('categoriesList');
   container.innerHTML = state.categories.map(cat => {
     const spent = getCategorySpent(cat.id);        // RD$
+    const hasBudget = cat.budget > 0;
+    // Categoría sin presupuesto fijo (ej: EPS, Amazon): solo muestra lo gastado,
+    // sin estado "excedido". Igual descuenta del ahorro porque es gasto real.
+    if (!hasBudget) {
+      const isZero = spent === 0;
+      return `
+        <div class="cat-card" onclick="openCategoryDetail('${cat.id}')">
+          <div class="cat-row-1">
+            <div class="cat-name"><span class="cat-emoji">${cat.emoji}</span>${cat.name}</div>
+            <div class="cat-amount ${isZero ? 'zero' : ''}">
+              <div class="remaining">RD$ ${Math.round(spent).toLocaleString('en-US')}</div>
+              <div class="dop">${refUSD(spent)}</div>
+            </div>
+          </div>
+          <div class="cat-row-2">
+            <span>Sin presupuesto fijo</span>
+            <span>Gastado este mes</span>
+          </div>
+        </div>`;
+    }
     const budgetDop = usdToDop(cat.budget);        // US$ fijo → RD$ del mes
     const remaining = budgetDop - spent;
     const pct = budgetDop > 0 ? (spent / budgetDop) * 100 : 0;
@@ -1799,14 +1842,17 @@ function openCategoryDetail(catId) {
 function renderCategoryDetail(catId) {
   const cat = state.categories.find(c => c.id === catId);
   const spent = getCategorySpent(catId);          // RD$
+  const hasBudget = cat.budget > 0;
   const budgetDop = usdToDop(cat.budget);          // US$ fijo → RD$ del mes
   const remaining = budgetDop - spent;
   document.getElementById('detailTitle').innerHTML = `${cat.emoji} <em>${cat.name}</em>`;
   const remEl = document.getElementById('detailRemaining');
-  remEl.textContent = fmtDOP(remaining);
-  remEl.classList.toggle('over', remaining < 0);
-  document.getElementById('detailRemainingDop').textContent = refUSD(remaining);
-  document.getElementById('detailBudget').textContent = fmtDOP(budgetDop);
+  // Sin presupuesto: el bloque de arriba muestra lo gastado, no un "disponible" negativo.
+  document.querySelector('.detail-amount-label').textContent = hasBudget ? 'Disponible' : 'Gastado este mes';
+  remEl.textContent = fmtDOP(hasBudget ? remaining : spent);
+  remEl.classList.toggle('over', hasBudget && remaining < 0);
+  document.getElementById('detailRemainingDop').textContent = refUSD(hasBudget ? remaining : spent);
+  document.getElementById('detailBudget').textContent = hasBudget ? fmtDOP(budgetDop) : 'Sin presupuesto';
   document.getElementById('detailSpent').textContent = fmtDOP(spent);
   const expenses = getCategoryExpenses(catId);
   const expContainer = document.getElementById('detailExpenses');
@@ -1836,6 +1882,39 @@ function renderCategoryDetail(catId) {
 function addExpenseToCategory() {
   closeModal('detailModal');
   setTimeout(() => openExpenseModal(currentDetailCategoryId), 200);
+}
+
+function openCatModal() {
+  document.getElementById('catName').value = '';
+  document.getElementById('catBudget').value = '';
+  document.getElementById('catModal').classList.add('active');
+  setTimeout(() => document.getElementById('catName').focus(), 300);
+}
+
+async function saveNewCategory() {
+  if (_saving) return;
+  const name = document.getElementById('catName').value.trim();
+  if (!name) { alert('Escribe el nombre de la categoría'); return; }
+  const budget = parseFloat(document.getElementById('catBudget').value) || 0;
+  const category = { id: 'cat' + Date.now().toString(36), name, emoji: '🏷️', budget };
+  // OPTIMISTIC
+  state.categories.push(category);
+  closeModal('catModal');
+  renderAll();
+  setSaving(true);
+  showSync('Guardando…', { sticky: true });
+  try {
+    state = await CLOUD.addCategory(category);
+    renderAll();
+    showSync('Guardado');
+  } catch (e) {
+    state.categories = state.categories.filter(c => c.id !== category.id);
+    renderAll();
+    showSync('No se guardó', { error: true });
+    alert('No se pudo guardar: ' + e.message);
+  } finally {
+    setSaving(false);
+  }
 }
 
 function openSavings(goalId = null) {

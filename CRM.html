@@ -2473,7 +2473,7 @@ body{
         <div class="dv3-grid3">
           <div class="dv3-card" id="dshPorCerrar"></div>
           <div class="dv3-card">
-            <div class="dv3-cardhd"><h3>Próximas reuniones</h3>
+            <div class="dv3-cardhd"><h3 onclick="abrirModalTodasReuniones()" style="cursor:pointer;" title="Ver todas las próximas reuniones">Próximas reuniones <span style="font-size:11px;color:#1a73e8;font-weight:600;vertical-align:middle;">(ver todas)</span></h3>
               <button class="lnk" onclick="abrirModalNuevaReunion()">+ Nueva</button>
             </div>
             <div id="dshReuniones"></div>
@@ -3268,6 +3268,21 @@ body{
     <div class="modal-foot">
       <button class="btn" onclick="cerrarModalNuevaReunion()">Cancelar</button>
       <button class="btn primary" id="nr-btn-guardar" onclick="guardarNuevaReunion()">Agendar reunión</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ Modal Todas las próximas reuniones ════ -->
+<div class="modal-backdrop" id="modalTodasReuniones">
+  <div class="modal-box" style="max-width:620px;">
+    <div class="modal-head">
+      <h2>Próximas reuniones</h2>
+      <button class="modal-close" onclick="cerrarModalTodasReuniones()" aria-label="Cerrar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="todasReunionesBody" style="max-height:65vh;overflow-y:auto;">
+      <div class="loading-state"><div class="spinner"></div></div>
     </div>
   </div>
 </div>
@@ -6441,6 +6456,41 @@ function renderReunionesDashboard(reuniones, modo, container, cntEl){
     '</div>';
   }).join('');
 }
+
+// Modal con TODAS las próximas reuniones (90 días) — se abre al tocar el título del card.
+async function abrirModalTodasReuniones(){
+  const m = document.getElementById('modalTodasReuniones');
+  const body = document.getElementById('todasReunionesBody');
+  if(!m || !body) return;
+  m.classList.add('show');
+  body.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
+  const ejec = getEjecutivoEfectivo();
+  const modoReu = hayDrillDown() ? 'ejecutiva' : MODO_VISTA;
+  const r = await fetchAPI('crm_reuniones_proximas', { ejecutivo: ejec, dias: 90, modo_vista: modoReu });
+  const reuniones = (r && r.ok && Array.isArray(r.reuniones)) ? r.reuniones : [];
+  if(!reuniones.length){
+    body.innerHTML = '<div style="padding:18px 4px;color:var(--subtle);font-size:13px;">No hay reuniones próximas en los próximos 90 días.</div>';
+    return;
+  }
+  body.innerHTML = reuniones.map(r => {
+    const f = r.fecha ? new Date(r.fecha) : null;
+    const fechaTxt = f && !isNaN(f.getTime())
+      ? f.toLocaleDateString('es-CL', {weekday:'long', day:'numeric', month:'long'}) + ' · ' + f.toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit'})
+      : 'Sin fecha';
+    const esCal = r.fuente === 'calendar';
+    const badge = esCal
+      ? ' <span style="font-size:9.5px;font-weight:700;color:#1a73e8;background:#e8f0fe;border-radius:5px;padding:1px 5px;vertical-align:middle;">Calendar</span>'
+      : '';
+    const clickeable = !!r.contacto_id;
+    const onclick = clickeable ? ' onclick="cerrarModalTodasReuniones();abrirFichaModal(\'' + esc(r.contacto_id) + '\')"' : '';
+    return '<div class="reunion-item" style="margin-bottom:8px;' + (clickeable?'':'cursor:default;') + '"' + onclick + '>' +
+      '<div class="ri-fecha">' + esc(fechaTxt) + badge + '</div>' +
+      '<div class="ri-nombre">' + esc(r.nombre || '(sin título)') + '</div>' +
+      '<div class="ri-inst">' + esc(r.institucion || '') + '</div>' +
+    '</div>';
+  }).join('');
+}
+function cerrarModalTodasReuniones(){ const m = document.getElementById('modalTodasReuniones'); if(m) m.classList.remove('show'); }
 
 async function cargarTareasDashboard(){
   const container = document.getElementById('dshTareas');

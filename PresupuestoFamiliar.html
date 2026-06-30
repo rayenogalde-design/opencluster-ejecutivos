@@ -966,6 +966,7 @@
       <button class="btn btn-secondary" onclick="closeModal('detailModal')">Cerrar</button>
       <button class="btn btn-primary" onclick="addExpenseToCategory()">+ Agregar gasto</button>
     </div>
+    <button class="btn" style="width:100%;margin-top:10px;background:transparent;color:var(--spend);border:1px solid var(--border)" onclick="deleteCategoryFromDetail()">Eliminar categoría</button>
   </div>
 </div>
 
@@ -1119,6 +1120,7 @@ const CLOUD = {
   async addContribution(contribution)  { return (await this._post({ action:'addContribution', contribution })).state; },
   async deleteContribution(id)         { return (await this._post({ action:'deleteContribution', id })).state; },
   async addCategory(category)          { return (await this._post({ action:'addCategory', category })).state; },
+  async deleteCategory(id)             { return (await this._post({ action:'deleteCategory', id })).state; },
   async updateSettings(payload)        { return (await this._post(Object.assign({ action:'updateSettings' }, payload))).state; },
   async setRate(payload)               { return (await this._post(Object.assign({ action:'setRate' }, payload))).state; },
   async reset()                        { return (await this._post({ action:'reset' })).state; },
@@ -1865,6 +1867,37 @@ function renderCategoryDetail(catId) {
 function addExpenseToCategory() {
   closeModal('detailModal');
   setTimeout(() => openExpenseModal(currentDetailCategoryId), 200);
+}
+
+async function deleteCategoryFromDetail() {
+  if (_saving) return;
+  const catId = currentDetailCategoryId;
+  const cat = state.categories.find(c => c.id === catId);
+  if (!cat) return;
+  const count = state.expenses.filter(e => e.category === catId).length;
+  const msg = count > 0
+    ? `¿Eliminar la categoría "${cat.name}"? Tiene ${count} gasto(s) registrados; esos gastos quedarán sin categoría.`
+    : `¿Eliminar la categoría "${cat.name}"?`;
+  if (!confirm(msg)) return;
+  const removed = cat;
+  // OPTIMISTIC
+  state.categories = state.categories.filter(c => c.id !== catId);
+  closeModal('detailModal');
+  renderAll();
+  setSaving(true);
+  showSync('Eliminando…', { sticky: true });
+  try {
+    state = await CLOUD.deleteCategory(catId);
+    renderAll();
+    showSync('Eliminada');
+  } catch (e) {
+    state.categories.push(removed);
+    renderAll();
+    showSync('No se eliminó', { error: true });
+    alert('No se pudo eliminar: ' + e.message);
+  } finally {
+    setSaving(false);
+  }
 }
 
 function openCatModal() {

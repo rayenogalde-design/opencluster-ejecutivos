@@ -370,9 +370,14 @@
   }
   .goal-meta { display: flex; justify-content: space-between; align-items: flex-end; font-size: 11px; color: var(--muted); }
   .goal-progress { font-family: var(--serif); font-style: italic; color: var(--gold); font-size: 13px; }
-  .goal-month-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.13em; color: var(--muted); font-weight: 600; margin-bottom: 2px; }
-  .goal-month-val { font-family: var(--serif); font-size: 20px; color: var(--gold); line-height: 1.05; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
-  .goal-pct { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .goal-headicon { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
+  .goal-headpct { font-family: var(--serif); font-style: italic; font-size: 16px; color: var(--gold); font-variant-numeric: tabular-nums; }
+  .goal-hero-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.13em; color: var(--muted); font-weight: 600; margin-bottom: 3px; }
+  .goal-hero-val { font-family: var(--serif); font-size: 27px; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+  .goal-breakdown { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-top: 14px; }
+  .goal-breakdown .right { text-align: right; }
+  .goal-sub-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); font-weight: 600; margin-bottom: 3px; }
+  .goal-sub-val { font-family: var(--serif); font-size: 18px; line-height: 1; color: var(--ink); font-variant-numeric: tabular-nums; }
 
   /* Tabs */
   .tabs {
@@ -1373,58 +1378,42 @@ function renderGoals() {
   const container = document.getElementById('goalsList');
   const allocThis = monthAlloc(monthKey());
   container.innerHTML = state.goals.map(goal => {
-    const through = goalAmountThrough(goal.id, monthKey());   // acumulado HASTA el mes visto
-    const thisMonth = allocThis[goal.id] || 0;                // aporte de ese mes
+    const through = goalAmountThrough(goal.id, monthKey());   // total acumulado HASTA el mes visto
+    const thisMonth = allocThis[goal.id] || 0;                // aporte de ESTE mes
+    const prev = Math.max(0, through - thisMonth);            // lo que venía de meses anteriores
+    const mes = MONTHS[currentMonth];
     const isFixed = goal.alloc && goal.alloc.mode === 'fixed';
-    if (isFixed) {
-      // Sobre de ahorro fijo (sin meta de monto, recurrente)
-      // GRANDE = acumulado hasta el mes; chico = lo apartado ese mes.
-      return `
-        <div class="goal-card" onclick="openGoalDetail('${goal.id}')">
-          <div class="goal-header">
-            <div class="goal-title">${goal.name}</div>
-            <div class="goal-emoji">${goal.emoji}</div>
-          </div>
-          <div class="goal-amounts">
-            <div>
-              <div class="goal-target" style="text-transform:uppercase;letter-spacing:0.07em;font-size:10px;margin-bottom:4px">Acumulado hasta ${MONTHS[currentMonth]}</div>
-              <div class="goal-current">${fmtUSD(through)}</div>
-            </div>
-          </div>
-          <div class="goal-meta">
-            <div>
-              <div class="goal-month-label">este mes</div>
-              <div class="goal-month-val">+${fmtUSDShort(thisMonth)}</div>
-            </div>
-            <span class="goal-pct">${fmtUSDShort(goal.alloc.usd)}/mes · fijo</span>
-          </div>
+    // % de avance hacia la meta (solo metas con objetivo de monto)
+    const pct = (!isFixed && goal.target > 0) ? (through / goal.target) * 100 : 0;
+    // Junto al ícono: el emoji y, si la meta tiene objetivo, el % de avance.
+    const headIcon = isFixed
+      ? `<span class="goal-emoji">${goal.emoji}</span>`
+      : `<span class="goal-emoji">${goal.emoji}</span><span class="goal-headpct">${pct.toFixed(0)}%</span>`;
+    // La barra de avance solo aplica a metas con objetivo de monto.
+    const bar = isFixed ? '' : `
+        <div class="goal-bar" style="margin-top:14px">
+          <div class="goal-bar-fill" style="width:${Math.min(pct, 100)}%"></div>
         </div>`;
-    }
-    // Meta grande con target y % del sobrante
-    // GRANDE = acumulado hasta el mes; barra y % miden ese acumulado contra la meta.
-    const pct = goal.target > 0 ? (through / goal.target) * 100 : 0;
     return `
       <div class="goal-card" onclick="openGoalDetail('${goal.id}')">
         <div class="goal-header">
           <div class="goal-title">${goal.name}</div>
-          <div class="goal-emoji">${goal.emoji}</div>
+          <div class="goal-headicon">${headIcon}</div>
         </div>
-        <div class="goal-amounts">
+        <div>
+          <div class="goal-hero-label">este mes</div>
+          <div class="goal-hero-val">+${fmtUSDShort(thisMonth)}</div>
+        </div>
+        <div class="goal-breakdown">
           <div>
-            <div class="goal-target" style="text-transform:uppercase;letter-spacing:0.07em;font-size:10px;margin-bottom:4px">Acumulado hasta ${MONTHS[currentMonth]}</div>
-            <div class="goal-current">${fmtUSD(through)}</div>
+            <div class="goal-sub-label">venías con</div>
+            <div class="goal-sub-val">${fmtUSD(prev)}</div>
           </div>
-        </div>
-        <div class="goal-bar">
-          <div class="goal-bar-fill" style="width:${Math.min(pct, 100)}%"></div>
-        </div>
-        <div class="goal-meta">
-          <div>
-            <div class="goal-month-label">este mes</div>
-            <div class="goal-month-val">+${fmtUSDShort(thisMonth)}</div>
+          <div class="right">
+            <div class="goal-sub-label">total hasta ${mes}</div>
+            <div class="goal-sub-val">${fmtUSD(through)}</div>
           </div>
-          <span class="goal-pct">${pct.toFixed(0)}% de ${fmtUSDShort(goal.target)}</span>
-        </div>
+        </div>${bar}
       </div>`;
   }).join('');
 }

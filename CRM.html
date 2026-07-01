@@ -9099,6 +9099,18 @@ function _cardMisCot(c){
   '</div>';
 }
 function _cerrarCotModal(){ var o=document.getElementById('cotModalOv'); if(o) o.remove(); }
+// La tarjeta de cotización es un overlay con z-index gigante (2147483500) para quedar
+// siempre encima; la ficha de contacto normalmente vive en 200, así que sin esto quedaba
+// tapada (invisible) al abrirla desde acá. La subimos solo mientras esté anidada así.
+var _FICHA_HIJOS_STACK = ['modalEditContacto','modalNuevoContacto','modalNuevaReunion','modalNuevaInteraccion','modalNuevaTarea','modalNuevaEmpresa','modalEtiquetas'];
+function abrirFichaDesdeCotModal(id){
+  var fm = document.getElementById('modalFichaContacto');
+  if(fm) fm.style.zIndex = '2147483550';
+  // Los modales de acción (editar/nueva interacción/etc.) se abren DESDE la ficha y deben
+  // quedar por encima de ella también en este modo apilado.
+  _FICHA_HIJOS_STACK.forEach(function(hid){ var m=document.getElementById(hid); if(m) m.style.zIndex='2147483560'; });
+  abrirFichaModal(id);
+}
 function _navCot(dir){ var o=window.__MC_ORDEN||[]; var i=o.indexOf(window.__MC_CUR)+dir; if(i>=0 && i<o.length) abrirCotModal(o[i]); }
 function _accionesCotHTML(c){
   var numJS = String(c.cotizacion||'').replace(/'/g,"\\'");
@@ -9109,7 +9121,7 @@ function _accionesCotHTML(c){
   } else {
     acc += '<button onclick="marcarEstadoCotMC(\''+esc(numJS)+'\',\'En gestión\',this)" style="background:#fff;color:#6B7280;border:1px solid #E6E8EF;padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">Reabrir</button>';
   }
-  if(c.contacto_id) acc += '<button onclick="abrirFichaModal(\''+esc(c.contacto_id)+'\')" style="background:#001A60;color:#fff;border:none;padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">Ver contacto</button>';
+  if(c.contacto_id) acc += '<button onclick="abrirFichaDesdeCotModal(\''+esc(c.contacto_id)+'\')" style="background:#001A60;color:#fff;border:none;padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">Ver contacto</button>';
   return acc;
 }
 function abrirCotModal(num){
@@ -11311,7 +11323,10 @@ async function abrirFichaModal(id, forzar){
 }
 
 function cerrarFichaModal(){
-  document.getElementById('modalFichaContacto').classList.remove('show');
+  const fm = document.getElementById('modalFichaContacto');
+  fm.classList.remove('show');
+  fm.style.zIndex = '';
+  if(typeof _FICHA_HIJOS_STACK !== 'undefined') _FICHA_HIJOS_STACK.forEach(function(hid){ var m=document.getElementById(hid); if(m) m.style.zIndex=''; });
 }
 
 // Click fuera del modal lo cierra

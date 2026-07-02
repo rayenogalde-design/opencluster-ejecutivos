@@ -2281,6 +2281,10 @@ body{
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l3-3 12 12-3 3z"/><path d="M14 14l7 7"/><circle cx="6" cy="6" r="2"/></svg>
         Territorios
       </div>
+      <div class="side-tab admin" data-view="vSalaMultisensorial" id="navSalaMS" onclick="goView('vSalaMultisensorial')" style="display:none;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
+        Sala Multisensorial
+      </div>
       <div class="side-tab admin" data-view="vConfig" id="navConfig" onclick="goView('vConfig')" style="display:none;">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         Configuración
@@ -2766,6 +2770,15 @@ body{
         <div id="metricasSelector" style="display:none;justify-content:flex-end;margin:6px 0;"></div>
         <div id="muroHonor" style="margin:14px 0;"></div>
         <div id="metricasCharts"><div class="loading-state"><div class="spinner"></div>Cargando métricas…</div></div>
+      </div>
+
+      <!-- ═══ Sala Multisensorial (admin) ═══ -->
+      <div class="view" id="vSalaMultisensorial">
+        <div class="sec-head">
+          <h1>Sala Multisensorial</h1>
+          <p>Cotizaciones de sala multisensorial del año — por ejecutivo, estado, mercado público/privado y qué se cotiza más.</p>
+        </div>
+        <div id="smBody"><div class="loading-state"><div class="spinner"></div>Cargando…</div></div>
       </div>
 
       <!-- ═══ Registro Ximena (admin) — repartir contactos migrados ═══ -->
@@ -4082,7 +4095,8 @@ const ACCIONES_POST = [
   'crm_fusionar','crm_asignar_ejecutivo_cuenta','crm_crear_cuenta','crm_editar_cuenta',
   'crm_sync_registro','crm_migrar','crm_normalizar_nombres','crm_fusionar_duplicados',
   'crm_inferir_categorias','crm_actualizar_categorias','crm_cruzar_cotizaciones','crm_invalidar_cache',
-  'crm_limpiar_duplicados_interacciones','crm_limpiar_duplicados_cotizaciones'
+  'crm_limpiar_duplicados_interacciones','crm_limpiar_duplicados_cotizaciones',
+  'crm_sm_set_probabilidad'
 ];
 async function fetchAPI(accion, params, body){
   if(!deployOK()){
@@ -4281,7 +4295,7 @@ function aplicarVisibilidadPorRol(){
 
   // Vistas admin (Territorios, Auditoría, Migración, Importar): visibles solo si Rayen está
   // en modo Admin. En modo Ejecutiva o para ejecutivos no admin, se ocultan.
-  ['navLeads', 'navCoaching', 'navActividad', 'navTerr', 'navConfig', 'secAdmin', 'secHerramientas', 'navVentasMes'].forEach(id => {
+  ['navLeads', 'navCoaching', 'navActividad', 'navTerr', 'navSalaMS', 'navConfig', 'secAdmin', 'secHerramientas', 'navVentasMes'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.style.display = verComoEjecutivo ? 'none' : '';
   });
@@ -4399,6 +4413,7 @@ function goView(id){
     case 'vVentasMes':       cargarVentasMes(); break;
     case 'vRegistroXimena':  cargarRegistroXimena(); break;
     case 'vMetricas':        cargarMetricas(); break;
+    case 'vSalaMultisensorial': cargarSalaMultisensorial(); break;
     case 'vCoaching':        cargarCoaching(); break;
     case 'vOlvidados':       cargarOlvidados(); break;
     case 'vTerritorios':     cargarTerritorios(); break;
@@ -9645,6 +9660,281 @@ function renderMetricasAnualApilado(cont, comp){
       options:{ responsive:true, plugins:{ legend:{display:true, position:'bottom', labels:{boxWidth:11, font:{size:10}, padding:8}}, tooltip:{callbacks:{label:c=> c.dataset.label+': '+(d.money?fmtCLP(c.parsed.y):c.parsed.y)}} },
         scales:{ x:{stacked:true, ticks:{font:{size:10}}}, y:{stacked:true, beginAtZero:true, ticks:{callback:v=>d.money?('$'+Math.round(v/1000000)+'M'):v, font:{size:10}}} } } }));
   });
+}
+
+/* ════ Vista SALA MULTISENSORIAL (admin): cotizaciones de sala — ejecutivo, estado, público/privado, qué se cotiza más ════
+   Reusa la lista que ya trae 'crm_mis_cotizaciones' en modo admin (todas las cotizaciones), sin llamar a un
+   endpoint nuevo. Una cotización es "de sala" si su N° termina en "-SM" (misma regla que ya usa el filtro
+   AT/SM de "Mis Cotizaciones", vía _lineaCot). */
+// Clasificador público/privado — MIRROR de crmEsSectorPublico_ (CRM_AppsScript.txt). Si se cambia el
+// criterio en el backend (la Lista Sector Público la usa también), hay que replicar el cambio acá.
+function crmEsPublicoFE_(inst, email){
+  const norm = s => String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+  const s = norm(inst);
+  const dom = String(email||'').toLowerCase().split('@')[1] || '';
+  const priv = [
+    /\bachs\b/, /asociacion chilena de seguridad/, /del trabajador/, /\bist\b/, /mutual/,
+    /clinica/, /\bbupa\b/,
+    /centro general de padres/, /centro de padres/,
+    /beneficiari/, /\bclub\b/, /junta de vecinos/, /\bjjvv\b/, /union comunal/,
+    /\bspa\b/, /\bs\.?a\b/, /\bltda\b/, /limitada/, /\beirl\b/, /e\.i\.r\.l/,
+    /distribuidora/, /distribuidor/, /comercial/, /importadora/, /ortopedia/, /\bsociedad\b/, /inversiones/,
+    /fundacion/, /corporacion/, /\bcorp\b/, /\bhogar\b/, /teleton/, /nino lisiado/,
+    /diocesis/, /\bduoc\b/, /universidad central/, /santo tomas/, /marista/, /colegio/, /\binstituto\b/, /agrupacion/
+  ];
+  for(let i=0;i<priv.length;i++) if(priv[i].test(s)) return false;
+  const pub = [
+    /municipalidad/, /\bmunicipal\b/, /\bdaem\b/, /\bslep\b/,
+    /hospital/, /cesfam/, /cecosf/, /cosam/, /consultorio/, /\bposta\b/, /\bsapu\b/,
+    /servicio de salud/, /servicio salud/, /\bseremi\b/, /\bminsal\b/, /ministerio/,
+    /\bjunji\b/, /\bescuela\b/, /\bliceo\b/,
+    /gobierno regional/, /\bgore\b/, /gobernacion/, /intendencia/, /delegacion presidencial/,
+    /\bsenadis\b/, /\bsename\b/, /\bsenama\b/, /\bfonasa\b/,
+    /universidad de (chile|santiago|valpara|concepc|talca|la frontera|antofagasta|atacama|magallanes|los lagos|aysen|tarapaca|playa ancha|biobio|o.?higgins)/,
+    /\butem\b/, /\busach\b/, /\bufro\b/, /\buct\b/, /\bupla\b/
+  ];
+  for(let j=0;j<pub.length;j++) if(pub[j].test(s)) return true;
+  if(/\.gob\.cl$/.test(dom)) return true;
+  if(/muni/.test(dom)) return true;
+  const domsPub = ['mpuentealto.cl','puertomontt.cl','providencia.cl','sanantonio.cl','talcahuano.cl',
+    'litueche.cl','mlareina.cl','edununoa.cl','cmdsnunoa.cl','slepmc.cl','redsalud.gob.cl',
+    'saludoriente.cl','saludohiggins.cl','saludpm.cl','senama.gob.cl'];
+  for(let k=0;k<domsPub.length;k++) if(dom.indexOf(domsPub[k])>=0) return true;
+  return false;
+}
+// Normaliza nombres de producto para agrupar variantes con errores de tipeo del registro
+// (ej. "vibracústico"/"vibroacústico", "Kit de Aromaterapia"/"Kit de Iniciación de Aromaterapia").
+const _SM_PROD_ALIAS = {
+  'linea led luminea para techo 5mts.': 'linea led luminea para techo',
+  'linea led para techo': 'linea led luminea para techo',
+  '5m linea led luminea para techo luminea': 'linea led luminea para techo',
+  'kit de aromaterapia': 'kit de iniciacion de aromaterapia'
+};
+function _smProdNorm(name){
+  return String(name||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/vibracustic/g,'vibroacustic').replace(/aromateria\b/g,'aromaterapia')
+    .replace(/\s*-\s*/g,' ').replace(/^sistema\s+/,'').replace(/\s+incluye.*$/,'')
+    .replace(/\s+/g,' ').trim();
+}
+async function cargarSalaMultisensorial(){
+  const cont = document.getElementById('smBody');
+  if(CACHE.vMisCot && CACHE.vMisCot.length){ try{ renderSalaMultisensorial(CACHE.vMisCot); }catch(e){} }
+  else cont.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando…</div>';
+  const ejec = (typeof getEjecutivoEfectivo==='function' ? getEjecutivoEfectivo() : '') || USUARIO;
+  const [r, rp] = await Promise.all([
+    fetchAPI('crm_mis_cotizaciones', { ejecutivo: ejec, modo_vista: MODO_VISTA }),
+    fetchAPI('crm_sm_probabilidades', {})
+  ]);
+  if(rp && rp.ok) CACHE.smProb = rp.mapa || {};
+  if(!r || !r.ok){
+    if(!(CACHE.vMisCot && CACHE.vMisCot.length)) cont.innerHTML = '<div class="error-state">No se pudo cargar. '+esc((r&&r.error)||'')+'</div>';
+    return;
+  }
+  CACHE.vMisCot = r.cotizaciones || [];
+  renderSalaMultisensorial(CACHE.vMisCot);
+}
+// Rayen marca a mano la probabilidad de cierre (20/50/90%) de una cotización "Ofrecida".
+// Click de nuevo sobre el mismo % la desmarca (vuelve a 0 = sin marcar).
+async function _smSetProb(num, val){
+  CACHE.smProb = CACHE.smProb || {};
+  const prev = CACHE.smProb[num] || 0;
+  const nuevo = (prev === val) ? 0 : val;
+  CACHE.smProb[num] = nuevo;
+  renderSalaMultisensorial(CACHE.vMisCot); // optimista
+  const r = await fetchAPI('crm_sm_set_probabilidad', { num_cotizacion: num, probabilidad: nuevo, solicitante: USUARIO });
+  if(!r || !r.ok){
+    CACHE.smProb[num] = prev;
+    renderSalaMultisensorial(CACHE.vMisCot);
+  }
+}
+// Extrae {key normalizada, nombre tal cual venía} por cada producto de UNA cotización, deduplicado.
+function _smExtraerProductos(prodStr){
+  const vistos = new Set(); const out = [];
+  String(prodStr||'').split(',').map(x=>x.trim()).filter(Boolean).forEach(item=>{
+    const m = item.match(/^(.*?)\s*[xX]\s*(\d+)\s*$/);
+    const rawName = m ? m[1].trim() : item;
+    if(!rawName || rawName.length<3) return;
+    let key = _smProdNorm(rawName);
+    if(_SM_PROD_ALIAS[key]) key = _SM_PROD_ALIAS[key];
+    if(vistos.has(key)) return;
+    vistos.add(key);
+    out.push({ key, display: rawName });
+  });
+  return out;
+}
+function renderSalaMultisensorial(todas){
+  const cont = document.getElementById('smBody');
+  if(!cont) return;
+  const fn = s => String(s||'').trim().split(/\s+/)[0] || '(sin ejecutivo)';
+  const sm = (todas||[]).filter(c => (typeof _lineaCot==='function' ? _lineaCot(c.cotizacion) : '') === 'SM');
+  const totalTodas = (todas||[]).length;
+  if(!sm.length){ cont.innerHTML = '<div class="loading-state" style="padding:30px;">No hay cotizaciones de sala multisensorial todavía.</div>'; return; }
+
+  const porEjec = {}, porEstado = {}, porMes = {}, porInst = {}, prodMap = {};
+  let montoTotal = 0, pubCount=0, pubMonto=0, privCount=0, privMonto=0, ganadas=0;
+
+  sm.forEach(c => {
+    const ej = fn(c.ejecutivo);
+    const est = String(c.estado||'(sin estado)').trim();
+    const mes = String(c.mes||'').trim() || '(sin mes)';
+    const monto = Number(c.monto)||0;
+    montoTotal += monto;
+    (porEjec[ej] = porEjec[ej]||{count:0,monto:0}).count++; porEjec[ej].monto += monto;
+    (porEstado[est] = porEstado[est]||{count:0,monto:0}).count++; porEstado[est].monto += monto;
+    (porMes[mes] = porMes[mes]||{count:0,monto:0}).count++; porMes[mes].monto += monto;
+    if(est === 'Ganada') ganadas++;
+    const inst = String(c.institucion||'').trim() || '(sin institución)';
+    (porInst[inst] = porInst[inst]||{count:0,monto:0}).count++; porInst[inst].monto += monto;
+    if(crmEsPublicoFE_(c.institucion, c.email)){ pubCount++; pubMonto += monto; } else { privCount++; privMonto += monto; }
+
+    _smExtraerProductos(c.productos).forEach(({key,display})=>{
+      if(!prodMap[key]) prodMap[key] = {display, count:0, votes:{}};
+      prodMap[key].votes[display] = (prodMap[key].votes[display]||0)+1;
+      prodMap[key].count++;
+    });
+  });
+  Object.values(prodMap).forEach(p => { p.display = Object.entries(p.votes).sort((a,b)=>b[1]-a[1])[0][0]; });
+
+  // ---- 3 grupos: Ganadas / Perdidas / Ofrecidas (todo lo que sigue abierto) ----
+  const grupos = { ganadas:[], perdidas:[], ofrecidas:[] };
+  sm.forEach(c => {
+    if(c.ganada) grupos.ganadas.push(c);
+    else if(c.cerrada) grupos.perdidas.push(c);
+    else grupos.ofrecidas.push(c);
+  });
+  const prodPorGrupo = { ganadas:{}, perdidas:{}, ofrecidas:{} };
+  ['ganadas','perdidas','ofrecidas'].forEach(g => {
+    grupos[g].forEach(c => {
+      _smExtraerProductos(c.productos).forEach(({key,display}) => {
+        if(!prodPorGrupo[g][key]) prodPorGrupo[g][key] = {display, count:0};
+        prodPorGrupo[g][key].count++;
+      });
+    });
+  });
+  const montoGrupo = arr => arr.reduce((s,c)=>s+(Number(c.monto)||0), 0);
+
+  const total = sm.length;
+  const pct = n => total ? Math.round(n/total*1000)/10 : 0;
+
+  const kpiCard = (lbl,val,color,note)=> '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-top:3px solid '+color+';border-radius:10px;padding:12px 15px;flex:1;min-width:160px;">' +
+    '<div style="font-size:10px;font-weight:800;color:var(--mist,#9aa3af);text-transform:uppercase;letter-spacing:.5px;">'+esc(lbl)+'</div>' +
+    '<div style="font-size:23px;font-weight:800;color:var(--ink);margin-top:4px;line-height:1;">'+esc(String(val))+'</div>' +
+    (note?'<div style="font-size:10.5px;color:var(--subtle);margin-top:4px;">'+esc(note)+'</div>':'') +
+  '</div>';
+
+  let html = '<div style="display:flex;gap:11px;flex-wrap:wrap;margin-bottom:20px;">' +
+    kpiCard('Cotizaciones sala', total, '#001A60', totalTodas ? (Math.round(total/totalTodas*1000)/10)+'% de '+totalTodas+' cotizaciones' : '') +
+    kpiCard('Monto cotizado', fmtCLP(montoTotal), '#5b21b6', '') +
+    kpiCard('Ganadas', ganadas, ganadas ? '#16A34A' : '#DC2626', pct(ganadas)+'%'+(ganadas?'':' — ninguna cerrada')) +
+    kpiCard('Mercado público', pubCount, '#0891B2', pct(pubCount)+'% · '+fmtCLP(pubMonto)) +
+    kpiCard('Mercado privado', privCount, '#C99935', pct(privCount)+'% · '+fmtCLP(privMonto)) +
+  '</div>';
+
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:18px;margin-bottom:20px;">';
+  html += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
+    '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #001A60;padding-left:8px;">Por ejecutivo</div>' +
+    '<canvas id="smChartEjec" height="200" style="margin-top:10px;"></canvas></div>';
+  html += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
+    '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #0891B2;padding-left:8px;">Mercado público vs privado</div>' +
+    '<canvas id="smChartPubPriv" height="200" style="margin-top:10px;"></canvas></div>';
+  html += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
+    '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #DC2626;padding-left:8px;">Estado de las cotizaciones</div>' +
+    '<canvas id="smChartEstado" height="200" style="margin-top:10px;"></canvas></div>';
+  html += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
+    '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #5b21b6;padding-left:8px;">Por mes</div>' +
+    '<canvas id="smChartMes" height="200" style="margin-top:10px;"></canvas></div>';
+  html += '</div>';
+
+  const topProd = Object.values(prodMap).sort((a,b)=>b.count-a.count).slice(0,12);
+  html += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:20px;">' +
+    '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #F59E0B;padding-left:8px;">Qué es lo que más se cotiza <span style="font-weight:600;color:var(--subtle);font-size:11px;">· % de las '+total+' cotizaciones que incluyen el ítem</span></div>' +
+    '<canvas id="smChartProd" height="'+Math.max(220, topProd.length*30)+'" style="margin-top:10px;"></canvas></div>';
+
+  // ---- Resumen de productos cotizados, separado en Ganadas / Perdidas / Ofrecidas ----
+  const prodKeysGrupo = Object.keys(prodMap).sort((a,b)=>prodMap[b].count-prodMap[a].count).slice(0,15);
+  html += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:20px;overflow-x:auto;">' +
+    '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #16A34A;padding-left:8px;margin-bottom:10px;">Resumen de productos cotizados <span style="font-weight:600;color:var(--subtle);font-size:11px;">· cuántas veces aparece en cada grupo</span></div>' +
+    '<table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:480px;">' +
+    '<tr><th style="text-align:left;padding:6px 4px;color:var(--subtle);font-size:11px;">Producto</th>' +
+      '<th style="text-align:right;padding:6px 4px;color:#16A34A;font-size:11px;">Ganadas</th>' +
+      '<th style="text-align:right;padding:6px 4px;color:#DC2626;font-size:11px;">Perdidas</th>' +
+      '<th style="text-align:right;padding:6px 4px;color:#F59E0B;font-size:11px;">Ofrecidas</th></tr>' +
+    prodKeysGrupo.map(k => '<tr>' +
+      '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);">'+esc(prodMap[k].display)+'</td>' +
+      '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;">'+(prodPorGrupo.ganadas[k]?prodPorGrupo.ganadas[k].count:0)+'</td>' +
+      '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;">'+(prodPorGrupo.perdidas[k]?prodPorGrupo.perdidas[k].count:0)+'</td>' +
+      '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;">'+(prodPorGrupo.ofrecidas[k]?prodPorGrupo.ofrecidas[k].count:0)+'</td>' +
+    '</tr>').join('') +
+    '</table></div>';
+
+  // ---- 3 listas: Ganadas / Perdidas / Ofrecidas (esta última con los botones de probabilidad) ----
+  const probMap = CACHE.smProb || {};
+  const _smFila = (c, extra) => '<div style="display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);font-size:12.5px;flex-wrap:wrap;">' +
+    '<span style="flex:0 0 120px;color:var(--subtle);">'+esc(c.cotizacion||'')+'</span>' +
+    '<span style="flex:1 1 200px;color:var(--ink);">'+esc(c.institucion||c.cliente||'(sin institución)')+'</span>' +
+    '<span style="flex:0 0 90px;color:var(--subtle);">'+esc(fn(c.ejecutivo))+'</span>' +
+    '<span style="flex:0 0 100px;text-align:right;font-weight:700;color:var(--ink);">'+fmtCLP(c.monto||0)+'</span>' +
+    (extra||'') +
+  '</div>';
+  const _smVacio = '<div style="padding:14px 4px;color:var(--subtle);font-size:12.5px;">Ninguna.</div>';
+
+  const grupoCard = (titulo, color, arr, filas) => '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:20px;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">' +
+      '<span style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid '+color+';padding-left:8px;">'+titulo+' <span style="font-weight:600;color:var(--subtle);font-size:11px;">· '+arr.length+'</span></span>' +
+      '<span style="font-size:12px;font-weight:700;color:'+color+';">'+fmtCLP(montoGrupo(arr))+'</span>' +
+    '</div>' + filas + '</div>';
+
+  html += grupoCard('Ganadas', '#16A34A', grupos.ganadas, grupos.ganadas.length ? grupos.ganadas.map(c=>_smFila(c)).join('') : _smVacio);
+  html += grupoCard('Perdidas', '#DC2626', grupos.perdidas, grupos.perdidas.length ? grupos.perdidas.map(c=>_smFila(c)).join('') : _smVacio);
+
+  const ofrecidasHtml = grupos.ofrecidas.length ? grupos.ofrecidas.map(c => {
+    const num = String(c.cotizacion||'').trim();
+    const sel = probMap[num] || 0;
+    const btn = v => '<button onclick="_smSetProb(\''+num.replace(/'/g,"\\'")+'\','+v+')" title="Marcar '+v+'% de probabilidad de cierre" style="padding:3px 10px;border-radius:999px;border:1px solid '+(sel===v?'#001A60':'var(--smoke,#e5e7eb)')+';background:'+(sel===v?'#001A60':'#fff')+';color:'+(sel===v?'#fff':'var(--subtle)')+';font-size:11px;font-weight:700;cursor:pointer;">'+v+'%</button>';
+    return _smFila(c, '<span style="flex:0 0 200px;display:flex;gap:5px;justify-content:flex-end;">'+btn(20)+btn(50)+btn(90)+'</span>');
+  }).join('') : _smVacio;
+  html += grupoCard('Ofrecidas <span style="font-weight:500;color:var(--subtle);font-size:11px;">— marca la probabilidad de cierre</span>', '#F59E0B', grupos.ofrecidas, ofrecidasHtml);
+
+  const topInst = Object.entries(porInst).filter(([k,v])=>v.count>1).sort((a,b)=>b[1].count-a[1].count);
+  if(topInst.length){
+    html += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:20px;">' +
+      '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #16A34A;padding-left:8px;margin-bottom:10px;">Instituciones con más de una cotización</div>' +
+      '<table style="width:100%;border-collapse:collapse;font-size:13px;">' +
+      topInst.map(([k,v])=>'<tr><td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);">'+esc(k)+'</td><td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;font-weight:700;">'+v.count+'</td></tr>').join('') +
+      '</table></div>';
+  }
+
+  cont.innerHTML = html;
+  if(typeof Chart === 'undefined') return;
+  if(window.__SM_CHARTS) window.__SM_CHARTS.forEach(ch=>{ try{ch.destroy();}catch(e){} });
+  window.__SM_CHARTS = [];
+
+  const ejecRows = Object.entries(porEjec).sort((a,b)=>b[1].count-a[1].count);
+  let ctx = document.getElementById('smChartEjec');
+  if(ctx) window.__SM_CHARTS.push(new Chart(ctx, { type:'bar', data:{ labels: ejecRows.map(x=>x[0]), datasets:[{ data: ejecRows.map(x=>x[1].count), backgroundColor:_PALETA_EJ, borderRadius:6, maxBarThickness:46 }]},
+    options:{ responsive:true, plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>c.parsed.y+' cotizaciones'}}}, scales:{ y:{beginAtZero:true, ticks:{stepSize:1,font:{size:11}}}, x:{ticks:{font:{size:11}}} } } }));
+
+  ctx = document.getElementById('smChartPubPriv');
+  if(ctx) window.__SM_CHARTS.push(new Chart(ctx, { type:'doughnut', data:{ labels:['Público','Privado'], datasets:[{ data:[pubCount,privCount], backgroundColor:['#0891B2','#C99935'], borderWidth:0 }]},
+    options:{ responsive:true, plugins:{ legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:11}}}, tooltip:{callbacks:{label:c=>c.label+': '+c.parsed+' ('+pct(c.parsed)+'%)'}} } } }));
+
+  const estOrden = ['Enviada','En gestión','Ganada','Perdida'];
+  const estRows = Object.entries(porEstado).sort((a,b)=> estOrden.indexOf(a[0]) - estOrden.indexOf(b[0]));
+  const estColor = { 'Enviada':'#001A60', 'En gestión':'#F59E0B', 'Ganada':'#16A34A', 'Perdida':'#DC2626' };
+  ctx = document.getElementById('smChartEstado');
+  if(ctx) window.__SM_CHARTS.push(new Chart(ctx, { type:'doughnut', data:{ labels: estRows.map(x=>x[0]), datasets:[{ data: estRows.map(x=>x[1].count), backgroundColor: estRows.map(x=>estColor[x[0]]||'#9aa3af'), borderWidth:0 }]},
+    options:{ responsive:true, plugins:{ legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:11}}}, tooltip:{callbacks:{label:c=>c.label+': '+c.parsed+' ('+pct(c.parsed)+'%)'}} } } }));
+
+  const mesOrden=['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09','2026-10','2026-11','2026-12'];
+  const mesRows = Object.entries(porMes).sort((a,b)=> mesOrden.indexOf(a[0]) - mesOrden.indexOf(b[0]));
+  const mesLbl = ym => { const p=String(ym).split('-'); return p.length===2 ? (_MN[parseInt(p[1],10)-1]||ym) : ym; };
+  ctx = document.getElementById('smChartMes');
+  if(ctx) window.__SM_CHARTS.push(new Chart(ctx, { type:'bar', data:{ labels: mesRows.map(x=>mesLbl(x[0])), datasets:[{ data: mesRows.map(x=>x[1].count), backgroundColor:'#001A60', borderRadius:6, maxBarThickness:46 }]},
+    options:{ responsive:true, plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>c.parsed.y+' cotizaciones'}}}, scales:{ y:{beginAtZero:true, ticks:{stepSize:1,font:{size:11}}}, x:{ticks:{font:{size:11}}} } } }));
+
+  ctx = document.getElementById('smChartProd');
+  if(ctx) window.__SM_CHARTS.push(new Chart(ctx, { type:'bar', data:{ labels: topProd.map(p=>p.display), datasets:[{ data: topProd.map(p=>Math.round(p.count/total*1000)/10), backgroundColor:'#F59E0B', borderRadius:5, maxBarThickness:22 }]},
+    options:{ indexAxis:'y', responsive:true, plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>c.parsed.x+'% ('+topProd[c.dataIndex].count+' cotizaciones)'}}}, scales:{ x:{beginAtZero:true, max:100, ticks:{callback:v=>v+'%',font:{size:11}}}, y:{ticks:{font:{size:11}}} } } }));
 }
 
 /* ════ Vista COACHING (admin): dónde se atasca cada ejecutivo ════ */

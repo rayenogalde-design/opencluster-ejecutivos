@@ -9896,70 +9896,97 @@ function renderSalaMultisensorial(todas){
     (note?'<div style="font-size:10.5px;color:var(--subtle);margin-top:4px;">'+esc(note)+'</div>':'') +
   '</div>';
 
-  let html = '<div style="display:flex;gap:11px;flex-wrap:wrap;margin-bottom:20px;">' +
+  // ---- Probabilidad de cierre de las "Ofrecidas" + proyección ponderada ----
+  const probMap = CACHE.smProb || {};
+  const probCounts = {0:0,20:0,50:0,90:0};
+  grupos.ofrecidas.forEach(c=>{ const p = probMap[String(c.cotizacion||'').trim()]||0; probCounts[p] = (probCounts[p]||0)+1; });
+  const montoGanadas = montoGrupo(grupos.ganadas);
+  const proyeccionPonderada = montoGanadas + grupos.ofrecidas.reduce((s,c)=>{
+    const p = probMap[String(c.cotizacion||'').trim()]||0;
+    return s + _smMontoProductos(c)*(p/100);
+  }, 0);
+
+  // ---- Barra de pestañas (para no tener que hacer scroll por todo junto) ----
+  const tabBtn = (id,label) => '<button onclick="_smTab(\''+id+'\')" data-smtab="'+id+'" class="sm-no-print" style="padding:7px 14px;border:1px solid var(--smoke,#e5e7eb);background:'+(id==='resumen'?'#001A60':'#fff')+';color:'+(id==='resumen'?'#fff':'var(--subtle)')+';font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;font-family:inherit;">'+label+'</button>';
+  let html = '<div class="sm-no-print" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">' +
+    tabBtn('resumen','Resumen') + tabBtn('instituciones','Por institución') + tabBtn('productos','Productos') + tabBtn('cotizaciones','Ganadas / Perdidas / Ofrecidas') +
+  '</div>';
+
+  // ---- Tab: Resumen ----
+  let resumenHtml = '<div style="display:flex;gap:11px;flex-wrap:wrap;margin-bottom:20px;">' +
     kpiCard('Cotizaciones sala', total, '#001A60', totalTodas ? (Math.round(total/totalTodas*1000)/10)+'% de '+totalTodas+' cotizaciones' : '') +
-    kpiCard('Monto cotizado', fmtCLP(montoTotal), '#5b21b6', '') +
-    kpiCard('Ganadas', ganadas, ganadas ? '#16A34A' : '#DC2626', pct(ganadas)+'%'+(ganadas?'':' — ninguna cerrada')) +
+    kpiCard('Monto cotizado', fmtCLP(montoTotal), '#5b21b6', 'total de las '+total) +
+    kpiCard('Ganadas', ganadas, ganadas ? '#16A34A' : '#DC2626', pct(ganadas)+'%'+(ganadas?' · '+fmtCLP(montoGanadas):' — ninguna cerrada')) +
+    kpiCard('Proyección ponderada', fmtCLP(Math.round(proyeccionPonderada)), '#5b21b6', 'ganadas + ofrecidas × su % marcado') +
     kpiCard('Mercado público', pubCount, '#0891B2', pct(pubCount)+'% · '+fmtCLP(pubMonto)) +
     kpiCard('Mercado privado', privCount, '#C99935', pct(privCount)+'% · '+fmtCLP(privMonto)) +
   '</div>';
-
-  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:18px;margin-bottom:20px;">';
-  html += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
+  resumenHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:18px;">';
+  resumenHtml += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
     '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #001A60;padding-left:8px;">Por ejecutivo</div>' +
     '<canvas id="smChartEjec" height="200" style="margin-top:10px;"></canvas></div>';
-  html += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
-    '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #0891B2;padding-left:8px;">Mercado público vs privado</div>' +
-    '<canvas id="smChartPubPriv" height="200" style="margin-top:10px;"></canvas></div>';
-  html += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
+  resumenHtml += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
     '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #DC2626;padding-left:8px;">Estado de las cotizaciones</div>' +
     '<canvas id="smChartEstado" height="200" style="margin-top:10px;"></canvas></div>';
-  html += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
+  resumenHtml += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
     '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #5b21b6;padding-left:8px;">Por mes</div>' +
     '<canvas id="smChartMes" height="200" style="margin-top:10px;"></canvas></div>';
-  html += '</div>';
+  resumenHtml += '</div>';
 
-  // ---- Dentro de cada sector, qué TIPO de institución es (2 gráficos redondos) ----
+  // ---- Tab: Por institución (público/privado + su desglose por tipo) ----
   const pubTipoRows = Object.entries(pubTipo).sort((a,b)=>b[1].count-a[1].count);
   const privTipoRows = Object.entries(privTipo).sort((a,b)=>b[1].count-a[1].count);
-  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:18px;margin-bottom:20px;">';
-  html += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
-    '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #0891B2;padding-left:8px;">Público · por tipo de institución</div>' +
-    (pubTipoRows.length ? '<canvas id="smChartPubTipo" height="220" style="margin-top:10px;"></canvas>' : '<div style="padding:20px 4px;color:var(--subtle);font-size:12.5px;">Sin cotizaciones públicas.</div>') +
+  let institucionesHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:18px;margin-bottom:18px;">';
+  institucionesHtml += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
+    '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #0891B2;padding-left:8px;">Mercado público vs privado</div>' +
+    '<canvas id="smChartPubPriv" height="200" style="margin-top:10px;"></canvas></div>';
+  institucionesHtml += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
+    '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #0891B2;padding-left:8px;">Público · por tipo</div>' +
+    (pubTipoRows.length ? '<canvas id="smChartPubTipo" height="200" style="margin-top:10px;"></canvas>' : '<div style="padding:20px 4px;color:var(--subtle);font-size:12.5px;">Sin cotizaciones públicas.</div>') +
     '</div>';
-  html += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
-    '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #C99935;padding-left:8px;">Privado · por tipo de institución</div>' +
-    (privTipoRows.length ? '<canvas id="smChartPrivTipo" height="220" style="margin-top:10px;"></canvas>' : '<div style="padding:20px 4px;color:var(--subtle);font-size:12.5px;">Sin cotizaciones privadas.</div>') +
+  institucionesHtml += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
+    '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #C99935;padding-left:8px;">Privado · por tipo</div>' +
+    (privTipoRows.length ? '<canvas id="smChartPrivTipo" height="200" style="margin-top:10px;"></canvas>' : '<div style="padding:20px 4px;color:var(--subtle);font-size:12.5px;">Sin cotizaciones privadas.</div>') +
     '</div>';
-  html += '</div>';
+  institucionesHtml += '</div>';
+  const topInst = Object.entries(porInst).filter(([k,v])=>v.count>1).sort((a,b)=>b[1].count-a[1].count);
+  if(topInst.length){
+    institucionesHtml += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
+      '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #16A34A;padding-left:8px;margin-bottom:10px;">Instituciones con más de una cotización</div>' +
+      '<table style="width:100%;border-collapse:collapse;font-size:13px;">' +
+      topInst.map(([k,v])=>'<tr><td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);">'+esc(k)+'</td><td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;font-weight:700;">'+v.count+'</td></tr>').join('') +
+      '</table></div>';
+  }
 
-  const topProd = Object.values(prodMap).sort((a,b)=>b.count-a.count).slice(0,12);
-  html += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:20px;">' +
-    '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #F59E0B;padding-left:8px;">Qué es lo que más se cotiza <span style="font-weight:600;color:var(--subtle);font-size:11px;">· % de las '+total+' cotizaciones que incluyen el ítem</span></div>' +
-    '<canvas id="smChartProd" height="'+Math.max(220, topProd.length*30)+'" style="margin-top:10px;"></canvas></div>';
-
-  // ---- Resumen de productos cotizados, separado en Ganadas / Perdidas / Ofrecidas ----
+  // ---- Tab: Productos (totales bien claros, arriba de todo) ----
+  const topProd = Object.values(prodMap).sort((a,b)=>b.count-a.count).slice(0,15);
+  let productosHtml = '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:18px;">' +
+    '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #F59E0B;padding-left:8px;">Qué es lo que más se cotiza <span style="font-weight:600;color:var(--subtle);font-size:11px;">· total de cotizaciones donde aparece cada ítem</span></div>' +
+    '<canvas id="smChartProd" height="'+Math.max(260, topProd.length*30)+'" style="margin-top:10px;"></canvas></div>';
   const prodKeysGrupo = Object.keys(prodMap).sort((a,b)=>prodMap[b].count-prodMap[a].count).slice(0,15);
-  html += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:20px;overflow-x:auto;">' +
-    '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #16A34A;padding-left:8px;margin-bottom:10px;">Resumen de productos cotizados <span style="font-weight:600;color:var(--subtle);font-size:11px;">· cuántas veces aparece en cada grupo</span></div>' +
-    '<table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:480px;">' +
+  productosHtml += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;overflow-x:auto;">' +
+    '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #16A34A;padding-left:8px;margin-bottom:10px;">Resumen de productos cotizados <span style="font-weight:600;color:var(--subtle);font-size:11px;">· total y por grupo</span></div>' +
+    '<table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:520px;">' +
     '<tr><th style="text-align:left;padding:6px 4px;color:var(--subtle);font-size:11px;">Producto</th>' +
+      '<th style="text-align:right;padding:6px 4px;color:var(--ink);font-size:11px;">Total</th>' +
       '<th style="text-align:right;padding:6px 4px;color:#16A34A;font-size:11px;">Ganadas</th>' +
       '<th style="text-align:right;padding:6px 4px;color:#DC2626;font-size:11px;">Perdidas</th>' +
       '<th style="text-align:right;padding:6px 4px;color:#F59E0B;font-size:11px;">Ofrecidas</th></tr>' +
     prodKeysGrupo.map(k => '<tr>' +
       '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);">'+esc(prodMap[k].display)+'</td>' +
+      '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;font-weight:800;">'+prodMap[k].count+'</td>' +
       '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;">'+(prodPorGrupo.ganadas[k]?prodPorGrupo.ganadas[k].count:0)+'</td>' +
       '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;">'+(prodPorGrupo.perdidas[k]?prodPorGrupo.perdidas[k].count:0)+'</td>' +
       '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;">'+(prodPorGrupo.ofrecidas[k]?prodPorGrupo.ofrecidas[k].count:0)+'</td>' +
     '</tr>').join('') +
     '</table></div>';
 
-  // ---- 3 listas: Ganadas / Perdidas / Ofrecidas (esta última con los botones de probabilidad) ----
+  // ---- Tab: Ganadas / Perdidas / Ofrecidas ----
   // Cada fila abre el modal completo de la cotización (abrirCotModal, ya usado en Mis Cotizaciones);
-  // desde ahí sale "Ver contacto" solo. window.__MC_ORDEN se fijó arriba con las 38 de sala,
-  // para que Anterior/Siguiente del modal navegue entre ellas.
-  const probMap = CACHE.smProb || {};
+  // desde ahí sale "Ver contacto" solo. window.__MC_ORDEN se fijó arriba con las de sala,
+  // para que Anterior/Siguiente del modal navegue entre ellas. Esta lista se recalcula cada vez
+  // que se abre la vista o se marca un %, así que Ganadas/Perdidas se actualizan solas apenas
+  // una cotización cambia de estado en el CRM — no hace falta tocar nada a mano.
   const _smHead = '<div class="sm-no-print" style="display:flex;align-items:center;gap:10px;padding:0 4px 6px;font-size:10.5px;font-weight:800;color:var(--mist,#9aa3af);text-transform:uppercase;letter-spacing:.4px;">' +
     '<span style="flex:0 0 120px;">N°</span><span style="flex:1 1 200px;">Institución</span><span style="flex:0 0 90px;">Ejecutivo</span><span style="flex:0 0 100px;text-align:right;">Monto</span></div>';
   const _smFila = (c, extra) => {
@@ -9973,72 +10000,96 @@ function renderSalaMultisensorial(todas){
     '</div>';
   };
   const _smVacio = '<div style="padding:14px 4px;color:var(--subtle);font-size:12.5px;">Ninguna.</div>';
-
-  const grupoCard = (titulo, color, arr, filas) => '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:20px;">' +
+  const grupoCard = (titulo, color, arr, filas) => '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:18px;">' +
     '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">' +
       '<span style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid '+color+';padding-left:8px;">'+titulo+' <span style="font-weight:600;color:var(--subtle);font-size:11px;">· '+arr.length+'</span></span>' +
       '<span style="font-size:12px;font-weight:700;color:'+color+';">'+fmtCLP(montoGrupo(arr))+'</span>' +
     '</div>' + (arr.length ? _smHead : '') + filas + '</div>';
 
-  html += grupoCard('Ganadas', '#16A34A', grupos.ganadas, grupos.ganadas.length ? grupos.ganadas.map(c=>_smFila(c)).join('') : _smVacio);
-  html += grupoCard('Perdidas', '#DC2626', grupos.perdidas, grupos.perdidas.length ? grupos.perdidas.map(c=>_smFila(c)).join('') : _smVacio);
+  let cotizacionesHtml = grupoCard('Ganadas', '#16A34A', grupos.ganadas, grupos.ganadas.length ? grupos.ganadas.map(c=>_smFila(c)).join('') : _smVacio);
+  cotizacionesHtml += grupoCard('Perdidas', '#DC2626', grupos.perdidas, grupos.perdidas.length ? grupos.perdidas.map(c=>_smFila(c)).join('') : _smVacio);
 
+  const probPill = (lbl,n,color) => '<span style="font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;background:'+color+'18;color:'+color+';">'+lbl+': '+n+'</span>';
+  const probResumen = '<div class="sm-no-print" style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px;">' +
+    probPill('Sin marcar', probCounts[0], '#9aa3af') + probPill('20%', probCounts[20], '#F59E0B') + probPill('50%', probCounts[50], '#0891B2') + probPill('90%', probCounts[90], '#16A34A') +
+  '</div>';
   const ofrecidasHtml = grupos.ofrecidas.length ? grupos.ofrecidas.map(c => {
     const num = String(c.cotizacion||'').trim();
     const sel = probMap[num] || 0;
     const btn = v => '<button onclick="event.stopPropagation();_smSetProb(\''+num.replace(/'/g,"\\'")+'\','+v+')" title="Marcar '+v+'% de probabilidad de cierre" style="padding:3px 10px;border-radius:999px;border:1px solid '+(sel===v?'#001A60':'var(--smoke,#e5e7eb)')+';background:'+(sel===v?'#001A60':'#fff')+';color:'+(sel===v?'#fff':'var(--subtle)')+';font-size:11px;font-weight:700;cursor:pointer;">'+v+'%</button>';
     return _smFila(c, '<span class="sm-no-print" style="flex:0 0 200px;display:flex;gap:5px;justify-content:flex-end;">'+btn(20)+btn(50)+btn(90)+'</span>');
   }).join('') : _smVacio;
-  html += grupoCard('Ofrecidas <span style="font-weight:500;color:var(--subtle);font-size:11px;">— marca la probabilidad de cierre</span>', '#F59E0B', grupos.ofrecidas, ofrecidasHtml);
+  cotizacionesHtml += grupoCard('Ofrecidas <span style="font-weight:500;color:var(--subtle);font-size:11px;">— marca la probabilidad de cierre</span>', '#F59E0B', grupos.ofrecidas, (grupos.ofrecidas.length?probResumen:'') + ofrecidasHtml);
 
-  const topInst = Object.entries(porInst).filter(([k,v])=>v.count>1).sort((a,b)=>b[1].count-a[1].count);
-  if(topInst.length){
-    html += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:20px;">' +
-      '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #16A34A;padding-left:8px;margin-bottom:10px;">Instituciones con más de una cotización</div>' +
-      '<table style="width:100%;border-collapse:collapse;font-size:13px;">' +
-      topInst.map(([k,v])=>'<tr><td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);">'+esc(k)+'</td><td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;font-weight:700;">'+v.count+'</td></tr>').join('') +
-      '</table></div>';
-  }
+  html += '<div class="sm-tab" id="smTab_resumen" style="display:block;">' + resumenHtml + '</div>';
+  html += '<div class="sm-tab" id="smTab_instituciones" style="display:none;">' + institucionesHtml + '</div>';
+  html += '<div class="sm-tab" id="smTab_productos" style="display:none;">' + productosHtml + '</div>';
+  html += '<div class="sm-tab" id="smTab_cotizaciones" style="display:none;">' + cotizacionesHtml + '</div>';
 
   cont.innerHTML = html;
-  if(typeof Chart === 'undefined') return;
   if(window.__SM_CHARTS) window.__SM_CHARTS.forEach(ch=>{ try{ch.destroy();}catch(e){} });
   window.__SM_CHARTS = [];
+  window.__SM_TAB_DONE = {};
 
-  const ejecRows = Object.entries(porEjec).sort((a,b)=>b[1].count-a[1].count);
-  let ctx = document.getElementById('smChartEjec');
-  if(ctx) window.__SM_CHARTS.push(new Chart(ctx, { type:'bar', data:{ labels: ejecRows.map(x=>x[0]), datasets:[{ data: ejecRows.map(x=>x[1].count), backgroundColor:_PALETA_EJ, borderRadius:6, maxBarThickness:46 }]},
-    options:{ responsive:true, plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>c.parsed.y+' cotizaciones'}}}, scales:{ y:{beginAtZero:true, ticks:{stepSize:1,font:{size:11}}}, x:{ticks:{font:{size:11}}} } } }));
+  // Los gráficos de cada pestaña se crean recién cuando se abre esa pestaña (más rápido al
+  // cargar la vista, y evita crear gráficos Chart.js dentro de un contenedor todavía oculto).
+  window.__SM_TAB_INITFN = {
+    resumen: function(){
+      const ejecRows = Object.entries(porEjec).sort((a,b)=>b[1].count-a[1].count);
+      let ctx = document.getElementById('smChartEjec');
+      if(ctx) window.__SM_CHARTS.push(new Chart(ctx, { type:'bar', data:{ labels: ejecRows.map(x=>x[0]), datasets:[{ data: ejecRows.map(x=>x[1].count), backgroundColor:_PALETA_EJ, borderRadius:6, maxBarThickness:46 }]},
+        options:{ responsive:true, plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>c.parsed.y+' cotizaciones'}}}, scales:{ y:{beginAtZero:true, ticks:{stepSize:1,font:{size:11}}}, x:{ticks:{font:{size:11}}} } } }));
 
-  ctx = document.getElementById('smChartPubPriv');
-  if(ctx) window.__SM_CHARTS.push(new Chart(ctx, { type:'doughnut', data:{ labels:['Público','Privado'], datasets:[{ data:[pubCount,privCount], backgroundColor:['#0891B2','#C99935'], borderWidth:0 }]},
-    options:{ responsive:true, plugins:{ legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:11}}}, tooltip:{callbacks:{label:c=>c.label+': '+c.parsed+' ('+pct(c.parsed)+'%)'}} } } }));
+      const estOrden = ['Enviada','En gestión','Ganada','Perdida'];
+      const estRows = Object.entries(porEstado).sort((a,b)=> estOrden.indexOf(a[0]) - estOrden.indexOf(b[0]));
+      const estColor = { 'Enviada':'#001A60', 'En gestión':'#F59E0B', 'Ganada':'#16A34A', 'Perdida':'#DC2626' };
+      ctx = document.getElementById('smChartEstado');
+      if(ctx) window.__SM_CHARTS.push(new Chart(ctx, { type:'doughnut', data:{ labels: estRows.map(x=>x[0]), datasets:[{ data: estRows.map(x=>x[1].count), backgroundColor: estRows.map(x=>estColor[x[0]]||'#9aa3af'), borderWidth:0 }]},
+        options:{ responsive:true, plugins:{ legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:11}}}, tooltip:{callbacks:{label:c=>c.label+': '+c.parsed+' ('+pct(c.parsed)+'%)'}} } } }));
 
-  ctx = document.getElementById('smChartPubTipo');
-  if(ctx && pubTipoRows.length) window.__SM_CHARTS.push(new Chart(ctx, { type:'doughnut', data:{ labels: pubTipoRows.map(x=>x[0]), datasets:[{ data: pubTipoRows.map(x=>x[1].count), backgroundColor:_PALETA_EJ, borderWidth:0 }]},
-    options:{ responsive:true, plugins:{ legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:10.5}}}, tooltip:{callbacks:{label:c=>c.label+': '+c.parsed+' ('+Math.round(c.parsed/pubCount*1000)/10+'%)'}} } } }));
+      const mesOrden=['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09','2026-10','2026-11','2026-12'];
+      const mesRows = Object.entries(porMes).sort((a,b)=> mesOrden.indexOf(a[0]) - mesOrden.indexOf(b[0]));
+      const mesLbl = ym => { const p=String(ym).split('-'); return p.length===2 ? (_MN[parseInt(p[1],10)-1]||ym) : ym; };
+      ctx = document.getElementById('smChartMes');
+      if(ctx) window.__SM_CHARTS.push(new Chart(ctx, { type:'bar', data:{ labels: mesRows.map(x=>mesLbl(x[0])), datasets:[{ data: mesRows.map(x=>x[1].count), backgroundColor:'#001A60', borderRadius:6, maxBarThickness:46 }]},
+        options:{ responsive:true, plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>c.parsed.y+' cotizaciones'}}}, scales:{ y:{beginAtZero:true, ticks:{stepSize:1,font:{size:11}}}, x:{ticks:{font:{size:11}}} } } }));
+    },
+    instituciones: function(){
+      let ctx = document.getElementById('smChartPubPriv');
+      if(ctx) window.__SM_CHARTS.push(new Chart(ctx, { type:'doughnut', data:{ labels:['Público','Privado'], datasets:[{ data:[pubCount,privCount], backgroundColor:['#0891B2','#C99935'], borderWidth:0 }]},
+        options:{ responsive:true, plugins:{ legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:11}}}, tooltip:{callbacks:{label:c=>c.label+': '+c.parsed+' ('+pct(c.parsed)+'%)'}} } } }));
 
-  ctx = document.getElementById('smChartPrivTipo');
-  if(ctx && privTipoRows.length) window.__SM_CHARTS.push(new Chart(ctx, { type:'doughnut', data:{ labels: privTipoRows.map(x=>x[0]), datasets:[{ data: privTipoRows.map(x=>x[1].count), backgroundColor:_PALETA_EJ, borderWidth:0 }]},
-    options:{ responsive:true, plugins:{ legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:10.5}}}, tooltip:{callbacks:{label:c=>c.label+': '+c.parsed+' ('+Math.round(c.parsed/privCount*1000)/10+'%)'}} } } }));
+      ctx = document.getElementById('smChartPubTipo');
+      if(ctx && pubTipoRows.length) window.__SM_CHARTS.push(new Chart(ctx, { type:'doughnut', data:{ labels: pubTipoRows.map(x=>x[0]), datasets:[{ data: pubTipoRows.map(x=>x[1].count), backgroundColor:_PALETA_EJ, borderWidth:0 }]},
+        options:{ responsive:true, plugins:{ legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:10.5}}}, tooltip:{callbacks:{label:c=>c.label+': '+c.parsed+' ('+Math.round(c.parsed/pubCount*1000)/10+'%)'}} } } }));
 
-  const estOrden = ['Enviada','En gestión','Ganada','Perdida'];
-  const estRows = Object.entries(porEstado).sort((a,b)=> estOrden.indexOf(a[0]) - estOrden.indexOf(b[0]));
-  const estColor = { 'Enviada':'#001A60', 'En gestión':'#F59E0B', 'Ganada':'#16A34A', 'Perdida':'#DC2626' };
-  ctx = document.getElementById('smChartEstado');
-  if(ctx) window.__SM_CHARTS.push(new Chart(ctx, { type:'doughnut', data:{ labels: estRows.map(x=>x[0]), datasets:[{ data: estRows.map(x=>x[1].count), backgroundColor: estRows.map(x=>estColor[x[0]]||'#9aa3af'), borderWidth:0 }]},
-    options:{ responsive:true, plugins:{ legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:11}}}, tooltip:{callbacks:{label:c=>c.label+': '+c.parsed+' ('+pct(c.parsed)+'%)'}} } } }));
-
-  const mesOrden=['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09','2026-10','2026-11','2026-12'];
-  const mesRows = Object.entries(porMes).sort((a,b)=> mesOrden.indexOf(a[0]) - mesOrden.indexOf(b[0]));
-  const mesLbl = ym => { const p=String(ym).split('-'); return p.length===2 ? (_MN[parseInt(p[1],10)-1]||ym) : ym; };
-  ctx = document.getElementById('smChartMes');
-  if(ctx) window.__SM_CHARTS.push(new Chart(ctx, { type:'bar', data:{ labels: mesRows.map(x=>mesLbl(x[0])), datasets:[{ data: mesRows.map(x=>x[1].count), backgroundColor:'#001A60', borderRadius:6, maxBarThickness:46 }]},
-    options:{ responsive:true, plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>c.parsed.y+' cotizaciones'}}}, scales:{ y:{beginAtZero:true, ticks:{stepSize:1,font:{size:11}}}, x:{ticks:{font:{size:11}}} } } }));
-
-  ctx = document.getElementById('smChartProd');
-  if(ctx) window.__SM_CHARTS.push(new Chart(ctx, { type:'bar', data:{ labels: topProd.map(p=>p.display), datasets:[{ data: topProd.map(p=>Math.round(p.count/total*1000)/10), backgroundColor:'#F59E0B', borderRadius:5, maxBarThickness:22 }]},
-    options:{ indexAxis:'y', responsive:true, plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>c.parsed.x+'% ('+topProd[c.dataIndex].count+' cotizaciones)'}}}, scales:{ x:{beginAtZero:true, max:100, ticks:{callback:v=>v+'%',font:{size:11}}}, y:{ticks:{font:{size:11}}} } } }));
+      ctx = document.getElementById('smChartPrivTipo');
+      if(ctx && privTipoRows.length) window.__SM_CHARTS.push(new Chart(ctx, { type:'doughnut', data:{ labels: privTipoRows.map(x=>x[0]), datasets:[{ data: privTipoRows.map(x=>x[1].count), backgroundColor:_PALETA_EJ, borderWidth:0 }]},
+        options:{ responsive:true, plugins:{ legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:10.5}}}, tooltip:{callbacks:{label:c=>c.label+': '+c.parsed+' ('+Math.round(c.parsed/privCount*1000)/10+'%)'}} } } }));
+    },
+    productos: function(){
+      const ctx = document.getElementById('smChartProd');
+      if(ctx) window.__SM_CHARTS.push(new Chart(ctx, { type:'bar', data:{ labels: topProd.map(p=>p.display), datasets:[{ data: topProd.map(p=>p.count), backgroundColor:'#F59E0B', borderRadius:5, maxBarThickness:22 }]},
+        options:{ indexAxis:'y', responsive:true, plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>c.parsed.x+' cotizaciones ('+pct(c.parsed.x)+'%)'}}}, scales:{ x:{beginAtZero:true, ticks:{stepSize:1,font:{size:11}}}, y:{ticks:{font:{size:11}}} } } }));
+    },
+    cotizaciones: function(){}
+  };
+  if(typeof Chart !== 'undefined'){ window.__SM_TAB_INITFN.resumen(); window.__SM_TAB_DONE.resumen = true; }
+}
+// Cambia de pestaña dentro de Sala Multisensorial sin recargar datos; crea los gráficos de esa
+// pestaña recién la primera vez que se abre (más liviano que tenerlos todos armados de entrada).
+function _smTab(id){
+  document.querySelectorAll('.sm-tab').forEach(function(el){ el.style.display = (el.id==='smTab_'+id) ? 'block' : 'none'; });
+  document.querySelectorAll('[data-smtab]').forEach(function(b){
+    const act = b.getAttribute('data-smtab')===id;
+    b.style.background = act ? '#001A60' : '#fff';
+    b.style.color = act ? '#fff' : 'var(--subtle)';
+  });
+  window.__SM_TAB_DONE = window.__SM_TAB_DONE || {};
+  if(!window.__SM_TAB_DONE[id] && typeof Chart!=='undefined' && window.__SM_TAB_INITFN && window.__SM_TAB_INITFN[id]){
+    window.__SM_TAB_INITFN[id]();
+    window.__SM_TAB_DONE[id] = true;
+  }
 }
 
 /* ════ Vista COACHING (admin): dónde se atasca cada ejecutivo ════ */

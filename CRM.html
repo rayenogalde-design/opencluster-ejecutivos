@@ -2782,6 +2782,10 @@ body{
           .sm-no-print { display: none !important; }
           #smPrintHeader { display: block !important; }
           canvas, table { break-inside: avoid; }
+          /* Cada tarjeta (gráfico, tabla, lista) entera en la misma hoja — evita que una tarjeta
+             quede cortada a la mitad entre dos páginas. Todas las tarjetas comparten este radio de
+             borde, así que sirve como selector sin tener que marcarlas una por una. */
+          div[style*="border-radius:12px"] { break-inside: avoid; page-break-inside: avoid; }
           /* Cada pestaña (Resumen / Por institución / Productos / Ganadas-Perdidas-Ofrecidas) en
              su propia hoja, con su título arriba. La primera queda junto al encabezado del informe. */
           .sm-tab + .sm-tab { break-before: page; page-break-before: always; }
@@ -10062,8 +10066,18 @@ function renderSalaMultisensorial(todas){
     tabBtn('resumen','Resumen') + tabBtn('instituciones','Por institución') + tabBtn('productos','Productos') + tabBtn('cotizaciones','Ganadas / Perdidas / Ofrecidas') +
   '</div>';
 
+  // Párrafo de contexto en texto plano al inicio de cada pestaña — para que el informe se
+  // entienda sin tener que interpretar los gráficos (útil también para quien no usa el CRM).
+  const _smParrafo = txt => '<p style="font-size:13px;color:var(--ink);line-height:1.65;background:#F7F3EE;border:1px solid #EAE1D5;border-radius:10px;padding:12px 16px;margin:0 0 18px;">'+txt+'</p>';
+
   // ---- Tab: Resumen ----
-  let resumenHtml = '<div style="display:flex;gap:11px;flex-wrap:wrap;margin-bottom:20px;">' +
+  const perdidasCount = grupos.perdidas.length, ofrecidasCount = grupos.ofrecidas.length;
+  let resumenHtml = _smParrafo(
+    'De las <b>'+total+'</b> cotizaciones de sala multisensorial del período, <b>'+ganadas+'</b> están ganadas ('+fmtCLP(montoGanadas)+'), <b>'+perdidasCount+'</b> perdidas y <b>'+ofrecidasCount+'</b> siguen en gestión (Ofrecidas). ' +
+    'El mercado público representa el '+pct(pubCount)+'% de las cotizaciones ('+fmtCLP(pubMonto)+') y el privado el '+pct(privCount)+'% ('+fmtCLP(privMonto)+'). ' +
+    'Según la probabilidad de cierre marcada en las Ofrecidas, la proyección estimada de venta es de <b>'+fmtCLP(Math.round(proyeccionPonderada))+'</b>.'
+  );
+  resumenHtml += '<div style="display:flex;gap:11px;flex-wrap:wrap;margin-bottom:20px;">' +
     kpiCardClick('Cotizaciones sala', total, '#001A60', totalTodas ? (Math.round(total/totalTodas*1000)/10)+'% de '+totalTodas+' cotizaciones' : '', "_smTab('cotizaciones')") +
     kpiCardClick('Monto cotizado', fmtCLP(montoTotal), '#5b21b6', 'total de las '+total, "_smTab('cotizaciones')") +
     kpiCardClick('Ganadas', ganadas, ganadas ? '#16A34A' : '#DC2626', pct(ganadas)+'%'+(ganadas?' · '+fmtCLP(montoGanadas):' — ninguna cerrada'), "_smTab('cotizaciones')") +
@@ -10094,7 +10108,12 @@ function renderSalaMultisensorial(todas){
   // ---- Tab: Por institución (público/privado + su desglose por tipo) ----
   const pubTipoRows = Object.entries(pubTipo).sort((a,b)=>b[1].count-a[1].count);
   const privTipoRows = Object.entries(privTipo).sort((a,b)=>b[1].count-a[1].count);
-  let institucionesHtml = '<p class="sm-no-print" style="font-size:11.5px;color:var(--subtle);margin:-8px 0 12px;">Haz clic en cualquier segmento de los gráficos redondos para ver esas cotizaciones abajo.</p>';
+  let institucionesHtml = _smParrafo(
+    'El <b>'+pct(pubCount)+'%</b> de las cotizaciones son de instituciones públicas ('+fmtCLP(pubMonto)+') y el <b>'+pct(privCount)+'%</b> de privadas ('+fmtCLP(privMonto)+'). ' +
+    (pubTipoRows.length ? 'Dentro del sector público, <b>'+pubTipoRows[0][0]+'</b> concentra la mayor parte ('+pubTipoRows[0][1].count+' cotizaciones). ' : '') +
+    (privTipoRows.length ? 'En el privado, <b>'+privTipoRows[0][0]+'</b> es el tipo de institución más frecuente ('+privTipoRows[0][1].count+' cotizaciones).' : '')
+  );
+  institucionesHtml += '<p class="sm-no-print" style="font-size:11.5px;color:var(--subtle);margin:-8px 0 12px;">Haz clic en cualquier segmento de los gráficos redondos para ver esas cotizaciones abajo.</p>';
   institucionesHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:18px;margin-bottom:18px;">';
   institucionesHtml += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
     '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #0891B2;padding-left:8px;">Mercado público vs privado</div>' +
@@ -10120,7 +10139,12 @@ function renderSalaMultisensorial(todas){
 
   // ---- Tab: Productos (totales bien claros, arriba de todo) ----
   const topProd = Object.values(prodMap).sort((a,b)=>b.count-a.count).slice(0,15);
-  let productosHtml = '<p class="sm-no-print" style="font-size:11.5px;color:var(--subtle);margin:0 0 10px;">Haz clic en cualquier barra para ver esas cotizaciones abajo.</p>';
+  let productosHtml = topProd.length ? _smParrafo(
+    'El producto más cotizado es <b>'+esc(topProd[0].display)+'</b>, presente en '+topProd[0].count+' de las '+total+' cotizaciones ('+pct(topProd[0].count)+'%)' +
+    (topProd[1] ? ', seguido de <b>'+esc(topProd[1].display)+'</b> ('+topProd[1].count+').' : '.') +
+    ' Estos ítems se repiten en la mayoría de los proyectos porque forman parte del paquete base de sala multisensorial que se cotiza casi completo.'
+  ) : '';
+  productosHtml += '<p class="sm-no-print" style="font-size:11.5px;color:var(--subtle);margin:0 0 10px;">Haz clic en cualquier barra para ver esas cotizaciones abajo.</p>';
   productosHtml += '<div class="sm-print-skip" style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:18px;">' +
     '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #F59E0B;padding-left:8px;">Qué es lo que más se cotiza <span style="font-weight:600;color:var(--subtle);font-size:11px;">· total de cotizaciones donde aparece cada ítem</span></div>' +
     '<canvas id="smChartProd" height="'+Math.max(260, topProd.length*30)+'" style="margin-top:10px;cursor:pointer;"></canvas></div>';
@@ -10155,8 +10179,8 @@ function renderSalaMultisensorial(todas){
   // para que Anterior/Siguiente del modal navegue entre ellas. Esta lista se recalcula cada vez
   // que se abre la vista o se marca un %, así que Ganadas/Perdidas se actualizan solas apenas
   // una cotización cambia de estado en el CRM — no hace falta tocar nada a mano.
-  const _smHead = '<div class="sm-no-print" style="display:flex;align-items:center;gap:10px;padding:0 4px 6px;font-size:10.5px;font-weight:800;color:var(--mist,#9aa3af);text-transform:uppercase;letter-spacing:.4px;">' +
-    '<span style="flex:0 0 120px;">N°</span><span style="flex:1 1 200px;">Institución</span><span style="flex:0 0 90px;">Ejecutivo</span><span style="flex:0 0 100px;text-align:right;">Monto</span></div>';
+  const _smHead = '<div style="display:flex;align-items:center;gap:10px;padding:0 4px 6px;font-size:10.5px;font-weight:800;color:var(--mist,#9aa3af);text-transform:uppercase;letter-spacing:.4px;">' +
+    '<span style="flex:0 0 120px;">N°</span><span style="flex:0 0 90px;">Fecha</span><span style="flex:1 1 200px;">Institución</span><span style="flex:0 0 90px;">Ejecutivo</span><span style="flex:0 0 100px;text-align:right;">Monto</span></div>';
   const smMsgMap = CACHE.smMsg || {};
   const _smFila = (c, extra) => {
     const numJS = String(c.cotizacion||'').replace(/'/g,"\\'");
@@ -10171,6 +10195,7 @@ function renderSalaMultisensorial(todas){
     return '<div onclick="abrirCotModal(\''+numJS+'\')" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);font-size:12.5px;flex-wrap:wrap;" onmouseover="this.style.background=\'var(--paper,#f9fafb)\'" onmouseout="this.style.background=\'transparent\'">' +
       '<span style="flex:0 0 120px;color:var(--subtle);font-family:Courier New,monospace;">'+esc(c.cotizacion||'')+'</span>' +
       msgIcon +
+      '<span style="flex:0 0 90px;color:var(--subtle);">'+esc(c.fecha||'—')+'</span>' +
       '<span style="flex:1 1 200px;color:var(--ink);">'+esc(c.institucion||c.cliente||'(sin institución)')+'</span>' +
       '<span style="flex:0 0 90px;color:var(--ink);font-weight:700;">'+esc(fn(c.ejecutivo))+'</span>' +
       '<span style="flex:0 0 100px;text-align:right;font-weight:700;color:var(--ink);">'+fmtCLP(_smMontoProductos(c))+'</span>' +
@@ -10203,7 +10228,11 @@ function renderSalaMultisensorial(todas){
       '<span style="font-size:12px;font-weight:700;color:'+color+';">'+fmtCLP(montoGrupo(arr))+'</span>' +
     '</div>' + (arr.length ? _smHead : '') + filas + '</div>';
 
-  let cotizacionesHtml = grupoCard('Ganadas', '#16A34A', grupos.ganadas, grupos.ganadas.length ? grupos.ganadas.map(c=>_smFila(c)).join('') : _smVacio);
+  let cotizacionesHtml = _smParrafo(
+    'De las '+ofrecidasCount+' cotizaciones Ofrecidas, <b>'+probCounts[90]+'</b> están marcadas con 90% de probabilidad de cierre, <b>'+probCounts[50]+'</b> con 50%, <b>'+probCounts[20]+'</b> con 20%, y <b>'+probCounts[0]+'</b> todavía sin marcar. ' +
+    'Hasta ahora, <b>'+ganadas+'</b> se han concretado como venta'+(ganadas!==1?'s':'')+' y <b>'+perdidasCount+'</b> se '+(perdidasCount===1?'ha':'han')+' perdido.'
+  );
+  cotizacionesHtml += grupoCard('Ganadas', '#16A34A', grupos.ganadas, grupos.ganadas.length ? grupos.ganadas.map(c=>_smFila(c)).join('') : _smVacio);
   cotizacionesHtml += grupoCard('Perdidas', '#DC2626', grupos.perdidas, grupos.perdidas.length ? grupos.perdidas.map(c=>_smFila(c)).join('') : _smVacio);
 
   const probPill = (lbl,n,color) => '<span style="font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;background:'+color+'18;color:'+color+';">'+lbl+': '+n+'</span>';
@@ -10212,12 +10241,24 @@ function renderSalaMultisensorial(todas){
   '</div>';
   // grupos.ofrecidas ya viene filtrada por los filtros globales (ejecutivo/probabilidad) aplicados
   // arriba, junto con todo lo demás de la vista — no hace falta filtrar de nuevo acá.
-  const ofrecidasHtml = grupos.ofrecidas.length ? grupos.ofrecidas.map(c => {
+  const _smFilaOfrecida = c => {
     const num = String(c.cotizacion||'').trim();
     const sel = probMap[num] || 0;
     const btn = v => '<button onclick="event.stopPropagation();_smSetProb(\''+num.replace(/'/g,"\\'")+'\','+v+')" title="Marcar '+v+'% de probabilidad de cierre" style="padding:3px 10px;border-radius:999px;border:1px solid '+(sel===v?'#001A60':'var(--smoke,#e5e7eb)')+';background:'+(sel===v?'#001A60':'#fff')+';color:'+(sel===v?'#fff':'var(--subtle)')+';font-size:11px;font-weight:700;cursor:pointer;">'+v+'%</button>';
     return _smFila(c, '<span class="sm-no-print" style="flex:0 0 200px;display:flex;gap:5px;justify-content:flex-end;">'+btn(20)+btn(50)+btn(90)+'</span>');
-  }).join('') : _smVacio;
+  };
+  // Separadas en 4 subgrupos por probabilidad (90% primero) — antes era una sola lista plana y
+  // había que fijarse en qué botón estaba resaltado para saber el % de cada una.
+  const probSubGrupoColor = { 90:'#16A34A', 50:'#0891B2', 20:'#F59E0B', 0:'#9aa3af' };
+  const probSubGrupoTitulo = { 90:'90% de probabilidad', 50:'50% de probabilidad', 20:'20% de probabilidad', 0:'Sin marcar' };
+  const ofrecidasHtml = !grupos.ofrecidas.length ? _smVacio : [90,50,20,0].map(p => {
+    const items = grupos.ofrecidas.filter(c => (probMap[String(c.cotizacion||'').trim()]||0) === p);
+    if(!items.length) return '';
+    return '<div style="margin-bottom:14px;">' +
+      '<div style="font-size:11.5px;font-weight:800;color:'+probSubGrupoColor[p]+';margin:10px 0 4px;padding-left:2px;">'+probSubGrupoTitulo[p]+' <span style="font-weight:600;color:var(--subtle);">· '+items.length+' · '+fmtCLP(items.reduce((s,c)=>s+_smMontoProductos(c),0))+'</span></div>' +
+      _smHead + items.map(c=>_smFilaOfrecida(c)).join('') +
+    '</div>';
+  }).join('');
   cotizacionesHtml += grupoCard('Ofrecidas <span style="font-weight:500;color:var(--subtle);font-size:11px;">— marca la probabilidad de cierre</span>', '#F59E0B', grupos.ofrecidas, (grupos.ofrecidas.length?probResumen:'') + ofrecidasHtml);
 
   html += '<div class="sm-tab" id="smTab_resumen" style="display:block;"><div class="sm-print-title">Resumen</div>' + resumenHtml + '</div>';

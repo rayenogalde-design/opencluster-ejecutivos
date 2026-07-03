@@ -2782,8 +2782,16 @@ body{
           .sm-no-print { display: none !important; }
           #smPrintHeader { display: block !important; }
           canvas, table { break-inside: avoid; }
+          /* Cada pestaña (Resumen / Por institución / Productos / Ganadas-Perdidas-Ofrecidas) en
+             su propia hoja, con su título arriba. La primera queda junto al encabezado del informe. */
+          .sm-tab + .sm-tab { break-before: page; page-break-before: always; }
+          .sm-print-title { display: block !important; }
+          /* El gráfico de barras de productos no se entiende impreso (queda muy angosto/alto);
+             la tabla "Resumen de productos cotizados" de más abajo ya trae el mismo dato mejor. */
+          .sm-print-skip { display: none !important; }
         }
-        #smPrintHeader { display: none; }
+        #smPrintHeader, .sm-print-title { display: none; }
+        .sm-print-title { font-family: Montserrat, sans-serif; font-size: 17px; font-weight: 800; color: #001A60; margin: 0 0 14px; }
       </style>
       <div class="view" id="vSalaMultisensorial">
         <div class="sec-head sm-no-print" style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
@@ -9840,7 +9848,14 @@ async function cargarSalaMultisensorial(forzar){
 }
 // Rayen marca a mano la probabilidad de cierre (20/50/90%) de una cotización "Ofrecida".
 // Click de nuevo sobre el mismo % la desmarca (vuelve a 0 = sin marcar).
+// Guarda de "un guardado a la vez" por cotización: si se guarda como append-only (última fila
+// gana), dos clics rápidos en 20/50/90% pueden llegar al servidor en orden distinto al que se
+// hizo clic y dejar guardado un % que ya no coincide con lo que se ve en pantalla. Mientras haya
+// un guardado en curso para ese N°, se ignoran clics nuevos sobre esa misma cotización.
+window.__SM_PROB_BUSY = window.__SM_PROB_BUSY || {};
 async function _smSetProb(num, val){
+  if(window.__SM_PROB_BUSY[num]) return;
+  window.__SM_PROB_BUSY[num] = true;
   CACHE.smProb = CACHE.smProb || {};
   const prev = CACHE.smProb[num] || 0;
   const nuevo = (prev === val) ? 0 : val;
@@ -9851,6 +9866,7 @@ async function _smSetProb(num, val){
     CACHE.smProb[num] = prev;
     renderSalaMultisensorial(CACHE.vMisCot);
   }
+  window.__SM_PROB_BUSY[num] = false;
 }
 // "Mensaje a Rayen": el ejecutivo cuenta su evaluación de una cotización de sala (¿se concreta?
 // ¿cuándo, según sus seguimientos?). Se abre desde el modal de la cotización (Mis Cotizaciones o
@@ -10014,10 +10030,11 @@ function renderSalaMultisensorial(todas){
     (note?'<div style="font-size:10.5px;color:var(--subtle);margin-top:4px;">'+esc(note)+'</div>':'') +
   '</div>';
   // KPI clickeable: lleva directo a la lista filtrada (usado para "Ofrecidas al 50%/90%").
-  const kpiCardClick = (lbl,val,color,onclickJs)=> '<div class="sm-no-print" onclick="'+onclickJs+'" style="cursor:pointer;background:#fff;border:1px solid var(--smoke,#e5e7eb);border-top:3px solid '+color+';border-radius:10px;padding:12px 15px;flex:1;min-width:160px;" onmouseover="this.style.boxShadow=\'0 3px 10px rgba(0,0,0,.1)\'" onmouseout="this.style.boxShadow=\'none\'">' +
+  const kpiCardClick = (lbl,val,color,note,onclickJs)=> '<div class="sm-no-print" onclick="'+onclickJs+'" style="cursor:pointer;background:#fff;border:1px solid var(--smoke,#e5e7eb);border-top:3px solid '+color+';border-radius:10px;padding:12px 15px;flex:1;min-width:160px;" onmouseover="this.style.boxShadow=\'0 3px 10px rgba(0,0,0,.1)\'" onmouseout="this.style.boxShadow=\'none\'">' +
     '<div style="font-size:10px;font-weight:800;color:var(--mist,#9aa3af);text-transform:uppercase;letter-spacing:.5px;">'+esc(lbl)+'</div>' +
     '<div style="font-size:23px;font-weight:800;color:var(--ink);margin-top:4px;line-height:1;">'+esc(String(val))+'</div>' +
-    '<div style="font-size:10.5px;color:'+color+';margin-top:4px;font-weight:700;">ver →</div>' +
+    (note?'<div style="font-size:10.5px;color:var(--subtle);margin-top:4px;">'+esc(note)+'</div>':'') +
+    '<div style="font-size:10.5px;color:'+color+';margin-top:3px;font-weight:700;">ver →</div>' +
   '</div>';
 
   // ---- Probabilidad de cierre de las "Ofrecidas" + proyección ponderada ----
@@ -10037,14 +10054,14 @@ function renderSalaMultisensorial(todas){
 
   // ---- Tab: Resumen ----
   let resumenHtml = '<div style="display:flex;gap:11px;flex-wrap:wrap;margin-bottom:20px;">' +
-    kpiCard('Cotizaciones sala', total, '#001A60', totalTodas ? (Math.round(total/totalTodas*1000)/10)+'% de '+totalTodas+' cotizaciones' : '') +
-    kpiCard('Monto cotizado', fmtCLP(montoTotal), '#5b21b6', 'total de las '+total) +
-    kpiCard('Ganadas', ganadas, ganadas ? '#16A34A' : '#DC2626', pct(ganadas)+'%'+(ganadas?' · '+fmtCLP(montoGanadas):' — ninguna cerrada')) +
-    kpiCard('Proyección ponderada', fmtCLP(Math.round(proyeccionPonderada)), '#5b21b6', 'ganadas + ofrecidas × su % marcado') +
-    kpiCard('Mercado público', pubCount, '#0891B2', pct(pubCount)+'% · '+fmtCLP(pubMonto)) +
-    kpiCard('Mercado privado', privCount, '#C99935', pct(privCount)+'% · '+fmtCLP(privMonto)) +
-    kpiCardClick('Ofrecidas al 50%', probCounts[50], '#0891B2', '_smFiltrarProb(50)') +
-    kpiCardClick('Ofrecidas al 90%', probCounts[90], '#16A34A', '_smFiltrarProb(90)') +
+    kpiCardClick('Cotizaciones sala', total, '#001A60', totalTodas ? (Math.round(total/totalTodas*1000)/10)+'% de '+totalTodas+' cotizaciones' : '', "_smTab('cotizaciones')") +
+    kpiCardClick('Monto cotizado', fmtCLP(montoTotal), '#5b21b6', 'total de las '+total, "_smTab('cotizaciones')") +
+    kpiCardClick('Ganadas', ganadas, ganadas ? '#16A34A' : '#DC2626', pct(ganadas)+'%'+(ganadas?' · '+fmtCLP(montoGanadas):' — ninguna cerrada'), "_smTab('cotizaciones')") +
+    kpiCardClick('Proyección ponderada', fmtCLP(Math.round(proyeccionPonderada)), '#5b21b6', 'ganadas + ofrecidas × su % marcado', "_smTab('cotizaciones')") +
+    kpiCardClick('Mercado público', pubCount, '#0891B2', pct(pubCount)+'% · '+fmtCLP(pubMonto), "_smTab('instituciones')") +
+    kpiCardClick('Mercado privado', privCount, '#C99935', pct(privCount)+'% · '+fmtCLP(privMonto), "_smTab('instituciones')") +
+    kpiCardClick('Ofrecidas al 50%', probCounts[50], '#0891B2', '', '_smFiltrarProb(50)') +
+    kpiCardClick('Ofrecidas al 90%', probCounts[90], '#16A34A', '', '_smFiltrarProb(90)') +
   '</div>';
   resumenHtml += '<p class="sm-no-print" style="font-size:11.5px;color:var(--subtle);margin:0 0 10px;">Haz clic en cualquier barra o segmento para ver esas cotizaciones abajo.</p>';
   resumenHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:18px;margin-bottom:18px;">';
@@ -10094,7 +10111,7 @@ function renderSalaMultisensorial(todas){
   // ---- Tab: Productos (totales bien claros, arriba de todo) ----
   const topProd = Object.values(prodMap).sort((a,b)=>b.count-a.count).slice(0,15);
   let productosHtml = '<p class="sm-no-print" style="font-size:11.5px;color:var(--subtle);margin:0 0 10px;">Haz clic en cualquier barra para ver esas cotizaciones abajo.</p>';
-  productosHtml += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:18px;">' +
+  productosHtml += '<div class="sm-print-skip" style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:18px;">' +
     '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #F59E0B;padding-left:8px;">Qué es lo que más se cotiza <span style="font-weight:600;color:var(--subtle);font-size:11px;">· total de cotizaciones donde aparece cada ítem</span></div>' +
     '<canvas id="smChartProd" height="'+Math.max(260, topProd.length*30)+'" style="margin-top:10px;cursor:pointer;"></canvas></div>';
   productosHtml += '<div id="smDetalleProd" class="sm-no-print" style="display:none;background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:18px;"></div>';
@@ -10187,10 +10204,10 @@ function renderSalaMultisensorial(todas){
   }).join('') : _smVacio;
   cotizacionesHtml += grupoCard('Ofrecidas <span style="font-weight:500;color:var(--subtle);font-size:11px;">— marca la probabilidad de cierre</span>', '#F59E0B', grupos.ofrecidas, (grupos.ofrecidas.length?probResumen:'') + ofrecidasHtml);
 
-  html += '<div class="sm-tab" id="smTab_resumen" style="display:block;">' + resumenHtml + '</div>';
-  html += '<div class="sm-tab" id="smTab_instituciones" style="display:none;">' + institucionesHtml + '</div>';
-  html += '<div class="sm-tab" id="smTab_productos" style="display:none;">' + productosHtml + '</div>';
-  html += '<div class="sm-tab" id="smTab_cotizaciones" style="display:none;">' + cotizacionesHtml + '</div>';
+  html += '<div class="sm-tab" id="smTab_resumen" style="display:block;"><div class="sm-print-title">Resumen</div>' + resumenHtml + '</div>';
+  html += '<div class="sm-tab" id="smTab_instituciones" style="display:none;"><div class="sm-print-title">Por institución</div>' + institucionesHtml + '</div>';
+  html += '<div class="sm-tab" id="smTab_productos" style="display:none;"><div class="sm-print-title">Productos</div>' + productosHtml + '</div>';
+  html += '<div class="sm-tab" id="smTab_cotizaciones" style="display:none;"><div class="sm-print-title">Ganadas / Perdidas / Ofrecidas</div>' + cotizacionesHtml + '</div>';
 
   cont.innerHTML = html;
   if(window.__SM_CHARTS) window.__SM_CHARTS.forEach(ch=>{ try{ch.destroy();}catch(e){} });

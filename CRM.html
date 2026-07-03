@@ -4140,7 +4140,7 @@ const ACCIONES_POST = [
   'crm_sync_registro','crm_migrar','crm_normalizar_nombres','crm_fusionar_duplicados',
   'crm_inferir_categorias','crm_actualizar_categorias','crm_cruzar_cotizaciones','crm_invalidar_cache',
   'crm_limpiar_duplicados_interacciones','crm_limpiar_duplicados_cotizaciones',
-  'crm_sm_set_probabilidad'
+  'crm_sm_set_probabilidad','crm_sm_set_mensaje'
 ];
 async function fetchAPI(accion, params, body){
   if(!deployOK()){
@@ -9181,6 +9181,11 @@ function _accionesCotHTML(c){
     acc += '<button onclick="marcarEstadoCotMC(\''+esc(numJS)+'\',\'En gestión\',this)" style="background:#fff;color:#6B7280;border:1px solid #E6E8EF;padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">Reabrir</button>';
   }
   if(c.contacto_id) acc += '<button onclick="abrirFichaDesdeCotModal(\''+esc(c.contacto_id)+'\')" style="background:#001A60;color:#fff;border:none;padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">Ver contacto</button>';
+  // Sala Multisensorial: el ejecutivo le cuenta a Rayen si cree que la venta se va a concretar y
+  // cuándo, según sus seguimientos (ella lo ve al pasar el mouse sobre la cotización en esa vista).
+  if(typeof _lineaCot==='function' && _lineaCot(c.cotizacion)==='SM'){
+    acc += '<button onclick="abrirMensajeSMModal(\''+esc(numJS)+'\')" style="background:#fff;color:#5b21b6;border:1px solid #DDD0EC;padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">Mensaje a Rayen</button>';
+  }
   return acc;
 }
 function abrirCotModal(num){
@@ -9818,11 +9823,13 @@ async function cargarSalaMultisensorial(forzar){
   if(!forzar && tieneCache && (Date.now() - (window.__SM_LAST_FETCH||0)) < RECIENTE_MS) return;
   window.__SM_LAST_FETCH = Date.now();
   const ejec = (typeof getEjecutivoEfectivo==='function' ? getEjecutivoEfectivo() : '') || USUARIO;
-  const [r, rp] = await Promise.all([
+  const [r, rp, rm] = await Promise.all([
     fetchAPI('crm_mis_cotizaciones', { ejecutivo: ejec, modo_vista: MODO_VISTA }),
-    fetchAPI('crm_sm_probabilidades', {})
+    fetchAPI('crm_sm_probabilidades', {}),
+    fetchAPI('crm_sm_mensajes', {})
   ]);
   if(rp && rp.ok) CACHE.smProb = rp.mapa || {};
+  if(rm && rm.ok) CACHE.smMsg = rm.mapa || {};
   if(!r || !r.ok){
     if(!(CACHE.vMisCot && CACHE.vMisCot.length)) cont.innerHTML = '<div class="error-state">No se pudo cargar. '+esc((r&&r.error)||'')+'</div>';
     return;
@@ -9844,6 +9851,56 @@ async function _smSetProb(num, val){
     CACHE.smProb[num] = prev;
     renderSalaMultisensorial(CACHE.vMisCot);
   }
+}
+// "Mensaje a Rayen": el ejecutivo cuenta su evaluación de una cotización de sala (¿se concreta?
+// ¿cuándo, según sus seguimientos?). Se abre desde el modal de la cotización (Mis Cotizaciones o
+// Sala Multisensorial, es el mismo modal). Busca el mensaje actual fresco al abrir, por si otra
+// pestaña ya lo cambió.
+async function abrirMensajeSMModal(num){
+  const numJS = String(num||'').replace(/'/g,"\\'");
+  const viejo = document.getElementById('smMsgModalOv'); if(viejo) viejo.remove();
+  const ov = document.createElement('div');
+  ov.id = 'smMsgModalOv';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:2147483600;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit;';
+  ov.onclick = function(e){ if(e.target===ov) ov.remove(); };
+  ov.innerHTML = '<div style="background:#fff;border-radius:14px;max-width:480px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,.3);padding:34px;text-align:center;color:#9aa3af;font-size:13px;">Cargando…</div>';
+  document.body.appendChild(ov);
+  const r = await fetchAPI('crm_sm_mensajes', {});
+  if(!document.getElementById('smMsgModalOv')) return; // se cerró mientras cargaba
+  if(r && r.ok) CACHE.smMsg = r.mapa || {};
+  const existente = (CACHE.smMsg && CACHE.smMsg[num]) ? CACHE.smMsg[num] : null;
+  ov.innerHTML =
+    '<div style="background:#fff;border-radius:14px;max-width:480px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,.3);overflow:hidden;">' +
+      '<div style="background:linear-gradient(100deg,#5b21b6,#7c3aed);color:#fff;padding:16px 20px;">' +
+        '<div style="font-weight:800;font-size:15px;">Mensaje a Rayen — '+esc(num)+'</div>' +
+        '<div style="font-size:12px;opacity:.9;margin-top:5px;line-height:1.4;">¿Crees que esta venta se va a concretar? Si es así, ¿cuándo estaría cerrando de acuerdo a tus seguimientos?</div>' +
+      '</div>' +
+      '<div style="padding:18px 20px;">' +
+        '<textarea id="smMsgTexto" rows="5" placeholder="Escribe aquí cualquier detalle sobre la probabilidad de compra…" style="width:100%;box-sizing:border-box;border:1px solid #E6E8EF;border-radius:9px;padding:10px 12px;font-size:13px;font-family:inherit;resize:vertical;">'+esc(existente?existente.mensaje:'')+'</textarea>' +
+        (existente && existente.fecha ? '<div style="font-size:11px;color:#9aa3af;margin-top:6px;">Último mensaje: '+esc(String(existente.ejecutivo||'').split(' ')[0])+' · '+esc(existente.fecha)+'</div>' : '') +
+      '</div>' +
+      '<div style="border-top:1px solid #E6E8EF;padding:13px 20px;display:flex;justify-content:flex-end;gap:8px;">' +
+        '<button onclick="document.getElementById(\'smMsgModalOv\').remove()" style="background:#fff;border:1px solid #E6E8EF;color:#6B7280;padding:8px 16px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">Cancelar</button>' +
+        '<button id="smMsgGuardarBtn" onclick="_smGuardarMensaje(\''+numJS+'\')" style="background:#5b21b6;color:#fff;border:none;padding:8px 16px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">Guardar</button>' +
+      '</div>' +
+    '</div>';
+  setTimeout(()=>{ const t=document.getElementById('smMsgTexto'); if(t) t.focus(); }, 50);
+}
+async function _smGuardarMensaje(num){
+  const btn = document.getElementById('smMsgGuardarBtn');
+  const texto = document.getElementById('smMsgTexto');
+  const val = texto ? texto.value.trim() : '';
+  if(btn){ btn.disabled = true; btn.textContent = 'Guardando…'; }
+  const r = await fetchAPI('crm_sm_set_mensaje', { num_cotizacion: num, mensaje: val, solicitante: USUARIO });
+  if(!r || !r.ok){
+    alert('No se pudo guardar: '+((r&&r.error)||'error desconocido'));
+    if(btn){ btn.disabled = false; btn.textContent = 'Guardar'; }
+    return;
+  }
+  CACHE.smMsg = CACHE.smMsg || {};
+  CACHE.smMsg[num] = { mensaje: val, ejecutivo: USUARIO, fecha: 'recién' };
+  const ov = document.getElementById('smMsgModalOv'); if(ov) ov.remove();
+  if(document.getElementById('vSalaMultisensorial') && CACHE.vMisCot) renderSalaMultisensorial(CACHE.vMisCot);
 }
 // Extrae {key normalizada, nombre tal cual venía} por cada producto de UNA cotización, deduplicado.
 function _smExtraerProductos(prodStr){
@@ -10067,10 +10124,20 @@ function renderSalaMultisensorial(todas){
   // una cotización cambia de estado en el CRM — no hace falta tocar nada a mano.
   const _smHead = '<div class="sm-no-print" style="display:flex;align-items:center;gap:10px;padding:0 4px 6px;font-size:10.5px;font-weight:800;color:var(--mist,#9aa3af);text-transform:uppercase;letter-spacing:.4px;">' +
     '<span style="flex:0 0 120px;">N°</span><span style="flex:1 1 200px;">Institución</span><span style="flex:0 0 90px;">Ejecutivo</span><span style="flex:0 0 100px;text-align:right;">Monto</span></div>';
+  const smMsgMap = CACHE.smMsg || {};
   const _smFila = (c, extra) => {
     const numJS = String(c.cotizacion||'').replace(/'/g,"\\'");
+    const num = String(c.cotizacion||'').trim();
+    const msg = smMsgMap[num] && smMsgMap[num].mensaje;
+    // Si el ejecutivo dejó un "Mensaje a Rayen", se ve un ícono junto al N°; el mensaje aparece
+    // al pasar el mouse por encima (tooltip nativo del navegador).
+    const msgTitle = msg ? (fn(c.ejecutivo) + ': ' + msg) : '';
+    const msgIcon = msg ? '<span title="'+esc(msgTitle)+'" style="flex:0 0 auto;color:#5b21b6;cursor:help;" onclick="event.stopPropagation();">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M21 6h-2v9H6v2c0 .55.45 1 1 1h11l4 4V7c0-.55-.45-1-1-1zm-4 6V3c0-.55-.45-1-1-1H3c-.55 0-1 .45-1 1v14l4-4h10c.55 0 1-.45 1-1z"/></svg>' +
+      '</span>' : '';
     return '<div onclick="abrirCotModal(\''+numJS+'\')" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);font-size:12.5px;flex-wrap:wrap;" onmouseover="this.style.background=\'var(--paper,#f9fafb)\'" onmouseout="this.style.background=\'transparent\'">' +
       '<span style="flex:0 0 120px;color:var(--subtle);font-family:Courier New,monospace;">'+esc(c.cotizacion||'')+'</span>' +
+      msgIcon +
       '<span style="flex:1 1 200px;color:var(--ink);">'+esc(c.institucion||c.cliente||'(sin institución)')+'</span>' +
       '<span style="flex:0 0 90px;color:var(--ink);font-weight:700;">'+esc(fn(c.ejecutivo))+'</span>' +
       '<span style="flex:0 0 100px;text-align:right;font-weight:700;color:var(--ink);">'+fmtCLP(_smMontoProductos(c))+'</span>' +

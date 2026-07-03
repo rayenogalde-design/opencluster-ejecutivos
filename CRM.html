@@ -2781,6 +2781,7 @@ body{
           #vSalaMultisensorial { position: absolute; left: 0; top: 0; width: 100%; }
           .sm-no-print { display: none !important; }
           #smPrintHeader { display: block !important; }
+          canvas, table { break-inside: avoid; }
         }
         #smPrintHeader { display: none; }
       </style>
@@ -2790,7 +2791,7 @@ body{
             <h1>Sala Multisensorial</h1>
             <p>Cotizaciones de sala multisensorial del año — por ejecutivo, estado, mercado público/privado y qué se cotiza más.</p>
           </div>
-          <button onclick="window.print()" style="background:#001A60;color:#fff;border:none;border-radius:9px;padding:9px 16px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">Exportar PDF</button>
+          <button onclick="_smExportarPDF()" style="background:#001A60;color:#fff;border:none;border-radius:9px;padding:9px 16px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">Exportar PDF</button>
         </div>
         <div id="smPrintHeader" style="padding:0 0 16px;">
           <div style="font-family:Montserrat,sans-serif;font-size:19px;font-weight:800;color:#001A60;">OpenCluster — Informe Sala Multisensorial</div>
@@ -2804,6 +2805,22 @@ body{
             style="width:100%;box-sizing:border-box;padding:9px 34px 9px 14px;border:1px solid var(--smoke,#e5e7eb);border-radius:9px;font-size:13px;font-family:inherit;">
           <span id="smBuscadorClear" onclick="_smLimpiarBusqueda()" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--subtle,#9aa3af);font-size:16px;">&times;</span>
           <div id="smBuscadorResultados" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:340px;overflow-y:auto;z-index:20;"></div>
+        </div>
+        <!-- Filtros globales: afectan TODO lo que se ve en la vista (KPIs, gráficos y listas de las
+             4 pestañas), no solo una lista puntual. Se aplican sobre las 38+ cotizaciones antes de
+             calcular cualquier otra cosa. -->
+        <div class="sm-no-print" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">
+          <select id="smFiltroEjec" onchange="_smAplicarFiltros()" style="padding:7px 10px;border:1px solid var(--smoke,#e5e7eb);border-radius:8px;font-size:12.5px;font-family:inherit;background:#fff;color:var(--ink);">
+            <option value="">Todos los ejecutivos</option>
+          </select>
+          <select id="smFiltroProb" onchange="_smAplicarFiltros()" style="padding:7px 10px;border:1px solid var(--smoke,#e5e7eb);border-radius:8px;font-size:12.5px;font-family:inherit;background:#fff;color:var(--ink);">
+            <option value="">Todas las probabilidades</option>
+            <option value="0">Ofrecidas sin marcar</option>
+            <option value="20">Ofrecidas al 20%</option>
+            <option value="50">Ofrecidas al 50%</option>
+            <option value="90">Ofrecidas al 90%</option>
+          </select>
+          <span id="smFiltrosActivos" onclick="_smQuitarFiltros()" style="display:none;font-size:11.5px;color:#001A60;font-weight:800;cursor:pointer;padding:7px 4px;">Quitar filtros ✕</span>
         </div>
         <div id="smBody"><div class="loading-state"><div class="spinner"></div>Cargando…</div></div>
       </div>
@@ -9786,7 +9803,11 @@ function _smProdNorm(name){
 async function cargarSalaMultisensorial(){
   const cont = document.getElementById('smBody');
   window.__SM_FILTRO_PROB = null;
+  window.__SM_FILTRO_EJEC = null;
   window.__SM_TAB_ACTUAL = 'resumen';
+  const selEj0 = document.getElementById('smFiltroEjec'); if(selEj0) selEj0.value = '';
+  const selPr0 = document.getElementById('smFiltroProb'); if(selPr0) selPr0.value = '';
+  const fa0 = document.getElementById('smFiltrosActivos'); if(fa0) fa0.style.display = 'none';
   if(typeof _smLimpiarBusqueda === 'function') _smLimpiarBusqueda();
   if(CACHE.vMisCot && CACHE.vMisCot.length){ try{ renderSalaMultisensorial(CACHE.vMisCot); }catch(e){} }
   else cont.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando…</div>';
@@ -9801,6 +9822,7 @@ async function cargarSalaMultisensorial(){
     return;
   }
   CACHE.vMisCot = r.cotizaciones || [];
+  _smPoblarFiltroEjec(CACHE.vMisCot);
   renderSalaMultisensorial(CACHE.vMisCot);
 }
 // Rayen marca a mano la probabilidad de cierre (20/50/90%) de una cotización "Ofrecida".
@@ -9843,10 +9865,30 @@ function renderSalaMultisensorial(todas){
     _pf.textContent = 'Generado el ' + fechaTxt + ' a las ' + horaTxt + ' — datos actualizados al día';
   }
   const fn = s => String(s||'').trim().split(/\s+/)[0] || '(sin ejecutivo)';
-  const sm = (todas||[]).filter(c => (typeof _lineaCot==='function' ? _lineaCot(c.cotizacion) : '') === 'SM');
-  window.__SM_LISTA = sm; // usado por el buscador rápido (_smBuscar), independiente de la pestaña activa
+  const smCompleta = (todas||[]).filter(c => (typeof _lineaCot==='function' ? _lineaCot(c.cotizacion) : '') === 'SM');
+  window.__SM_LISTA = smCompleta; // el buscador rápido siempre busca sobre TODAS, sin importar filtros activos
   const totalTodas = (todas||[]).length;
-  if(!sm.length){ cont.innerHTML = '<div class="loading-state" style="padding:30px;">No hay cotizaciones de sala multisensorial todavía.</div>'; return; }
+
+  // ---- Filtros GLOBALES (ejecutivo / probabilidad): se aplican ANTES de calcular nada, así que
+  // todo lo de abajo (KPIs, gráficos, tablas y listas de las 4 pestañas) ya sale filtrado. ----
+  const probMap = CACHE.smProb || {};
+  let sm = smCompleta;
+  const filtroEjec = window.__SM_FILTRO_EJEC || null;
+  const filtroProb = (window.__SM_FILTRO_PROB!=null) ? window.__SM_FILTRO_PROB : null;
+  if(filtroEjec) sm = sm.filter(c => fn(c.ejecutivo) === filtroEjec);
+  if(filtroProb!=null) sm = sm.filter(c => !c.cerrada && (probMap[String(c.cotizacion||'').trim()]||0) === filtroProb);
+  const _faEl = document.getElementById('smFiltrosActivos');
+  if(_faEl){
+    const activo = filtroEjec || filtroProb!=null;
+    _faEl.style.display = activo ? 'inline' : 'none';
+    if(activo) _faEl.textContent = 'Mostrando '+sm.length+' de '+smCompleta.length+' · Quitar filtros ✕';
+  }
+
+  if(!sm.length){
+    cont.innerHTML = '<div class="loading-state" style="padding:30px;">Ninguna cotización de sala coincide con el filtro activo.</div>';
+    if(typeof Chart!=='undefined' && window.__SM_CHARTS){ window.__SM_CHARTS.forEach(ch=>{ try{ch.destroy();}catch(e){} }); window.__SM_CHARTS=[]; }
+    return;
+  }
 
   const porEjec = {}, porEstado = {}, porMes = {}, porInst = {}, prodMap = {};
   const pubTipo = {}, privTipo = {};
@@ -9916,7 +9958,6 @@ function renderSalaMultisensorial(todas){
   '</div>';
 
   // ---- Probabilidad de cierre de las "Ofrecidas" + proyección ponderada ----
-  const probMap = CACHE.smProb || {};
   const probCounts = {0:0,20:0,50:0,90:0};
   grupos.ofrecidas.forEach(c=>{ const p = probMap[String(c.cotizacion||'').trim()]||0; probCounts[p] = (probCounts[p]||0)+1; });
   const montoGanadas = montoGrupo(grupos.ganadas);
@@ -9953,6 +9994,10 @@ function renderSalaMultisensorial(todas){
   resumenHtml += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
     '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #5b21b6;padding-left:8px;">Por mes</div>' +
     '<canvas id="smChartMes" height="200" style="margin-top:10px;cursor:pointer;"></canvas></div>';
+  resumenHtml += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
+    '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #F59E0B;padding-left:8px;">Probabilidad de cierre · Ofrecidas</div>' +
+    (grupos.ofrecidas.length ? '<canvas id="smChartProb" height="200" style="margin-top:10px;cursor:pointer;"></canvas>' : '<div style="padding:20px 4px;color:var(--subtle);font-size:12.5px;">No hay Ofrecidas.</div>') +
+    '</div>';
   resumenHtml += '</div>';
   resumenHtml += '<div id="smDetalleResumen" class="sm-no-print" style="display:none;background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;"></div>';
 
@@ -10059,16 +10104,15 @@ function renderSalaMultisensorial(todas){
   const probResumen = '<div class="sm-no-print" style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px;">' +
     probPill('Sin marcar', probCounts[0], '#9aa3af') + probPill('20%', probCounts[20], '#F59E0B') + probPill('50%', probCounts[50], '#0891B2') + probPill('90%', probCounts[90], '#16A34A') +
   '</div>';
-  const filtroProb = window.__SM_FILTRO_PROB;
-  const ofrecidasMostrar = (filtroProb!=null) ? grupos.ofrecidas.filter(c => (probMap[String(c.cotizacion||'').trim()]||0) === filtroProb) : grupos.ofrecidas;
-  const chipFiltro = (filtroProb!=null) ? '<div class="sm-no-print" style="margin-bottom:10px;"><span style="font-size:11.5px;font-weight:700;background:#001A60;color:#fff;padding:4px 6px 4px 10px;border-radius:999px;">Mostrando solo '+filtroProb+'% <span onclick="_smQuitarFiltroProb()" style="cursor:pointer;margin-left:6px;padding:0 5px;">✕</span></span></div>' : '';
-  const ofrecidasHtml = ofrecidasMostrar.length ? ofrecidasMostrar.map(c => {
+  // grupos.ofrecidas ya viene filtrada por los filtros globales (ejecutivo/probabilidad) aplicados
+  // arriba, junto con todo lo demás de la vista — no hace falta filtrar de nuevo acá.
+  const ofrecidasHtml = grupos.ofrecidas.length ? grupos.ofrecidas.map(c => {
     const num = String(c.cotizacion||'').trim();
     const sel = probMap[num] || 0;
     const btn = v => '<button onclick="event.stopPropagation();_smSetProb(\''+num.replace(/'/g,"\\'")+'\','+v+')" title="Marcar '+v+'% de probabilidad de cierre" style="padding:3px 10px;border-radius:999px;border:1px solid '+(sel===v?'#001A60':'var(--smoke,#e5e7eb)')+';background:'+(sel===v?'#001A60':'#fff')+';color:'+(sel===v?'#fff':'var(--subtle)')+';font-size:11px;font-weight:700;cursor:pointer;">'+v+'%</button>';
     return _smFila(c, '<span class="sm-no-print" style="flex:0 0 200px;display:flex;gap:5px;justify-content:flex-end;">'+btn(20)+btn(50)+btn(90)+'</span>');
-  }).join('') : (filtroProb!=null ? '<div style="padding:14px 4px;color:var(--subtle);font-size:12.5px;">Ninguna en '+filtroProb+'%.</div>' : _smVacio);
-  cotizacionesHtml += grupoCard('Ofrecidas <span style="font-weight:500;color:var(--subtle);font-size:11px;">— marca la probabilidad de cierre</span>', '#F59E0B', ofrecidasMostrar, chipFiltro + (grupos.ofrecidas.length?probResumen:'') + ofrecidasHtml);
+  }).join('') : _smVacio;
+  cotizacionesHtml += grupoCard('Ofrecidas <span style="font-weight:500;color:var(--subtle);font-size:11px;">— marca la probabilidad de cierre</span>', '#F59E0B', grupos.ofrecidas, (grupos.ofrecidas.length?probResumen:'') + ofrecidasHtml);
 
   html += '<div class="sm-tab" id="smTab_resumen" style="display:block;">' + resumenHtml + '</div>';
   html += '<div class="sm-tab" id="smTab_instituciones" style="display:none;">' + institucionesHtml + '</div>';
@@ -10108,6 +10152,16 @@ function renderSalaMultisensorial(todas){
         options:{ responsive:true, onClick:(evt,els)=>{ if(!els.length) return; const key = mesRows[els[0].index][0];
             _smMostrarDetalle('smDetalleResumen', mesLbl(key), sm.filter(c=>(String(c.mes||'').trim()||'(sin mes)')===key)); },
           plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>c.parsed.y+' cotizaciones'}}}, scales:{ y:{beginAtZero:true, ticks:{stepSize:1,font:{size:11}}}, x:{ticks:{font:{size:11}}} } } }));
+
+      ctx = document.getElementById('smChartProb');
+      if(ctx && grupos.ofrecidas.length){
+        const probLbl = ['Sin marcar','20%','50%','90%'];
+        const probVals = [probCounts[0], probCounts[20], probCounts[50], probCounts[90]];
+        const probCol = ['#9aa3af','#F59E0B','#0891B2','#16A34A'];
+        window.__SM_CHARTS.push(new Chart(ctx, { type:'doughnut', data:{ labels: probLbl, datasets:[{ data: probVals, backgroundColor: probCol, borderWidth:0 }]},
+          options:{ responsive:true, onClick:(evt,els)=>{ if(!els.length) return; const p = [0,20,50,90][els[0].index]; if(p>0) _smFiltrarProb(p); },
+            plugins:{ legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:10.5}}}, tooltip:{callbacks:{label:c=>c.label+': '+c.parsed+' de '+grupos.ofrecidas.length+' ofrecidas'}} } } }));
+      }
     },
     instituciones: function(){
       let ctx = document.getElementById('smChartPubPriv');
@@ -10156,13 +10210,36 @@ function _smTab(id){
   }
 }
 // KPI "Ofrecidas al 50%/90%" → salta a la pestaña de listas y deja solo esas cotizaciones a la vista.
+// Filtros GLOBALES: se aplican sobre las cotizaciones de sala ANTES de calcular cualquier KPI,
+// gráfico o lista — por eso afectan a las 4 pestañas a la vez, no solo un listado puntual.
+function _smPoblarFiltroEjec(todas){
+  const sel = document.getElementById('smFiltroEjec');
+  if(!sel) return;
+  const actual = sel.value;
+  const sm = (todas||[]).filter(c => (typeof _lineaCot==='function' ? _lineaCot(c.cotizacion) : '') === 'SM');
+  const nombres = Array.from(new Set(sm.map(c => String(c.ejecutivo||'').trim().split(/\s+/)[0]).filter(Boolean))).sort();
+  sel.innerHTML = '<option value="">Todos los ejecutivos</option>' + nombres.map(n=>'<option value="'+esc(n)+'">'+esc(n)+'</option>').join('');
+  sel.value = nombres.indexOf(actual) >= 0 ? actual : '';
+}
+function _smAplicarFiltros(){
+  const ej = document.getElementById('smFiltroEjec');
+  const pr = document.getElementById('smFiltroProb');
+  window.__SM_FILTRO_EJEC = ej && ej.value ? ej.value : null;
+  window.__SM_FILTRO_PROB = pr && pr.value !== '' ? Number(pr.value) : null;
+  renderSalaMultisensorial(CACHE.vMisCot);
+}
+function _smQuitarFiltros(){
+  window.__SM_FILTRO_EJEC = null;
+  window.__SM_FILTRO_PROB = null;
+  const ej = document.getElementById('smFiltroEjec'); if(ej) ej.value = '';
+  const pr = document.getElementById('smFiltroProb'); if(pr) pr.value = '';
+  renderSalaMultisensorial(CACHE.vMisCot);
+}
+// Atajo desde los KPI "Ofrecidas al 50%/90%": fija el filtro global de probabilidad y salta a verlas.
 function _smFiltrarProb(p){
   window.__SM_FILTRO_PROB = p;
   window.__SM_TAB_ACTUAL = 'cotizaciones';
-  renderSalaMultisensorial(CACHE.vMisCot);
-}
-function _smQuitarFiltroProb(){
-  window.__SM_FILTRO_PROB = null;
+  const pr = document.getElementById('smFiltroProb'); if(pr) pr.value = String(p);
   renderSalaMultisensorial(CACHE.vMisCot);
 }
 // Buscador rápido de Sala Multisensorial — filtra window.__SM_LISTA (las cotizaciones de sala del
@@ -10202,6 +10279,25 @@ function _smLimpiarBusqueda(){
   const clearBtn = document.getElementById('smBuscadorClear'); if(clearBtn) clearBtn.style.display = 'none';
   const box = document.getElementById('smBuscadorResultados'); if(box){ box.style.display = 'none'; box.innerHTML = ''; }
 }
+// Exportar PDF a mano (no basta con window.print()): con pestañas, solo la activa está en el DOM
+// visible y las otras 3 nunca llegaron a dibujar sus gráficos (se crean recién al abrir la pestaña),
+// así que salían en blanco o el canvas quedaba pixelado al reacomodarse al ancho de la hoja impresa.
+function _smExportarPDF(){
+  if(window.__SM_TAB_INITFN){
+    window.__SM_TAB_DONE = window.__SM_TAB_DONE || {};
+    Object.keys(window.__SM_TAB_INITFN).forEach(function(id){
+      if(!window.__SM_TAB_DONE[id]){ window.__SM_TAB_INITFN[id](); window.__SM_TAB_DONE[id] = true; }
+    });
+  }
+  document.querySelectorAll('.sm-tab').forEach(function(el){ el.style.display = 'block'; });
+  requestAnimationFrame(function(){
+    (window.__SM_CHARTS || []).forEach(function(ch){ try{ ch.resize(); }catch(e){} });
+    requestAnimationFrame(function(){ window.print(); });
+  });
+}
+window.addEventListener('afterprint', function(){
+  if(document.getElementById('vSalaMultisensorial') && CACHE.vMisCot) renderSalaMultisensorial(CACHE.vMisCot);
+});
 
 /* ════ Vista COACHING (admin): dónde se atasca cada ejecutivo ════ */
 async function cargarCoaching(){

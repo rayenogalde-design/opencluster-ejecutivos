@@ -10338,7 +10338,9 @@ function renderSalaMultisensorial(todas){
     },
     cotizaciones: function(){}
   };
-  _smTab(window.__SM_TAB_ACTUAL || 'resumen');
+  // Un tick de más para que el navegador termine el layout del innerHTML recién puesto — si
+  // Chart.js mide el canvas antes de eso, a veces lo crea con 0 de alto/ancho y queda en blanco.
+  requestAnimationFrame(() => _smTab(window.__SM_TAB_ACTUAL || 'resumen'));
 }
 // Cambia de pestaña dentro de Sala Multisensorial sin recargar datos; crea los gráficos de esa
 // pestaña recién la primera vez que se abre (más liviano que tenerlos todos armados de entrada).
@@ -10433,6 +10435,10 @@ function _smLimpiarBusqueda(){
 // antes queda con las medidas de pantalla y el gráfico sale en blanco/mal ubicado. El evento
 // correcto para esto es beforeprint (se dispara justo cuando el navegador ya va a imprimir).
 function _smExportarPDF(){
+  if(!(CACHE.vMisCot && CACHE.vMisCot.length) || !window.__SM_TAB_INITFN){
+    alert('Todavía se están cargando los datos. Espera unos segundos (que aparezcan los números arriba) y vuelve a intentar.');
+    return;
+  }
   if(window.__SM_TAB_INITFN){
     window.__SM_TAB_DONE = window.__SM_TAB_DONE || {};
     Object.keys(window.__SM_TAB_INITFN).forEach(function(id){

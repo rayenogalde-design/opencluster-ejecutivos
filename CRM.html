@@ -9800,7 +9800,7 @@ function _smProdNorm(name){
     .replace(/\s*-\s*/g,' ').replace(/^sistema\s+/,'').replace(/\s+incluye.*$/,'')
     .replace(/\s+/g,' ').trim();
 }
-async function cargarSalaMultisensorial(){
+async function cargarSalaMultisensorial(forzar){
   const cont = document.getElementById('smBody');
   window.__SM_FILTRO_PROB = null;
   window.__SM_FILTRO_EJEC = null;
@@ -9809,8 +9809,14 @@ async function cargarSalaMultisensorial(){
   const selPr0 = document.getElementById('smFiltroProb'); if(selPr0) selPr0.value = '';
   const fa0 = document.getElementById('smFiltrosActivos'); if(fa0) fa0.style.display = 'none';
   if(typeof _smLimpiarBusqueda === 'function') _smLimpiarBusqueda();
-  if(CACHE.vMisCot && CACHE.vMisCot.length){ try{ renderSalaMultisensorial(CACHE.vMisCot); }catch(e){} }
+  const tieneCache = CACHE.vMisCot && CACHE.vMisCot.length;
+  if(tieneCache){ try{ renderSalaMultisensorial(CACHE.vMisCot); }catch(e){} }
   else cont.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando…</div>';
+  // Si ya se pidió al servidor hace menos de 20s, no se vuelve a pedir — entrar y salir de la vista
+  // varias veces seguidas no debe apilar llamadas al Apps Script (eso puede colgarlo).
+  const RECIENTE_MS = 20000;
+  if(!forzar && tieneCache && (Date.now() - (window.__SM_LAST_FETCH||0)) < RECIENTE_MS) return;
+  window.__SM_LAST_FETCH = Date.now();
   const ejec = (typeof getEjecutivoEfectivo==='function' ? getEjecutivoEfectivo() : '') || USUARIO;
   const [r, rp] = await Promise.all([
     fetchAPI('crm_mis_cotizaciones', { ejecutivo: ejec, modo_vista: MODO_VISTA }),

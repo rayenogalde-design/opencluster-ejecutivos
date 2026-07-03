@@ -9776,6 +9776,8 @@ function _smProdNorm(name){
 }
 async function cargarSalaMultisensorial(){
   const cont = document.getElementById('smBody');
+  window.__SM_FILTRO_PROB = null;
+  window.__SM_TAB_ACTUAL = 'resumen';
   if(CACHE.vMisCot && CACHE.vMisCot.length){ try{ renderSalaMultisensorial(CACHE.vMisCot); }catch(e){} }
   else cont.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando…</div>';
   const ejec = (typeof getEjecutivoEfectivo==='function' ? getEjecutivoEfectivo() : '') || USUARIO;
@@ -9895,6 +9897,12 @@ function renderSalaMultisensorial(todas){
     '<div style="font-size:23px;font-weight:800;color:var(--ink);margin-top:4px;line-height:1;">'+esc(String(val))+'</div>' +
     (note?'<div style="font-size:10.5px;color:var(--subtle);margin-top:4px;">'+esc(note)+'</div>':'') +
   '</div>';
+  // KPI clickeable: lleva directo a la lista filtrada (usado para "Ofrecidas al 50%/90%").
+  const kpiCardClick = (lbl,val,color,onclickJs)=> '<div class="sm-no-print" onclick="'+onclickJs+'" style="cursor:pointer;background:#fff;border:1px solid var(--smoke,#e5e7eb);border-top:3px solid '+color+';border-radius:10px;padding:12px 15px;flex:1;min-width:160px;" onmouseover="this.style.boxShadow=\'0 3px 10px rgba(0,0,0,.1)\'" onmouseout="this.style.boxShadow=\'none\'">' +
+    '<div style="font-size:10px;font-weight:800;color:var(--mist,#9aa3af);text-transform:uppercase;letter-spacing:.5px;">'+esc(lbl)+'</div>' +
+    '<div style="font-size:23px;font-weight:800;color:var(--ink);margin-top:4px;line-height:1;">'+esc(String(val))+'</div>' +
+    '<div style="font-size:10.5px;color:'+color+';margin-top:4px;font-weight:700;">ver →</div>' +
+  '</div>';
 
   // ---- Probabilidad de cierre de las "Ofrecidas" + proyección ponderada ----
   const probMap = CACHE.smProb || {};
@@ -9920,6 +9928,8 @@ function renderSalaMultisensorial(todas){
     kpiCard('Proyección ponderada', fmtCLP(Math.round(proyeccionPonderada)), '#5b21b6', 'ganadas + ofrecidas × su % marcado') +
     kpiCard('Mercado público', pubCount, '#0891B2', pct(pubCount)+'% · '+fmtCLP(pubMonto)) +
     kpiCard('Mercado privado', privCount, '#C99935', pct(privCount)+'% · '+fmtCLP(privMonto)) +
+    kpiCardClick('Ofrecidas al 50%', probCounts[50], '#0891B2', '_smFiltrarProb(50)') +
+    kpiCardClick('Ofrecidas al 90%', probCounts[90], '#16A34A', '_smFiltrarProb(90)') +
   '</div>';
   resumenHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:18px;">';
   resumenHtml += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
@@ -10013,13 +10023,16 @@ function renderSalaMultisensorial(todas){
   const probResumen = '<div class="sm-no-print" style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px;">' +
     probPill('Sin marcar', probCounts[0], '#9aa3af') + probPill('20%', probCounts[20], '#F59E0B') + probPill('50%', probCounts[50], '#0891B2') + probPill('90%', probCounts[90], '#16A34A') +
   '</div>';
-  const ofrecidasHtml = grupos.ofrecidas.length ? grupos.ofrecidas.map(c => {
+  const filtroProb = window.__SM_FILTRO_PROB;
+  const ofrecidasMostrar = (filtroProb!=null) ? grupos.ofrecidas.filter(c => (probMap[String(c.cotizacion||'').trim()]||0) === filtroProb) : grupos.ofrecidas;
+  const chipFiltro = (filtroProb!=null) ? '<div class="sm-no-print" style="margin-bottom:10px;"><span style="font-size:11.5px;font-weight:700;background:#001A60;color:#fff;padding:4px 6px 4px 10px;border-radius:999px;">Mostrando solo '+filtroProb+'% <span onclick="_smQuitarFiltroProb()" style="cursor:pointer;margin-left:6px;padding:0 5px;">✕</span></span></div>' : '';
+  const ofrecidasHtml = ofrecidasMostrar.length ? ofrecidasMostrar.map(c => {
     const num = String(c.cotizacion||'').trim();
     const sel = probMap[num] || 0;
     const btn = v => '<button onclick="event.stopPropagation();_smSetProb(\''+num.replace(/'/g,"\\'")+'\','+v+')" title="Marcar '+v+'% de probabilidad de cierre" style="padding:3px 10px;border-radius:999px;border:1px solid '+(sel===v?'#001A60':'var(--smoke,#e5e7eb)')+';background:'+(sel===v?'#001A60':'#fff')+';color:'+(sel===v?'#fff':'var(--subtle)')+';font-size:11px;font-weight:700;cursor:pointer;">'+v+'%</button>';
     return _smFila(c, '<span class="sm-no-print" style="flex:0 0 200px;display:flex;gap:5px;justify-content:flex-end;">'+btn(20)+btn(50)+btn(90)+'</span>');
-  }).join('') : _smVacio;
-  cotizacionesHtml += grupoCard('Ofrecidas <span style="font-weight:500;color:var(--subtle);font-size:11px;">— marca la probabilidad de cierre</span>', '#F59E0B', grupos.ofrecidas, (grupos.ofrecidas.length?probResumen:'') + ofrecidasHtml);
+  }).join('') : (filtroProb!=null ? '<div style="padding:14px 4px;color:var(--subtle);font-size:12.5px;">Ninguna en '+filtroProb+'%.</div>' : _smVacio);
+  cotizacionesHtml += grupoCard('Ofrecidas <span style="font-weight:500;color:var(--subtle);font-size:11px;">— marca la probabilidad de cierre</span>', '#F59E0B', ofrecidasMostrar, chipFiltro + (grupos.ofrecidas.length?probResumen:'') + ofrecidasHtml);
 
   html += '<div class="sm-tab" id="smTab_resumen" style="display:block;">' + resumenHtml + '</div>';
   html += '<div class="sm-tab" id="smTab_instituciones" style="display:none;">' + institucionesHtml + '</div>';
@@ -10074,11 +10087,12 @@ function renderSalaMultisensorial(todas){
     },
     cotizaciones: function(){}
   };
-  if(typeof Chart !== 'undefined'){ window.__SM_TAB_INITFN.resumen(); window.__SM_TAB_DONE.resumen = true; }
+  _smTab(window.__SM_TAB_ACTUAL || 'resumen');
 }
 // Cambia de pestaña dentro de Sala Multisensorial sin recargar datos; crea los gráficos de esa
 // pestaña recién la primera vez que se abre (más liviano que tenerlos todos armados de entrada).
 function _smTab(id){
+  window.__SM_TAB_ACTUAL = id;
   document.querySelectorAll('.sm-tab').forEach(function(el){ el.style.display = (el.id==='smTab_'+id) ? 'block' : 'none'; });
   document.querySelectorAll('[data-smtab]').forEach(function(b){
     const act = b.getAttribute('data-smtab')===id;
@@ -10090,6 +10104,16 @@ function _smTab(id){
     window.__SM_TAB_INITFN[id]();
     window.__SM_TAB_DONE[id] = true;
   }
+}
+// KPI "Ofrecidas al 50%/90%" → salta a la pestaña de listas y deja solo esas cotizaciones a la vista.
+function _smFiltrarProb(p){
+  window.__SM_FILTRO_PROB = p;
+  window.__SM_TAB_ACTUAL = 'cotizaciones';
+  renderSalaMultisensorial(CACHE.vMisCot);
+}
+function _smQuitarFiltroProb(){
+  window.__SM_FILTRO_PROB = null;
+  renderSalaMultisensorial(CACHE.vMisCot);
 }
 
 /* ════ Vista COACHING (admin): dónde se atasca cada ejecutivo ════ */

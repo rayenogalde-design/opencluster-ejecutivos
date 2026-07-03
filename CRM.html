@@ -9931,17 +9931,19 @@ function renderSalaMultisensorial(todas){
     kpiCardClick('Ofrecidas al 50%', probCounts[50], '#0891B2', '_smFiltrarProb(50)') +
     kpiCardClick('Ofrecidas al 90%', probCounts[90], '#16A34A', '_smFiltrarProb(90)') +
   '</div>';
-  resumenHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:18px;">';
+  resumenHtml += '<p class="sm-no-print" style="font-size:11.5px;color:var(--subtle);margin:0 0 10px;">Haz clic en cualquier barra o segmento para ver esas cotizaciones abajo.</p>';
+  resumenHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:18px;margin-bottom:18px;">';
   resumenHtml += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
     '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #001A60;padding-left:8px;">Por ejecutivo</div>' +
-    '<canvas id="smChartEjec" height="200" style="margin-top:10px;"></canvas></div>';
+    '<canvas id="smChartEjec" height="200" style="margin-top:10px;cursor:pointer;"></canvas></div>';
   resumenHtml += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
     '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #DC2626;padding-left:8px;">Estado de las cotizaciones</div>' +
-    '<canvas id="smChartEstado" height="200" style="margin-top:10px;"></canvas></div>';
+    '<canvas id="smChartEstado" height="200" style="margin-top:10px;cursor:pointer;"></canvas></div>';
   resumenHtml += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
     '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #5b21b6;padding-left:8px;">Por mes</div>' +
-    '<canvas id="smChartMes" height="200" style="margin-top:10px;"></canvas></div>';
+    '<canvas id="smChartMes" height="200" style="margin-top:10px;cursor:pointer;"></canvas></div>';
   resumenHtml += '</div>';
+  resumenHtml += '<div id="smDetalleResumen" class="sm-no-print" style="display:none;background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;"></div>';
 
   // ---- Tab: Por institución (público/privado + su desglose por tipo) ----
   const pubTipoRows = Object.entries(pubTipo).sort((a,b)=>b[1].count-a[1].count);
@@ -9972,9 +9974,11 @@ function renderSalaMultisensorial(todas){
 
   // ---- Tab: Productos (totales bien claros, arriba de todo) ----
   const topProd = Object.values(prodMap).sort((a,b)=>b.count-a.count).slice(0,15);
-  let productosHtml = '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:18px;">' +
+  let productosHtml = '<p class="sm-no-print" style="font-size:11.5px;color:var(--subtle);margin:0 0 10px;">Haz clic en cualquier barra para ver esas cotizaciones abajo.</p>';
+  productosHtml += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:18px;">' +
     '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #F59E0B;padding-left:8px;">Qué es lo que más se cotiza <span style="font-weight:600;color:var(--subtle);font-size:11px;">· total de cotizaciones donde aparece cada ítem</span></div>' +
-    '<canvas id="smChartProd" height="'+Math.max(260, topProd.length*30)+'" style="margin-top:10px;"></canvas></div>';
+    '<canvas id="smChartProd" height="'+Math.max(260, topProd.length*30)+'" style="margin-top:10px;cursor:pointer;"></canvas></div>';
+  productosHtml += '<div id="smDetalleProd" class="sm-no-print" style="display:none;background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:18px;"></div>';
   const prodKeysGrupo = Object.keys(prodMap).sort((a,b)=>prodMap[b].count-prodMap[a].count).slice(0,15);
   productosHtml += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;overflow-x:auto;">' +
     '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #16A34A;padding-left:8px;margin-bottom:10px;">Resumen de productos cotizados <span style="font-weight:600;color:var(--subtle);font-size:11px;">· total y por grupo</span></div>' +
@@ -10012,13 +10016,13 @@ function renderSalaMultisensorial(todas){
     '</div>';
   };
   const _smVacio = '<div style="padding:14px 4px;color:var(--subtle);font-size:12.5px;">Ninguna.</div>';
-  // Click en un segmento de los donuts de "Por institución" → despliega el listado de esas
-  // cotizaciones justo debajo de los gráficos (mismo panel, se reemplaza en cada clic).
-  const _smMostrarDetalleInst = (titulo, lista) => {
-    const el = document.getElementById('smDetalleInst');
+  // Click en CUALQUIER gráfico de la vista → despliega el listado de esas cotizaciones justo
+  // debajo, en el panel de detalle de esa misma pestaña (elId distinto por pestaña).
+  const _smMostrarDetalle = (elId, titulo, lista) => {
+    const el = document.getElementById(elId);
     if(!el) return;
     el.style.display = 'block';
-    const cerrar = '<span onclick="document.getElementById(\'smDetalleInst\').style.display=\'none\'" style="cursor:pointer;color:var(--subtle);font-size:20px;line-height:1;">&times;</span>';
+    const cerrar = '<span onclick="document.getElementById(\''+elId+'\').style.display=\'none\'" style="cursor:pointer;color:var(--subtle);font-size:20px;line-height:1;">&times;</span>';
     if(!lista.length){
       el.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;">' +
         '<span style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);">'+esc(titulo)+'</span>' + cerrar + '</div>' +
@@ -10072,45 +10076,53 @@ function renderSalaMultisensorial(todas){
       const ejecRows = Object.entries(porEjec).sort((a,b)=>b[1].count-a[1].count);
       let ctx = document.getElementById('smChartEjec');
       if(ctx) window.__SM_CHARTS.push(new Chart(ctx, { type:'bar', data:{ labels: ejecRows.map(x=>x[0]), datasets:[{ data: ejecRows.map(x=>x[1].count), backgroundColor:_PALETA_EJ, borderRadius:6, maxBarThickness:46 }]},
-        options:{ responsive:true, plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>c.parsed.y+' cotizaciones'}}}, scales:{ y:{beginAtZero:true, ticks:{stepSize:1,font:{size:11}}}, x:{ticks:{font:{size:11}}} } } }));
+        options:{ responsive:true, onClick:(evt,els)=>{ if(!els.length) return; const label = ejecRows[els[0].index][0];
+            _smMostrarDetalle('smDetalleResumen', 'Ejecutivo: '+label, sm.filter(c=>fn(c.ejecutivo)===label)); },
+          plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>c.parsed.y+' cotizaciones'}}}, scales:{ y:{beginAtZero:true, ticks:{stepSize:1,font:{size:11}}}, x:{ticks:{font:{size:11}}} } } }));
 
       const estOrden = ['Enviada','En gestión','Ganada','Perdida'];
       const estRows = Object.entries(porEstado).sort((a,b)=> estOrden.indexOf(a[0]) - estOrden.indexOf(b[0]));
       const estColor = { 'Enviada':'#06B3FD', 'En gestión':'#F59E0B', 'Ganada':'#16A34A', 'Perdida':'#DC2626' };
       ctx = document.getElementById('smChartEstado');
       if(ctx) window.__SM_CHARTS.push(new Chart(ctx, { type:'doughnut', data:{ labels: estRows.map(x=>x[0]), datasets:[{ data: estRows.map(x=>x[1].count), backgroundColor: estRows.map(x=>estColor[x[0]]||'#9aa3af'), borderWidth:0 }]},
-        options:{ responsive:true, plugins:{ legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:11}}}, tooltip:{callbacks:{label:c=>c.label+': '+c.parsed+' ('+pct(c.parsed)+'%)'}} } } }));
+        options:{ responsive:true, onClick:(evt,els)=>{ if(!els.length) return; const label = estRows[els[0].index][0];
+            _smMostrarDetalle('smDetalleResumen', 'Estado: '+label, sm.filter(c=>String(c.estado||'(sin estado)').trim()===label)); },
+          plugins:{ legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:11}}}, tooltip:{callbacks:{label:c=>c.label+': '+c.parsed+' ('+pct(c.parsed)+'%)'}} } } }));
 
       const mesOrden=['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09','2026-10','2026-11','2026-12'];
       const mesRows = Object.entries(porMes).sort((a,b)=> mesOrden.indexOf(a[0]) - mesOrden.indexOf(b[0]));
       const mesLbl = ym => { const p=String(ym).split('-'); return p.length===2 ? (_MN[parseInt(p[1],10)-1]||ym) : ym; };
       ctx = document.getElementById('smChartMes');
       if(ctx) window.__SM_CHARTS.push(new Chart(ctx, { type:'bar', data:{ labels: mesRows.map(x=>mesLbl(x[0])), datasets:[{ data: mesRows.map(x=>x[1].count), backgroundColor:'#001A60', borderRadius:6, maxBarThickness:46 }]},
-        options:{ responsive:true, plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>c.parsed.y+' cotizaciones'}}}, scales:{ y:{beginAtZero:true, ticks:{stepSize:1,font:{size:11}}}, x:{ticks:{font:{size:11}}} } } }));
+        options:{ responsive:true, onClick:(evt,els)=>{ if(!els.length) return; const key = mesRows[els[0].index][0];
+            _smMostrarDetalle('smDetalleResumen', mesLbl(key), sm.filter(c=>(String(c.mes||'').trim()||'(sin mes)')===key)); },
+          plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>c.parsed.y+' cotizaciones'}}}, scales:{ y:{beginAtZero:true, ticks:{stepSize:1,font:{size:11}}}, x:{ticks:{font:{size:11}}} } } }));
     },
     instituciones: function(){
       let ctx = document.getElementById('smChartPubPriv');
       if(ctx) window.__SM_CHARTS.push(new Chart(ctx, { type:'doughnut', data:{ labels:['Público','Privado'], datasets:[{ data:[pubCount,privCount], backgroundColor:['#0891B2','#C99935'], borderWidth:0 }]},
         options:{ responsive:true, onClick:(evt,els)=>{ if(!els.length) return; const idx=els[0].index; const esPub = idx===0;
-            _smMostrarDetalleInst(esPub?'Público':'Privado', sm.filter(c=>crmEsPublicoFE_(c.institucion,c.email)===esPub)); },
+            _smMostrarDetalle('smDetalleInst', esPub?'Público':'Privado', sm.filter(c=>crmEsPublicoFE_(c.institucion,c.email)===esPub)); },
           plugins:{ legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:11}}}, tooltip:{callbacks:{label:c=>c.label+': '+c.parsed+' ('+pct(c.parsed)+'%)'}} } } }));
 
       ctx = document.getElementById('smChartPubTipo');
       if(ctx && pubTipoRows.length) window.__SM_CHARTS.push(new Chart(ctx, { type:'doughnut', data:{ labels: pubTipoRows.map(x=>x[0]), datasets:[{ data: pubTipoRows.map(x=>x[1].count), backgroundColor:_PALETA_EJ, borderWidth:0 }]},
         options:{ responsive:true, onClick:(evt,els)=>{ if(!els.length) return; const label = pubTipoRows[els[0].index][0];
-            _smMostrarDetalleInst('Público · '+label, sm.filter(c=>crmEsPublicoFE_(c.institucion,c.email) && _smTipoInstitucion(c)===label)); },
+            _smMostrarDetalle('smDetalleInst', 'Público · '+label, sm.filter(c=>crmEsPublicoFE_(c.institucion,c.email) && _smTipoInstitucion(c)===label)); },
           plugins:{ legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:10.5}}}, tooltip:{callbacks:{label:c=>c.label+': '+c.parsed+' ('+Math.round(c.parsed/pubCount*1000)/10+'%)'}} } } }));
 
       ctx = document.getElementById('smChartPrivTipo');
       if(ctx && privTipoRows.length) window.__SM_CHARTS.push(new Chart(ctx, { type:'doughnut', data:{ labels: privTipoRows.map(x=>x[0]), datasets:[{ data: privTipoRows.map(x=>x[1].count), backgroundColor:_PALETA_EJ, borderWidth:0 }]},
         options:{ responsive:true, onClick:(evt,els)=>{ if(!els.length) return; const label = privTipoRows[els[0].index][0];
-            _smMostrarDetalleInst('Privado · '+label, sm.filter(c=>!crmEsPublicoFE_(c.institucion,c.email) && _smTipoInstitucion(c)===label)); },
+            _smMostrarDetalle('smDetalleInst', 'Privado · '+label, sm.filter(c=>!crmEsPublicoFE_(c.institucion,c.email) && _smTipoInstitucion(c)===label)); },
           plugins:{ legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:10.5}}}, tooltip:{callbacks:{label:c=>c.label+': '+c.parsed+' ('+Math.round(c.parsed/privCount*1000)/10+'%)'}} } } }));
     },
     productos: function(){
       const ctx = document.getElementById('smChartProd');
       if(ctx) window.__SM_CHARTS.push(new Chart(ctx, { type:'bar', data:{ labels: topProd.map(p=>p.display), datasets:[{ data: topProd.map(p=>p.count), backgroundColor:'#F59E0B', borderRadius:5, maxBarThickness:22 }]},
-        options:{ indexAxis:'y', responsive:true, plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>c.parsed.x+' cotizaciones ('+pct(c.parsed.x)+'%)'}}}, scales:{ x:{beginAtZero:true, ticks:{stepSize:1,font:{size:11}}}, y:{ticks:{font:{size:11}}} } } }));
+        options:{ indexAxis:'y', responsive:true, onClick:(evt,els)=>{ if(!els.length) return; const prod = topProd[els[0].index];
+            _smMostrarDetalle('smDetalleProd', prod.display, sm.filter(c=>_smExtraerProductos(c.productos).some(p=>p.key===prod.key))); },
+          plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>c.parsed.x+' cotizaciones ('+pct(c.parsed.x)+'%)'}}}, scales:{ x:{beginAtZero:true, ticks:{stepSize:1,font:{size:11}}}, y:{ticks:{font:{size:11}}} } } }));
     },
     cotizaciones: function(){}
   };

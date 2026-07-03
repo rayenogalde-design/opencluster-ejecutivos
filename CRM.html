@@ -10019,6 +10019,16 @@ function renderSalaMultisensorial(todas){
       });
     });
   });
+  // "Ofrecidas" desglosada por probabilidad — para saber qué productos aparecen en las cotizaciones
+  // marcadas 50%/90%, no solo en "ofrecidas" en general (que junta también las sin marcar).
+  const prodPorProb = { 0:{}, 20:{}, 50:{}, 90:{} };
+  grupos.ofrecidas.forEach(c => {
+    const p = probMap[String(c.cotizacion||'').trim()] || 0;
+    _smExtraerProductos(c.productos).forEach(({key,display}) => {
+      if(!prodPorProb[p][key]) prodPorProb[p][key] = {display, count:0};
+      prodPorProb[p][key].count++;
+    });
+  });
   const montoGrupo = arr => arr.reduce((s,c)=>s+_smMontoProductos(c), 0);
 
   const total = sm.length;
@@ -10117,19 +10127,25 @@ function renderSalaMultisensorial(todas){
   productosHtml += '<div id="smDetalleProd" class="sm-no-print" style="display:none;background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:18px;"></div>';
   const prodKeysGrupo = Object.keys(prodMap).sort((a,b)=>prodMap[b].count-prodMap[a].count).slice(0,15);
   productosHtml += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;overflow-x:auto;">' +
-    '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #16A34A;padding-left:8px;margin-bottom:10px;">Resumen de productos cotizados <span style="font-weight:600;color:var(--subtle);font-size:11px;">· total y por grupo</span></div>' +
-    '<table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:520px;">' +
+    '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #16A34A;padding-left:8px;margin-bottom:10px;">Resumen de productos cotizados <span style="font-weight:600;color:var(--subtle);font-size:11px;">· total, Ganadas/Perdidas, y Ofrecidas por su % de probabilidad</span></div>' +
+    '<table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:640px;">' +
     '<tr><th style="text-align:left;padding:6px 4px;color:var(--subtle);font-size:11px;">Producto</th>' +
       '<th style="text-align:right;padding:6px 4px;color:var(--ink);font-size:11px;">Total</th>' +
       '<th style="text-align:right;padding:6px 4px;color:#16A34A;font-size:11px;">Ganadas</th>' +
       '<th style="text-align:right;padding:6px 4px;color:#DC2626;font-size:11px;">Perdidas</th>' +
-      '<th style="text-align:right;padding:6px 4px;color:#F59E0B;font-size:11px;">Ofrecidas</th></tr>' +
+      '<th style="text-align:right;padding:6px 4px;color:#9aa3af;font-size:11px;">Sin marcar</th>' +
+      '<th style="text-align:right;padding:6px 4px;color:#F59E0B;font-size:11px;">20%</th>' +
+      '<th style="text-align:right;padding:6px 4px;color:#0891B2;font-size:11px;">50%</th>' +
+      '<th style="text-align:right;padding:6px 4px;color:#16A34A;font-size:11px;">90%</th></tr>' +
     prodKeysGrupo.map(k => '<tr>' +
       '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);">'+esc(prodMap[k].display)+'</td>' +
       '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;font-weight:800;">'+prodMap[k].count+'</td>' +
       '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;">'+(prodPorGrupo.ganadas[k]?prodPorGrupo.ganadas[k].count:0)+'</td>' +
       '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;">'+(prodPorGrupo.perdidas[k]?prodPorGrupo.perdidas[k].count:0)+'</td>' +
-      '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;">'+(prodPorGrupo.ofrecidas[k]?prodPorGrupo.ofrecidas[k].count:0)+'</td>' +
+      '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;">'+(prodPorProb[0][k]?prodPorProb[0][k].count:0)+'</td>' +
+      '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;">'+(prodPorProb[20][k]?prodPorProb[20][k].count:0)+'</td>' +
+      '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;font-weight:700;">'+(prodPorProb[50][k]?prodPorProb[50][k].count:0)+'</td>' +
+      '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;font-weight:700;">'+(prodPorProb[90][k]?prodPorProb[90][k].count:0)+'</td>' +
     '</tr>').join('') +
     '</table></div>';
 
@@ -10370,8 +10386,11 @@ function _smLimpiarBusqueda(){
   const box = document.getElementById('smBuscadorResultados'); if(box){ box.style.display = 'none'; box.innerHTML = ''; }
 }
 // Exportar PDF a mano (no basta con window.print()): con pestañas, solo la activa está en el DOM
-// visible y las otras 3 nunca llegaron a dibujar sus gráficos (se crean recién al abrir la pestaña),
-// así que salían en blanco o el canvas quedaba pixelado al reacomodarse al ancho de la hoja impresa.
+// visible y las otras 3 nunca llegaron a dibujar sus gráficos (se crean recién al abrir la pestaña).
+// El resize de los canvas de Chart.js NO se puede hacer antes de llamar a print() — el navegador
+// recién aplica el CSS de @media print en su propio momento interno, así que un resize() hecho
+// antes queda con las medidas de pantalla y el gráfico sale en blanco/mal ubicado. El evento
+// correcto para esto es beforeprint (se dispara justo cuando el navegador ya va a imprimir).
 function _smExportarPDF(){
   if(window.__SM_TAB_INITFN){
     window.__SM_TAB_DONE = window.__SM_TAB_DONE || {};
@@ -10379,12 +10398,13 @@ function _smExportarPDF(){
       if(!window.__SM_TAB_DONE[id]){ window.__SM_TAB_INITFN[id](); window.__SM_TAB_DONE[id] = true; }
     });
   }
-  document.querySelectorAll('.sm-tab').forEach(function(el){ el.style.display = 'block'; });
-  requestAnimationFrame(function(){
-    (window.__SM_CHARTS || []).forEach(function(ch){ try{ ch.resize(); }catch(e){} });
-    requestAnimationFrame(function(){ window.print(); });
-  });
+  window.print();
 }
+window.addEventListener('beforeprint', function(){
+  if(!document.getElementById('vSalaMultisensorial')) return;
+  document.querySelectorAll('.sm-tab').forEach(function(el){ el.style.display = 'block'; });
+  (window.__SM_CHARTS || []).forEach(function(ch){ try{ ch.resize(); }catch(e){} });
+});
 window.addEventListener('afterprint', function(){
   if(document.getElementById('vSalaMultisensorial') && CACHE.vMisCot) renderSalaMultisensorial(CACHE.vMisCot);
 });

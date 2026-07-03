@@ -2796,6 +2796,15 @@ body{
           <div style="font-family:Montserrat,sans-serif;font-size:19px;font-weight:800;color:#001A60;">OpenCluster — Informe Sala Multisensorial</div>
           <div id="smPrintFecha" style="font-size:12.5px;color:#555;margin-top:3px;"></div>
         </div>
+        <!-- Buscador rápido: filtra las 38+ cotizaciones de sala por cualquier dato (N°, institución,
+             cliente, ejecutivo o producto), sin importar en qué pestaña o grupo esté. Vive fuera de
+             smBody para no perderse cuando se re-arma el contenido de la pestaña activa. -->
+        <div class="sm-no-print" style="position:relative;margin-bottom:16px;max-width:480px;">
+          <input id="smBuscador" type="text" placeholder="Buscar cotización, institución, cliente, ejecutivo o producto…" oninput="_smBuscar(this.value)"
+            style="width:100%;box-sizing:border-box;padding:9px 34px 9px 14px;border:1px solid var(--smoke,#e5e7eb);border-radius:9px;font-size:13px;font-family:inherit;">
+          <span id="smBuscadorClear" onclick="_smLimpiarBusqueda()" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--subtle,#9aa3af);font-size:16px;">&times;</span>
+          <div id="smBuscadorResultados" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:340px;overflow-y:auto;z-index:20;"></div>
+        </div>
         <div id="smBody"><div class="loading-state"><div class="spinner"></div>Cargando…</div></div>
       </div>
 
@@ -9778,6 +9787,7 @@ async function cargarSalaMultisensorial(){
   const cont = document.getElementById('smBody');
   window.__SM_FILTRO_PROB = null;
   window.__SM_TAB_ACTUAL = 'resumen';
+  if(typeof _smLimpiarBusqueda === 'function') _smLimpiarBusqueda();
   if(CACHE.vMisCot && CACHE.vMisCot.length){ try{ renderSalaMultisensorial(CACHE.vMisCot); }catch(e){} }
   else cont.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando…</div>';
   const ejec = (typeof getEjecutivoEfectivo==='function' ? getEjecutivoEfectivo() : '') || USUARIO;
@@ -9834,6 +9844,7 @@ function renderSalaMultisensorial(todas){
   }
   const fn = s => String(s||'').trim().split(/\s+/)[0] || '(sin ejecutivo)';
   const sm = (todas||[]).filter(c => (typeof _lineaCot==='function' ? _lineaCot(c.cotizacion) : '') === 'SM');
+  window.__SM_LISTA = sm; // usado por el buscador rápido (_smBuscar), independiente de la pestaña activa
   const totalTodas = (todas||[]).length;
   if(!sm.length){ cont.innerHTML = '<div class="loading-state" style="padding:30px;">No hay cotizaciones de sala multisensorial todavía.</div>'; return; }
 
@@ -10153,6 +10164,43 @@ function _smFiltrarProb(p){
 function _smQuitarFiltroProb(){
   window.__SM_FILTRO_PROB = null;
   renderSalaMultisensorial(CACHE.vMisCot);
+}
+// Buscador rápido de Sala Multisensorial — filtra window.__SM_LISTA (las cotizaciones de sala del
+// último render, se actualiza sola) por N°, institución, cliente, ejecutivo o producto. Funciona
+// sin importar la pestaña activa; cada resultado abre el detalle completo al hacer clic.
+function _smNorm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''); }
+function _smBuscar(q){
+  const clearBtn = document.getElementById('smBuscadorClear');
+  if(clearBtn) clearBtn.style.display = q ? 'block' : 'none';
+  const box = document.getElementById('smBuscadorResultados');
+  if(!box) return;
+  const qn = _smNorm(q).trim();
+  if(qn.length < 2){ box.style.display = 'none'; box.innerHTML = ''; return; }
+  const lista = (window.__SM_LISTA || []).filter(c =>
+    _smNorm(c.cotizacion).indexOf(qn) >= 0 || _smNorm(c.institucion).indexOf(qn) >= 0 ||
+    _smNorm(c.cliente).indexOf(qn) >= 0 || _smNorm(c.ejecutivo).indexOf(qn) >= 0 ||
+    _smNorm(c.productos).indexOf(qn) >= 0
+  ).slice(0, 25);
+  box.style.display = 'block';
+  if(!lista.length){
+    box.innerHTML = '<div style="padding:12px 14px;color:var(--subtle);font-size:12.5px;">Sin resultados para "'+esc(q)+'".</div>';
+    return;
+  }
+  box.innerHTML = lista.map(c => {
+    const numJS = String(c.cotizacion||'').replace(/'/g,"\\'");
+    const ej = String(c.ejecutivo||'').trim().split(/\s+/)[0] || '';
+    return '<div onclick="abrirCotModal(\''+numJS+'\')" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--smoke,#e5e7eb);font-size:12.5px;" onmouseover="this.style.background=\'var(--paper,#f9fafb)\'" onmouseout="this.style.background=\'transparent\'">' +
+      '<span style="flex:0 0 110px;color:var(--subtle);font-family:Courier New,monospace;">'+esc(c.cotizacion||'')+'</span>' +
+      '<span style="flex:1;min-width:0;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+esc(c.institucion||c.cliente||'(sin institución)')+'</span>' +
+      '<span style="flex:0 0 80px;color:var(--ink);font-weight:700;">'+esc(ej)+'</span>' +
+      '<span style="flex:0 0 80px;text-align:right;font-size:11px;font-weight:700;color:var(--subtle);">'+esc(c.estado||'')+'</span>' +
+    '</div>';
+  }).join('');
+}
+function _smLimpiarBusqueda(){
+  const inp = document.getElementById('smBuscador'); if(inp) inp.value = '';
+  const clearBtn = document.getElementById('smBuscadorClear'); if(clearBtn) clearBtn.style.display = 'none';
+  const box = document.getElementById('smBuscadorResultados'); if(box){ box.style.display = 'none'; box.innerHTML = ''; }
 }
 
 /* ════ Vista COACHING (admin): dónde se atasca cada ejecutivo ════ */

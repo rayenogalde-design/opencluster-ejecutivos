@@ -9724,7 +9724,7 @@ function renderMetricasVsEquipo(cont, comp){
       card('vs-reun','Mis reuniones vs equipo','6 meses') +
       card('vs-cotmes','Monto cotizado del mes vs equipo','') +
       card('vs-cotanio','Monto cotizado del año vs equipo','') +
-      card('vs-ganmes','Ventas cerradas del mes vs equipo','') +
+      card('vs-ganmes','Ventas cerradas del mes vs equipo','· · · = meta de cada uno') +
       card('vs-gananio','Ventas cerradas del año vs equipo','') +
       card('vs-fndr','Proyectos postulados a Fondos','equipo · año')
     );
@@ -9738,16 +9738,40 @@ function renderMetricasVsEquipo(cont, comp){
   }
   lineChart('vs-desemp', sliceS(miReg.serie_cot_12m), avgS('serie_cot_12m'), '#5b21b6');
   lineChart('vs-reun', sliceS(miReg.serie_reu_12m), avgS('serie_reu_12m'), '#06B3FD');
-  function barChart(id, valKey, color, money){
+  function barChart(id, valKey, color, money, mostrarMeta){
     const ctx=document.getElementById(id); if(!ctx) return;
     const rows = arr.slice().sort((a,b)=>(b[valKey]||0)-(a[valKey]||0));
     const cols = rows.map(x => _busqNorm(fn(x.ejecutivo))===_busqNorm(mi) ? color : '#cbd5e1');
+    // Marca de meta por ejecutivo (una rayita punteada sobre su propia barra, cada quién tiene
+    // una meta distinta — ver _metaDeEjec/point 2). Dentro de try/catch: es un plugin de dibujo
+    // encima del gráfico, si la API de escalas de Chart.js no se comporta como se espera, que
+    // falle en silencio y deje el gráfico normal intacto en vez de romper toda la vista.
+    const plugins = mostrarMeta ? [{
+      id: 'metaTicks',
+      afterDatasetsDraw(chart){
+        try {
+          const chartArea = chart.chartArea, xScale = chart.scales.x, yScale = chart.scales.y, c2 = chart.ctx;
+          rows.forEach((x, i) => {
+            const meta = _metaDeEjec(fn(x.ejecutivo));
+            if(!meta) return;
+            const y = yScale.getPixelForValue(meta);
+            if(y < chartArea.top || y > chartArea.bottom) return;
+            const xCenter = xScale.getPixelForTick(i);
+            const half = Math.min(28, (xScale.width / Math.max(1,rows.length)) * .32);
+            c2.save();
+            c2.strokeStyle = '#C9A96E'; c2.lineWidth = 2.5; c2.setLineDash([4,3]);
+            c2.beginPath(); c2.moveTo(xCenter-half, y); c2.lineTo(xCenter+half, y); c2.stroke();
+            c2.restore();
+          });
+        } catch(e) { /* silencio: el grafico de barras normal ya se dibujo antes de esto */ }
+      }
+    }] : [];
     _METRICAS_CHARTS.push(new Chart(ctx,{ type:'bar', data:{ labels:rows.map(x=>fn(x.ejecutivo)), datasets:[{ data:rows.map(x=>x[valKey]||0), backgroundColor:cols, borderRadius:6, maxBarThickness:46 }]},
-      options:{ responsive:true, plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>money?fmtCLP(c.parsed.y):String(c.parsed.y)}}}, scales:{ y:{beginAtZero:true,ticks:{callback:v=>money?('$'+Math.round(v/1000000)+'M'):v,font:{size:11}}}, x:{ticks:{font:{size:11}}} } } }));
+      options:{ responsive:true, plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>money?fmtCLP(c.parsed.y):String(c.parsed.y)}}}, scales:{ y:{beginAtZero:true,ticks:{callback:v=>money?('$'+Math.round(v/1000000)+'M'):v,font:{size:11}}}, x:{ticks:{font:{size:11}}} } }, plugins }));
   }
   barChart('vs-cotmes','cot_mes_monto','#5b21b6',true);
   barChart('vs-cotanio','cot_anio_monto','#C9A96E',true);
-  barChart('vs-ganmes','gan_mes_monto','#16A34A',true);
+  barChart('vs-ganmes','gan_mes_monto','#16A34A',true,true);
   barChart('vs-gananio','gan_anio_monto','#16A34A',true);
   barChart('vs-fndr','fndr_cant','#5b21b6',false);
 }

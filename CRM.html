@@ -2462,6 +2462,7 @@ body{
 
         <!-- Selector admin "Ver dashboard de" (visible). El #dshCampana viejo quedó oculto en el rediseño. -->
         <div id="dshAdminVer"></div>
+        <div id="dshResumenDia"></div>
         <!-- Leads urgentes: persisten ARRIBA hasta que el ejecutivo los marque contactados. -->
         <div id="dshLeads"></div>
 
@@ -5772,6 +5773,27 @@ function _kpisCacheKey(){
 // Token monotónico para descartar respuestas de fetches viejos cuando cambia el modo rápidamente.
 window.__DASH_FETCH_TOKEN = 0;
 
+// Resumen de una línea arriba de Leads/Toques/Tareas ("Hoy tienes...") — dimensiona la carga del
+// día de un vistazo SIN fusionar las 3 listas (cada una sigue siendo su propia fuente de datos,
+// con su propia urgencia/criterio). Se llama al final de cada una de las 3 funciones que ya
+// calculan su propio conteo (pintarLeadsDashboard, pintarToquesHoy, cargarTareasDashboard), así
+// que el resumen se va completando a medida que van llegando, sin esperar a que las 3 terminen.
+function _actualizarResumenDia(){
+  var box = document.getElementById('dshResumenDia');
+  if(!box) return;
+  var leads = window.__LEADS_COUNT || 0;
+  var toques = (window.__TOQUES_ALL || []).length;
+  var tareasEl = document.getElementById('dshTareasCount');
+  var tareas = tareasEl ? (parseInt(tareasEl.textContent, 10) || 0) : 0;
+  var partes = [];
+  if(leads) partes.push(leads + (leads===1?' lead urgente':' leads urgentes'));
+  if(toques) partes.push(toques + (toques===1?' toque pendiente':' toques pendientes'));
+  if(tareas) partes.push(tareas + (tareas===1?' tarea':' tareas'));
+  if(!partes.length){ box.innerHTML = ''; return; }
+  var texto = partes.length===1 ? partes[0] : (partes.slice(0,-1).join(', ') + ' y ' + partes[partes.length-1]);
+  box.innerHTML = '<div style="font-size:13px;color:#4b5563;font-weight:600;margin:2px 0 10px;">Hoy tienes ' + texto + '.</div>';
+}
+
 async function cargarDashboard(){
   setSaludo();
   pintarBannerCampana();
@@ -6629,6 +6651,7 @@ async function cargarTareasDashboard(){
       if (parsed && parsed.ts && (Date.now() - parsed.ts) < 1800000) {
         const tareasCache = parsed.data || [];
         cnt.textContent = tareasCache.length;
+        try{ _actualizarResumenDia(); }catch(e){}
         if (!tareasCache.length) container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--mist);font-size:13px;">Sin tareas pendientes. ¡Buen trabajo!</div>';
         else container.innerHTML = tareasCache.slice(0, 5).map(t => renderTarea(t)).join('');
       } else {
@@ -6644,6 +6667,7 @@ async function cargarTareasDashboard(){
   const tareas = r.tareas || [];
   try { localStorage.setItem(keyTareas, JSON.stringify({ ts: Date.now(), data: tareas })); } catch(e){}
   cnt.textContent = tareas.length;
+  try{ _actualizarResumenDia(); }catch(e){}
 
   if(!tareas.length){
     container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--mist);font-size:13px;">Sin tareas pendientes. ¡Buen trabajo!</div>';
@@ -7444,6 +7468,7 @@ async function pintarToquesHoy(){
   const atrasados = items.filter(i => i.diff < 0).length;
   const deHoy = items.filter(i => i.diff === 0).length;
   window.__TOQUES_ALL = items;
+  try{ _actualizarResumenDia(); }catch(e){}
   const badge = document.getElementById('badgeToques');
   if(badge){ badge.textContent = items.length; badge.style.display = items.length>0 ? 'inline-flex' : 'none'; }
   if(!items.length){
@@ -7600,6 +7625,8 @@ async function pintarLeadsDashboard(){
   const hoy0 = new Date(); hoy0.setHours(0,0,0,0);
   items.forEach(c => { const pa=new Date(c.proxima_accion); pa.setHours(0,0,0,0); c.__leadDiff = isNaN(pa.getTime())? 9999 : Math.round((pa-hoy0)/86400000); });
   items.sort((a,b)=> a.__leadDiff - b.__leadDiff);
+  window.__LEADS_COUNT = items.length;
+  try{ _actualizarResumenDia(); }catch(e){}
   if(!items.length){ cont.innerHTML=''; return; }
   // El bloqueo de pantalla y el toast son para que el PROPIO ejecutivo atienda
   // sus leads. Si Rayen está en modo admin (viendo el dashboard del equipo o de

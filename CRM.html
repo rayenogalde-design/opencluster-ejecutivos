@@ -9125,7 +9125,19 @@ function _detalleCotHTML(c){
   var LBL = 'font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#9aa3bd;margin-bottom:9px;';
   var ACT = 'display:inline-flex;align-items:center;gap:5px;border-radius:8px;padding:6px 11px;font-size:12px;font-weight:700;text-decoration:none;cursor:pointer;font-family:inherit;border:1px solid #E6E8EF;background:#fff;';
   let det = '';
-  // 0. Probabilidad de cierre — mismo mecanismo que ya usaba Sala Multisensorial (_smSetProb),
+  // Resumen — concatenación de datos que ya están en pantalla (monto, seguimientos, días sin
+  // gestión), NO es un análisis de IA. Pensado para ver de un vistazo el estado sin leer toda
+  // la ficha.
+  {
+    const ultimoSeg = segs.length ? segs[segs.length-1] : null;
+    const partes = [];
+    if(monto) partes.push(monto);
+    partes.push(segs.length + (segs.length===1 ? ' seguimiento registrado' : ' seguimientos registrados'));
+    if(ultimoSeg) partes.push('último: ' + (ultimoSeg.fecha||'sin fecha') + (ultimoSeg.estado ? ' · '+ultimoSeg.estado : ''));
+    if(!c.cerrada && diasTxt) partes.push(diasTxt);
+    det += '<div style="'+SEC+'background:#FAFBFF;"><div style="'+LBL+'">Resumen</div><div style="font-size:12.5px;color:#1a2440;line-height:1.6;">' + esc(partes.join(' · ')) + '</div></div>';
+  }
+  // Probabilidad de cierre — mismo mecanismo que ya usaba Sala Multisensorial (_smSetProb),
   // ahora disponible en todo el pipeline. Solo tiene sentido mientras la cotización sigue abierta.
   if(!c.cerrada){
     const probActual = (CACHE.smProb && CACHE.smProb[c.cotizacion]) || 0;

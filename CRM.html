@@ -8686,6 +8686,7 @@ async function cargarMisCotizaciones(forzar){
     fetchAPI('crm_sm_probabilidades', {})
   ]);
   if(rp && rp.ok) CACHE.smProb = rp.mapa || {};
+  _cargarMetasReales(); // en paralelo, no bloquea — re-renderiza la barra de metas si trae datos nuevos
   if(!r || !r.ok){
     container.innerHTML = '<div class="error-state">No se pudieron cargar las cotizaciones.<div style="font-size:12px;color:var(--subtle);margin-top:4px;">' + esc((r&&r.error)||'desconocido') + '</div></div>';
     return;
@@ -8781,12 +8782,38 @@ function _kpisDeMisCot(arr, anio){
   return {total_anio:t, ganadas_anio:g, sin_seguimiento:s, monto_cotizado_anio:m, monto_ganado:mg};
 }
 // Meta del EQUIPO: $50M. La ve SOLO la administradora (Rayen) en su vista; los ejecutivos no.
+// OJO: estos valores son el FALLBACK si crm_kpis_dashboard no responde — la fuente real es
+// CACHE.metaMesMap/CACHE.metaEquipoReal, cargada por _cargarMetasReales(). Antes esta constante
+// era la ÚNICA fuente y podía desincronizarse en silencio de la meta real del backend.
 const META_EQUIPO_MONTO = 50000000;
 // Metas mensuales ABSOLUTAS por ejecutivo (Rayen, 2026-06-22). Suman más que el equipo a propósito.
 const META_EJEC = { 'rayen':5000000, 'william':10000000, 'german':10000000, 'roberto':10000000, 'maximiliano':12000000, 'ximena':12000000 };
 function _metaDeEjec(primerNombre){
   const k = _busqNorm(primerNombre);
+  if(CACHE.metaMesMap && CACHE.metaMesMap[k] !== undefined) return CACHE.metaMesMap[k];
   return META_EJEC[k] !== undefined ? META_EJEC[k] : 0;
+}
+// Trae la meta real de cada ejecutivo y la del equipo directo del backend (crm_kpis_dashboard),
+// para que la barra de metas de "Mis Cotizaciones" deje de depender de una copia hardcodeada.
+// Se llama una sola vez por sesión; si falla, _metaDeEjec/renderMetaBarMisCot caen solos al
+// valor hardcodeado de arriba, así que nunca deja la barra sin número.
+window.__METAS_REALES_CARGANDO = false;
+async function _cargarMetasReales(){
+  if(CACHE.metaMesMap || window.__METAS_REALES_CARGANDO) return;
+  window.__METAS_REALES_CARGANDO = true;
+  const nombres = Object.keys(META_EJEC);
+  try {
+    const [porEjec, equipo] = await Promise.all([
+      Promise.all(nombres.map(n => fetchAPI('crm_kpis_dashboard', { ejecutivo:n, modo_vista:'ejecutivo', _t:Date.now() }))),
+      fetchAPI('crm_kpis_dashboard', { ejecutivo:nombres[0], modo_vista:'admin', _t:Date.now() })
+    ]);
+    const mapa = {};
+    nombres.forEach((n,i) => { const r = porEjec[i]; if(r && r.ok && r.meta_mes) mapa[n] = r.meta_mes; });
+    CACHE.metaMesMap = mapa;
+    if(equipo && equipo.ok && equipo.meta_mes) CACHE.metaEquipoReal = equipo.meta_mes;
+  } catch(e) { /* silencio: se sigue usando el fallback hardcodeado */ }
+  window.__METAS_REALES_CARGANDO = false;
+  if(document.getElementById('listMisCot')) { try { renderMisCotizaciones(); } catch(e){} }
 }
 function renderMetaBarMisCot(base, anio){
   const d = new Date();
@@ -8795,7 +8822,7 @@ function renderMetaBarMisCot(base, anio){
   const ejecSel = selEj ? selEj.value : '';
   const admin = (typeof esActuandoComoAdmin==='function') && esActuandoComoAdmin();
   let meta, titulo;
-  if(admin && !ejecSel){ meta = META_EQUIPO_MONTO; titulo = 'META MENSUAL DEL EQUIPO'; }
+  if(admin && !ejecSel){ meta = CACHE.metaEquipoReal || META_EQUIPO_MONTO; titulo = 'META MENSUAL DEL EQUIPO'; }
   else { const quien = ejecSel || (USUARIO||'').split(' ')[0]; meta = _metaDeEjec(quien); titulo = 'META MENSUAL DE VENTAS · ' + quien.toUpperCase(); }
   if(!meta) return '';
   // Vendido = neto GANADO cuyo mes de CIERRE es el mes actual (no la fecha de la cotización).

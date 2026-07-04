@@ -4411,7 +4411,6 @@ function cambiarModo(modo){
   // 4) FORZAR re-render del dashboard. No dependemos de .view.act porque puede no existir
   //    si la inicialización aún no terminó. Repintamos las 3 secciones del dashboard de inmediato.
   pintarBannerCampana();
-  pintarProductosSugeridos();
   pintarListasPrecios();
   // Si la vista activa es otra, también la refrescamos
   const v = document.querySelector('.view.act');
@@ -5539,7 +5538,6 @@ async function pintarBannerCampana(){
 function cambiarPreviewEjec(nm){
   try { localStorage.setItem('crm_preview_ejec', nm); } catch(e){}
   pintarBannerCampana();
-  pintarProductosSugeridos();
   pintarListasPrecios();
 }
 
@@ -5776,11 +5774,8 @@ window.__DASH_FETCH_TOKEN = 0;
 
 async function cargarDashboard(){
   setSaludo();
-  renderScriptBanner();
   pintarBannerCampana();
-  pintarTarjetaProductosCampana();
   pintarBannerListaPartida();
-  pintarProductosSugeridos();
   pintarListasPrecios();
   pintarToquesHoy();
   pintarLeadsDashboard();
@@ -5811,7 +5806,6 @@ async function cargarDashboard(){
     }
   } catch(e){}
   if(kpisCacheados){
-    pintarKpis(kpisCacheados, true);
     try{ renderDashV3(kpisCacheados); }catch(e){ console.warn('dashV3',e); }
   } else {
     const kpiBox = document.getElementById('dshKpis');
@@ -5829,7 +5823,6 @@ async function cargarDashboard(){
       if(modoEnVuelo !== modoActualAhora) return;
       if(r && r.ok){
         try { localStorage.setItem(_kpisCacheKey(), JSON.stringify({ ts: Date.now(), data: r })); } catch(e){}
-        pintarKpis(r, false);
         try{ renderDashV3(r); }catch(e){ console.warn('dashV3',e); }
       } else {
         if(!kpisCacheados){
@@ -5840,7 +5833,6 @@ async function cargarDashboard(){
     })
     .catch(e => {});
   cargarTareasDashboard();
-  cargarFunnelDashboard();
   cargarReunionesDashboard();
 }
 
@@ -6167,8 +6159,6 @@ function renderDashV3(r){
   try{ _updatePipelineMini(); }catch(e){}
   // ranking (contactos de la semana)
   try{ _rankingDash(k); }catch(e){}
-  // por trabajar (async, desde contactos base)
-  try{ _porTrabajarDash(); }catch(e){}
 }
 
 // Ximena es de Finanzas: no entra en los rankings de venta/contactos del equipo.
@@ -6304,8 +6294,6 @@ function cambiarPeriodoDash(p){
   try {
     const raw = localStorage.getItem(_kpisCacheKey());
     if(raw){
-      const parsed = JSON.parse(raw);
-      if(parsed && parsed.data) pintarKpis(parsed.data, false);
       return;
     }
   } catch(e){}
@@ -16063,8 +16051,6 @@ function cargarProductosCampana(){
   _esperarFichas(() => {
     pintarChipsFamilias();
     renderListaProductosCampana();
-    // Refrescar también la tarjeta del dashboard (puede que ya tengamos total real)
-    pintarTarjetaProductosCampana();
   });
 }
 

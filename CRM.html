@@ -8678,7 +8678,14 @@ async function cargarMisCotizaciones(forzar){
   const ejec = (typeof getEjecutivoEfectivo === 'function' ? getEjecutivoEfectivo() : '') || USUARIO;
   const params = { ejecutivo: ejec, modo_vista: MODO_VISTA };
   if(forzar) params.forzar = 1;
-  const r = await fetchAPI('crm_mis_cotizaciones', params);
+  // crm_sm_probabilidades no filtra por línea de negocio pese al prefijo "sm" — se reusa acá
+  // para tener la probabilidad de cierre (20/50/90%) disponible en TODO el pipeline, no solo
+  // en Sala Multisensorial.
+  const [r, rp] = await Promise.all([
+    fetchAPI('crm_mis_cotizaciones', params),
+    fetchAPI('crm_sm_probabilidades', {})
+  ]);
+  if(rp && rp.ok) CACHE.smProb = rp.mapa || {};
   if(!r || !r.ok){
     container.innerHTML = '<div class="error-state">No se pudieron cargar las cotizaciones.<div style="font-size:12px;color:var(--subtle);margin-top:4px;">' + esc((r&&r.error)||'desconocido') + '</div></div>';
     return;
@@ -9091,6 +9098,16 @@ function _detalleCotHTML(c){
   var LBL = 'font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#9aa3bd;margin-bottom:9px;';
   var ACT = 'display:inline-flex;align-items:center;gap:5px;border-radius:8px;padding:6px 11px;font-size:12px;font-weight:700;text-decoration:none;cursor:pointer;font-family:inherit;border:1px solid #E6E8EF;background:#fff;';
   let det = '';
+  // 0. Probabilidad de cierre — mismo mecanismo que ya usaba Sala Multisensorial (_smSetProb),
+  // ahora disponible en todo el pipeline. Solo tiene sentido mientras la cotización sigue abierta.
+  if(!c.cerrada){
+    const probActual = (CACHE.smProb && CACHE.smProb[c.cotizacion]) || 0;
+    const probBtn = v => {
+      const sel = probActual === v;
+      return '<button onclick="event.stopPropagation();_smSetProb(\''+numJS+'\','+v+')" title="Marcar '+v+'% de probabilidad de cierre" style="padding:5px 14px;border-radius:999px;border:1px solid '+(sel?'#001A60':'#E6E8EF')+';background:'+(sel?'#001A60':'#fff')+';color:'+(sel?'#fff':'#6B7280')+';font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">'+v+'%</button>';
+    };
+    det += '<div style="'+SEC+'"><div style="'+LBL+'">Probabilidad de cierre</div><div style="display:flex;gap:7px;">' + probBtn(20) + probBtn(50) + probBtn(90) + '</div></div>';
+  }
   // 1. Contacto
   // Teléfonos: de la cotización (c.telefono) y, de respaldo, del CONTACTO vinculado (celular + empresa).
   var _telPers = String(c.telefono||'').replace(/\D/g,'');
@@ -9864,13 +9881,20 @@ async function _smSetProb(num, val){
   const prev = CACHE.smProb[num] || 0;
   const nuevo = (prev === val) ? 0 : val;
   CACHE.smProb[num] = nuevo;
-  renderSalaMultisensorial(CACHE.vMisCot); // optimista
+  _refrescarProbUI(num); // optimista
   const r = await fetchAPI('crm_sm_set_probabilidad', { num_cotizacion: num, probabilidad: nuevo, solicitante: USUARIO });
   if(!r || !r.ok){
     CACHE.smProb[num] = prev;
-    renderSalaMultisensorial(CACHE.vMisCot);
+    _refrescarProbUI(num);
   }
   window.__SM_PROB_BUSY[num] = false;
+}
+// Repinta dondequiera que se esté mostrando la probabilidad de esta cotización: Sala
+// Multisensorial (si está abierta) y/o el modal de detalle de Mis Cotizaciones (si está abierto
+// mostrando esta misma cotización). La probabilidad ya no es exclusiva de Sala Multisensorial.
+function _refrescarProbUI(num){
+  if(document.getElementById('smBody')) renderSalaMultisensorial(CACHE.vMisCot);
+  if(document.getElementById('cotModalOv') && window.__MC_CUR === num) abrirCotModal(num);
 }
 // "Mensaje a Rayen": el ejecutivo cuenta su evaluación de una cotización de sala (¿se concreta?
 // ¿cuándo, según sus seguimientos?). Se abre desde el modal de la cotización (Mis Cotizaciones o

@@ -4096,6 +4096,34 @@ function mostrarAvisoDescuentos(){
 }
 function cerrarAvisoDescuentos(){ try{ localStorage.setItem('crm_aviso_descuentos_v1','1'); }catch(e){} const e=document.getElementById('avisoDescuentos'); if(e) e.remove(); }
 
+// Aviso en pantalla (una sola vez por usuario) de la actualización de precios de julio 2026
+function mostrarAvisoPreciosJulio2026(){
+  try{ if(localStorage.getItem('crm_aviso_precios_jul2026')==='1') return; }catch(e){}
+  const ex=document.getElementById('avisoPreciosJulio'); if(ex) ex.remove();
+  const t=document.createElement('div');
+  t.id='avisoPreciosJulio';
+  // bottom mas alto que el aviso de descuentos para que no se encimen si un usuario aun no cerro ese
+  const otroAvisoVisible = document.getElementById('avisoDescuentos');
+  const bottomPos = otroAvisoVisible ? 24 + otroAvisoVisible.offsetHeight + 14 : 24;
+  t.style.cssText='position:fixed;bottom:'+bottomPos+'px;right:24px;background:linear-gradient(135deg,#001A60,#06B3FD);color:#fff;padding:16px 18px;border-radius:14px;box-shadow:0 14px 40px rgba(0,26,96,.32);z-index:9999;max-width:380px;font-family:var(--font-sans);animation:slideInRight .3s ease;';
+  t.innerHTML=
+    '<div style="display:flex;align-items:flex-start;gap:11px;">'+
+      '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px;"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>'+
+      '<div style="flex:1;">'+
+        '<div style="font-size:10.5px;font-weight:800;letter-spacing:.12em;opacity:.85;">NUEVO · PRECIOS</div>'+
+        '<div style="font-size:14px;font-weight:800;margin-top:3px;line-height:1.2;">Actualizamos los precios del catálogo</div>'+
+        '<div style="font-size:12px;margin-top:5px;opacity:.93;line-height:1.45;">Cambiamos el esquema de cálculo y la mayoría de los precios bajaron. Revisa tu <b>Lista de Precios</b> y actualiza la información que tengas con tus clientes. También hay catálogos actualizados disponibles.</div>'+
+        '<div style="display:flex;gap:8px;margin-top:11px;">'+
+          '<button onclick="goView(\'vListaPrecios\');cerrarAvisoPreciosJulio2026();" style="background:#fff;color:#001A60;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;">Ver Lista de Precios</button>'+
+          '<button onclick="cerrarAvisoPreciosJulio2026()" style="background:rgba(255,255,255,.16);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;">Entendido</button>'+
+        '</div>'+
+      '</div>'+
+      '<button onclick="cerrarAvisoPreciosJulio2026()" style="background:rgba(255,255,255,.2);border:none;color:#fff;width:24px;height:24px;border-radius:6px;cursor:pointer;font-size:16px;line-height:1;flex-shrink:0;">&times;</button>'+
+    '</div>';
+  document.body.appendChild(t);
+}
+function cerrarAvisoPreciosJulio2026(){ try{ localStorage.setItem('crm_aviso_precios_jul2026','1'); }catch(e){} const e=document.getElementById('avisoPreciosJulio'); if(e) e.remove(); }
+
 function mostrarBannerDeploy(){
   if(deployOK()) return;
   const el = document.getElementById('deployBanner');
@@ -4308,6 +4336,7 @@ function initApp(user){
   aplicarVisibilidadPorRol();
   mostrarBannerDeploy();
   mostrarAvisoDescuentos();
+  mostrarAvisoPreciosJulio2026();
   mostrarRecordatorioDiesel();
   setSaludo();
   cargarFiltrosLS();

@@ -2472,6 +2472,23 @@ body{
         #vDashboard .meta-pill:hover{border-color:#c9cede;}
         #vDashboard .meta-pill.si.on{background:linear-gradient(135deg,#1AAB6E,#0E7A50);border-color:transparent;color:#fff;box-shadow:0 6px 14px -8px rgba(14,122,80,.6);}
         #vDashboard .meta-pill.no.on{background:linear-gradient(135deg,#C5677A,#7A2838);border-color:transparent;color:#fff;box-shadow:0 6px 14px -8px rgba(122,40,56,.6);}
+        #vDashboard .mm-tally{font-size:12px;font-weight:800;color:#B8720A;background:#FFF4DE;padding:4px 10px;border-radius:999px;display:inline-block;margin-bottom:12px;}
+        #vDashboard .mm-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #F1F3F8;flex-wrap:wrap;}
+        #vDashboard .mm-row:last-of-type{border-bottom:none;}
+        #vDashboard .mm-def-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #F1F3F8;}
+        #vDashboard .mm-def-row:last-child{border-bottom:none;}
+        #vDashboard .mm-ic{width:28px;height:28px;border-radius:8px;background:#FFF4DE;color:#B8720A;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+        #vDashboard .mm-row.done .mm-ic{background:var(--jade-lt,#DCEFE3);color:var(--jade-dk,#0E7A50);}
+        #vDashboard .mm-lab{flex:1;min-width:130px;font-size:13px;color:#1a2440;font-weight:600;}
+        #vDashboard .mm-lab .src{font-size:10px;font-weight:700;color:#9aa3bd;text-transform:uppercase;letter-spacing:.04em;margin-left:5px;}
+        #vDashboard .mm-val{font-size:12.5px;font-weight:800;color:#1a2440;white-space:nowrap;display:flex;align-items:center;gap:5px;}
+        #vDashboard .mm-row.done .mm-val{color:var(--jade-dk,#0E7A50);}
+        #vDashboard .mm-track{flex-basis:100%;height:7px;background:#EEF1F6;border-radius:20px;overflow:hidden;margin-top:2px;}
+        #vDashboard .mm-fill{height:100%;border-radius:20px;background:#06B3FD;transition:width .5s ease;}
+        #vDashboard .mm-row.done .mm-fill{background:var(--jade,#1AAB6E);}
+        #vDashboard .mm-manual-in,#vDashboard .mm-target-in{width:60px;padding:5px 8px;border:1.5px solid #F0DCB0;border-radius:7px;font-size:12.5px;font-family:inherit;text-align:right;}
+        #vDashboard .mm-manual-in:focus,#vDashboard .mm-target-in:focus{outline:none;border-color:#F5A623;box-shadow:0 0 0 2px rgba(245,166,35,.16);}
+        #vDashboard .mm-target-in{margin-left:auto;}
         #vDashboard .pipeline-card{border-color:transparent;box-shadow:0 14px 34px -18px rgba(124,58,237,.4),0 6px 18px -14px rgba(0,26,96,.25);}
         #vDashboard .pipeline-card .dv3-cardhd{background:linear-gradient(120deg,var(--navy) 0%,var(--purple) 55%,var(--purple-dk) 100%);border-bottom:none;position:relative;overflow:hidden;}
         #vDashboard .pipeline-card .dv3-cardhd::before{content:'';position:absolute;inset:0;background-image:repeating-linear-gradient(125deg,rgba(255,255,255,.09) 0 12px,transparent 12px 24px);pointer-events:none;}
@@ -6618,43 +6635,97 @@ async function cargarMetaSemanal(){
 }
 function _diasParaViernesTxt(){
   const dow = new Date().getDay();
-  if(dow===5) return 'hoy se marca';
-  if(dow===6 || dow===0) return 'ya pasó el viernes, no olvides marcarla';
+  if(dow===5) return 'hoy se cierra';
+  if(dow===6 || dow===0) return 'ya pasó el viernes, no olvides cerrarla';
   const faltan = 5 - dow;
-  return faltan===1 ? 'queda 1 día para marcarla' : ('quedan '+faltan+' días para marcarla');
+  return faltan===1 ? 'queda 1 día para cerrarla' : ('quedan '+faltan+' días para cerrarla');
 }
-function renderMetaSemanal(actual, ejec, soloLectura){
+const MM_IC_TARGET = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>';
+const MM_ICS = {
+  cotizaciones: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>',
+  ventas: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M9 13.5 7 21l5-3 5 3-2-7.5"/></svg>',
+  monto_vendido: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 12h.01M18 12h.01"/></svg>',
+  reuniones: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
+  llamadas: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',
+  nuevos_clientes: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>'
+};
+const MM_CFG = [
+  { key:'cotizaciones', label:'Cotizaciones enviadas' },
+  { key:'ventas', label:'Ventas cerradas' },
+  { key:'monto_vendido', label:'Monto vendido', esMonto:true },
+  { key:'reuniones', label:'Reuniones' },
+  { key:'llamadas', label:'Llamadas' },
+  { key:'nuevos_clientes', label:'Nuevos clientes', manual:true }
+];
+function _mmDefRows(){
+  return MM_CFG.map(function(cfg){
+    return '<div class="mm-def-row"><div class="mm-ic">'+MM_ICS[cfg.key]+'</div>'+
+      '<div class="mm-lab">'+cfg.label+(cfg.manual?'<span class="src">manual</span>':'')+'</div>'+
+      '<input type="number" min="0" class="mm-target-in" id="mmTarget_'+cfg.key+'" placeholder="0">'+
+    '</div>';
+  }).join('');
+}
+function _htmlDefinirMetas(){
+  return '<div class="meta-card-body">'+
+    '<div class="meta-empty">'+
+      '<div class="ic">'+MM_IC_TARGET+'</div>'+
+      '<h4>Fija tu meta de la semana</h4>'+
+      '<p>Pon un número por cada frente. Deja en 0 lo que no quieras medir esta semana.</p>'+
+    '</div>'+
+    _mmDefRows()+
+    '<button onclick="guardarMetaSemanal()" class="meta-btn-save" style="margin-top:12px;">'+MM_IC_TARGET+' Guardar mis metas</button>'+
+  '</div>';
+}
+function _mmFilaRows(actual, soloLectura, cerrada){
+  return MM_CFG.map(function(cfg){
+    const m = actual.metrics[cfg.key] || { target:0, actual:null };
+    const target = Number(m.target) || 0;
+    const av = m.actual;
+    const done = target > 0 && av != null && av >= target;
+    const pct = target > 0 ? Math.min(100, Math.round(((av||0)/target)*100)) : 0;
+    const fmt = v => cfg.esMonto ? fmtCLP(v||0) : (v==null ? '—' : v);
+    const editable = cfg.manual && !soloLectura && !cerrada;
+    const valTxt = editable
+      ? '<input type="number" min="0" class="mm-manual-in" id="mmManual_'+cfg.key+'" value="'+(av!=null?av:'')+'" placeholder="0"> / '+target
+      : (fmt(av)+' / '+fmt(target));
+    return '<div class="mm-row'+(done?' done':'')+'">'+
+      '<div class="mm-ic">'+MM_ICS[cfg.key]+'</div>'+
+      '<div class="mm-lab">'+cfg.label+(cfg.manual?'<span class="src">manual</span>':'')+'</div>'+
+      '<div class="mm-val">'+valTxt+'</div>'+
+      (target>0 ? '<div class="mm-track"><div class="mm-fill" style="width:'+pct+'%;"></div></div>' : '') +
+    '</div>';
+  }).join('');
+}
+function _renderMetaSemanalMulti(actual, head, soloLectura){
   const box = document.getElementById('dshMetaSemanal');
-  if(!box) return;
-  const icTarget = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>';
+  const cerrada = !!actual.cerrada;
+  const rows = _mmFilaRows(actual, soloLectura, cerrada);
+  const conMeta = MM_CFG.filter(function(cfg){ const m=actual.metrics[cfg.key]; return m && Number(m.target)>0; }).length;
+  const cumplidas = MM_CFG.filter(function(cfg){ const m=actual.metrics[cfg.key]; return m && Number(m.target)>0 && m.actual!=null && m.actual>=Number(m.target); }).length;
+  const tally = conMeta ? '<div class="mm-tally">'+cumplidas+' de '+conMeta+' cumplidas</div>' : '';
+  let cierreHtml;
+  if(soloLectura){
+    cierreHtml = cerrada
+      ? (actual.nota ? '<div style="margin-top:12px;padding:10px 12px;background:#FAFBFF;border-radius:9px;font-size:12.5px;color:#4b5563;"><b>Nota:</b> '+esc(actual.nota)+'</div>' : '')
+      : '<div class="meta-banner pend" style="margin-top:12px;">Semana en curso, todavía no la cierra.</div>';
+  } else if(cerrada){
+    cierreHtml = '<div class="meta-banner ok" style="margin-top:12px;">Semana cerrada'+(actual.nota?': '+esc(actual.nota):'')+'</div>';
+  } else {
+    cierreHtml = '<div style="margin-top:14px;">'+
+      '<div class="meta-label">¿Cómo lo lograste esta semana?</div>'+
+      '<textarea id="metaSemanalNotaCierre" class="meta-txt" rows="2" placeholder="Una nota breve (opcional)"></textarea>'+
+      '<button onclick="cerrarMiSemana()" class="meta-btn-save" style="margin-top:9px;">Cerrar mi semana</button>'+
+    '</div>';
+  }
+  box.innerHTML = '<div class="dv3-card meta-card">'+head+'<div class="meta-card-body">'+tally+rows+cierreHtml+'</div></div>';
+}
+function _renderMetaSemanalTexto(actual, head, soloLectura){
+  const box = document.getElementById('dshMetaSemanal');
   const icCheck = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
   const icX = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>';
   const icClock = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>';
-
-  const titulo = soloLectura ? ('Meta de la semana · '+esc(String(ejec||'').split(' ')[0])) : 'Mi meta de la semana';
-  const subt = (actual && actual.semana_inicio) ? '<span class="wk">semana del '+esc(actual.semana_inicio)+'</span>' : '';
-  const head = '<div class="dv3-cardhd"><h3>'+icTarget+titulo+'</h3>'+subt+'</div>';
-
-  if(!actual || !actual.meta){
-    box.innerHTML = '<div class="dv3-card meta-card">'+head+
-      (soloLectura
-        ? '<div class="dv3-empty">Todavía no puso su meta esta semana.</div>'
-        : '<div class="meta-card-body">'+
-            '<div class="meta-empty">'+
-              '<div class="ic">'+icTarget+'</div>'+
-              '<h4>¿Cuál es tu gran objetivo esta semana?</h4>'+
-              '<p>Escríbelo ahora. El viernes marcas si lo lograste.</p>'+
-            '</div>'+
-            '<textarea id="metaSemanalTxt" class="meta-txt" rows="2" placeholder="Ej: cerrar la cotización de X, agendar 3 reuniones nuevas..."></textarea>'+
-            '<button onclick="guardarMetaSemanal()" class="meta-btn-save">'+icTarget+' Guardar mi meta</button>'+
-          '</div>') +
-    '</div>';
-    return;
-  }
-
   const cump = actual.cumplida || '';
   const cuenta = _diasParaViernesTxt();
-
   if(soloLectura){
     const banner = cump==='si' ? '<div class="meta-banner ok">'+icCheck+' Meta cumplida</div>'
       : cump==='no' ? '<div class="meta-banner bad">'+icX+' No se cumplió</div>'
@@ -6662,12 +6733,11 @@ function renderMetaSemanal(actual, ejec, soloLectura){
     box.innerHTML = '<div class="dv3-card meta-card">'+head+
       '<div class="meta-card-body">'+
         banner+
-        '<div class="meta-quote"><span class="ic">'+icTarget+'</span><span class="tx">'+esc(actual.meta)+'</span></div>'+
+        '<div class="meta-quote"><span class="ic">'+MM_IC_TARGET+'</span><span class="tx">'+esc(actual.meta)+'</span></div>'+
         (actual.notas_cumplimiento ? '<div style="font-size:12px;color:#6B7280;">'+esc(actual.notas_cumplimiento)+'</div>' : '') +
       '</div></div>';
     return;
   }
-
   const btnCump = (v, label, icon) => '<button onclick="marcarMetaSemanal(\''+v+'\')" class="meta-pill '+v+(cump===v?' on':'')+'">'+icon+' '+label+'</button>';
   const banner = cump==='si' ? '<div class="meta-banner ok">'+icCheck+' ¡La cumpliste! Bien ahí.</div>'
     : cump==='no' ? '<div class="meta-banner bad">'+icX+' Marcada como no cumplida</div>'
@@ -6675,19 +6745,56 @@ function renderMetaSemanal(actual, ejec, soloLectura){
   box.innerHTML = '<div class="dv3-card meta-card">'+head+
     '<div class="meta-card-body">'+
       banner+
-      '<div class="meta-quote"><span class="ic">'+icTarget+'</span><span class="tx">'+esc(actual.meta)+'</span></div>'+
+      '<div class="meta-quote"><span class="ic">'+MM_IC_TARGET+'</span><span class="tx">'+esc(actual.meta)+'</span></div>'+
       '<div class="meta-label">¿Se cumplió?</div>'+
       '<div class="meta-cump-row">'+btnCump('si','Sí',icCheck)+btnCump('no','No',icX)+'</div>'+
       '<textarea id="metaSemanalNotas" class="meta-txt" rows="2" placeholder="¿Por qué? (opcional)">'+esc(actual.notas_cumplimiento||'')+'</textarea>'+
       '<button onclick="marcarMetaSemanal(\''+(cump||'si')+'\')" class="meta-btn-save secondary">Guardar nota</button>'+
     '</div></div>';
 }
+function renderMetaSemanal(actual, ejec, soloLectura){
+  const box = document.getElementById('dshMetaSemanal');
+  if(!box) return;
+  const titulo = soloLectura ? ('Meta de la semana · '+esc(String(ejec||'').split(' ')[0])) : 'Mi meta de la semana';
+  const subt = (actual && actual.semana_inicio) ? '<span class="wk">semana del '+esc(actual.semana_inicio)+'</span>' : '';
+  const head = '<div class="dv3-cardhd"><h3>'+MM_IC_TARGET+titulo+'</h3>'+subt+'</div>';
+
+  // Formato viejo (texto libre, guardado antes de pasar a multi-métrica): se respeta tal cual.
+  if(actual && actual.meta !== undefined && actual.meta !== '' && !actual.metrics){
+    _renderMetaSemanalTexto(actual, head, soloLectura);
+    return;
+  }
+  if(actual && actual.metrics){
+    _renderMetaSemanalMulti(actual, head, soloLectura);
+    return;
+  }
+  box.innerHTML = '<div class="dv3-card meta-card">'+head+
+    (soloLectura ? '<div class="dv3-empty">Todavía no puso sus metas esta semana.</div>' : _htmlDefinirMetas()) +
+  '</div>';
+}
 async function guardarMetaSemanal(){
-  const txt = document.getElementById('metaSemanalTxt');
-  const meta = txt ? txt.value.trim() : '';
-  if(!meta){ alert('Escribe tu meta de esta semana'); return; }
-  const r = await fetchAPI('crm_meta_semanal_guardar', { ejecutivo: USUARIO, meta: meta, solicitante: USUARIO });
+  const metrics = {};
+  let hayAlguna = false;
+  MM_CFG.forEach(function(cfg){
+    const el = document.getElementById('mmTarget_'+cfg.key);
+    let v = el ? parseInt(el.value, 10) : 0;
+    if(isNaN(v) || v < 0) v = 0;
+    metrics[cfg.key] = { target: v };
+    if(v > 0) hayAlguna = true;
+  });
+  if(!hayAlguna){ alert('Pon al menos una meta mayor a 0.'); return; }
+  const r = await fetchAPI('crm_meta_semanal_guardar', { ejecutivo: USUARIO, metrics: metrics, solicitante: USUARIO });
   if(!r || !r.ok){ alert('No se pudo guardar: '+((r&&r.error)||'error desconocido')); return; }
+  cargarMetaSemanal();
+}
+async function cerrarMiSemana(){
+  const notaEl = document.getElementById('metaSemanalNotaCierre');
+  const nota = notaEl ? notaEl.value.trim() : '';
+  const ncEl = document.getElementById('mmManual_nuevos_clientes');
+  let nuevosClientes = ncEl ? parseInt(ncEl.value, 10) : 0;
+  if(isNaN(nuevosClientes) || nuevosClientes < 0) nuevosClientes = 0;
+  const r = await fetchAPI('crm_meta_semanal_marcar', { ejecutivo: USUARIO, nota: nota, nuevos_clientes: nuevosClientes, solicitante: USUARIO });
+  if(!r || !r.ok){ alert('No se pudo cerrar la semana: '+((r&&r.error)||'error desconocido')); return; }
   cargarMetaSemanal();
 }
 async function marcarMetaSemanal(cumplida){
@@ -6703,11 +6810,23 @@ function renderMetasEquipo(equipo){
   window.__METAS_EQUIPO = equipo || [];
   const filas = (equipo||[]).map(function(x){
     const a = x.actual;
-    const cumpTxt = !a ? '' : (a.cumplida==='si' ? '<span style="color:#16A34A;font-weight:800;">Sí</span>' : (a.cumplida==='no' ? '<span style="color:#B91C1C;font-weight:800;">No</span>' : '<span style="color:#9aa3bd;">Pendiente</span>'));
+    let resumen = '<i>Sin metas puestas esta semana</i>', cumpTxt = '';
+    if(a && a.metrics){
+      const conMeta = MM_CFG.filter(function(cfg){ const m=a.metrics[cfg.key]; return m && Number(m.target)>0; });
+      if(conMeta.length){
+        const cumplidas = conMeta.filter(function(cfg){ const m=a.metrics[cfg.key]; return m.actual!=null && m.actual>=Number(m.target); }).length;
+        resumen = cumplidas+' de '+conMeta.length+' métricas cumplidas';
+        cumpTxt = !a.cerrada ? '<span style="color:#9aa3bd;">En curso</span>'
+          : (cumplidas===conMeta.length ? '<span style="color:#16A34A;font-weight:800;">Cumplida</span>'
+            : (cumplidas===0 ? '<span style="color:#B91C1C;font-weight:800;">No cumplida</span>' : '<span style="color:#D97706;font-weight:800;">Parcial</span>'));
+      }
+    } else if(a && a.meta){
+      resumen = esc(a.meta);
+      cumpTxt = a.cumplida==='si' ? '<span style="color:#16A34A;font-weight:800;">Sí</span>' : (a.cumplida==='no' ? '<span style="color:#B91C1C;font-weight:800;">No</span>' : '<span style="color:#9aa3bd;">Pendiente</span>');
+    }
     return '<div class="dv3-prow"><div class="info"><div class="nm">'+esc(x.ejecutivo)+'</div>'+
-      '<div class="mt">'+(a&&a.meta ? esc(a.meta) : '<i>Sin meta puesta esta semana</i>')+'</div></div>'+
-      (a ? cumpTxt : '') +
-      '<button onclick="abrirHistorialMeta(\''+esc(x.ejecutivo)+'\')" style="margin-left:8px;background:#fff;border:1px solid #E6E8EF;color:#001A60;padding:5px 10px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Historial</button>'+
+      '<div class="mt">'+resumen+'</div></div>'+
+      cumpTxt+
     '</div>';
   }).join('');
   box.innerHTML = '<div class="dv3-card" style="margin-top:14px;"><div class="dv3-cardhd" style="display:flex;justify-content:space-between;align-items:center;"><h3>Metas de la semana · equipo</h3>'+
@@ -6728,6 +6847,23 @@ function abrirHistorialEquipo(){
   '</div>';
   document.body.appendChild(ov);
   _pintarHistorialEquipoMatriz();
+}
+function _mmEstadoCelda(h){
+  if(!h) return null;
+  if(h.metrics){
+    const conMeta = MM_CFG.filter(function(cfg){ const m=h.metrics[cfg.key]; return m && Number(m.target)>0; });
+    if(!conMeta.length) return null;
+    const cumplidas = conMeta.filter(function(cfg){ const m=h.metrics[cfg.key]; return m.actual!=null && m.actual>=Number(m.target); }).length;
+    const resumen = conMeta.map(function(cfg){ const m=h.metrics[cfg.key]; const av = cfg.esMonto ? fmtCLP(m.actual||0) : (m.actual==null?'—':m.actual); const tg = cfg.esMonto ? fmtCLP(m.target) : m.target; return cfg.label+': '+av+'/'+tg; }).join(' · ');
+    const color = !h.cerrada ? '#D1A83A' : (cumplidas===conMeta.length ? '#16A34A' : (cumplidas===0 ? '#DC2626' : '#F5A623'));
+    return { color: color, tip: esc(resumen + (h.nota ? ' — '+h.nota : '')) };
+  }
+  if(h.meta){
+    const color = h.cumplida==='si' ? '#16A34A' : (h.cumplida==='no' ? '#DC2626' : '#D1A83A');
+    const tip = esc(h.meta) + (h.notas_cumplimiento ? ' — ' + esc(h.notas_cumplimiento) : '');
+    return { color: color, tip: tip };
+  }
+  return null;
 }
 function _pintarHistorialEquipoMatriz(){
   const eq = window.__METAS_EQUIPO || [];
@@ -6761,10 +6897,9 @@ function _pintarHistorialEquipoMatriz(){
       const h = histPorSemana[s];
       const esNuevoMes = i===0 || semanas[i-1].slice(0,7) !== s.slice(0,7);
       const borde = esNuevoMes ? 'border-left:2px solid #D8DCE8;' : '';
-      if(!h || !h.meta) return '<td style="'+borde+'padding:4px 3px;text-align:center;"><span style="display:inline-block;width:16px;height:16px;border-radius:5px;background:#F0F1F5;" title="Sin meta puesta"></span></td>';
-      const color = h.cumplida==='si' ? '#16A34A' : (h.cumplida==='no' ? '#DC2626' : '#D1A83A');
-      const tip = esc(h.meta) + (h.notas_cumplimiento ? ' — ' + esc(h.notas_cumplimiento) : '');
-      return '<td style="'+borde+'padding:4px 3px;text-align:center;"><span style="display:inline-block;width:16px;height:16px;border-radius:5px;background:'+color+';cursor:default;" title="'+tip+'"></span></td>';
+      const est = _mmEstadoCelda(h);
+      if(!est) return '<td style="'+borde+'padding:4px 3px;text-align:center;"><span style="display:inline-block;width:16px;height:16px;border-radius:5px;background:#F0F1F5;" title="Sin meta puesta"></span></td>';
+      return '<td style="'+borde+'padding:4px 3px;text-align:center;"><span style="display:inline-block;width:16px;height:16px;border-radius:5px;background:'+est.color+';cursor:default;" title="'+est.tip+'"></span></td>';
     }).join('');
     return '<tr><td style="position:sticky;left:0;background:#fff;padding:6px 10px;font-size:12px;font-weight:700;color:#1a2440;white-space:nowrap;border-right:1px solid #E6E8EF;">'+esc(x.ejecutivo.split(' ')[0])+'</td>'+celdas+'</tr>';
   }).join('');
@@ -6772,8 +6907,9 @@ function _pintarHistorialEquipoMatriz(){
   body.innerHTML =
     '<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-bottom:12px;font-size:11px;color:#6B7280;">'+
       '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:4px;background:#16A34A;display:inline-block;"></span> Cumplida</span>'+
+      '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:4px;background:#F5A623;display:inline-block;"></span> Parcial</span>'+
       '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:4px;background:#DC2626;display:inline-block;"></span> No cumplida</span>'+
-      '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:4px;background:#D1A83A;display:inline-block;"></span> Pendiente de marcar</span>'+
+      '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:4px;background:#D1A83A;display:inline-block;"></span> Semana en curso / sin cerrar</span>'+
       '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:4px;background:#F0F1F5;display:inline-block;"></span> Sin meta</span>'+
       '<span style="color:#9aa3bd;">· pasa el mouse sobre cada cuadro para ver la meta y la nota</span>'+
     '</div>'+
@@ -6783,29 +6919,6 @@ function _pintarHistorialEquipoMatriz(){
     '</tr><tr><th style="position:sticky;left:0;background:#fff;"></th>'+rowSemana+'</tr></thead><tbody>'+filas+'</tbody></table>'+
     '</div>';
 }
-function abrirHistorialMeta(ejecutivo){
-  const eq = window.__METAS_EQUIPO || [];
-  const x = eq.find(function(e){ return e.ejecutivo === ejecutivo; });
-  const hist = (x && x.historial) || [];
-  const viejo = document.getElementById('histMetaOv'); if(viejo) viejo.remove();
-  const ov = document.createElement('div');
-  ov.id = 'histMetaOv';
-  ov.style.cssText = 'position:fixed;inset:0;z-index:2147483600;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit;';
-  ov.onclick = function(e){ if(e.target===ov) ov.remove(); };
-  const filas = hist.length ? hist.map(function(h){
-    const cumpTxt = h.cumplida==='si' ? '<span style="color:#16A34A;font-weight:800;">Sí</span>' : (h.cumplida==='no' ? '<span style="color:#B91C1C;font-weight:800;">No</span>' : '<span style="color:#9aa3bd;">Pendiente</span>');
-    return '<div style="border-bottom:1px solid #E6E8EF;padding:10px 0;"><div style="font-size:11px;color:#6B7280;font-weight:700;">Semana del '+esc(h.semana_inicio||'')+' · '+cumpTxt+'</div>'+
-      '<div style="font-size:13px;color:#1a2440;margin-top:3px;">'+esc(h.meta||'')+'</div>'+
-      (h.notas_cumplimiento ? '<div style="font-size:12px;color:#6B7280;margin-top:3px;">'+esc(h.notas_cumplimiento)+'</div>' : '') +
-    '</div>';
-  }).join('') : '<div style="color:#9aa3bd;font-size:13px;padding:10px 0;">Sin historial todavía.</div>';
-  ov.innerHTML = '<div style="background:#fff;border-radius:14px;max-width:480px;width:100%;max-height:80vh;overflow:auto;box-shadow:0 24px 70px rgba(0,0,0,.3);padding:22px;">'+
-    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><b style="font-size:15px;color:#001A60;">Historial de '+esc(ejecutivo)+'</b><button onclick="document.getElementById(\'histMetaOv\').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#9aa3bd;">&times;</button></div>'+
-    filas +
-  '</div>';
-  document.body.appendChild(ov);
-}
-
 function cambiarPeriodoDash(p){
   DASH_PERIODO = p;
   try { localStorage.setItem('crm_dash_periodo', p); } catch(e){}

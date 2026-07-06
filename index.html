@@ -133,6 +133,18 @@
   .central-login-box .cl-err{font-size:11px;color:#c0392b;margin-top:6px;display:none;}
   .cl-logout{position:fixed;top:16px;right:16px;z-index:100;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);padding:6px 14px;border-radius:8px;font-size:10px;font-weight:600;cursor:pointer;font-family:'Open Sans',sans-serif;}
   .cl-logout:hover{background:rgba(255,255,255,.25);color:#fff;}
+  .cl-changepass{position:fixed;top:16px;right:110px;z-index:100;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);padding:6px 14px;border-radius:8px;font-size:10px;font-weight:600;cursor:pointer;font-family:'Open Sans',sans-serif;}
+  .cl-changepass:hover{background:rgba(255,255,255,.25);color:#fff;}
+  .cl-pass-overlay{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;background:rgba(10,15,30,.6);}
+  .cl-pass-overlay.on{display:flex;}
+  .cl-pass-box{background:#fff;border-radius:16px;padding:32px 30px;width:340px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+  .cl-pass-box h3{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--navy);margin-bottom:16px;}
+  .cl-pass-box input{width:100%;padding:12px 14px;border:2px solid #d0d8e8;border-radius:10px;font-family:'Open Sans',sans-serif;font-size:14px;color:#1a2535;outline:none;margin-bottom:12px;}
+  .cl-pass-box input:focus{border-color:var(--sky);}
+  .cl-pass-box button{width:100%;padding:13px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--navy),#0a2e8a);color:#fff;font-family:'Montserrat',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px;}
+  .cl-pass-box .cl-pass-cancel{background:none;color:var(--subtle);font-weight:600;margin-top:8px;}
+  .cl-pass-box .cl-pass-err{font-size:11px;color:#c0392b;margin-top:6px;display:none;}
+  .cl-pass-box .cl-pass-ok{font-size:11px;color:#1a8a4c;margin-top:6px;display:none;}
 
   @media(max-width:480px){
     .header{padding:40px 16px 0;}
@@ -454,6 +466,20 @@
 
 <div class="page" id="centralPage" style="display:none;">
 <button class="cl-logout" onclick="clLogout()">Cerrar sesion</button>
+<button class="cl-changepass" onclick="clOpenPassModal()">Cambiar contraseña</button>
+
+<div class="cl-pass-overlay" id="clPassOverlay">
+  <div class="cl-pass-box">
+    <h3>Cambiar contraseña</h3>
+    <input type="password" id="clPassActual" placeholder="Contraseña actual">
+    <input type="password" id="clPassNueva1" placeholder="Nueva contraseña">
+    <input type="password" id="clPassNueva2" placeholder="Repite la nueva contraseña">
+    <button onclick="clDoChangePass()">Guardar</button>
+    <button class="cl-pass-cancel" onclick="clClosePassModal()">Cancelar</button>
+    <div class="cl-pass-err" id="clPassErr"></div>
+    <div class="cl-pass-ok" id="clPassOk"></div>
+  </div>
+</div>
 
   <div class="hero-bg"></div>
 
@@ -1497,6 +1523,42 @@ function clLogout(){
   // Ocultar Mi Día al cerrar sesión
   var fab=document.getElementById('todoFab'); if(fab) fab.classList.remove('show');
   var panel=document.getElementById('todoPanel'); if(panel) panel.classList.remove('open');
+}
+
+function clOpenPassModal(){
+  document.getElementById('clPassActual').value='';
+  document.getElementById('clPassNueva1').value='';
+  document.getElementById('clPassNueva2').value='';
+  document.getElementById('clPassErr').style.display='none';
+  document.getElementById('clPassOk').style.display='none';
+  document.getElementById('clPassOverlay').classList.add('on');
+}
+
+function clClosePassModal(){
+  document.getElementById('clPassOverlay').classList.remove('on');
+}
+
+async function clDoChangePass(){
+  var name=localStorage.getItem('oc_central_user');
+  var passActual=document.getElementById('clPassActual').value;
+  var pass1=document.getElementById('clPassNueva1').value;
+  var pass2=document.getElementById('clPassNueva2').value;
+  var err=document.getElementById('clPassErr');
+  var ok=document.getElementById('clPassOk');
+  err.style.display='none'; ok.style.display='none';
+  if(!name){err.textContent='Sesión inválida, vuelve a ingresar.';err.style.display='block';return;}
+  if(passActual!==localStorage.getItem('oc_central_pass')){err.textContent='La contraseña actual es incorrecta.';err.style.display='block';return;}
+  if(pass1.length<6){err.textContent='La nueva contraseña debe tener al menos 6 caracteres.';err.style.display='block';return;}
+  if(pass1!==pass2){err.textContent='Las contraseñas no coinciden.';err.style.display='block';return;}
+  try{
+    var r=await fetch(CL_API,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({accion:'cambiar_password',ejecutivo:name,nueva_password:pass1})});
+    var res=await r.json();
+    if(!res.ok){err.textContent=res.error||'No se pudo cambiar la contraseña.';err.style.display='block';return;}
+    localStorage.setItem('oc_central_pass',pass1);
+    localStorage.setItem('oc_portal_pass',pass1);
+    ok.textContent='✓ Contraseña actualizada.';ok.style.display='block';
+    setTimeout(clClosePassModal,1200);
+  }catch(ex){err.textContent='Error de conexión. Intenta de nuevo.';err.style.display='block';}
 }
 
 // ── Update notification system ──

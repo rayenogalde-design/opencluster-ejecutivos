@@ -6555,7 +6555,82 @@ function renderMetasEquipo(equipo){
       '<button onclick="abrirHistorialMeta(\''+esc(x.ejecutivo)+'\')" style="margin-left:8px;background:#fff;border:1px solid #E6E8EF;color:#001A60;padding:5px 10px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Historial</button>'+
     '</div>';
   }).join('');
-  box.innerHTML = '<div class="dv3-card" style="margin-top:14px;"><div class="dv3-cardhd"><h3>Metas de la semana · equipo</h3></div>'+(filas||'<div class="dv3-empty">Sin datos.</div>')+'</div>';
+  box.innerHTML = '<div class="dv3-card" style="margin-top:14px;"><div class="dv3-cardhd" style="display:flex;justify-content:space-between;align-items:center;"><h3>Metas de la semana · equipo</h3>'+
+    '<button onclick="abrirHistorialEquipo()" style="background:#fff;border:1px solid #E6E8EF;color:#001A60;padding:5px 10px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Historial equipo</button>'+
+  '</div>'+(filas||'<div class="dv3-empty">Sin datos.</div>')+'</div>';
+}
+var _MESES_ES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+function abrirHistorialEquipo(){
+  const eq = window.__METAS_EQUIPO || [];
+  if(!eq.length){ alert('Todavía no hay datos del equipo.'); return; }
+  const viejo = document.getElementById('histEquipoOv'); if(viejo) viejo.remove();
+  const ov = document.createElement('div');
+  ov.id = 'histEquipoOv';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:2147483600;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit;';
+  ov.onclick = function(e){ if(e.target===ov) ov.remove(); };
+  const primero = eq.find(function(x){ return (x.historial||[]).length; }) || eq[0];
+  ov.innerHTML = '<div style="background:#fff;border-radius:14px;max-width:640px;width:100%;max-height:85vh;overflow:auto;box-shadow:0 24px 70px rgba(0,0,0,.3);padding:22px;">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;"><b style="font-size:15px;color:#001A60;">Historial de metas · equipo</b><button onclick="document.getElementById(\'histEquipoOv\').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#9aa3bd;">&times;</button></div>'+
+    '<div id="histEquipoPills" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">'+
+      eq.map(function(x){ return '<button onclick="_pintarHistorialEquipoDe(\''+esc(x.ejecutivo)+'\')" data-ej="'+esc(x.ejecutivo)+'" class="histEqPill" style="padding:6px 12px;border-radius:999px;border:1px solid #E6E8EF;background:#fff;color:#001A60;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">'+esc(x.ejecutivo.split(' ')[0])+'</button>'; }).join('') +
+    '</div>'+
+    '<div id="histEquipoBody"></div>'+
+  '</div>';
+  document.body.appendChild(ov);
+  _pintarHistorialEquipoDe(primero.ejecutivo);
+}
+function _pintarHistorialEquipoDe(ejecutivo){
+  const eq = window.__METAS_EQUIPO || [];
+  const x = eq.find(function(e){ return e.ejecutivo === ejecutivo; });
+  const hist = (x && x.historial) || [];
+  document.querySelectorAll('.histEqPill').forEach(function(b){
+    const activo = b.getAttribute('data-ej') === ejecutivo;
+    b.style.background = activo ? '#001A60' : '#fff';
+    b.style.color = activo ? '#fff' : '#001A60';
+  });
+  const body = document.getElementById('histEquipoBody');
+  if(!body) return;
+  if(!hist.length){ body.innerHTML = '<div style="color:#9aa3bd;font-size:13px;padding:10px 0;">Sin historial todavía.</div>'; return; }
+  const porTrim = {};
+  hist.forEach(function(h){
+    const ymd = String(h.semana_inicio||'');
+    const p = ymd.split('-');
+    if(p.length<2) return;
+    const anio = p[0], mesN = parseInt(p[1],10);
+    const trimN = Math.floor((mesN-1)/3)+1;
+    const kT = anio+'-T'+trimN, kM = anio+'-'+p[1];
+    if(!porTrim[kT]) porTrim[kT] = { label: 'Trimestre '+trimN+' · '+anio, orden: parseInt(anio,10)*10+trimN, meses:{} };
+    if(!porTrim[kT].meses[kM]) porTrim[kT].meses[kM] = { label: _MESES_ES[mesN-1]+' '+anio, orden: parseInt(anio,10)*100+mesN, semanas:[] };
+    porTrim[kT].meses[kM].semanas.push(h);
+  });
+  const trimKeys = Object.keys(porTrim).sort(function(a,b){ return porTrim[b].orden - porTrim[a].orden; });
+  body.innerHTML = trimKeys.map(function(kT){
+    const trim = porTrim[kT];
+    const mesKeys = Object.keys(trim.meses).sort(function(a,b){ return trim.meses[b].orden - trim.meses[a].orden; });
+    let siT=0, noT=0, penT=0;
+    const mesesHtml = mesKeys.map(function(kM){
+      const mes = trim.meses[kM];
+      mes.semanas.sort(function(a,b){ return String(b.semana_inicio||'').localeCompare(String(a.semana_inicio||'')); });
+      let si=0, no=0, pen=0;
+      mes.semanas.forEach(function(h){ if(h.cumplida==='si') si++; else if(h.cumplida==='no') no++; else pen++; });
+      siT+=si; noT+=no; penT+=pen;
+      const semanasHtml = mes.semanas.map(function(h){
+        const cumpTxt = h.cumplida==='si' ? '<span style="color:#16A34A;font-weight:800;">Sí</span>' : (h.cumplida==='no' ? '<span style="color:#B91C1C;font-weight:800;">No</span>' : '<span style="color:#9aa3bd;">Pendiente</span>');
+        return '<div style="border-bottom:1px solid #F0F1F5;padding:8px 0;"><div style="font-size:10.5px;color:#6B7280;font-weight:700;">Semana del '+esc(h.semana_inicio||'')+' · '+cumpTxt+'</div>'+
+          '<div style="font-size:12.5px;color:#1a2440;margin-top:2px;">'+esc(h.meta||'')+'</div>'+
+          (h.notas_cumplimiento ? '<div style="font-size:11.5px;color:#6B7280;margin-top:2px;">'+esc(h.notas_cumplimiento)+'</div>' : '') +
+        '</div>';
+      }).join('');
+      return '<div style="margin-bottom:10px;">'+
+        '<div style="font-size:12px;font-weight:800;color:#1a2440;text-transform:capitalize;margin-bottom:4px;">'+esc(mes.label)+' <span style="font-weight:600;color:#9aa3bd;">· '+si+' sí / '+no+' no / '+pen+' pend.</span></div>'+
+        semanasHtml +
+      '</div>';
+    }).join('');
+    return '<details style="margin-bottom:10px;" open>'+
+      '<summary style="cursor:pointer;font-size:13px;font-weight:800;color:#001A60;padding:6px 0;">'+esc(trim.label)+' <span style="font-weight:600;color:#9aa3bd;">· '+siT+' sí / '+noT+' no / '+penT+' pend.</span></summary>'+
+      '<div style="padding-left:6px;margin-top:6px;">'+mesesHtml+'</div>'+
+    '</details>';
+  }).join('');
 }
 function abrirHistorialMeta(ejecutivo){
   const eq = window.__METAS_EQUIPO || [];

@@ -2285,6 +2285,10 @@ body{
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
         Sala Multisensorial
       </div>
+      <div class="side-tab admin" data-view="vAyudasTecnicas" id="navAyudasTecnicas" onclick="goView('vAyudasTecnicas')" style="display:none;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+        Ayudas Técnicas
+      </div>
       <div class="side-tab admin" data-view="vConfig" id="navConfig" onclick="goView('vConfig')" style="display:none;">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         Configuración
@@ -2870,15 +2874,20 @@ body{
         <div id="metricasCharts"><div class="loading-state"><div class="spinner"></div>Cargando métricas…</div></div>
       </div>
 
-      <!-- ═══ Sala Multisensorial (admin) ═══ -->
+      <!-- ═══ Sala Multisensorial (admin) + Ayudas Técnicas (admin) ═══
+           Mismas clases de impresión (.sm-no-print/.sm-tab/.sm-print-title/.sm-print-skip) para
+           las dos vistas: son genéricas (no mencionan la línea de negocio) y como solo una vista
+           está visible a la vez (.view{display:none} salvo la .act), compartirlas no las mezcla. -->
       <style>
-        /* Imprimir/exportar PDF solo esta vista: todo lo demás se oculta al imprimir. */
+        /* Imprimir/exportar PDF solo la vista activa (Sala Multisensorial o Ayudas Técnicas): todo
+           lo demás se oculta al imprimir. */
         @media print {
           body * { visibility: hidden; }
-          #vSalaMultisensorial, #vSalaMultisensorial * { visibility: visible; }
-          #vSalaMultisensorial { position: absolute; left: 0; top: 0; width: 100%; }
+          #vSalaMultisensorial, #vSalaMultisensorial *,
+          #vAyudasTecnicas, #vAyudasTecnicas * { visibility: visible; }
+          #vSalaMultisensorial, #vAyudasTecnicas { position: absolute; left: 0; top: 0; width: 100%; }
           .sm-no-print { display: none !important; }
-          #smPrintHeader { display: block !important; }
+          #smPrintHeader, #atPrintHeader { display: block !important; }
           canvas, table { break-inside: avoid; }
           /* Cada tarjeta (gráfico, tabla, lista) entera en la misma hoja — evita que una tarjeta
              quede cortada a la mitad entre dos páginas. Todas las tarjetas comparten este radio de
@@ -2892,7 +2901,7 @@ body{
              la tabla "Resumen de productos cotizados" de más abajo ya trae el mismo dato mejor. */
           .sm-print-skip { display: none !important; }
         }
-        #smPrintHeader, .sm-print-title { display: none; }
+        #smPrintHeader, #atPrintHeader, .sm-print-title { display: none; }
         .sm-print-title { font-family: Montserrat, sans-serif; font-size: 17px; font-weight: 800; color: #001A60; margin: 0 0 14px; }
       </style>
       <div class="view" id="vSalaMultisensorial">
@@ -2942,6 +2951,56 @@ body{
           <span id="smFiltrosActivos" onclick="_smQuitarFiltros()" style="display:none;font-size:11.5px;color:#001A60;font-weight:800;cursor:pointer;padding:7px 4px;">Quitar filtros ✕</span>
         </div>
         <div id="smBody"><div class="loading-state"><div class="spinner"></div>Cargando…</div></div>
+      </div>
+
+      <!-- ═══ Ayudas Técnicas (admin) ═══ -->
+      <div class="view" id="vAyudasTecnicas">
+        <div class="sec-head sm-no-print" style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+          <div>
+            <h1>Ayudas Técnicas</h1>
+            <p>Cotizaciones de ayudas técnicas del año — por ejecutivo, estado, mercado público/privado y qué se cotiza más.</p>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button onclick="_lineaInformeOfrecidas('AT')" title="Filtra a solo Ofrecidas y abre el PDF — para ver qué se necesita para responder a esa demanda" style="background:#fff;color:#5b21b6;border:1px solid #DDD0EC;border-radius:9px;padding:9px 16px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">Informe de Ofrecidas</button>
+            <button onclick="_lineaExportarPDF('AT')" style="background:#001A60;color:#fff;border:none;border-radius:9px;padding:9px 16px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">Exportar PDF</button>
+          </div>
+        </div>
+        <div id="atPrintHeader" style="padding:0 0 16px;">
+          <div style="font-family:Montserrat,sans-serif;font-size:19px;font-weight:800;color:#001A60;">OpenCluster — Informe Ayudas Técnicas</div>
+          <div id="atPrintFecha" style="font-size:12.5px;color:#555;margin-top:3px;"></div>
+        </div>
+        <!-- Buscador rápido: filtra las cotizaciones de ayudas técnicas por cualquier dato (N°,
+             institución, cliente, ejecutivo o producto), sin importar en qué pestaña o grupo esté.
+             Vive fuera de atBody para no perderse cuando se re-arma el contenido de la pestaña activa. -->
+        <div class="sm-no-print" style="position:relative;margin-bottom:16px;max-width:480px;">
+          <input id="atBuscador" type="text" placeholder="Buscar cotización, institución, cliente, ejecutivo o producto…" oninput="_lineaBuscar('AT', this.value)"
+            style="width:100%;box-sizing:border-box;padding:9px 34px 9px 14px;border:1px solid var(--smoke,#e5e7eb);border-radius:9px;font-size:13px;font-family:inherit;">
+          <span id="atBuscadorClear" onclick="_lineaLimpiarBusqueda('AT')" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--subtle,#9aa3af);font-size:16px;">&times;</span>
+          <div id="atBuscadorResultados" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:340px;overflow-y:auto;z-index:20;"></div>
+        </div>
+        <!-- Filtros globales: afectan TODO lo que se ve en la vista (KPIs, gráficos y listas de las
+             4 pestañas), no solo una lista puntual. Se aplican sobre las cotizaciones de ayudas
+             técnicas antes de calcular cualquier otra cosa. -->
+        <div class="sm-no-print" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">
+          <select id="atFiltroEjec" onchange="_lineaAplicarFiltros('AT')" style="padding:7px 10px;border:1px solid var(--smoke,#e5e7eb);border-radius:8px;font-size:12.5px;font-family:inherit;background:#fff;color:var(--ink);">
+            <option value="">Todos los ejecutivos</option>
+          </select>
+          <select id="atFiltroProb" onchange="_lineaAplicarFiltros('AT')" style="padding:7px 10px;border:1px solid var(--smoke,#e5e7eb);border-radius:8px;font-size:12.5px;font-family:inherit;background:#fff;color:var(--ink);">
+            <option value="">Todas las probabilidades</option>
+            <option value="0">Ofrecidas sin marcar</option>
+            <option value="20">Ofrecidas al 20%</option>
+            <option value="50">Ofrecidas al 50%</option>
+            <option value="90">Ofrecidas al 90%</option>
+          </select>
+          <select id="atFiltroGrupo" onchange="_lineaAplicarFiltros('AT')" style="padding:7px 10px;border:1px solid var(--smoke,#e5e7eb);border-radius:8px;font-size:12.5px;font-family:inherit;background:#fff;color:var(--ink);">
+            <option value="">Ganadas + Perdidas + Ofrecidas</option>
+            <option value="ganadas">Solo Ganadas</option>
+            <option value="perdidas">Solo Perdidas</option>
+            <option value="ofrecidas">Solo Ofrecidas</option>
+          </select>
+          <span id="atFiltrosActivos" onclick="_lineaQuitarFiltros('AT')" style="display:none;font-size:11.5px;color:#001A60;font-weight:800;cursor:pointer;padding:7px 4px;">Quitar filtros ✕</span>
+        </div>
+        <div id="atBody"><div class="loading-state"><div class="spinner"></div>Cargando…</div></div>
       </div>
 
       <!-- ═══ Registro Ximena (admin) — repartir contactos migrados ═══ -->
@@ -4491,7 +4550,7 @@ function aplicarVisibilidadPorRol(){
 
   // Vistas admin (Territorios, Auditoría, Migración, Importar): visibles solo si Rayen está
   // en modo Admin. En modo Ejecutiva o para ejecutivos no admin, se ocultan.
-  ['navLeads', 'navCoaching', 'navActividad', 'navTerr', 'navSalaMS', 'navConfig', 'secAdmin', 'secHerramientas', 'navVentasMes'].forEach(id => {
+  ['navLeads', 'navCoaching', 'navActividad', 'navTerr', 'navSalaMS', 'navAyudasTecnicas', 'navConfig', 'secAdmin', 'secHerramientas', 'navVentasMes'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.style.display = verComoEjecutivo ? 'none' : '';
   });
@@ -4623,6 +4682,7 @@ function goView(id){
     case 'vRegistroXimena':  cargarRegistroXimena(); break;
     case 'vMetricas':        cargarMetricas(); break;
     case 'vSalaMultisensorial': cargarSalaMultisensorial(); break;
+    case 'vAyudasTecnicas':  cargarAyudasTecnicas(); break;
     case 'vCoaching':        cargarCoaching(); break;
     case 'vOlvidados':       cargarOlvidados(); break;
     case 'vTerritorios':     cargarTerritorios(); break;
@@ -10654,42 +10714,85 @@ function _smProdNorm(name){
     .replace(/\s*-\s*/g,' ').replace(/^sistema\s+/,'').replace(/\s+incluye.*$/,'')
     .replace(/\s+/g,' ').trim();
 }
-async function cargarSalaMultisensorial(forzar){
-  const cont = document.getElementById('smBody');
-  window.__SM_FILTRO_PROB = null;
-  window.__SM_FILTRO_EJEC = null;
-  window.__SM_FILTRO_GRUPO = null;
-  window.__SM_TAB_ACTUAL = 'resumen';
-  const selEj0 = document.getElementById('smFiltroEjec'); if(selEj0) selEj0.value = '';
-  const selPr0 = document.getElementById('smFiltroProb'); if(selPr0) selPr0.value = '';
-  const selGr0 = document.getElementById('smFiltroGrupo'); if(selGr0) selGr0.value = '';
-  const fa0 = document.getElementById('smFiltrosActivos'); if(fa0) fa0.style.display = 'none';
-  if(typeof _smLimpiarBusqueda === 'function') _smLimpiarBusqueda();
+/* ════ Config compartida entre las 2 líneas de negocio con vista admin propia: Sala Multisensorial
+   (SM) y Ayudas Técnicas (AT). Mismo motor de carga/render para las dos — solo cambian los ids
+   del DOM, el label y algunos textos. Reusa la lista que ya trae 'crm_mis_cotizaciones' en modo
+   admin (todas las cotizaciones), sin llamar a un endpoint nuevo. Una cotización pertenece a una
+   línea si su N° termina en "-SM"/"-AT" (misma regla que ya usa el filtro AT/SM de "Mis
+   Cotizaciones", vía _lineaCot). */
+const _LINEA_CFG = {
+  SM: {
+    label: 'Sala Multisensorial', labelCorto: 'sala multisensorial', kpiCotLabel: 'Cotizaciones sala',
+    view: 'vSalaMultisensorial', body: 'smBody',
+    printHeader: 'smPrintHeader', printFecha: 'smPrintFecha',
+    buscador: 'smBuscador', buscadorClear: 'smBuscadorClear', buscadorResultados: 'smBuscadorResultados',
+    filtroEjec: 'smFiltroEjec', filtroProb: 'smFiltroProb', filtroGrupo: 'smFiltroGrupo', filtrosActivos: 'smFiltrosActivos',
+    chartEjec: 'smChartEjec', chartEstado: 'smChartEstado', chartMes: 'smChartMes', chartProb: 'smChartProb',
+    chartPubPriv: 'smChartPubPriv', chartPubTipo: 'smChartPubTipo', chartPrivTipo: 'smChartPrivTipo', chartProd: 'smChartProd',
+    detalleResumen: 'smDetalleResumen', detalleInst: 'smDetalleInst', detalleProd: 'smDetalleProd',
+    tabPrefix: 'smTab_', vacioMsg: 'Ninguna cotización de sala coincide con el filtro activo.'
+  },
+  AT: {
+    label: 'Ayudas Técnicas', labelCorto: 'ayudas técnicas', kpiCotLabel: 'Cotizaciones AT',
+    view: 'vAyudasTecnicas', body: 'atBody',
+    printHeader: 'atPrintHeader', printFecha: 'atPrintFecha',
+    buscador: 'atBuscador', buscadorClear: 'atBuscadorClear', buscadorResultados: 'atBuscadorResultados',
+    filtroEjec: 'atFiltroEjec', filtroProb: 'atFiltroProb', filtroGrupo: 'atFiltroGrupo', filtrosActivos: 'atFiltrosActivos',
+    chartEjec: 'atChartEjec', chartEstado: 'atChartEstado', chartMes: 'atChartMes', chartProb: 'atChartProb',
+    chartPubPriv: 'atChartPubPriv', chartPubTipo: 'atChartPubTipo', chartPrivTipo: 'atChartPrivTipo', chartProd: 'atChartProd',
+    detalleResumen: 'atDetalleResumen', detalleInst: 'atDetalleInst', detalleProd: 'atDetalleProd',
+    tabPrefix: 'atTab_', vacioMsg: 'Ninguna cotización de ayudas técnicas coincide con el filtro activo.'
+  }
+};
+// Estado de UI (pestaña activa, filtros, gráficos, caché del buscador) independiente por línea de
+// negocio — así entrar y salir de Sala Multisensorial y Ayudas Técnicas sin recargar la página
+// nunca mezcla la pestaña o los filtros que quedaron activos en la otra vista.
+window.__LINEA_STATE = window.__LINEA_STATE || {
+  SM: { tabActual:'resumen', filtroEjec:null, filtroProb:null, filtroGrupo:null, lista:[], lastFetch:0, charts:[], tabDone:{}, tabInitFn:null },
+  AT: { tabActual:'resumen', filtroEjec:null, filtroProb:null, filtroGrupo:null, lista:[], lastFetch:0, charts:[], tabDone:{}, tabInitFn:null }
+};
+async function _cargarVistaLinea(tipo, forzar){
+  const cfg = _LINEA_CFG[tipo];
+  const st = window.__LINEA_STATE[tipo];
+  const cont = document.getElementById(cfg.body);
+  st.filtroProb = null;
+  st.filtroEjec = null;
+  st.filtroGrupo = null;
+  st.tabActual = 'resumen';
+  const selEj0 = document.getElementById(cfg.filtroEjec); if(selEj0) selEj0.value = '';
+  const selPr0 = document.getElementById(cfg.filtroProb); if(selPr0) selPr0.value = '';
+  const selGr0 = document.getElementById(cfg.filtroGrupo); if(selGr0) selGr0.value = '';
+  const fa0 = document.getElementById(cfg.filtrosActivos); if(fa0) fa0.style.display = 'none';
+  if(typeof _lineaLimpiarBusqueda === 'function') _lineaLimpiarBusqueda(tipo);
   const tieneCache = CACHE.vMisCot && CACHE.vMisCot.length;
-  if(tieneCache){ try{ renderSalaMultisensorial(CACHE.vMisCot); }catch(e){} }
-  else cont.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando…</div>';
+  if(tieneCache){ try{ _renderVistaLinea(CACHE.vMisCot, tipo); }catch(e){} }
+  else if(cont) cont.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando…</div>';
   // Si ya se pidió al servidor hace menos de 20s, no se vuelve a pedir — entrar y salir de la vista
   // varias veces seguidas no debe apilar llamadas al Apps Script (eso puede colgarlo).
   const RECIENTE_MS = 20000;
-  if(!forzar && tieneCache && (Date.now() - (window.__SM_LAST_FETCH||0)) < RECIENTE_MS) return;
-  window.__SM_LAST_FETCH = Date.now();
-  // Sala Multisensorial es una vista exclusiva de admin — SIEMPRE trae a todo el equipo, sin
-  // importar si hay un "ver como" (drill-down) o el toggle ADMIN/EJECUTIVA activo en otra parte
-  // del CRM (si no se fuerza esto, el backend devuelve solo las cotizaciones de esa persona).
+  if(!forzar && tieneCache && (Date.now() - (st.lastFetch||0)) < RECIENTE_MS) return;
+  st.lastFetch = Date.now();
+  // Sala Multisensorial y Ayudas Técnicas son vistas exclusivas de admin — SIEMPRE traen a todo el
+  // equipo, sin importar si hay un "ver como" (drill-down) o el toggle ADMIN/EJECUTIVA activo en
+  // otra parte del CRM (si no se fuerza esto, el backend devuelve solo las cotizaciones de esa persona).
   const [r, rp] = await Promise.all([
     fetchAPI('crm_mis_cotizaciones', { ejecutivo: USUARIO, modo_vista: 'admin' }),
     fetchAPI('crm_sm_probabilidades', {})
   ]);
   if(rp && rp.ok) CACHE.smProb = rp.mapa || {};
   if(!r || !r.ok){
-    if(!(CACHE.vMisCot && CACHE.vMisCot.length)) cont.innerHTML = '<div class="error-state">No se pudo cargar. '+esc((r&&r.error)||'')+'</div>';
+    if(!(CACHE.vMisCot && CACHE.vMisCot.length) && cont) cont.innerHTML = '<div class="error-state">No se pudo cargar. '+esc((r&&r.error)||'')+'</div>';
     return;
   }
   CACHE.vMisCot = r.cotizaciones || [];
-  _smPoblarFiltroEjec(CACHE.vMisCot);
-  renderSalaMultisensorial(CACHE.vMisCot);
+  _lineaPoblarFiltroEjec(CACHE.vMisCot, tipo);
+  _renderVistaLinea(CACHE.vMisCot, tipo);
 }
-// Rayen marca a mano la probabilidad de cierre (20/50/90%) de una cotización "Ofrecida".
+async function cargarSalaMultisensorial(forzar){ return _cargarVistaLinea('SM', forzar); }
+async function cargarAyudasTecnicas(forzar){ return _cargarVistaLinea('AT', forzar); }
+// Rayen marca a mano la probabilidad de cierre (20/50/90%) de una cotización "Ofrecida" — mecanismo
+// COMPARTIDO por Sala Multisensorial, Ayudas Técnicas y el modal de Mis Cotizaciones (no es exclusivo
+// de una línea de negocio; CACHE.smProb queda indexado por N° de cotización, no por línea de negocio).
 // Click de nuevo sobre el mismo % la desmarca (vuelve a 0 = sin marcar).
 // Guarda de "un guardado a la vez" por cotización: si se guarda como append-only (última fila
 // gana), dos clics rápidos en 20/50/90% pueden llegar al servidor en orden distinto al que se
@@ -10711,11 +10814,13 @@ async function _smSetProb(num, val){
   }
   window.__SM_PROB_BUSY[num] = false;
 }
-// Repinta dondequiera que se esté mostrando la probabilidad de esta cotización: Sala
-// Multisensorial (si está abierta) y/o el modal de detalle de Mis Cotizaciones (si está abierto
-// mostrando esta misma cotización). La probabilidad ya no es exclusiva de Sala Multisensorial.
+// Repinta dondequiera que se esté mostrando la probabilidad de esta cotización: la vista de su
+// línea de negocio (Sala Multisensorial o Ayudas Técnicas, si está abierta) y/o el modal de detalle
+// de Mis Cotizaciones (si está abierto mostrando esta misma cotización).
 function _refrescarProbUI(num){
-  if(document.getElementById('smBody')) renderSalaMultisensorial(CACHE.vMisCot);
+  const tipoNum = (typeof _lineaCot === 'function') ? _lineaCot(num) : '';
+  if(tipoNum === 'AT'){ if(document.getElementById('atBody')) _renderVistaLinea(CACHE.vMisCot, 'AT'); }
+  else { if(document.getElementById('smBody')) _renderVistaLinea(CACHE.vMisCot, 'SM'); }
   if(document.getElementById('cotModalOv') && window.__MC_CUR === num) abrirCotModal(num);
 }
 // Extrae {key normalizada, nombre tal cual venía} por cada producto de UNA cotización, deduplicado.
@@ -10734,10 +10839,16 @@ function _smExtraerProductos(prodStr){
   });
   return out;
 }
-function renderSalaMultisensorial(todas){
-  const cont = document.getElementById('smBody');
+// Motor de render COMPARTIDO por Sala Multisensorial y Ayudas Técnicas — todos los ids de DOM,
+// el label y los textos que mencionan la línea de negocio salen de _LINEA_CFG[tipo]; el resto de
+// la lógica (KPIs, gráficos, filtros, público/privado, productos) es exactamente la misma para
+// ambas, solo cambia qué subconjunto de cotizaciones entra (según _lineaCot).
+function _renderVistaLinea(todas, tipo){
+  const cfg = _LINEA_CFG[tipo];
+  const st = window.__LINEA_STATE[tipo];
+  const cont = document.getElementById(cfg.body);
   if(!cont) return;
-  const _pf = document.getElementById('smPrintFecha');
+  const _pf = document.getElementById(cfg.printFecha);
   if(_pf){
     const ahora = new Date();
     const fechaTxt = ahora.toLocaleDateString('es-CL', { day:'2-digit', month:'long', year:'numeric' });
@@ -10745,8 +10856,8 @@ function renderSalaMultisensorial(todas){
     _pf.textContent = 'Generado el ' + fechaTxt + ' a las ' + horaTxt + ' — datos actualizados al día';
   }
   const fn = s => String(s||'').trim().split(/\s+/)[0] || '(sin ejecutivo)';
-  const smCompleta = (todas||[]).filter(c => (typeof _lineaCot==='function' ? _lineaCot(c.cotizacion) : '') === 'SM');
-  window.__SM_LISTA = smCompleta; // el buscador rápido siempre busca sobre TODAS, sin importar filtros activos
+  const smCompleta = (todas||[]).filter(c => (typeof _lineaCot==='function' ? _lineaCot(c.cotizacion) : '') === tipo);
+  st.lista = smCompleta; // el buscador rápido siempre busca sobre TODAS, sin importar filtros activos
   const totalTodas = (todas||[]).length;
 
   // ---- Filtros GLOBALES (ejecutivo / probabilidad / grupo): se aplican ANTES de calcular nada,
@@ -10755,15 +10866,15 @@ function renderSalaMultisensorial(todas){
   // demanda que todavía está en gestión (sin contar lo ya ganado/perdido). ----
   const probMap = CACHE.smProb || {};
   let sm = smCompleta;
-  const filtroEjec = window.__SM_FILTRO_EJEC || null;
-  const filtroProb = (window.__SM_FILTRO_PROB!=null) ? window.__SM_FILTRO_PROB : null;
-  const filtroGrupo = window.__SM_FILTRO_GRUPO || null;
+  const filtroEjec = st.filtroEjec || null;
+  const filtroProb = (st.filtroProb!=null) ? st.filtroProb : null;
+  const filtroGrupo = st.filtroGrupo || null;
   if(filtroEjec) sm = sm.filter(c => fn(c.ejecutivo) === filtroEjec);
   if(filtroProb!=null) sm = sm.filter(c => !c.cerrada && (probMap[String(c.cotizacion||'').trim()]||0) === filtroProb);
   if(filtroGrupo === 'ganadas') sm = sm.filter(c => c.ganada);
   else if(filtroGrupo === 'perdidas') sm = sm.filter(c => c.cerrada && !c.ganada);
   else if(filtroGrupo === 'ofrecidas') sm = sm.filter(c => !c.cerrada);
-  const _faEl = document.getElementById('smFiltrosActivos');
+  const _faEl = document.getElementById(cfg.filtrosActivos);
   if(_faEl){
     const activo = filtroEjec || filtroProb!=null || filtroGrupo;
     _faEl.style.display = activo ? 'inline' : 'none';
@@ -10771,8 +10882,8 @@ function renderSalaMultisensorial(todas){
   }
 
   if(!sm.length){
-    cont.innerHTML = '<div class="loading-state" style="padding:30px;">Ninguna cotización de sala coincide con el filtro activo.</div>';
-    if(typeof Chart!=='undefined' && window.__SM_CHARTS){ window.__SM_CHARTS.forEach(ch=>{ try{ch.destroy();}catch(e){} }); window.__SM_CHARTS=[]; }
+    cont.innerHTML = '<div class="loading-state" style="padding:30px;">'+cfg.vacioMsg+'</div>';
+    if(typeof Chart!=='undefined' && st.charts){ st.charts.forEach(ch=>{ try{ch.destroy();}catch(e){} }); st.charts=[]; }
     return;
   }
 
@@ -10792,13 +10903,13 @@ function renderSalaMultisensorial(todas){
     if(est === 'Ganada') ganadas++;
     const inst = String(c.institucion||'').trim() || '(sin institución)';
     (porInst[inst] = porInst[inst]||{count:0,monto:0}).count++; porInst[inst].monto += monto;
-    const tipo = _smTipoInstitucion(c);
+    const tipoInst = _smTipoInstitucion(c);
     if(crmEsPublicoFE_(c.institucion, c.email)){
       pubCount++; pubMonto += monto;
-      (pubTipo[tipo] = pubTipo[tipo]||{count:0,monto:0}).count++; pubTipo[tipo].monto += monto;
+      (pubTipo[tipoInst] = pubTipo[tipoInst]||{count:0,monto:0}).count++; pubTipo[tipoInst].monto += monto;
     } else {
       privCount++; privMonto += monto;
-      (privTipo[tipo] = privTipo[tipo]||{count:0,monto:0}).count++; privTipo[tipo].monto += monto;
+      (privTipo[tipoInst] = privTipo[tipoInst]||{count:0,monto:0}).count++; privTipo[tipoInst].monto += monto;
     }
 
     _smExtraerProductos(c.productos).forEach(({key,display,qty})=>{
@@ -10867,7 +10978,7 @@ function renderSalaMultisensorial(todas){
   }, 0);
 
   // ---- Barra de pestañas (para no tener que hacer scroll por todo junto) ----
-  const tabBtn = (id,label) => '<button onclick="_smTab(\''+id+'\')" data-smtab="'+id+'" class="sm-no-print" style="padding:7px 14px;border:1px solid var(--smoke,#e5e7eb);background:'+(id==='resumen'?'#001A60':'#fff')+';color:'+(id==='resumen'?'#fff':'var(--subtle)')+';font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;font-family:inherit;">'+label+'</button>';
+  const tabBtn = (id,label) => '<button onclick="_lineaTab(\''+tipo+'\',\''+id+'\')" data-smtab="'+id+'" class="sm-no-print" style="padding:7px 14px;border:1px solid var(--smoke,#e5e7eb);background:'+(id==='resumen'?'#001A60':'#fff')+';color:'+(id==='resumen'?'#fff':'var(--subtle)')+';font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;font-family:inherit;">'+label+'</button>';
   let html = '<div class="sm-no-print" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">' +
     tabBtn('resumen','Resumen') + tabBtn('instituciones','Por institución') + tabBtn('productos','Productos') + tabBtn('cotizaciones','Ganadas / Perdidas / Ofrecidas') +
   '</div>';
@@ -10879,37 +10990,37 @@ function renderSalaMultisensorial(todas){
   // ---- Tab: Resumen ----
   const perdidasCount = grupos.perdidas.length, ofrecidasCount = grupos.ofrecidas.length;
   let resumenHtml = _smParrafo(
-    'De las <b>'+total+'</b> cotizaciones de sala multisensorial del período, <b>'+ganadas+'</b> están ganadas ('+fmtCLP(montoGanadas)+'), <b>'+perdidasCount+'</b> perdidas y <b>'+ofrecidasCount+'</b> siguen en gestión (Ofrecidas). ' +
+    'De las <b>'+total+'</b> cotizaciones de '+cfg.labelCorto+' del período, <b>'+ganadas+'</b> están ganadas ('+fmtCLP(montoGanadas)+'), <b>'+perdidasCount+'</b> perdidas y <b>'+ofrecidasCount+'</b> siguen en gestión (Ofrecidas). ' +
     'El mercado público representa el '+pct(pubCount)+'% de las cotizaciones ('+fmtCLP(pubMonto)+') y el privado el '+pct(privCount)+'% ('+fmtCLP(privMonto)+'). ' +
     'Según la probabilidad de cierre marcada en las Ofrecidas, la proyección estimada de venta es de <b>'+fmtCLP(Math.round(proyeccionPonderada))+'</b>.'
   );
   resumenHtml += '<div style="display:flex;gap:11px;flex-wrap:wrap;margin-bottom:20px;">' +
-    kpiCardClick('Cotizaciones sala', total, '#001A60', totalTodas ? (Math.round(total/totalTodas*1000)/10)+'% de '+totalTodas+' cotizaciones' : '', "_smTab('cotizaciones')") +
-    kpiCardClick('Monto cotizado', fmtCLP(montoTotal), '#5b21b6', 'total de las '+total, "_smTab('cotizaciones')") +
-    kpiCardClick('Ganadas', ganadas, ganadas ? '#16A34A' : '#DC2626', pct(ganadas)+'%'+(ganadas?' · '+fmtCLP(montoGanadas):' — ninguna cerrada'), "_smTab('cotizaciones')") +
-    kpiCardClick('Proyección ponderada', fmtCLP(Math.round(proyeccionPonderada)), '#5b21b6', 'ganadas + ofrecidas × su % marcado', "_smTab('cotizaciones')") +
-    kpiCardClick('Mercado público', pubCount, '#0891B2', pct(pubCount)+'% · '+fmtCLP(pubMonto), "_smTab('instituciones')") +
-    kpiCardClick('Mercado privado', privCount, '#C99935', pct(privCount)+'% · '+fmtCLP(privMonto), "_smTab('instituciones')") +
-    kpiCardClick('Ofrecidas al 50%', probCounts[50], '#0891B2', '', '_smFiltrarProb(50)') +
-    kpiCardClick('Ofrecidas al 90%', probCounts[90], '#16A34A', '', '_smFiltrarProb(90)') +
+    kpiCardClick(cfg.kpiCotLabel, total, '#001A60', totalTodas ? (Math.round(total/totalTodas*1000)/10)+'% de '+totalTodas+' cotizaciones' : '', "_lineaTab('"+tipo+"','cotizaciones')") +
+    kpiCardClick('Monto cotizado', fmtCLP(montoTotal), '#5b21b6', 'total de las '+total, "_lineaTab('"+tipo+"','cotizaciones')") +
+    kpiCardClick('Ganadas', ganadas, ganadas ? '#16A34A' : '#DC2626', pct(ganadas)+'%'+(ganadas?' · '+fmtCLP(montoGanadas):' — ninguna cerrada'), "_lineaTab('"+tipo+"','cotizaciones')") +
+    kpiCardClick('Proyección ponderada', fmtCLP(Math.round(proyeccionPonderada)), '#5b21b6', 'ganadas + ofrecidas × su % marcado', "_lineaTab('"+tipo+"','cotizaciones')") +
+    kpiCardClick('Mercado público', pubCount, '#0891B2', pct(pubCount)+'% · '+fmtCLP(pubMonto), "_lineaTab('"+tipo+"','instituciones')") +
+    kpiCardClick('Mercado privado', privCount, '#C99935', pct(privCount)+'% · '+fmtCLP(privMonto), "_lineaTab('"+tipo+"','instituciones')") +
+    kpiCardClick('Ofrecidas al 50%', probCounts[50], '#0891B2', '', "_lineaFiltrarProb('"+tipo+"',50)") +
+    kpiCardClick('Ofrecidas al 90%', probCounts[90], '#16A34A', '', "_lineaFiltrarProb('"+tipo+"',90)") +
   '</div>';
   resumenHtml += '<p class="sm-no-print" style="font-size:11.5px;color:var(--subtle);margin:0 0 10px;">Haz clic en cualquier barra o segmento para ver esas cotizaciones abajo.</p>';
   resumenHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:18px;margin-bottom:18px;">';
   resumenHtml += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
     '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #001A60;padding-left:8px;">Por ejecutivo</div>' +
-    '<canvas id="smChartEjec" height="200" style="margin-top:10px;cursor:pointer;"></canvas></div>';
+    '<canvas id="'+cfg.chartEjec+'" height="200" style="margin-top:10px;cursor:pointer;"></canvas></div>';
   resumenHtml += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
     '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #DC2626;padding-left:8px;">Estado de las cotizaciones</div>' +
-    '<canvas id="smChartEstado" height="200" style="margin-top:10px;cursor:pointer;"></canvas></div>';
+    '<canvas id="'+cfg.chartEstado+'" height="200" style="margin-top:10px;cursor:pointer;"></canvas></div>';
   resumenHtml += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
     '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #5b21b6;padding-left:8px;">Por mes</div>' +
-    '<canvas id="smChartMes" height="200" style="margin-top:10px;cursor:pointer;"></canvas></div>';
+    '<canvas id="'+cfg.chartMes+'" height="200" style="margin-top:10px;cursor:pointer;"></canvas></div>';
   resumenHtml += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
     '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #F59E0B;padding-left:8px;">Probabilidad de cierre · Ofrecidas</div>' +
-    (grupos.ofrecidas.length ? '<canvas id="smChartProb" height="200" style="margin-top:10px;cursor:pointer;"></canvas>' : '<div style="padding:20px 4px;color:var(--subtle);font-size:12.5px;">No hay Ofrecidas.</div>') +
+    (grupos.ofrecidas.length ? '<canvas id="'+cfg.chartProb+'" height="200" style="margin-top:10px;cursor:pointer;"></canvas>' : '<div style="padding:20px 4px;color:var(--subtle);font-size:12.5px;">No hay Ofrecidas.</div>') +
     '</div>';
   resumenHtml += '</div>';
-  resumenHtml += '<div id="smDetalleResumen" class="sm-no-print" style="display:none;background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;"></div>';
+  resumenHtml += '<div id="'+cfg.detalleResumen+'" class="sm-no-print" style="display:none;background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;"></div>';
 
   // ---- Tab: Por institución (público/privado + su desglose por tipo) ----
   const pubTipoRows = Object.entries(pubTipo).sort((a,b)=>b[1].count-a[1].count);
@@ -10923,17 +11034,17 @@ function renderSalaMultisensorial(todas){
   institucionesHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:18px;margin-bottom:18px;">';
   institucionesHtml += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
     '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #0891B2;padding-left:8px;">Mercado público vs privado</div>' +
-    '<canvas id="smChartPubPriv" height="200" style="margin-top:10px;cursor:pointer;"></canvas></div>';
+    '<canvas id="'+cfg.chartPubPriv+'" height="200" style="margin-top:10px;cursor:pointer;"></canvas></div>';
   institucionesHtml += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
     '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #0891B2;padding-left:8px;">Público · por tipo</div>' +
-    (pubTipoRows.length ? '<canvas id="smChartPubTipo" height="200" style="margin-top:10px;cursor:pointer;"></canvas>' : '<div style="padding:20px 4px;color:var(--subtle);font-size:12.5px;">Sin cotizaciones públicas.</div>') +
+    (pubTipoRows.length ? '<canvas id="'+cfg.chartPubTipo+'" height="200" style="margin-top:10px;cursor:pointer;"></canvas>' : '<div style="padding:20px 4px;color:var(--subtle);font-size:12.5px;">Sin cotizaciones públicas.</div>') +
     '</div>';
   institucionesHtml += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
     '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #C99935;padding-left:8px;">Privado · por tipo</div>' +
-    (privTipoRows.length ? '<canvas id="smChartPrivTipo" height="200" style="margin-top:10px;cursor:pointer;"></canvas>' : '<div style="padding:20px 4px;color:var(--subtle);font-size:12.5px;">Sin cotizaciones privadas.</div>') +
+    (privTipoRows.length ? '<canvas id="'+cfg.chartPrivTipo+'" height="200" style="margin-top:10px;cursor:pointer;"></canvas>' : '<div style="padding:20px 4px;color:var(--subtle);font-size:12.5px;">Sin cotizaciones privadas.</div>') +
     '</div>';
   institucionesHtml += '</div>';
-  institucionesHtml += '<div id="smDetalleInst" class="sm-no-print" style="display:none;background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:18px;"></div>';
+  institucionesHtml += '<div id="'+cfg.detalleInst+'" class="sm-no-print" style="display:none;background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:18px;"></div>';
   const topInst = Object.entries(porInst).filter(([k,v])=>v.count>1).sort((a,b)=>b[1].count-a[1].count);
   if(topInst.length){
     institucionesHtml += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;">' +
@@ -10948,13 +11059,13 @@ function renderSalaMultisensorial(todas){
   let productosHtml = topProd.length ? _smParrafo(
     'El producto más cotizado es <b>'+esc(topProd[0].display)+'</b>, presente en '+topProd[0].count+' de las '+total+' cotizaciones ('+pct(topProd[0].count)+'%)' +
     (topProd[1] ? ', seguido de <b>'+esc(topProd[1].display)+'</b> ('+topProd[1].count+').' : '.') +
-    ' Estos ítems se repiten en la mayoría de los proyectos porque forman parte del paquete base de sala multisensorial que se cotiza casi completo.'
+    ' Estos ítems se repiten en la mayoría de los proyectos porque forman parte del paquete base de '+cfg.labelCorto+' que se cotiza casi completo.'
   ) : '';
   productosHtml += '<p class="sm-no-print" style="font-size:11.5px;color:var(--subtle);margin:0 0 10px;">Haz clic en cualquier barra para ver esas cotizaciones abajo.</p>';
   productosHtml += '<div class="sm-print-skip" style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:18px;">' +
     '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #F59E0B;padding-left:8px;">Qué es lo que más se cotiza <span style="font-weight:600;color:var(--subtle);font-size:11px;">· total de cotizaciones donde aparece cada ítem</span></div>' +
-    '<canvas id="smChartProd" height="'+Math.max(260, topProd.length*30)+'" style="margin-top:10px;cursor:pointer;"></canvas></div>';
-  productosHtml += '<div id="smDetalleProd" class="sm-no-print" style="display:none;background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:18px;"></div>';
+    '<canvas id="'+cfg.chartProd+'" height="'+Math.max(260, topProd.length*30)+'" style="margin-top:10px;cursor:pointer;"></canvas></div>';
+  productosHtml += '<div id="'+cfg.detalleProd+'" class="sm-no-print" style="display:none;background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:18px;"></div>';
   const prodKeysGrupo = Object.keys(prodMap).sort((a,b)=>prodMap[b].count-prodMap[a].count).slice(0,15);
   productosHtml += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;overflow-x:auto;">' +
     '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #16A34A;padding-left:8px;margin-bottom:10px;">Resumen de productos cotizados <span style="font-weight:600;color:var(--subtle);font-size:11px;">· cotizaciones y unidades entre paréntesis</span></div>' +
@@ -10984,7 +11095,7 @@ function renderSalaMultisensorial(todas){
 
   // ---- Tab: Ganadas / Perdidas / Ofrecidas ----
   // Cada fila abre el modal completo de la cotización (abrirCotModal, ya usado en Mis Cotizaciones);
-  // desde ahí sale "Ver contacto" solo. window.__MC_ORDEN se fijó arriba con las de sala,
+  // desde ahí sale "Ver contacto" solo. window.__MC_ORDEN se fijó arriba con las de esta línea,
   // para que Anterior/Siguiente del modal navegue entre ellas. Esta lista se recalcula cada vez
   // que se abre la vista o se marca un %, así que Ganadas/Perdidas se actualizan solas apenas
   // una cotización cambia de estado en el CRM — no hace falta tocar nada a mano.
@@ -11060,160 +11171,184 @@ function renderSalaMultisensorial(todas){
   }).join('');
   cotizacionesHtml += grupoCard('Ofrecidas <span style="font-weight:500;color:var(--subtle);font-size:11px;">— marca la probabilidad de cierre</span>', '#F59E0B', grupos.ofrecidas, (grupos.ofrecidas.length?probResumen:'') + ofrecidasHtml);
 
-  html += '<div class="sm-tab" id="smTab_resumen" style="display:block;"><div class="sm-print-title">Resumen</div>' + resumenHtml + '</div>';
-  html += '<div class="sm-tab" id="smTab_instituciones" style="display:none;"><div class="sm-print-title">Por institución</div>' + institucionesHtml + '</div>';
-  html += '<div class="sm-tab" id="smTab_productos" style="display:none;"><div class="sm-print-title">Productos</div>' + productosHtml + '</div>';
-  html += '<div class="sm-tab" id="smTab_cotizaciones" style="display:none;"><div class="sm-print-title">Ganadas / Perdidas / Ofrecidas</div>' + cotizacionesHtml + '</div>';
+  html += '<div class="sm-tab" id="'+cfg.tabPrefix+'resumen" style="display:block;"><div class="sm-print-title">Resumen</div>' + resumenHtml + '</div>';
+  html += '<div class="sm-tab" id="'+cfg.tabPrefix+'instituciones" style="display:none;"><div class="sm-print-title">Por institución</div>' + institucionesHtml + '</div>';
+  html += '<div class="sm-tab" id="'+cfg.tabPrefix+'productos" style="display:none;"><div class="sm-print-title">Productos</div>' + productosHtml + '</div>';
+  html += '<div class="sm-tab" id="'+cfg.tabPrefix+'cotizaciones" style="display:none;"><div class="sm-print-title">Ganadas / Perdidas / Ofrecidas</div>' + cotizacionesHtml + '</div>';
 
   cont.innerHTML = html;
-  if(window.__SM_CHARTS) window.__SM_CHARTS.forEach(ch=>{ try{ch.destroy();}catch(e){} });
-  window.__SM_CHARTS = [];
-  window.__SM_TAB_DONE = {};
+  if(st.charts) st.charts.forEach(ch=>{ try{ch.destroy();}catch(e){} });
+  st.charts = [];
+  st.tabDone = {};
 
   // Los gráficos de cada pestaña se crean recién cuando se abre esa pestaña (más rápido al
   // cargar la vista, y evita crear gráficos Chart.js dentro de un contenedor todavía oculto).
-  window.__SM_TAB_INITFN = {
+  st.tabInitFn = {
     resumen: function(){
       const ejecRows = Object.entries(porEjec).sort((a,b)=>b[1].count-a[1].count);
-      let ctx = document.getElementById('smChartEjec');
-      if(ctx) window.__SM_CHARTS.push(new Chart(ctx, { type:'bar', data:{ labels: ejecRows.map(x=>x[0]), datasets:[{ data: ejecRows.map(x=>x[1].count), backgroundColor:_PALETA_EJ, borderRadius:6, maxBarThickness:46 }]},
+      let ctx = document.getElementById(cfg.chartEjec);
+      if(ctx) st.charts.push(new Chart(ctx, { type:'bar', data:{ labels: ejecRows.map(x=>x[0]), datasets:[{ data: ejecRows.map(x=>x[1].count), backgroundColor:_PALETA_EJ, borderRadius:6, maxBarThickness:46 }]},
         options:{ responsive:true, onClick:(evt,els)=>{ if(!els.length) return; const label = ejecRows[els[0].index][0];
-            _smMostrarDetalle('smDetalleResumen', 'Ejecutivo: '+label, sm.filter(c=>fn(c.ejecutivo)===label)); },
+            _smMostrarDetalle(cfg.detalleResumen, 'Ejecutivo: '+label, sm.filter(c=>fn(c.ejecutivo)===label)); },
           plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>c.parsed.y+' cotizaciones'}}}, scales:{ y:{beginAtZero:true, ticks:{stepSize:1,font:{size:11}}}, x:{ticks:{font:{size:11}}} } } }));
 
       const estOrden = ['Enviada','En gestión','Ganada','Perdida'];
       const estRows = Object.entries(porEstado).sort((a,b)=> estOrden.indexOf(a[0]) - estOrden.indexOf(b[0]));
       const estColor = { 'Enviada':'#06B3FD', 'En gestión':'#F59E0B', 'Ganada':'#16A34A', 'Perdida':'#DC2626' };
-      ctx = document.getElementById('smChartEstado');
-      if(ctx) window.__SM_CHARTS.push(new Chart(ctx, { type:'doughnut', data:{ labels: estRows.map(x=>x[0]), datasets:[{ data: estRows.map(x=>x[1].count), backgroundColor: estRows.map(x=>estColor[x[0]]||'#9aa3af'), borderWidth:0 }]},
+      ctx = document.getElementById(cfg.chartEstado);
+      if(ctx) st.charts.push(new Chart(ctx, { type:'doughnut', data:{ labels: estRows.map(x=>x[0]), datasets:[{ data: estRows.map(x=>x[1].count), backgroundColor: estRows.map(x=>estColor[x[0]]||'#9aa3af'), borderWidth:0 }]},
         options:{ responsive:true, onClick:(evt,els)=>{ if(!els.length) return; const label = estRows[els[0].index][0];
-            _smMostrarDetalle('smDetalleResumen', 'Estado: '+label, sm.filter(c=>String(c.estado||'(sin estado)').trim()===label)); },
+            _smMostrarDetalle(cfg.detalleResumen, 'Estado: '+label, sm.filter(c=>String(c.estado||'(sin estado)').trim()===label)); },
           plugins:{ legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:11}}}, tooltip:{callbacks:{label:c=>c.label+': '+c.parsed+' ('+pct(c.parsed)+'%)'}} } } }));
 
       const mesOrden=['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09','2026-10','2026-11','2026-12'];
       const mesRows = Object.entries(porMes).sort((a,b)=> mesOrden.indexOf(a[0]) - mesOrden.indexOf(b[0]));
       const mesLbl = ym => { const p=String(ym).split('-'); return p.length===2 ? (_MN[parseInt(p[1],10)-1]||ym) : ym; };
-      ctx = document.getElementById('smChartMes');
-      if(ctx) window.__SM_CHARTS.push(new Chart(ctx, { type:'bar', data:{ labels: mesRows.map(x=>mesLbl(x[0])), datasets:[{ data: mesRows.map(x=>x[1].count), backgroundColor:'#001A60', borderRadius:6, maxBarThickness:46 }]},
+      ctx = document.getElementById(cfg.chartMes);
+      if(ctx) st.charts.push(new Chart(ctx, { type:'bar', data:{ labels: mesRows.map(x=>mesLbl(x[0])), datasets:[{ data: mesRows.map(x=>x[1].count), backgroundColor:'#001A60', borderRadius:6, maxBarThickness:46 }]},
         options:{ responsive:true, onClick:(evt,els)=>{ if(!els.length) return; const key = mesRows[els[0].index][0];
-            _smMostrarDetalle('smDetalleResumen', mesLbl(key), sm.filter(c=>(String(c.mes||'').trim()||'(sin mes)')===key)); },
+            _smMostrarDetalle(cfg.detalleResumen, mesLbl(key), sm.filter(c=>(String(c.mes||'').trim()||'(sin mes)')===key)); },
           plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>c.parsed.y+' cotizaciones'}}}, scales:{ y:{beginAtZero:true, ticks:{stepSize:1,font:{size:11}}}, x:{ticks:{font:{size:11}}} } } }));
 
-      ctx = document.getElementById('smChartProb');
+      ctx = document.getElementById(cfg.chartProb);
       if(ctx && grupos.ofrecidas.length){
         const probLbl = ['Sin marcar','20%','50%','90%'];
         const probVals = [probCounts[0], probCounts[20], probCounts[50], probCounts[90]];
         const probCol = ['#9aa3af','#F59E0B','#0891B2','#16A34A'];
-        window.__SM_CHARTS.push(new Chart(ctx, { type:'doughnut', data:{ labels: probLbl, datasets:[{ data: probVals, backgroundColor: probCol, borderWidth:0 }]},
-          options:{ responsive:true, onClick:(evt,els)=>{ if(!els.length) return; const p = [0,20,50,90][els[0].index]; if(p>0) _smFiltrarProb(p); },
+        st.charts.push(new Chart(ctx, { type:'doughnut', data:{ labels: probLbl, datasets:[{ data: probVals, backgroundColor: probCol, borderWidth:0 }]},
+          options:{ responsive:true, onClick:(evt,els)=>{ if(!els.length) return; const p = [0,20,50,90][els[0].index]; if(p>0) _lineaFiltrarProb(tipo, p); },
             plugins:{ legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:10.5}}}, tooltip:{callbacks:{label:c=>c.label+': '+c.parsed+' de '+grupos.ofrecidas.length+' ofrecidas'}} } } }));
       }
     },
     instituciones: function(){
-      let ctx = document.getElementById('smChartPubPriv');
-      if(ctx) window.__SM_CHARTS.push(new Chart(ctx, { type:'doughnut', data:{ labels:['Público','Privado'], datasets:[{ data:[pubCount,privCount], backgroundColor:['#0891B2','#C99935'], borderWidth:0 }]},
+      let ctx = document.getElementById(cfg.chartPubPriv);
+      if(ctx) st.charts.push(new Chart(ctx, { type:'doughnut', data:{ labels:['Público','Privado'], datasets:[{ data:[pubCount,privCount], backgroundColor:['#0891B2','#C99935'], borderWidth:0 }]},
         options:{ responsive:true, onClick:(evt,els)=>{ if(!els.length) return; const idx=els[0].index; const esPub = idx===0;
-            _smMostrarDetalle('smDetalleInst', esPub?'Público':'Privado', sm.filter(c=>crmEsPublicoFE_(c.institucion,c.email)===esPub)); },
+            _smMostrarDetalle(cfg.detalleInst, esPub?'Público':'Privado', sm.filter(c=>crmEsPublicoFE_(c.institucion,c.email)===esPub)); },
           plugins:{ legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:11}}}, tooltip:{callbacks:{label:c=>c.label+': '+c.parsed+' ('+pct(c.parsed)+'%)'}} } } }));
 
-      ctx = document.getElementById('smChartPubTipo');
-      if(ctx && pubTipoRows.length) window.__SM_CHARTS.push(new Chart(ctx, { type:'doughnut', data:{ labels: pubTipoRows.map(x=>x[0]), datasets:[{ data: pubTipoRows.map(x=>x[1].count), backgroundColor:_PALETA_EJ, borderWidth:0 }]},
+      ctx = document.getElementById(cfg.chartPubTipo);
+      if(ctx && pubTipoRows.length) st.charts.push(new Chart(ctx, { type:'doughnut', data:{ labels: pubTipoRows.map(x=>x[0]), datasets:[{ data: pubTipoRows.map(x=>x[1].count), backgroundColor:_PALETA_EJ, borderWidth:0 }]},
         options:{ responsive:true, onClick:(evt,els)=>{ if(!els.length) return; const label = pubTipoRows[els[0].index][0];
-            _smMostrarDetalle('smDetalleInst', 'Público · '+label, sm.filter(c=>crmEsPublicoFE_(c.institucion,c.email) && _smTipoInstitucion(c)===label)); },
+            _smMostrarDetalle(cfg.detalleInst, 'Público · '+label, sm.filter(c=>crmEsPublicoFE_(c.institucion,c.email) && _smTipoInstitucion(c)===label)); },
           plugins:{ legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:10.5}}}, tooltip:{callbacks:{label:c=>c.label+': '+c.parsed+' ('+Math.round(c.parsed/pubCount*1000)/10+'%)'}} } } }));
 
-      ctx = document.getElementById('smChartPrivTipo');
-      if(ctx && privTipoRows.length) window.__SM_CHARTS.push(new Chart(ctx, { type:'doughnut', data:{ labels: privTipoRows.map(x=>x[0]), datasets:[{ data: privTipoRows.map(x=>x[1].count), backgroundColor:_PALETA_EJ, borderWidth:0 }]},
+      ctx = document.getElementById(cfg.chartPrivTipo);
+      if(ctx && privTipoRows.length) st.charts.push(new Chart(ctx, { type:'doughnut', data:{ labels: privTipoRows.map(x=>x[0]), datasets:[{ data: privTipoRows.map(x=>x[1].count), backgroundColor:_PALETA_EJ, borderWidth:0 }]},
         options:{ responsive:true, onClick:(evt,els)=>{ if(!els.length) return; const label = privTipoRows[els[0].index][0];
-            _smMostrarDetalle('smDetalleInst', 'Privado · '+label, sm.filter(c=>!crmEsPublicoFE_(c.institucion,c.email) && _smTipoInstitucion(c)===label)); },
+            _smMostrarDetalle(cfg.detalleInst, 'Privado · '+label, sm.filter(c=>!crmEsPublicoFE_(c.institucion,c.email) && _smTipoInstitucion(c)===label)); },
           plugins:{ legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:10.5}}}, tooltip:{callbacks:{label:c=>c.label+': '+c.parsed+' ('+Math.round(c.parsed/privCount*1000)/10+'%)'}} } } }));
     },
     productos: function(){
-      const ctx = document.getElementById('smChartProd');
-      if(ctx) window.__SM_CHARTS.push(new Chart(ctx, { type:'bar', data:{ labels: topProd.map(p=>p.display), datasets:[{ data: topProd.map(p=>p.count), backgroundColor:'#F59E0B', borderRadius:5, maxBarThickness:22 }]},
+      const ctx = document.getElementById(cfg.chartProd);
+      if(ctx) st.charts.push(new Chart(ctx, { type:'bar', data:{ labels: topProd.map(p=>p.display), datasets:[{ data: topProd.map(p=>p.count), backgroundColor:'#F59E0B', borderRadius:5, maxBarThickness:22 }]},
         options:{ indexAxis:'y', responsive:true, onClick:(evt,els)=>{ if(!els.length) return; const prod = topProd[els[0].index];
-            _smMostrarDetalle('smDetalleProd', prod.display, sm.filter(c=>_smExtraerProductos(c.productos).some(p=>p.key===prod.key))); },
+            _smMostrarDetalle(cfg.detalleProd, prod.display, sm.filter(c=>_smExtraerProductos(c.productos).some(p=>p.key===prod.key))); },
           plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>c.parsed.x+' cotizaciones ('+pct(c.parsed.x)+'%)'}}}, scales:{ x:{beginAtZero:true, ticks:{stepSize:1,font:{size:11}}}, y:{ticks:{font:{size:11}}} } } }));
     },
     cotizaciones: function(){}
   };
   // Un tick de más para que el navegador termine el layout del innerHTML recién puesto — si
   // Chart.js mide el canvas antes de eso, a veces lo crea con 0 de alto/ancho y queda en blanco.
-  requestAnimationFrame(() => _smTab(window.__SM_TAB_ACTUAL || 'resumen'));
+  requestAnimationFrame(() => _lineaTab(tipo, st.tabActual || 'resumen'));
 }
-// Cambia de pestaña dentro de Sala Multisensorial sin recargar datos; crea los gráficos de esa
-// pestaña recién la primera vez que se abre (más liviano que tenerlos todos armados de entrada).
-function _smTab(id){
-  window.__SM_TAB_ACTUAL = id;
-  document.querySelectorAll('.sm-tab').forEach(function(el){ el.style.display = (el.id==='smTab_'+id) ? 'block' : 'none'; });
-  document.querySelectorAll('[data-smtab]').forEach(function(b){
+function renderSalaMultisensorial(todas){ return _renderVistaLinea(todas, 'SM'); }
+function renderAyudasTecnicas(todas){ return _renderVistaLinea(todas, 'AT'); }
+// Cambia de pestaña dentro de la vista de esta línea de negocio sin recargar datos; crea los
+// gráficos de esa pestaña recién la primera vez que se abre (más liviano que tenerlos todos armados
+// de entrada). Las búsquedas de '.sm-tab'/'[data-smtab]' quedan acotadas al contenedor de esta
+// línea (cfg.view) para no pisar el estado de la otra vista (que comparte esas mismas clases).
+function _lineaTab(tipo, id){
+  const cfg = _LINEA_CFG[tipo];
+  const st = window.__LINEA_STATE[tipo];
+  st.tabActual = id;
+  document.querySelectorAll('#'+cfg.view+' .sm-tab').forEach(function(el){ el.style.display = (el.id===cfg.tabPrefix+id) ? 'block' : 'none'; });
+  document.querySelectorAll('#'+cfg.view+' [data-smtab]').forEach(function(b){
     const act = b.getAttribute('data-smtab')===id;
     b.style.background = act ? '#001A60' : '#fff';
     b.style.color = act ? '#fff' : 'var(--subtle)';
   });
-  window.__SM_TAB_DONE = window.__SM_TAB_DONE || {};
-  if(!window.__SM_TAB_DONE[id] && typeof Chart!=='undefined' && window.__SM_TAB_INITFN && window.__SM_TAB_INITFN[id]){
-    window.__SM_TAB_INITFN[id]();
-    window.__SM_TAB_DONE[id] = true;
+  st.tabDone = st.tabDone || {};
+  if(!st.tabDone[id] && typeof Chart!=='undefined' && st.tabInitFn && st.tabInitFn[id]){
+    st.tabInitFn[id]();
+    st.tabDone[id] = true;
   }
 }
+function _smTab(id){ _lineaTab('SM', id); }
 // KPI "Ofrecidas al 50%/90%" → salta a la pestaña de listas y deja solo esas cotizaciones a la vista.
-// Filtros GLOBALES: se aplican sobre las cotizaciones de sala ANTES de calcular cualquier KPI,
+// Filtros GLOBALES: se aplican sobre las cotizaciones de esta línea ANTES de calcular cualquier KPI,
 // gráfico o lista — por eso afectan a las 4 pestañas a la vez, no solo un listado puntual.
-function _smPoblarFiltroEjec(todas){
-  const sel = document.getElementById('smFiltroEjec');
+function _lineaPoblarFiltroEjec(todas, tipo){
+  const cfg = _LINEA_CFG[tipo];
+  const sel = document.getElementById(cfg.filtroEjec);
   if(!sel) return;
   const actual = sel.value;
-  const sm = (todas||[]).filter(c => (typeof _lineaCot==='function' ? _lineaCot(c.cotizacion) : '') === 'SM');
-  const nombres = Array.from(new Set(sm.map(c => String(c.ejecutivo||'').trim().split(/\s+/)[0]).filter(Boolean))).sort();
+  const base = (todas||[]).filter(c => (typeof _lineaCot==='function' ? _lineaCot(c.cotizacion) : '') === tipo);
+  const nombres = Array.from(new Set(base.map(c => String(c.ejecutivo||'').trim().split(/\s+/)[0]).filter(Boolean))).sort();
   sel.innerHTML = '<option value="">Todos los ejecutivos</option>' + nombres.map(n=>'<option value="'+esc(n)+'">'+esc(n)+'</option>').join('');
   sel.value = nombres.indexOf(actual) >= 0 ? actual : '';
 }
-function _smAplicarFiltros(){
-  const ej = document.getElementById('smFiltroEjec');
-  const pr = document.getElementById('smFiltroProb');
-  const gr = document.getElementById('smFiltroGrupo');
-  window.__SM_FILTRO_EJEC = ej && ej.value ? ej.value : null;
-  window.__SM_FILTRO_PROB = pr && pr.value !== '' ? Number(pr.value) : null;
-  window.__SM_FILTRO_GRUPO = gr && gr.value ? gr.value : null;
-  renderSalaMultisensorial(CACHE.vMisCot);
+function _smPoblarFiltroEjec(todas){ _lineaPoblarFiltroEjec(todas, 'SM'); }
+function _lineaAplicarFiltros(tipo){
+  const cfg = _LINEA_CFG[tipo];
+  const st = window.__LINEA_STATE[tipo];
+  const ej = document.getElementById(cfg.filtroEjec);
+  const pr = document.getElementById(cfg.filtroProb);
+  const gr = document.getElementById(cfg.filtroGrupo);
+  st.filtroEjec = ej && ej.value ? ej.value : null;
+  st.filtroProb = pr && pr.value !== '' ? Number(pr.value) : null;
+  st.filtroGrupo = gr && gr.value ? gr.value : null;
+  _renderVistaLinea(CACHE.vMisCot, tipo);
 }
-function _smQuitarFiltros(){
-  window.__SM_FILTRO_EJEC = null;
-  window.__SM_FILTRO_PROB = null;
-  window.__SM_FILTRO_GRUPO = null;
-  const ej = document.getElementById('smFiltroEjec'); if(ej) ej.value = '';
-  const pr = document.getElementById('smFiltroProb'); if(pr) pr.value = '';
-  const gr = document.getElementById('smFiltroGrupo'); if(gr) gr.value = '';
-  renderSalaMultisensorial(CACHE.vMisCot);
+function _smAplicarFiltros(){ _lineaAplicarFiltros('SM'); }
+function _lineaQuitarFiltros(tipo){
+  const cfg = _LINEA_CFG[tipo];
+  const st = window.__LINEA_STATE[tipo];
+  st.filtroEjec = null;
+  st.filtroProb = null;
+  st.filtroGrupo = null;
+  const ej = document.getElementById(cfg.filtroEjec); if(ej) ej.value = '';
+  const pr = document.getElementById(cfg.filtroProb); if(pr) pr.value = '';
+  const gr = document.getElementById(cfg.filtroGrupo); if(gr) gr.value = '';
+  _renderVistaLinea(CACHE.vMisCot, tipo);
 }
+function _smQuitarFiltros(){ _lineaQuitarFiltros('SM'); }
 // Atajo: "Sacar informe de Ofrecidas" — fija el filtro de grupo a Ofrecidas y abre el diálogo de
 // impresión, para tener ese informe (con productos necesarios, KPIs y proyección) cuando se necesite.
-function _smInformeOfrecidas(){
-  window.__SM_FILTRO_GRUPO = 'ofrecidas';
-  const gr = document.getElementById('smFiltroGrupo'); if(gr) gr.value = 'ofrecidas';
-  renderSalaMultisensorial(CACHE.vMisCot);
-  setTimeout(_smExportarPDF, 300);
+function _lineaInformeOfrecidas(tipo){
+  const cfg = _LINEA_CFG[tipo];
+  const st = window.__LINEA_STATE[tipo];
+  st.filtroGrupo = 'ofrecidas';
+  const gr = document.getElementById(cfg.filtroGrupo); if(gr) gr.value = 'ofrecidas';
+  _renderVistaLinea(CACHE.vMisCot, tipo);
+  setTimeout(function(){ _lineaExportarPDF(tipo); }, 300);
 }
+function _smInformeOfrecidas(){ _lineaInformeOfrecidas('SM'); }
 // Atajo desde los KPI "Ofrecidas al 50%/90%": fija el filtro global de probabilidad y salta a verlas.
-function _smFiltrarProb(p){
-  window.__SM_FILTRO_PROB = p;
-  window.__SM_TAB_ACTUAL = 'cotizaciones';
-  const pr = document.getElementById('smFiltroProb'); if(pr) pr.value = String(p);
-  renderSalaMultisensorial(CACHE.vMisCot);
+function _lineaFiltrarProb(tipo, p){
+  const cfg = _LINEA_CFG[tipo];
+  const st = window.__LINEA_STATE[tipo];
+  st.filtroProb = p;
+  st.tabActual = 'cotizaciones';
+  const pr = document.getElementById(cfg.filtroProb); if(pr) pr.value = String(p);
+  _renderVistaLinea(CACHE.vMisCot, tipo);
 }
-// Buscador rápido de Sala Multisensorial — filtra window.__SM_LISTA (las cotizaciones de sala del
-// último render, se actualiza sola) por N°, institución, cliente, ejecutivo o producto. Funciona
-// sin importar la pestaña activa; cada resultado abre el detalle completo al hacer clic.
+function _smFiltrarProb(p){ _lineaFiltrarProb('SM', p); }
+// Buscador rápido de Sala Multisensorial / Ayudas Técnicas — filtra st.lista (las cotizaciones de
+// esa línea del último render, se actualiza sola) por N°, institución, cliente, ejecutivo o
+// producto. Funciona sin importar la pestaña activa; cada resultado abre el detalle completo al
+// hacer clic.
 function _smNorm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''); }
-function _smBuscar(q){
-  const clearBtn = document.getElementById('smBuscadorClear');
+function _lineaBuscar(tipo, q){
+  const cfg = _LINEA_CFG[tipo];
+  const st = window.__LINEA_STATE[tipo];
+  const clearBtn = document.getElementById(cfg.buscadorClear);
   if(clearBtn) clearBtn.style.display = q ? 'block' : 'none';
-  const box = document.getElementById('smBuscadorResultados');
+  const box = document.getElementById(cfg.buscadorResultados);
   if(!box) return;
   const qn = _smNorm(q).trim();
   if(qn.length < 2){ box.style.display = 'none'; box.innerHTML = ''; return; }
-  const lista = (window.__SM_LISTA || []).filter(c =>
+  const lista = (st.lista || []).filter(c =>
     _smNorm(c.cotizacion).indexOf(qn) >= 0 || _smNorm(c.institucion).indexOf(qn) >= 0 ||
     _smNorm(c.cliente).indexOf(qn) >= 0 || _smNorm(c.ejecutivo).indexOf(qn) >= 0 ||
     _smNorm(c.productos).indexOf(qn) >= 0
@@ -11234,37 +11369,49 @@ function _smBuscar(q){
     '</div>';
   }).join('');
 }
-function _smLimpiarBusqueda(){
-  const inp = document.getElementById('smBuscador'); if(inp) inp.value = '';
-  const clearBtn = document.getElementById('smBuscadorClear'); if(clearBtn) clearBtn.style.display = 'none';
-  const box = document.getElementById('smBuscadorResultados'); if(box){ box.style.display = 'none'; box.innerHTML = ''; }
+function _smBuscar(q){ _lineaBuscar('SM', q); }
+function _lineaLimpiarBusqueda(tipo){
+  const cfg = _LINEA_CFG[tipo];
+  const inp = document.getElementById(cfg.buscador); if(inp) inp.value = '';
+  const clearBtn = document.getElementById(cfg.buscadorClear); if(clearBtn) clearBtn.style.display = 'none';
+  const box = document.getElementById(cfg.buscadorResultados); if(box){ box.style.display = 'none'; box.innerHTML = ''; }
 }
+function _smLimpiarBusqueda(){ _lineaLimpiarBusqueda('SM'); }
 // Exportar PDF a mano (no basta con window.print()): con pestañas, solo la activa está en el DOM
 // visible y las otras 3 nunca llegaron a dibujar sus gráficos (se crean recién al abrir la pestaña).
 // El resize de los canvas de Chart.js NO se puede hacer antes de llamar a print() — el navegador
 // recién aplica el CSS de @media print en su propio momento interno, así que un resize() hecho
 // antes queda con las medidas de pantalla y el gráfico sale en blanco/mal ubicado. El evento
 // correcto para esto es beforeprint (se dispara justo cuando el navegador ya va a imprimir).
-function _smExportarPDF(){
-  if(!(CACHE.vMisCot && CACHE.vMisCot.length) || !window.__SM_TAB_INITFN){
+function _lineaExportarPDF(tipo){
+  const st = window.__LINEA_STATE[tipo];
+  if(!(CACHE.vMisCot && CACHE.vMisCot.length) || !st.tabInitFn){
     alert('Todavía se están cargando los datos. Espera unos segundos (que aparezcan los números arriba) y vuelve a intentar.');
     return;
   }
-  if(window.__SM_TAB_INITFN){
-    window.__SM_TAB_DONE = window.__SM_TAB_DONE || {};
-    Object.keys(window.__SM_TAB_INITFN).forEach(function(id){
-      if(!window.__SM_TAB_DONE[id]){ window.__SM_TAB_INITFN[id](); window.__SM_TAB_DONE[id] = true; }
+  if(st.tabInitFn){
+    st.tabDone = st.tabDone || {};
+    Object.keys(st.tabInitFn).forEach(function(id){
+      if(!st.tabDone[id]){ st.tabInitFn[id](); st.tabDone[id] = true; }
     });
   }
   window.print();
 }
+function _smExportarPDF(){ _lineaExportarPDF('SM'); }
 window.addEventListener('beforeprint', function(){
-  if(!document.getElementById('vSalaMultisensorial')) return;
-  document.querySelectorAll('.sm-tab').forEach(function(el){ el.style.display = 'block'; });
-  (window.__SM_CHARTS || []).forEach(function(ch){ try{ ch.resize(); }catch(e){} });
+  ['SM','AT'].forEach(function(tipo){
+    const cfg = _LINEA_CFG[tipo];
+    if(!document.getElementById(cfg.view)) return;
+    document.querySelectorAll('#'+cfg.view+' .sm-tab').forEach(function(el){ el.style.display = 'block'; });
+    const st = window.__LINEA_STATE[tipo];
+    (st.charts || []).forEach(function(ch){ try{ ch.resize(); }catch(e){} });
+  });
 });
 window.addEventListener('afterprint', function(){
-  if(document.getElementById('vSalaMultisensorial') && CACHE.vMisCot) renderSalaMultisensorial(CACHE.vMisCot);
+  ['SM','AT'].forEach(function(tipo){
+    const cfg = _LINEA_CFG[tipo];
+    if(document.getElementById(cfg.view) && CACHE.vMisCot) _renderVistaLinea(CACHE.vMisCot, tipo);
+  });
 });
 
 /* ════ Vista COACHING (admin): dónde se atasca cada ejecutivo ════ */

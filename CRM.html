@@ -4438,6 +4438,8 @@ function initApp(user){
   setTimeout(() => preCargarTodoEnBackground(), 200);
   // Cargar ejecutivos + plantillas de pipeline (para links nativos de las tarjetas v2)
   setTimeout(() => cargarPipelineData(), 350);
+  // Meta de la semana OBLIGATORIA — corre primero que los demás avisos bloqueantes.
+  setTimeout(() => chequearMetaSemanalObligatoria(), 700);
   // Anuncio único bloqueante (catálogos/precios) — una vez por usuario hasta que dé Aceptar
   setTimeout(() => mostrarAnuncioSiCorresponde(), 1300);
   // Cargar notificaciones pendientes y abrir modal si hay
@@ -5960,6 +5962,55 @@ function cerrarNovedadesBanner(){
   localStorage.setItem(NOVEDADES_CRM_KEY, '1');
   var box = document.getElementById('dshNovedades');
   if(box) box.innerHTML = '';
+}
+
+// ════ Bloqueo OBLIGATORIO: sin meta de la semana puesta, no se puede usar el CRM ════
+// Se revisa al entrar. Si "actual.meta" no existe para la semana en curso, tapa toda la
+// pantalla (sin botón de salir ni cerrar) hasta que la escribe y la guarda. Igual que el
+// resto de los avisos bloqueantes (catálogos/duplicados), Rayen viendo el equipo completo
+// como admin queda exenta (ese modo no tiene "meta propia" en pantalla); en modo ejecutiva
+// o como cualquier otro ejecutivo, sí se le exige.
+async function chequearMetaSemanalObligatoria(){
+  try {
+    if (document.getElementById('modalAnuncio') || document.getElementById('bloqueoMetaOv')) return;
+    if (typeof hayDrillDown==='function' && hayDrillDown()) return;
+    if (ROL === 'admin' && typeof getModoVista==='function' && getModoVista() === 'admin') return;
+    const r = await fetchAPI('crm_metas_semanales', { ejecutivo: USUARIO, modo_vista: MODO_VISTA, solicitante: USUARIO });
+    if (!r || !r.ok) return; // backend no disponible: no bloqueamos por un error ajeno
+    if (r.actual && r.actual.meta) return; // ya la puso esta semana
+    mostrarBloqueoMetaSemanal();
+  } catch(e){}
+}
+function mostrarBloqueoMetaSemanal(){
+  if (document.getElementById('bloqueoMetaOv')) return;
+  const ov = document.createElement('div');
+  ov.id = 'bloqueoMetaOv';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(58,34,0,.74);display:flex;align-items:center;justify-content:center;padding:24px;font-family:var(--font-sans);';
+  ov.innerHTML =
+    '<div style="background:#fff;border-radius:20px;max-width:480px;width:100%;box-shadow:0 30px 90px rgba(0,0,0,.5);overflow:hidden;">'+
+      '<div style="background:linear-gradient(120deg,#FFC94D 0%,#F5A623 55%,#E8850C 100%);color:#3a2200;padding:22px 26px;display:flex;align-items:center;gap:12px;">'+
+        '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>'+
+        '<div style="font-size:17.5px;font-weight:800;">Antes de seguir, escribe tu meta de la semana</div>'+
+      '</div>'+
+      '<div style="padding:24px 26px;">'+
+        '<div style="font-size:13.5px;color:#4b5563;line-height:1.55;margin-bottom:14px;">Todavía no pusiste tu objetivo de esta semana. Escríbelo para entrar al CRM — el viernes marcas si lo cumpliste.</div>'+
+        '<textarea id="bloqueoMetaTxt" rows="3" placeholder="Ej: cerrar la cotización de X, agendar 3 reuniones nuevas..." style="width:100%;box-sizing:border-box;padding:11px 13px;border:1.5px solid #F0DCB0;border-radius:10px;font-size:13.5px;font-family:inherit;resize:vertical;"></textarea>'+
+        '<div id="bloqueoMetaErr" style="color:#B91C1C;font-size:12px;font-weight:700;margin-top:8px;display:none;"></div>'+
+        '<button onclick="guardarMetaBloqueo()" style="margin-top:14px;width:100%;background:linear-gradient(120deg,#FFC94D 0%,#F5A623 55%,#E8850C 100%);color:#3a2200;border:none;padding:13px;border-radius:11px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;">Guardar mi meta y entrar</button>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(ov);
+}
+async function guardarMetaBloqueo(){
+  const txt = document.getElementById('bloqueoMetaTxt');
+  const err = document.getElementById('bloqueoMetaErr');
+  const meta = txt ? txt.value.trim() : '';
+  if(!meta){ if(err){ err.textContent = 'Escribe tu meta antes de continuar.'; err.style.display = 'block'; } return; }
+  if(err) err.style.display = 'none';
+  const r = await fetchAPI('crm_meta_semanal_guardar', { ejecutivo: USUARIO, meta: meta, solicitante: USUARIO });
+  if(!r || !r.ok){ if(err){ err.textContent = 'No se pudo guardar: '+((r&&r.error)||'error desconocido'); err.style.display = 'block'; } return; }
+  const o = document.getElementById('bloqueoMetaOv'); if(o) o.remove();
+  try{ if(typeof cargarMetaSemanal==='function') cargarMetaSemanal(); }catch(e){}
 }
 async function cargarDashboard(){
   setSaludo();
@@ -14410,6 +14461,7 @@ function mostrarAnuncioSiCorresponde(){
   try {
     if(localStorage.getItem(_anuncioKey())) return;             // ya lo aceptó
     if(document.getElementById('modalAnuncio')) return;
+    if(document.getElementById('bloqueoMetaOv')) return;        // primero resuelve la meta obligatoria
     const ov = document.createElement('div');
     ov.id = 'modalAnuncio';
     ov.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(8,12,28,.82);display:flex;align-items:center;justify-content:center;padding:24px;font-family:var(--font-sans);';

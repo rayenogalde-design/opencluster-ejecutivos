@@ -2589,7 +2589,7 @@ body{
           <div id="dshCampana"></div>
           <div id="dshProductosCampanaCard"></div><div id="dshListaPartida"></div>
           <div id="dshFunnel"></div><span id="dshFunnelTotal"></span>
-          <div id="dshListasPrecios"></div><div id="scriptBanner"></div>
+          <div id="scriptBanner"></div>
         </div>
 
         <!-- Informativo, sin acción asociada (racha de días): abajo de todo, no compite por el
@@ -4634,7 +4634,6 @@ function cambiarModo(modo){
   // 4) FORZAR re-render del dashboard. No dependemos de .view.act porque puede no existir
   //    si la inicialización aún no terminó. Repintamos las 3 secciones del dashboard de inmediato.
   pintarBannerCampana();
-  pintarListasPrecios();
   // Si la vista activa es otra, también la refrescamos
   const v = document.querySelector('.view.act');
   if (v) {
@@ -5778,7 +5777,6 @@ async function pintarBannerCampana(){
 function cambiarPreviewEjec(nm){
   try { localStorage.setItem('crm_preview_ejec', nm); } catch(e){}
   pintarBannerCampana();
-  pintarListasPrecios();
 }
 
 // Banner naranja en el dashboard del ejecutivo: "Tu lista de partida — X empresas pre-cargadas sin trabajar"
@@ -6118,7 +6116,6 @@ async function cargarDashboard(){
   try{ pintarNovedadesBanner(); }catch(e){}
   pintarBannerCampana();
   pintarBannerListaPartida();
-  pintarListasPrecios();
   pintarToquesHoy();
   pintarLeadsDashboard();
   // ── rediseño v3 ──
@@ -16524,7 +16521,6 @@ function _lpThumb(p){
   fetch('productos_img.json', { cache:'no-store' })
     .then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); })
     .then(function(d){ window.__PROD_IMG = d || {}; window.__PROD_IMG_LOADED = true;
-      try{ pintarListasPrecios(); }catch(e){}
       try{ if(document.getElementById('lpListaContainer')) cargarListaPrecios(); }catch(e){}
     })
     .catch(function(){});
@@ -16588,7 +16584,6 @@ function _lpRenderCards(keys){
 function lpSetVerTodo(v){
   window.__LP_VER_TODO = !!v;
   try{ localStorage.setItem('crm_lp_vertodo', v?'1':'0'); }catch(e){}
-  try{ pintarListasPrecios(); }catch(e){}
   try{ if(document.getElementById('lpListaContainer')) cargarListaPrecios(); }catch(e){}
 }
 
@@ -16668,7 +16663,6 @@ function _lpEjecRender(keys){
 function lpSetEjecTab(id){
   window.__LP_EJEC_TAB = id;
   try{ localStorage.setItem('crm_lp_ejectab', id); }catch(e){}
-  try{ pintarListasPrecios(); }catch(e){}
   try{ if(document.getElementById('lpListaContainer')) cargarListaPrecios(); }catch(e){}
 }
 
@@ -16692,7 +16686,6 @@ function _lpAdminTabsBar(){
 function lpSetAdminTab(k){
   window.__LP_ADMIN_TAB = k;
   try{ localStorage.setItem('crm_lp_admintab', k); }catch(e){}
-  try{ pintarListasPrecios(); }catch(e){}
   try{ if(document.getElementById('lpListaContainer')) cargarListaPrecios(); }catch(e){}
 }
 function _lpAdminRender(){
@@ -16793,7 +16786,7 @@ function abrirFichaDesdePrecio(el){
 // Marca como clickeables solo las filas que tienen ficha (evita clics muertos).
 function _lpDecorarFichas(){
   if(!window.__FICHAS_LOADED) return;
-  ['dshListasPrecios','lpListaContainer'].forEach(function(boxId){
+  ['lpListaContainer'].forEach(function(boxId){
     const box = document.getElementById(boxId);
     if(!box) return;
     box.querySelectorAll('.lp-fila').forEach(function(fila){
@@ -16804,28 +16797,6 @@ function _lpDecorarFichas(){
   });
 }
 
-function pintarListasPrecios(){
-  const box = document.getElementById('dshListasPrecios');
-  if(!box) return;
-  if(!window.__PRECIOS_SEG_LOADED){ box.innerHTML = ''; return; } // se repinta al cargar el JSON
-  let keys = [];
-  if(typeof hayDrillDown === 'function' && hayDrillDown()){
-    keys = _segKeysParaEjec(typeof DRILL_DOWN_EJEC !== 'undefined' ? DRILL_DOWN_EJEC : '');
-  } else {
-    const modoActivo = (typeof getModoVista === 'function') ? getModoVista() : '';
-    const verComoEjec = (typeof ROL === 'undefined') || ROL !== 'admin' || modoActivo === 'ejecutiva';
-    if(verComoEjec){
-      keys = _segKeysParaEjec(typeof USUARIO !== 'undefined' ? USUARIO : '');
-    } else {
-      // Admin: pestañas por canal (Instituciones · ClickMedical · Distribuidor · Surterapia)
-      box.innerHTML = _lpAdminRender();
-      _esperarFichas(_lpDecorarFichas);
-      return;
-    }
-  }
-  box.innerHTML = _lpEjecRender(keys);
-  _esperarFichas(_lpDecorarFichas);
-}
 
 // ── Vista "Lista de Precios" del sidebar (con buscador) ──
 function cargarListaPrecios(){
@@ -16890,7 +16861,7 @@ function toggleListaPrecios(segKey){
   }
   fetch('precios_segmento.json', { cache:'no-store' })
     .then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); })
-    .then(function(d){ window.__PRECIOS_SEG = d; window.__PRECIOS_SEG_LOADED = true; try{ pintarListasPrecios(); }catch(e){} })
+    .then(function(d){ window.__PRECIOS_SEG = d; window.__PRECIOS_SEG_LOADED = true; try{ if(document.getElementById('lpListaContainer')) cargarListaPrecios(); }catch(e){} })
     .catch(function(){});
 })();
 

@@ -6862,9 +6862,23 @@ function renderMetasEquipo(equipo){
       cumpTxt+
     '</div>';
   }).join('');
-  box.innerHTML = '<div class="dv3-card" style="margin-top:14px;"><div class="dv3-cardhd" style="display:flex;justify-content:space-between;align-items:center;"><h3>Metas de la semana · equipo</h3>'+
+  const abierto = !!window.__METAS_EQUIPO_ABIERTO;
+  const icChev = '<svg id="metasEquipoChev" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .15s;flex-shrink:0;transform:rotate('+(abierto?'90':'0')+'deg);"><path d="M9 6l6 6-6 6"/></svg>';
+  box.innerHTML = '<div class="dv3-card" style="margin-top:14px;"><div class="dv3-cardhd" style="display:flex;justify-content:space-between;align-items:center;">'+
+    '<h3 onclick="_toggleMetasEquipo()" style="cursor:pointer;display:flex;align-items:center;gap:7px;user-select:none;">'+icChev+'Metas de la semana · equipo</h3>'+
     '<button onclick="abrirHistorialEquipo()" style="background:#fff;border:1px solid #E6E8EF;color:#001A60;padding:5px 10px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Historial equipo</button>'+
-  '</div>'+(filas||'<div class="dv3-empty">Sin datos.</div>')+'</div>';
+  '</div>'+
+  '<div id="metasEquipoBody" style="display:'+(abierto?'':'none')+';">'+(filas||'<div class="dv3-empty">Sin datos.</div>')+'</div>'+
+  '</div>';
+}
+function _toggleMetasEquipo(){
+  const body = document.getElementById('metasEquipoBody');
+  const chev = document.getElementById('metasEquipoChev');
+  if(!body) return;
+  const abrir = body.style.display === 'none';
+  body.style.display = abrir ? '' : 'none';
+  if(chev) chev.style.transform = abrir ? 'rotate(90deg)' : 'rotate(0deg)';
+  window.__METAS_EQUIPO_ABIERTO = abrir;
 }
 function abrirHistorialEquipo(){
   const eq = window.__METAS_EQUIPO || [];

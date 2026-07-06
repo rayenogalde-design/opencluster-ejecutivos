@@ -2470,6 +2470,13 @@ body{
           <div id="dshRings"></div>
         </div>
 
+        <!-- Kanban de cotizaciones: arrastrar una tarjeta cambia su estado real (mismo flujo
+             que el botón "Marcar ganada/perdida" de siempre — pide motivo, abre el cierre de venta). -->
+        <div class="dv3-card" style="margin-bottom:14px;">
+          <div class="dv3-cardhd"><h3>Pipeline de cotizaciones</h3><span style="font-size:11px;color:#727c98;font-weight:600;">arrastra para cambiar el estado</span></div>
+          <div id="dshKanbanCot" class="kanban-board" style="height:auto;min-height:220px;padding:10px;"></div>
+        </div>
+
         <div class="dv3-kpirow" id="dshMinis"></div>
 
         <div class="dv3-grid3">
@@ -5855,6 +5862,7 @@ async function cargarDashboard(){
   try{ pintarStreakDash(); }catch(e){}
   try{ pintarFocoDash(); }catch(e){}
   try{ pintarPorCerrarDash(); }catch(e){}
+  try{ cargarKanbanCotizaciones(); }catch(e){}
   try{ cargarCelebraciones(); }catch(e){}
 
   // Token único de esta carga — descartamos respuestas de fetches anteriores
@@ -6357,6 +6365,73 @@ async function pintarPorCerrarDash(){
     }).join('');
     box.innerHTML=head+rows;
   }catch(e){ box.innerHTML=head+'<div class="dv3-empty">No se pudieron cargar las cotizaciones.</div>'; }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// KANBAN DE COTIZACIONES (Dashboard) — arrastrar una tarjeta llama a marcarEstadoCotMC,
+// el MISMO flujo que ya usa el botón "Marcar ganada/perdida" del modal (pide motivo si es
+// Perdida, abre el panel de cierre de venta si es Ganada). No hay estado nuevo: son los 4
+// que ya valida el backend en crmMarcarCotizacion (Enviada/En gestión/Ganada/Perdida).
+// ════════════════════════════════════════════════════════════════════════════
+const KANBAN_COT_COLS = [
+  { key:'Enviada',     label:'Enviada' },
+  { key:'En gestión',  label:'En gestión' },
+  { key:'Ganada',      label:'Ganada' },
+  { key:'Perdida',     label:'Perdida' }
+];
+async function cargarKanbanCotizaciones(){
+  const board = document.getElementById('dshKanbanCot');
+  if(!board) return;
+  if(!(CACHE.vMisCot && CACHE.vMisCot.length)){ try{ await cargarMisCotizaciones(false); }catch(e){} }
+  renderKanbanCotizaciones();
+}
+function renderKanbanCotizaciones(){
+  const board = document.getElementById('dshKanbanCot');
+  if(!board) return;
+  const arr = (CACHE.vMisCot||[]);
+  const porCol = {};
+  KANBAN_COT_COLS.forEach(c => porCol[c.key] = []);
+  arr.forEach(c => {
+    const key = KANBAN_COT_COLS.some(col => col.key === c.estado) ? c.estado : 'Enviada';
+    porCol[key].push(c);
+  });
+  board.innerHTML = KANBAN_COT_COLS.map(col => {
+    const cards = porCol[col.key] || [];
+    return '<div class="kanban-col" data-col="'+esc(col.key)+'" '+
+      'ondragover="event.preventDefault(); this.classList.add(\'drag-over\');" '+
+      'ondragleave="this.classList.remove(\'drag-over\');" '+
+      'ondrop="dropEnKanbanCot(event, \''+esc(col.key)+'\')">'+
+      '<div class="kanban-col-hd">'+esc(col.label)+'<span class="col-count">'+cards.length+'</span></div>'+
+      '<div class="kanban-col-body">'+
+        cards.map(c => {
+          const numJS = String(c.cotizacion||'').replace(/'/g,"\\'");
+          const monto = (c.monto && c.monto>0) ? fmtCLP(c.monto) : '';
+          return '<div class="kanban-card" draggable="true" data-num="'+esc(numJS)+'" '+
+            'ondragstart="this.classList.add(\'dragging\'); event.dataTransfer.setData(\'text/plain\', \''+numJS+'\');" '+
+            'ondragend="this.classList.remove(\'dragging\');" '+
+            'onclick="abrirCotModal(\''+numJS+'\')">'+
+            '<div class="kc-name">'+esc(c.cliente || c.institucion || ('Cotización '+(c.cotizacion||'')))+'</div>'+
+            '<div class="kc-inst">'+esc(String(c.cotizacion||''))+'</div>'+
+            (monto ? '<div class="kc-foot"><span class="kc-cot">'+esc(monto)+'</span></div>' : '') +
+          '</div>';
+        }).join('') +
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+async function dropEnKanbanCot(event, estadoDestino){
+  event.preventDefault();
+  const col = event.currentTarget;
+  if(col && col.classList) col.classList.remove('drag-over');
+  const num = event.dataTransfer.getData('text/plain');
+  if(!num) return;
+  const cot = (CACHE.vMisCot||[]).find(c => String(c.cotizacion)===String(num));
+  if(!cot || cot.estado === estadoDestino) return;
+  // Sin botón real de por medio (btn=null) — marcarEstadoCotMC ya tolera eso (ver refactor).
+  // Ella misma pide el motivo si es Perdida, abre el panel de venta si es Ganada, y refresca
+  // CACHE.vMisCot al terminar — por eso alcanza con re-pintar el Kanban después.
+  await marcarEstadoCotMC(num, estadoDestino, null);
+  renderKanbanCotizaciones();
 }
 
 function cambiarPeriodoDash(p){
@@ -9070,6 +9145,9 @@ function _lineaCot(num){
   return '';
 }
 function renderMisCotizaciones(){
+  // El Kanban de cotizaciones del Dashboard usa la misma CACHE.vMisCot — se re-pinta acá
+  // para quedar sincronizado cada vez que esta lista se actualiza, sin lógica nueva.
+  try{ if(document.getElementById('dshKanbanCot')) renderKanbanCotizaciones(); }catch(e){}
   const container = document.getElementById('listMisCot');
   const cnt = document.getElementById('cntMisCot');
   try{ var _ordSel=document.getElementById('ordenMisCot'); if(_ordSel && _ordSel.value!==MISCOT_ORDEN) _ordSel.value=MISCOT_ORDEN; }catch(e){}
@@ -9449,9 +9527,12 @@ function _confirmarMotivoPerdida(){
 async function marcarEstadoCotMC(num, estado, btn, motivo){
   // Al marcar Perdida, pedir primero el motivo (modal); recién ahí continúa.
   if(estado==='Perdida' && !motivo){ pedirMotivoPerdida(function(m){ if(m) marcarEstadoCotMC(num, estado, btn, m); }); return; }
-  const prev = btn.textContent; btn.disabled=true; btn.textContent='Guardando…';
+  // btn es opcional: el Kanban de cotizaciones llama a esta misma función al soltar una
+  // tarjeta, sin un botón real de por medio.
+  const prev = btn ? btn.textContent : '';
+  if(btn){ btn.disabled=true; btn.textContent='Guardando…'; }
   const r = await fetchAPI('crm_marcar_cotizacion', { solicitante:USUARIO, num:num, estado:estado, motivo_perdida: motivo||'' });
-  if(!r || !r.ok){ btn.disabled=false; btn.textContent=prev; alert('No se pudo: '+((r&&r.error)||'error desconocido')); return; }
+  if(!r || !r.ok){ if(btn){ btn.disabled=false; btn.textContent=prev; } alert('No se pudo: '+((r&&r.error)||'error desconocido')); return; }
   try { Object.keys(localStorage).forEach(kk=>{ if(kk.indexOf('crm_perfil_')===0||kk.indexOf('crm_kpis_cache')===0||kk.indexOf('crm_dash')===0) localStorage.removeItem(kk); }); } catch(e){}
   try{ _cerrarCotModal(); }catch(e){}
   if(estado==='Ganada'){

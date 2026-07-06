@@ -5022,20 +5022,22 @@ const SUGERENCIAS_POR_SEGMENTO = {
     { id:'colchon-cic-basico', razon:'Mutuales: colchón clínico básico para hospital del trabajador en pacientes sin riesgo de úlceras.' }
   ]
 };
-// ── Rotación de segmentos (mayo 2026) ──
+// ── Rotación de segmentos (mayo 2026, actualizada julio 2026) ──
 // El contenido de cada lista NO cambia; cambia QUIÉN la recibe. Reasignamos por ejecutivo:
-//   William → Colegios · Rayen → Hogares de ancianos · Maximiliano → Teletón/Mutuales/Clínicas
-//   (Germán y Roberto sin cambio). Las listas internas conservan su nombre histórico.
+//   William → Colegios · Germán → Rehabilitación + Hogares de ancianos · Maximiliano → Teletón/Mutuales/Clínicas
+//   Rayen es admin del equipo, sin segmento propio. (Roberto sin cambio).
 (function(){
   var hogares  = SUGERENCIAS_POR_SEGMENTO['William'];       // lista geriátrica (hogares de ancianos)
   var colegios = SUGERENCIAS_POR_SEGMENTO['Maximiliano'];   // lista escolar (colegios)
   var teleton  = SUGERENCIAS_POR_SEGMENTO['Rayen Ogalde'];  // lista institucional (Teletón/Mutuales/Clínicas)
+  var rehab    = SUGERENCIAS_POR_SEGMENTO['Germán'];        // lista propia de Germán (rehabilitación)
   SUGERENCIAS_POR_SEGMENTO['William']       = colegios;
   SUGERENCIAS_POR_SEGMENTO['William Marin'] = colegios;
   SUGERENCIAS_POR_SEGMENTO['Maximiliano']   = teleton;
-  SUGERENCIAS_POR_SEGMENTO['Rayen Ogalde']  = hogares;
-  SUGERENCIAS_POR_SEGMENTO['Rayen']         = hogares;
+  SUGERENCIAS_POR_SEGMENTO['Germán']        = (rehab||[]).concat(hogares||[]);
   SUGERENCIAS_POR_SEGMENTO['German']        = SUGERENCIAS_POR_SEGMENTO['Germán'];
+  delete SUGERENCIAS_POR_SEGMENTO['Rayen Ogalde'];
+  delete SUGERENCIAS_POR_SEGMENTO['Rayen'];
 })();
 
 function pintarProductosSugeridos(){
@@ -5269,8 +5271,8 @@ function toggleBannerCampanaAdmin(e){
 // ── Metadata de ejecutivos para las tarjetas del dashboard (rotación vigente mayo 2026) ──
 const EJEC_META = {
   'William':     { full:'William', ini:'WM', color:'#06B3FD', cargo:'Ejecutivo Comercial', pills:['Colegios','Escuelas con PIE','Jardines infantiles'], desc:'Educación parvularia, básica y media.' },
-  'Germán':      { full:'Germán', ini:'GE', color:'#059669', cargo:'Ejecutivo Comercial', pills:['Rehabilitación física','Rehabilitación neurológica'], desc:'Kinesiología, terapia ocupacional, recuperación funcional.' },
-  'Rayen':       { full:'Rayen', ini:'RO', color:'#FF7E00', cargo:'Líder Comercial', pills:['Hogares de ancianos','Residencias','Lugares de acogida'], desc:'Cuidado de adulto mayor.' },
+  'Germán':      { full:'Germán', ini:'GE', color:'#059669', cargo:'Ejecutivo Comercial', pills:['Rehabilitación física','Rehabilitación neurológica','Hogares de ancianos','Residencias','Lugares de acogida'], desc:'Kinesiología, terapia ocupacional, recuperación funcional y cuidado de adulto mayor.' },
+  'Rayen':       { full:'Rayen', ini:'RO', color:'#FF7E00', cargo:'Líder Comercial', pills:[], desc:'Supervisa y apoya a todo el equipo (sin segmento propio asignado).' },
   'Roberto':     { full:'Roberto', ini:'RB', color:'#7C3AED', cargo:'Ejecutivo Comercial', pills:['Distribuidores','Ortopedias'], desc:'Catálogo completo con descuentos por volumen.' },
   'Maximiliano': { full:'Maximiliano', ini:'MA', color:'#D97706', cargo:'Ejecutivo Comercial', pills:['Teletón','Mutuales','Clínicas'], desc:'Foco institucional y partnership a largo plazo.' }
 };
@@ -5601,7 +5603,7 @@ async function pintarBannerCampana(){
   if(_f){
     const _base = _f.getAttribute('data-fecha') || _f.textContent || '';
     _f.setAttribute('data-fecha', _base);
-    _f.innerHTML = esc(_base) + (_m
+    _f.innerHTML = esc(_base) + ((_m && _m.pills && _m.pills.length)
       ? '  ·  <span style="color:var(--subtle);">Tu segmento:</span> <span title="' + esc(_m.desc) + '" style="display:inline-flex;align-items:center;background:#FFF4EA;color:' + _m.color + ';font-size:12px;font-weight:500;padding:3px 12px;border-radius:999px;vertical-align:middle;">' + esc(_m.pills.join(' · ')) + '</span>'
       : '');
   }

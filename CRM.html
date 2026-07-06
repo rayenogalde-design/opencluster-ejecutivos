@@ -2465,6 +2465,11 @@ body{
         <!-- Leads urgentes: persisten ARRIBA hasta que el ejecutivo los marque contactados. -->
         <div id="dshLeads"></div>
 
+        <!-- Meta semanal: cada ejecutivo escribe su meta el lunes y marca cumplimiento el
+             viernes. dshMetasEquipo solo se llena si es admin sin drill-down. -->
+        <div id="dshMetaSemanal"></div>
+        <div id="dshMetasEquipo"></div>
+
         <div class="dv3-bento">
           <div id="dshToquesHoy"></div>
           <div id="dshRings"></div>
@@ -4194,7 +4199,8 @@ const ACCIONES_POST = [
   'crm_sync_registro','crm_migrar','crm_normalizar_nombres','crm_fusionar_duplicados',
   'crm_inferir_categorias','crm_actualizar_categorias','crm_cruzar_cotizaciones','crm_invalidar_cache',
   'crm_limpiar_duplicados_interacciones','crm_limpiar_duplicados_cotizaciones',
-  'crm_sm_set_probabilidad','crm_sm_set_mensaje'
+  'crm_sm_set_probabilidad','crm_sm_set_mensaje',
+  'crm_meta_semanal_guardar','crm_meta_semanal_marcar'
 ];
 async function fetchAPI(accion, params, body){
   if(!deployOK()){
@@ -5863,6 +5869,7 @@ async function cargarDashboard(){
   try{ pintarFocoDash(); }catch(e){}
   try{ pintarPorCerrarDash(); }catch(e){}
   try{ cargarKanbanCotizaciones(); }catch(e){}
+  try{ cargarMetaSemanal(); }catch(e){}
   try{ cargarCelebraciones(); }catch(e){}
 
   // Token único de esta carga — descartamos respuestas de fetches anteriores
@@ -6084,6 +6091,23 @@ function _gestTile(g){
       '<div style="height:5px;border-radius:99px;background:#eef1f8;margin-top:4px;overflow:hidden;"><i style="display:block;height:100%;width:'+Math.round(v/max*100)+'%;background:'+cols[md]+';border-radius:99px;"></i></div></div>'+
       '<span style="font-size:14px;font-weight:700;color:#001a60;min-width:18px;text-align:right;">'+v+'</span></div>';
   }).join('');
+  // Desglose semana por semana dentro del mes. Requiere que el backend mande g.semanas_mes
+  // (ver Claude Files\CRM\MetaSemanal.gs.txt) — si todavía no está instalado, simplemente no
+  // se muestra esta sección, sin romper el resto de la tarjeta.
+  var semanas = (g && Array.isArray(g.semanas_mes)) ? g.semanas_mes : [];
+  var semMax = semanas.reduce(function(m,s){ return Math.max(m, s.cantidad||0); }, 0) || 1;
+  var semanasHtml = semanas.length ? (
+    '<div style="margin-top:12px;padding-top:10px;border-top:1px solid #eef1f8;">' +
+      '<div style="font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#9aa3bd;margin-bottom:7px;">Por semana este mes</div>' +
+      semanas.map(function(s){
+        var v = s.cantidad||0;
+        return '<div style="display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;margin-top:5px;">' +
+          '<div><div style="font-size:10.5px;color:#727c98;">'+esc(s.inicio||'')+'</div>' +
+          '<div style="height:4px;border-radius:99px;background:#eef1f8;margin-top:3px;overflow:hidden;"><i style="display:block;height:100%;width:'+Math.round(v/semMax*100)+'%;background:#0ea5a5;border-radius:99px;"></i></div></div>' +
+          '<span style="font-size:12px;font-weight:700;color:#001a60;">'+v+'</span></div>';
+      }).join('') +
+    '</div>'
+  ) : '';
   return '<div class="dv3-mini dv3-gest" style="--c2:#0ea5a5;">'+
     '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;">'+
       '<span style="font-size:17px;font-weight:800;color:#001a60;letter-spacing:-.015em;display:flex;align-items:center;gap:8px;">'+
@@ -6092,7 +6116,7 @@ function _gestTile(g){
       '<span style="font-size:32px;font-weight:800;color:#001a60;line-height:1;letter-spacing:-.02em;">'+total+'</span>'+
     '</div>'+
     ((typeof esActuandoComoAdmin==='function'&&esActuandoComoAdmin())?'<div onclick="abrirGestionesPorEjecutivo()" style="font-size:11px;font-weight:800;color:#0ea5a5;cursor:pointer;margin-bottom:6px;">Ver por ejecutivo →</div>':'')+
-    rows+'</div>';
+    rows+semanasHtml+'</div>';
 }
 // Detalle al hacer clic en una barra de "Gestiones del mes": a quiénes contactó por ese medio
 // este mes. Usa crm_actividad_equipo (eventos vivos), sin redeploy.
@@ -6432,6 +6456,119 @@ async function dropEnKanbanCot(event, estadoDestino){
   // CACHE.vMisCot al terminar — por eso alcanza con re-pintar el Kanban después.
   await marcarEstadoCotMC(num, estadoDestino, null);
   renderKanbanCotizaciones();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// META SEMANAL — cada ejecutivo escribe su meta el lunes y marca cumplimiento el viernes.
+// Requiere que el backend tenga instaladas crm_meta_semanal_guardar/_marcar/crm_metas_semanales
+// (ver Claude Files\CRM\MetaSemanal.gs.txt). Si todavía no está instalado, no rompe el
+// dashboard — muestra un aviso claro y nada más.
+// En drill-down (Rayen viendo el dashboard de otra persona) se muestra en solo lectura: no
+// tiene sentido que Rayen escriba o marque la meta de otro a nombre suyo.
+// ════════════════════════════════════════════════════════════════════════════
+async function cargarMetaSemanal(){
+  const box = document.getElementById('dshMetaSemanal');
+  if(!box) return;
+  const ejec = (typeof getEjecutivoEfectivo === 'function' ? getEjecutivoEfectivo() : '') || USUARIO;
+  const soloLectura = (typeof hayDrillDown==='function') && hayDrillDown();
+  const r = await fetchAPI('crm_metas_semanales', { ejecutivo: ejec, modo_vista: MODO_VISTA, solicitante: USUARIO });
+  if(!r || !r.ok){
+    box.innerHTML = '<div class="dv3-card"><div class="dv3-cardhd"><h3>Mi meta de la semana</h3></div><div class="dv3-empty">Todavía no disponible (falta instalar la actualización del backend).</div></div>';
+    return;
+  }
+  window.__META_SEMANAL_ACTUAL = r.actual || null;
+  renderMetaSemanal(r.actual, ejec, soloLectura);
+  if((typeof esActuandoComoAdmin==='function') && esActuandoComoAdmin() && !soloLectura && r.equipo) renderMetasEquipo(r.equipo);
+  else { const eqBox = document.getElementById('dshMetasEquipo'); if(eqBox) eqBox.innerHTML=''; }
+}
+function renderMetaSemanal(actual, ejec, soloLectura){
+  const box = document.getElementById('dshMetaSemanal');
+  if(!box) return;
+  const titulo = soloLectura ? ('Meta de la semana · '+esc(String(ejec||'').split(' ')[0])) : 'Mi meta de la semana';
+  const subt = (actual && actual.semana_inicio) ? '<span style="font-size:11px;color:#727c98;font-weight:600;">semana del '+esc(actual.semana_inicio)+'</span>' : '';
+  if(!actual || !actual.meta){
+    box.innerHTML = '<div class="dv3-card"><div class="dv3-cardhd"><h3>'+titulo+'</h3></div>'+
+      (soloLectura
+        ? '<div class="dv3-empty">Todavía no puso su meta esta semana.</div>'
+        : '<div style="padding:14px 17px;">'+
+            '<textarea id="metaSemanalTxt" rows="2" placeholder="¿Cuál es tu meta esta semana?" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #E6E8EF;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;"></textarea>'+
+            '<button onclick="guardarMetaSemanal()" style="margin-top:8px;background:#001A60;color:#fff;border:none;padding:8px 15px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">Guardar mi meta</button>'+
+          '</div>') +
+    '</div>';
+    return;
+  }
+  const cump = actual.cumplida || '';
+  if(soloLectura){
+    const cumpTxt = cump==='si' ? '<span style="color:#16A34A;font-weight:800;">Cumplida</span>' : (cump==='no' ? '<span style="color:#B91C1C;font-weight:800;">No cumplida</span>' : '<span style="color:#9aa3bd;font-weight:700;">Pendiente de marcar</span>');
+    box.innerHTML = '<div class="dv3-card"><div class="dv3-cardhd"><h3>'+titulo+'</h3>'+subt+'</div>'+
+      '<div style="padding:14px 17px;">'+
+        '<div style="font-size:13.5px;color:#1a2440;margin-bottom:8px;">'+esc(actual.meta)+'</div>'+
+        '<div style="font-size:12px;">'+cumpTxt+'</div>'+
+        (actual.notas_cumplimiento ? '<div style="font-size:12px;color:#6B7280;margin-top:5px;">'+esc(actual.notas_cumplimiento)+'</div>' : '') +
+      '</div></div>';
+    return;
+  }
+  const btnCump = (v, label, color) => '<button onclick="marcarMetaSemanal(\''+v+'\')" style="padding:6px 14px;border-radius:999px;border:1px solid '+(cump===v?color:'#E6E8EF')+';background:'+(cump===v?color:'#fff')+';color:'+(cump===v?'#fff':'#6B7280')+';font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">'+label+'</button>';
+  box.innerHTML = '<div class="dv3-card"><div class="dv3-cardhd"><h3>'+titulo+'</h3>'+subt+'</div>'+
+    '<div style="padding:14px 17px;">'+
+      '<div style="font-size:13.5px;color:#1a2440;margin-bottom:10px;">'+esc(actual.meta)+'</div>'+
+      '<div style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#9aa3bd;margin-bottom:7px;">¿Se cumplió?</div>'+
+      '<div style="display:flex;gap:7px;margin-bottom:9px;">'+btnCump('si','Sí','#16A34A')+btnCump('no','No','#B91C1C')+'</div>'+
+      '<textarea id="metaSemanalNotas" rows="2" placeholder="¿Por qué? (opcional)" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #E6E8EF;border-radius:8px;font-size:12.5px;font-family:inherit;resize:vertical;">'+esc(actual.notas_cumplimiento||'')+'</textarea>'+
+      '<button onclick="marcarMetaSemanal(\''+(cump||'si')+'\')" style="margin-top:8px;background:#fff;color:#001A60;border:1px solid #E6E8EF;padding:7px 13px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Guardar nota</button>'+
+    '</div></div>';
+}
+async function guardarMetaSemanal(){
+  const txt = document.getElementById('metaSemanalTxt');
+  const meta = txt ? txt.value.trim() : '';
+  if(!meta){ alert('Escribe tu meta de esta semana'); return; }
+  const r = await fetchAPI('crm_meta_semanal_guardar', { ejecutivo: USUARIO, meta: meta, solicitante: USUARIO });
+  if(!r || !r.ok){ alert('No se pudo guardar: '+((r&&r.error)||'error desconocido')); return; }
+  cargarMetaSemanal();
+}
+async function marcarMetaSemanal(cumplida){
+  const notasEl = document.getElementById('metaSemanalNotas');
+  const notas = notasEl ? notasEl.value.trim() : '';
+  const r = await fetchAPI('crm_meta_semanal_marcar', { ejecutivo: USUARIO, cumplida: cumplida, notas: notas, solicitante: USUARIO });
+  if(!r || !r.ok){ alert('No se pudo guardar: '+((r&&r.error)||'error desconocido')); return; }
+  cargarMetaSemanal();
+}
+function renderMetasEquipo(equipo){
+  const box = document.getElementById('dshMetasEquipo');
+  if(!box) return;
+  window.__METAS_EQUIPO = equipo || [];
+  const filas = (equipo||[]).map(function(x){
+    const a = x.actual;
+    const cumpTxt = !a ? '' : (a.cumplida==='si' ? '<span style="color:#16A34A;font-weight:800;">Sí</span>' : (a.cumplida==='no' ? '<span style="color:#B91C1C;font-weight:800;">No</span>' : '<span style="color:#9aa3bd;">Pendiente</span>'));
+    return '<div class="dv3-prow"><div class="info"><div class="nm">'+esc(x.ejecutivo)+'</div>'+
+      '<div class="mt">'+(a&&a.meta ? esc(a.meta) : '<i>Sin meta puesta esta semana</i>')+'</div></div>'+
+      (a ? cumpTxt : '') +
+      '<button onclick="abrirHistorialMeta(\''+esc(x.ejecutivo)+'\')" style="margin-left:8px;background:#fff;border:1px solid #E6E8EF;color:#001A60;padding:5px 10px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">Historial</button>'+
+    '</div>';
+  }).join('');
+  box.innerHTML = '<div class="dv3-card" style="margin-top:14px;"><div class="dv3-cardhd"><h3>Metas de la semana · equipo</h3></div>'+(filas||'<div class="dv3-empty">Sin datos.</div>')+'</div>';
+}
+function abrirHistorialMeta(ejecutivo){
+  const eq = window.__METAS_EQUIPO || [];
+  const x = eq.find(function(e){ return e.ejecutivo === ejecutivo; });
+  const hist = (x && x.historial) || [];
+  const viejo = document.getElementById('histMetaOv'); if(viejo) viejo.remove();
+  const ov = document.createElement('div');
+  ov.id = 'histMetaOv';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:2147483600;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit;';
+  ov.onclick = function(e){ if(e.target===ov) ov.remove(); };
+  const filas = hist.length ? hist.map(function(h){
+    const cumpTxt = h.cumplida==='si' ? '<span style="color:#16A34A;font-weight:800;">Sí</span>' : (h.cumplida==='no' ? '<span style="color:#B91C1C;font-weight:800;">No</span>' : '<span style="color:#9aa3bd;">Pendiente</span>');
+    return '<div style="border-bottom:1px solid #E6E8EF;padding:10px 0;"><div style="font-size:11px;color:#6B7280;font-weight:700;">Semana del '+esc(h.semana_inicio||'')+' · '+cumpTxt+'</div>'+
+      '<div style="font-size:13px;color:#1a2440;margin-top:3px;">'+esc(h.meta||'')+'</div>'+
+      (h.notas_cumplimiento ? '<div style="font-size:12px;color:#6B7280;margin-top:3px;">'+esc(h.notas_cumplimiento)+'</div>' : '') +
+    '</div>';
+  }).join('') : '<div style="color:#9aa3bd;font-size:13px;padding:10px 0;">Sin historial todavía.</div>';
+  ov.innerHTML = '<div style="background:#fff;border-radius:14px;max-width:480px;width:100%;max-height:80vh;overflow:auto;box-shadow:0 24px 70px rgba(0,0,0,.3);padding:22px;">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><b style="font-size:15px;color:#001A60;">Historial de '+esc(ejecutivo)+'</b><button onclick="document.getElementById(\'histMetaOv\').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#9aa3bd;">&times;</button></div>'+
+    filas +
+  '</div>';
+  document.body.appendChild(ov);
 }
 
 function cambiarPeriodoDash(p){

@@ -2378,15 +2378,6 @@ body{
         #vDashboard .dv3-streak .dots{display:flex;gap:3px;margin-left:4px;}
         #vDashboard .dv3-streak .dots i{width:6px;height:6px;border-radius:50%;background:#16a34a;}
         #vDashboard .dv3-streak .dots i.off{background:#dde3ef;}
-        #vDashboard .dv3-pin{display:flex;align-items:center;gap:13px;margin-bottom:14px;padding:12px 18px;border-radius:13px;color:#fff;position:relative;overflow:hidden;background:radial-gradient(120% 200% at 0% 0%,rgba(6,179,253,.30),transparent 55%),linear-gradient(100deg,#001a60,#0d3499);box-shadow:0 12px 28px -18px rgba(0,26,96,.7);}
-        #vDashboard .dv3-pin .pic{width:32px;height:32px;border-radius:9px;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-        #vDashboard .dv3-pin .pic svg{width:16px;height:16px;color:#ffd9b0;}
-        #vDashboard .dv3-pin .tx{flex:1;min-width:0;}
-        #vDashboard .dv3-pin .eye{font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#9fd8ff;}
-        #vDashboard .dv3-pin .msg{font-size:13.5px;font-weight:600;margin-top:1px;}
-        #vDashboard .dv3-pin .by{font-size:11px;color:rgba(255,255,255,.65);white-space:nowrap;font-weight:500;}
-        #vDashboard .dv3-pin .edit{margin-left:8px;color:rgba(255,255,255,.6);cursor:pointer;flex-shrink:0;}
-        #vDashboard .dv3-pin .edit svg{width:14px;height:14px;}
         #vDashboard .dv3-bento{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px;}
         #vDashboard .dv3-tile{background:#fff;border:1px solid #e8ecf5;border-radius:15px;padding:15px 16px;box-shadow:0 6px 18px -14px rgba(0,26,96,.4);position:relative;overflow:hidden;}
         #vDashboard #dshToquesHoy{display:contents;}
@@ -2578,11 +2569,10 @@ body{
           <div id="dshListasPrecios"></div><div id="scriptBanner"></div>
         </div>
 
-        <!-- Informativo, sin acción asociada (racha de días, foco de la semana): abajo de todo,
-             no compite por el primer vistazo con lo accionable de arriba. -->
+        <!-- Informativo, sin acción asociada (racha de días): abajo de todo, no compite por el
+             primer vistazo con lo accionable de arriba. -->
         <div style="margin-top:14px;display:flex;gap:14px;flex-wrap:wrap;">
           <div id="dshStreak"></div>
-          <div id="dshFoco" style="flex:1;min-width:220px;"></div>
         </div>
 
         <!-- Ranking social (comparativo entre ejecutivos): informativo, sin acción directa por fila. -->
@@ -6023,7 +6013,6 @@ async function cargarDashboard(){
   // ── rediseño v3 ──
   try{ pintarAdminVerDashboard(); }catch(e){}
   try{ pintarStreakDash(); }catch(e){}
-  try{ pintarFocoDash(); }catch(e){}
   try{ pintarPorCerrarDash(); }catch(e){}
   try{ cargarKanbanCotizaciones(); }catch(e){}
   try{ cargarMetaSemanal(); }catch(e){}
@@ -6476,17 +6465,6 @@ function pintarStreakDash(){
   var dots=''; for(var i=0;i<5;i++){ dots+='<i'+(i<Math.min(streak,5)?'':' class="off"')+'></i>'; }
   box.innerHTML='<div class="dv3-streak"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2s4 4 4 8a4 4 0 0 1-8 0c0-1 .5-2 .5-2S8 10 8 12a4 4 0 0 0 8 0c0-4-4-10-4-10z"/></svg><div><b>'+streak+' día'+(streak>1?'s':'')+'</b> <span>activos</span></div><div class="dots">'+dots+'</div></div>';
 }
-
-function pintarFocoDash(){
-  var box=document.getElementById('dshFoco'); if(!box) return;
-  var msg=''; try{ msg=localStorage.getItem('crm_foco_semana')||''; }catch(e){}
-  var esAdmin=(typeof ROL!=='undefined'&&ROL==='admin');
-  if(!msg && !esAdmin){ box.innerHTML=''; return; }
-  var edit=esAdmin?'<span class="edit" title="Editar foco" onclick="editarFocoSemana()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span>':'';
-  var texto=msg||'Fija un foco para el equipo esta semana…';
-  box.innerHTML='<div class="dv3-pin"'+(msg?'':' style="opacity:.8"')+'><div class="pic">'+_DV3.pin+'</div><div class="tx"><div class="eye">Foco de la semana</div><div class="msg">'+esc(texto)+'</div></div>'+(msg?'<div class="by">— '+esc(_yoNombre()||'Líder')+'</div>':'')+edit+'</div>';
-}
-function editarFocoSemana(){ var cur=''; try{cur=localStorage.getItem('crm_foco_semana')||'';}catch(e){} var v=prompt('Foco de la semana (lo verá todo el equipo):',cur); if(v===null)return; try{localStorage.setItem('crm_foco_semana',String(v).trim());}catch(e){} pintarFocoDash(); }
 
 // Selector admin "Ver dashboard de" — VISIBLE arriba del dashboard.
 // El #dshCampana original quedó dentro del bloque oculto del rediseño v3, así que

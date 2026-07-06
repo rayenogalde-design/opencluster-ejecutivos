@@ -7353,10 +7353,22 @@ function renderTarea(t){
   '</div>';
 }
 
+window.__TAREA_BUSY = window.__TAREA_BUSY || {};
 async function completarTarea(id){
-  await fetchAPI('crm_completar_tarea', null, { id: id, completada_por: USUARIO });
-  await cargarTareasDashboard();
-  if(document.getElementById('vTareas').classList.contains('act')) cargarTareas();
+  if(window.__TAREA_BUSY[id]) return; // ya se está guardando, ignora clics repetidos
+  window.__TAREA_BUSY[id] = true;
+  try {
+    const r = await fetchAPI('crm_completar_tarea', null, { id: id, completada_por: USUARIO });
+    if(!r || !r.ok){
+      alert('No se pudo marcar la tarea como hecha: '+((r&&r.error)||'sin respuesta del servidor')+'. Intenta de nuevo en un momento.');
+      return;
+    }
+    await cargarTareasDashboard();
+    const vt = document.getElementById('vTareas');
+    if(vt && vt.classList.contains('act')) cargarTareas();
+  } finally {
+    window.__TAREA_BUSY[id] = false;
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════

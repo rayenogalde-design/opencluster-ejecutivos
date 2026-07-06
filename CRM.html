@@ -2822,7 +2822,10 @@ body{
             <h1>Sala Multisensorial</h1>
             <p>Cotizaciones de sala multisensorial del año — por ejecutivo, estado, mercado público/privado y qué se cotiza más.</p>
           </div>
-          <button onclick="_smExportarPDF()" style="background:#001A60;color:#fff;border:none;border-radius:9px;padding:9px 16px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">Exportar PDF</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button onclick="_smInformeOfrecidas()" title="Filtra a solo Ofrecidas y abre el PDF — para ver qué se necesita para responder a esa demanda" style="background:#fff;color:#5b21b6;border:1px solid #DDD0EC;border-radius:9px;padding:9px 16px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">Informe de Ofrecidas</button>
+            <button onclick="_smExportarPDF()" style="background:#001A60;color:#fff;border:none;border-radius:9px;padding:9px 16px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">Exportar PDF</button>
+          </div>
         </div>
         <div id="smPrintHeader" style="padding:0 0 16px;">
           <div style="font-family:Montserrat,sans-serif;font-size:19px;font-weight:800;color:#001A60;">OpenCluster — Informe Sala Multisensorial</div>
@@ -2850,6 +2853,12 @@ body{
             <option value="20">Ofrecidas al 20%</option>
             <option value="50">Ofrecidas al 50%</option>
             <option value="90">Ofrecidas al 90%</option>
+          </select>
+          <select id="smFiltroGrupo" onchange="_smAplicarFiltros()" style="padding:7px 10px;border:1px solid var(--smoke,#e5e7eb);border-radius:8px;font-size:12.5px;font-family:inherit;background:#fff;color:var(--ink);">
+            <option value="">Ganadas + Perdidas + Ofrecidas</option>
+            <option value="ganadas">Solo Ganadas</option>
+            <option value="perdidas">Solo Perdidas</option>
+            <option value="ofrecidas">Solo Ofrecidas</option>
           </select>
           <span id="smFiltrosActivos" onclick="_smQuitarFiltros()" style="display:none;font-size:11.5px;color:#001A60;font-weight:800;cursor:pointer;padding:7px 4px;">Quitar filtros ✕</span>
         </div>
@@ -10187,9 +10196,11 @@ async function cargarSalaMultisensorial(forzar){
   const cont = document.getElementById('smBody');
   window.__SM_FILTRO_PROB = null;
   window.__SM_FILTRO_EJEC = null;
+  window.__SM_FILTRO_GRUPO = null;
   window.__SM_TAB_ACTUAL = 'resumen';
   const selEj0 = document.getElementById('smFiltroEjec'); if(selEj0) selEj0.value = '';
   const selPr0 = document.getElementById('smFiltroProb'); if(selPr0) selPr0.value = '';
+  const selGr0 = document.getElementById('smFiltroGrupo'); if(selGr0) selGr0.value = '';
   const fa0 = document.getElementById('smFiltrosActivos'); if(fa0) fa0.style.display = 'none';
   if(typeof _smLimpiarBusqueda === 'function') _smLimpiarBusqueda();
   const tieneCache = CACHE.vMisCot && CACHE.vMisCot.length;
@@ -10200,9 +10211,11 @@ async function cargarSalaMultisensorial(forzar){
   const RECIENTE_MS = 20000;
   if(!forzar && tieneCache && (Date.now() - (window.__SM_LAST_FETCH||0)) < RECIENTE_MS) return;
   window.__SM_LAST_FETCH = Date.now();
-  const ejec = (typeof getEjecutivoEfectivo==='function' ? getEjecutivoEfectivo() : '') || USUARIO;
+  // Sala Multisensorial es una vista exclusiva de admin — SIEMPRE trae a todo el equipo, sin
+  // importar si hay un "ver como" (drill-down) o el toggle ADMIN/EJECUTIVA activo en otra parte
+  // del CRM (si no se fuerza esto, el backend devuelve solo las cotizaciones de esa persona).
   const [r, rp, rm] = await Promise.all([
-    fetchAPI('crm_mis_cotizaciones', { ejecutivo: ejec, modo_vista: MODO_VISTA }),
+    fetchAPI('crm_mis_cotizaciones', { ejecutivo: USUARIO, modo_vista: 'admin' }),
     fetchAPI('crm_sm_probabilidades', {}),
     fetchAPI('crm_sm_mensajes', {})
   ]);
@@ -10301,12 +10314,13 @@ function _smExtraerProductos(prodStr){
   String(prodStr||'').split(',').map(x=>x.trim()).filter(Boolean).forEach(item=>{
     const m = item.match(/^(.*?)\s*[xX]\s*(\d+)\s*$/);
     const rawName = m ? m[1].trim() : item;
+    const qty = m ? (parseInt(m[2],10)||1) : 1;
     if(!rawName || rawName.length<3) return;
     let key = _smProdNorm(rawName);
     if(_SM_PROD_ALIAS[key]) key = _SM_PROD_ALIAS[key];
-    if(vistos.has(key)) return;
+    if(vistos.has(key)) return; // una cotización no debería repetir el mismo ítem dos veces
     vistos.add(key);
-    out.push({ key, display: rawName });
+    out.push({ key, display: rawName, qty });
   });
   return out;
 }
@@ -10325,17 +10339,23 @@ function renderSalaMultisensorial(todas){
   window.__SM_LISTA = smCompleta; // el buscador rápido siempre busca sobre TODAS, sin importar filtros activos
   const totalTodas = (todas||[]).length;
 
-  // ---- Filtros GLOBALES (ejecutivo / probabilidad): se aplican ANTES de calcular nada, así que
-  // todo lo de abajo (KPIs, gráficos, tablas y listas de las 4 pestañas) ya sale filtrado. ----
+  // ---- Filtros GLOBALES (ejecutivo / probabilidad / grupo): se aplican ANTES de calcular nada,
+  // así que todo lo de abajo (KPIs, gráficos, tablas y listas de las 4 pestañas) ya sale filtrado.
+  // "Solo Ofrecidas" es lo que se usa para sacar el informe de qué se necesita para responder a la
+  // demanda que todavía está en gestión (sin contar lo ya ganado/perdido). ----
   const probMap = CACHE.smProb || {};
   let sm = smCompleta;
   const filtroEjec = window.__SM_FILTRO_EJEC || null;
   const filtroProb = (window.__SM_FILTRO_PROB!=null) ? window.__SM_FILTRO_PROB : null;
+  const filtroGrupo = window.__SM_FILTRO_GRUPO || null;
   if(filtroEjec) sm = sm.filter(c => fn(c.ejecutivo) === filtroEjec);
   if(filtroProb!=null) sm = sm.filter(c => !c.cerrada && (probMap[String(c.cotizacion||'').trim()]||0) === filtroProb);
+  if(filtroGrupo === 'ganadas') sm = sm.filter(c => c.ganada);
+  else if(filtroGrupo === 'perdidas') sm = sm.filter(c => c.cerrada && !c.ganada);
+  else if(filtroGrupo === 'ofrecidas') sm = sm.filter(c => !c.cerrada);
   const _faEl = document.getElementById('smFiltrosActivos');
   if(_faEl){
-    const activo = filtroEjec || filtroProb!=null;
+    const activo = filtroEjec || filtroProb!=null || filtroGrupo;
     _faEl.style.display = activo ? 'inline' : 'none';
     if(activo) _faEl.textContent = 'Mostrando '+sm.length+' de '+smCompleta.length+' · Quitar filtros ✕';
   }
@@ -10371,10 +10391,11 @@ function renderSalaMultisensorial(todas){
       (privTipo[tipo] = privTipo[tipo]||{count:0,monto:0}).count++; privTipo[tipo].monto += monto;
     }
 
-    _smExtraerProductos(c.productos).forEach(({key,display})=>{
-      if(!prodMap[key]) prodMap[key] = {display, count:0, votes:{}};
+    _smExtraerProductos(c.productos).forEach(({key,display,qty})=>{
+      if(!prodMap[key]) prodMap[key] = {display, count:0, unidades:0, votes:{}};
       prodMap[key].votes[display] = (prodMap[key].votes[display]||0)+1;
       prodMap[key].count++;
+      prodMap[key].unidades += qty;
     });
   });
   Object.values(prodMap).forEach(p => { p.display = Object.entries(p.votes).sort((a,b)=>b[1]-a[1])[0][0]; });
@@ -10390,20 +10411,22 @@ function renderSalaMultisensorial(todas){
   const prodPorGrupo = { ganadas:{}, perdidas:{}, ofrecidas:{} };
   ['ganadas','perdidas','ofrecidas'].forEach(g => {
     grupos[g].forEach(c => {
-      _smExtraerProductos(c.productos).forEach(({key,display}) => {
-        if(!prodPorGrupo[g][key]) prodPorGrupo[g][key] = {display, count:0};
+      _smExtraerProductos(c.productos).forEach(({key,display,qty}) => {
+        if(!prodPorGrupo[g][key]) prodPorGrupo[g][key] = {display, count:0, unidades:0};
         prodPorGrupo[g][key].count++;
+        prodPorGrupo[g][key].unidades += qty;
       });
     });
   });
-  // "Ofrecidas" desglosada por probabilidad — para saber qué productos aparecen en las cotizaciones
-  // marcadas 50%/90%, no solo en "ofrecidas" en general (que junta también las sin marcar).
+  // "Ofrecidas" desglosada por probabilidad — para saber qué productos (y cuántas UNIDADES, no
+  // solo en cuántas cotizaciones) hacen falta para responder a la demanda marcada 50%/90%.
   const prodPorProb = { 0:{}, 20:{}, 50:{}, 90:{} };
   grupos.ofrecidas.forEach(c => {
     const p = probMap[String(c.cotizacion||'').trim()] || 0;
-    _smExtraerProductos(c.productos).forEach(({key,display}) => {
-      if(!prodPorProb[p][key]) prodPorProb[p][key] = {display, count:0};
+    _smExtraerProductos(c.productos).forEach(({key,display,qty}) => {
+      if(!prodPorProb[p][key]) prodPorProb[p][key] = {display, count:0, unidades:0};
       prodPorProb[p][key].count++;
+      prodPorProb[p][key].unidades += qty;
     });
   });
   const montoGrupo = arr => arr.reduce((s,c)=>s+_smMontoProductos(c), 0);
@@ -10441,7 +10464,7 @@ function renderSalaMultisensorial(todas){
 
   // Párrafo de contexto en texto plano al inicio de cada pestaña — para que el informe se
   // entienda sin tener que interpretar los gráficos (útil también para quien no usa el CRM).
-  const _smParrafo = txt => '<p style="font-size:13px;color:var(--ink);line-height:1.65;background:#F7F3EE;border:1px solid #EAE1D5;border-radius:10px;padding:12px 16px;margin:0 0 18px;">'+txt+'</p>';
+  const _smParrafo = txt => '<p style="font-size:15.5px;color:var(--ink);line-height:1.75;background:#F7F3EE;border-left:4px solid #001A60;border-radius:8px;padding:16px 20px;margin:0 0 20px;">'+txt+'</p>';
 
   // ---- Tab: Resumen ----
   const perdidasCount = grupos.perdidas.length, ofrecidasCount = grupos.ofrecidas.length;
@@ -10524,7 +10547,7 @@ function renderSalaMultisensorial(todas){
   productosHtml += '<div id="smDetalleProd" class="sm-no-print" style="display:none;background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:18px;"></div>';
   const prodKeysGrupo = Object.keys(prodMap).sort((a,b)=>prodMap[b].count-prodMap[a].count).slice(0,15);
   productosHtml += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;overflow-x:auto;">' +
-    '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #16A34A;padding-left:8px;margin-bottom:10px;">Resumen de productos cotizados <span style="font-weight:600;color:var(--subtle);font-size:11px;">· total, Ganadas/Perdidas, y Ofrecidas por su % de probabilidad</span></div>' +
+    '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #16A34A;padding-left:8px;margin-bottom:10px;">Resumen de productos cotizados <span style="font-weight:600;color:var(--subtle);font-size:11px;">· cotizaciones y unidades entre paréntesis</span></div>' +
     '<table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:640px;">' +
     '<tr><th style="text-align:left;padding:6px 4px;color:var(--subtle);font-size:11px;">Producto</th>' +
       '<th style="text-align:right;padding:6px 4px;color:var(--ink);font-size:11px;">Total</th>' +
@@ -10534,16 +10557,19 @@ function renderSalaMultisensorial(todas){
       '<th style="text-align:right;padding:6px 4px;color:#F59E0B;font-size:11px;">20%</th>' +
       '<th style="text-align:right;padding:6px 4px;color:#0891B2;font-size:11px;">50%</th>' +
       '<th style="text-align:right;padding:6px 4px;color:#16A34A;font-size:11px;">90%</th></tr>' +
-    prodKeysGrupo.map(k => '<tr>' +
+    prodKeysGrupo.map(k => {
+      const c50 = prodPorProb[50][k], c90 = prodPorProb[90][k];
+      return '<tr>' +
       '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);">'+esc(prodMap[k].display)+'</td>' +
-      '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;font-weight:800;">'+prodMap[k].count+'</td>' +
+      '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;font-weight:800;">'+prodMap[k].count+' <span style="color:var(--subtle);font-weight:600;">('+prodMap[k].unidades+' u.)</span></td>' +
       '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;">'+(prodPorGrupo.ganadas[k]?prodPorGrupo.ganadas[k].count:0)+'</td>' +
       '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;">'+(prodPorGrupo.perdidas[k]?prodPorGrupo.perdidas[k].count:0)+'</td>' +
       '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;">'+(prodPorProb[0][k]?prodPorProb[0][k].count:0)+'</td>' +
       '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;">'+(prodPorProb[20][k]?prodPorProb[20][k].count:0)+'</td>' +
-      '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;font-weight:700;">'+(prodPorProb[50][k]?prodPorProb[50][k].count:0)+'</td>' +
-      '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;font-weight:700;">'+(prodPorProb[90][k]?prodPorProb[90][k].count:0)+'</td>' +
-    '</tr>').join('') +
+      '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;font-weight:700;">'+(c50?c50.count+' ('+c50.unidades+' u.)':0)+'</td>' +
+      '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;font-weight:700;">'+(c90?c90.count+' ('+c90.unidades+' u.)':0)+'</td>' +
+    '</tr>';
+    }).join('') +
     '</table></div>';
 
   // ---- Tab: Ganadas / Perdidas / Ofrecidas ----
@@ -10746,16 +10772,28 @@ function _smPoblarFiltroEjec(todas){
 function _smAplicarFiltros(){
   const ej = document.getElementById('smFiltroEjec');
   const pr = document.getElementById('smFiltroProb');
+  const gr = document.getElementById('smFiltroGrupo');
   window.__SM_FILTRO_EJEC = ej && ej.value ? ej.value : null;
   window.__SM_FILTRO_PROB = pr && pr.value !== '' ? Number(pr.value) : null;
+  window.__SM_FILTRO_GRUPO = gr && gr.value ? gr.value : null;
   renderSalaMultisensorial(CACHE.vMisCot);
 }
 function _smQuitarFiltros(){
   window.__SM_FILTRO_EJEC = null;
   window.__SM_FILTRO_PROB = null;
+  window.__SM_FILTRO_GRUPO = null;
   const ej = document.getElementById('smFiltroEjec'); if(ej) ej.value = '';
   const pr = document.getElementById('smFiltroProb'); if(pr) pr.value = '';
+  const gr = document.getElementById('smFiltroGrupo'); if(gr) gr.value = '';
   renderSalaMultisensorial(CACHE.vMisCot);
+}
+// Atajo: "Sacar informe de Ofrecidas" — fija el filtro de grupo a Ofrecidas y abre el diálogo de
+// impresión, para tener ese informe (con productos necesarios, KPIs y proyección) cuando se necesite.
+function _smInformeOfrecidas(){
+  window.__SM_FILTRO_GRUPO = 'ofrecidas';
+  const gr = document.getElementById('smFiltroGrupo'); if(gr) gr.value = 'ofrecidas';
+  renderSalaMultisensorial(CACHE.vMisCot);
+  setTimeout(_smExportarPDF, 300);
 }
 // Atajo desde los KPI "Ofrecidas al 50%/90%": fija el filtro global de probabilidad y salta a verlas.
 function _smFiltrarProb(p){

@@ -2489,6 +2489,8 @@ body{
         #vDashboard .mm-manual-in,#vDashboard .mm-target-in{width:60px;padding:5px 8px;border:1.5px solid #F0DCB0;border-radius:7px;font-size:12.5px;font-family:inherit;text-align:right;}
         #vDashboard .mm-manual-in:focus,#vDashboard .mm-target-in:focus{outline:none;border-color:#F5A623;box-shadow:0 0 0 2px rgba(245,166,35,.16);}
         #vDashboard .mm-target-in{margin-left:auto;}
+        #vDashboard .meta-card-compact .meta-compact-body{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 19px;}
+        #vDashboard .meta-compact-resumen{font-size:13px;color:#4b5563;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
         #vDashboard .pipeline-card{border-color:transparent;box-shadow:0 14px 34px -18px rgba(124,58,237,.4),0 6px 18px -14px rgba(0,26,96,.25);}
         #vDashboard .pipeline-card .dv3-cardhd{background:linear-gradient(120deg,var(--navy) 0%,var(--purple) 55%,var(--purple-dk) 100%);border-bottom:none;position:relative;overflow:hidden;}
         #vDashboard .pipeline-card .dv3-cardhd::before{content:'';position:absolute;inset:0;background-image:repeating-linear-gradient(125deg,rgba(255,255,255,.09) 0 12px,transparent 12px 24px);pointer-events:none;}
@@ -5984,7 +5986,7 @@ async function chequearMetaSemanalObligatoria(){
     if (ROL === 'admin' && typeof getModoVista==='function' && getModoVista() === 'admin') return;
     const r = await fetchAPI('crm_metas_semanales', { ejecutivo: USUARIO, modo_vista: MODO_VISTA, solicitante: USUARIO });
     if (!r || !r.ok) return; // backend no disponible: no bloqueamos por un error ajeno
-    if (r.actual && r.actual.meta) return; // ya la puso esta semana
+    if (r.actual && (r.actual.meta || r.actual.metrics)) return; // ya la puso esta semana
     mostrarBloqueoMetaSemanal();
   } catch(e){}
 }
@@ -5994,27 +5996,34 @@ function mostrarBloqueoMetaSemanal(){
   ov.id = 'bloqueoMetaOv';
   ov.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(58,34,0,.74);display:flex;align-items:center;justify-content:center;padding:24px;font-family:var(--font-sans);';
   ov.innerHTML =
-    '<div style="background:#fff;border-radius:20px;max-width:480px;width:100%;box-shadow:0 30px 90px rgba(0,0,0,.5);overflow:hidden;">'+
-      '<div style="background:linear-gradient(120deg,#FFC94D 0%,#F5A623 55%,#E8850C 100%);color:#3a2200;padding:22px 26px;display:flex;align-items:center;gap:12px;">'+
-        '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>'+
-        '<div style="font-size:17.5px;font-weight:800;">Antes de seguir, escribe tu meta de la semana</div>'+
+    '<div style="background:#fff;border-radius:20px;max-width:480px;width:100%;max-height:88vh;overflow:auto;box-shadow:0 30px 90px rgba(0,0,0,.5);">'+
+      '<div style="background:linear-gradient(120deg,#FFC94D 0%,#F5A623 55%,#E8850C 100%);color:#3a2200;padding:22px 26px;display:flex;align-items:center;gap:12px;position:sticky;top:0;">'+
+        MM_IC_TARGET+
+        '<div style="font-size:17.5px;font-weight:800;">Antes de seguir, fija tu meta de la semana</div>'+
       '</div>'+
-      '<div style="padding:24px 26px;">'+
-        '<div style="font-size:13.5px;color:#4b5563;line-height:1.55;margin-bottom:14px;">Todavía no pusiste tu objetivo de esta semana. Escríbelo para entrar al CRM — el viernes marcas si lo cumpliste.</div>'+
-        '<textarea id="bloqueoMetaTxt" rows="3" placeholder="Ej: cerrar la cotización de X, agendar 3 reuniones nuevas..." style="width:100%;box-sizing:border-box;padding:11px 13px;border:1.5px solid #F0DCB0;border-radius:10px;font-size:13.5px;font-family:inherit;resize:vertical;"></textarea>'+
+      '<div style="padding:22px 26px;">'+
+        '<div style="font-size:13.5px;color:#4b5563;line-height:1.55;margin-bottom:6px;">Pon un número por cada frente (deja en 0 lo que no midas esta semana) para entrar al CRM.</div>'+
+        _mmDefRows()+
         '<div id="bloqueoMetaErr" style="color:#B91C1C;font-size:12px;font-weight:700;margin-top:8px;display:none;"></div>'+
-        '<button onclick="guardarMetaBloqueo()" style="margin-top:14px;width:100%;background:linear-gradient(120deg,#FFC94D 0%,#F5A623 55%,#E8850C 100%);color:#3a2200;border:none;padding:13px;border-radius:11px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;">Guardar mi meta y entrar</button>'+
+        '<button onclick="guardarMetaBloqueo()" style="margin-top:14px;width:100%;background:linear-gradient(120deg,#FFC94D 0%,#F5A623 55%,#E8850C 100%);color:#3a2200;border:none;padding:13px;border-radius:11px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;">Guardar mis metas y entrar</button>'+
       '</div>'+
     '</div>';
   document.body.appendChild(ov);
 }
 async function guardarMetaBloqueo(){
-  const txt = document.getElementById('bloqueoMetaTxt');
   const err = document.getElementById('bloqueoMetaErr');
-  const meta = txt ? txt.value.trim() : '';
-  if(!meta){ if(err){ err.textContent = 'Escribe tu meta antes de continuar.'; err.style.display = 'block'; } return; }
+  const metrics = {};
+  let hayAlguna = false;
+  MM_CFG.forEach(function(cfg){
+    const el = document.getElementById('mmTarget_'+cfg.key);
+    let v = el ? parseInt(el.value, 10) : 0;
+    if(isNaN(v) || v < 0) v = 0;
+    metrics[cfg.key] = { target: v };
+    if(v > 0) hayAlguna = true;
+  });
+  if(!hayAlguna){ if(err){ err.textContent = 'Pon al menos una meta mayor a 0.'; err.style.display = 'block'; } return; }
   if(err) err.style.display = 'none';
-  const r = await fetchAPI('crm_meta_semanal_guardar', { ejecutivo: USUARIO, meta: meta, solicitante: USUARIO });
+  const r = await fetchAPI('crm_meta_semanal_guardar', { ejecutivo: USUARIO, metrics: metrics, solicitante: USUARIO });
   if(!r || !r.ok){ if(err){ err.textContent = 'No se pudo guardar: '+((r&&r.error)||'error desconocido'); err.style.display = 'block'; } return; }
   const o = document.getElementById('bloqueoMetaOv'); if(o) o.remove();
   try{ if(typeof cargarMetaSemanal==='function') cargarMetaSemanal(); }catch(e){}
@@ -6628,7 +6637,6 @@ async function cargarMetaSemanal(){
     box.innerHTML = '<div class="dv3-card"><div class="dv3-cardhd"><h3>Mi meta de la semana</h3></div><div class="dv3-empty">Todavía no disponible (falta instalar la actualización del backend).</div></div>';
     return;
   }
-  window.__META_SEMANAL_ACTUAL = r.actual || null;
   renderMetaSemanal(r.actual, ejec, soloLectura);
   if((typeof esActuandoComoAdmin==='function') && esActuandoComoAdmin() && !soloLectura && r.equipo) renderMetasEquipo(r.equipo);
   else { const eqBox = document.getElementById('dshMetasEquipo'); if(eqBox) eqBox.innerHTML=''; }
@@ -6666,15 +6674,13 @@ function _mmDefRows(){
   }).join('');
 }
 function _htmlDefinirMetas(){
-  return '<div class="meta-card-body">'+
-    '<div class="meta-empty">'+
+  return '<div class="meta-empty">'+
       '<div class="ic">'+MM_IC_TARGET+'</div>'+
       '<h4>Fija tu meta de la semana</h4>'+
       '<p>Pon un número por cada frente. Deja en 0 lo que no quieras medir esta semana.</p>'+
     '</div>'+
     _mmDefRows()+
-    '<button onclick="guardarMetaSemanal()" class="meta-btn-save" style="margin-top:12px;">'+MM_IC_TARGET+' Guardar mis metas</button>'+
-  '</div>';
+    '<button onclick="guardarMetaSemanal()" class="meta-btn-save" style="margin-top:12px;">'+MM_IC_TARGET+' Guardar mis metas</button>';
 }
 function _mmFilaRows(actual, soloLectura, cerrada){
   return MM_CFG.map(function(cfg){
@@ -6696,8 +6702,7 @@ function _mmFilaRows(actual, soloLectura, cerrada){
     '</div>';
   }).join('');
 }
-function _renderMetaSemanalMulti(actual, head, soloLectura){
-  const box = document.getElementById('dshMetaSemanal');
+function _htmlMetaSemanalMulti(actual, soloLectura){
   const cerrada = !!actual.cerrada;
   const rows = _mmFilaRows(actual, soloLectura, cerrada);
   const conMeta = MM_CFG.filter(function(cfg){ const m=actual.metrics[cfg.key]; return m && Number(m.target)>0; }).length;
@@ -6717,10 +6722,9 @@ function _renderMetaSemanalMulti(actual, head, soloLectura){
       '<button onclick="cerrarMiSemana()" class="meta-btn-save" style="margin-top:9px;">Cerrar mi semana</button>'+
     '</div>';
   }
-  box.innerHTML = '<div class="dv3-card meta-card">'+head+'<div class="meta-card-body">'+tally+rows+cierreHtml+'</div></div>';
+  return tally+rows+cierreHtml;
 }
-function _renderMetaSemanalTexto(actual, head, soloLectura){
-  const box = document.getElementById('dshMetaSemanal');
+function _htmlMetaSemanalTexto(actual, soloLectura){
   const icCheck = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
   const icX = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>';
   const icClock = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>';
@@ -6730,47 +6734,75 @@ function _renderMetaSemanalTexto(actual, head, soloLectura){
     const banner = cump==='si' ? '<div class="meta-banner ok">'+icCheck+' Meta cumplida</div>'
       : cump==='no' ? '<div class="meta-banner bad">'+icX+' No se cumplió</div>'
       : '<div class="meta-banner pend">'+icClock+' Pendiente de marcar · '+cuenta+'</div>';
-    box.innerHTML = '<div class="dv3-card meta-card">'+head+
-      '<div class="meta-card-body">'+
-        banner+
+    return banner+
         '<div class="meta-quote"><span class="ic">'+MM_IC_TARGET+'</span><span class="tx">'+esc(actual.meta)+'</span></div>'+
-        (actual.notas_cumplimiento ? '<div style="font-size:12px;color:#6B7280;">'+esc(actual.notas_cumplimiento)+'</div>' : '') +
-      '</div></div>';
-    return;
+        (actual.notas_cumplimiento ? '<div style="font-size:12px;color:#6B7280;">'+esc(actual.notas_cumplimiento)+'</div>' : '');
   }
   const btnCump = (v, label, icon) => '<button onclick="marcarMetaSemanal(\''+v+'\')" class="meta-pill '+v+(cump===v?' on':'')+'">'+icon+' '+label+'</button>';
   const banner = cump==='si' ? '<div class="meta-banner ok">'+icCheck+' ¡La cumpliste! Bien ahí.</div>'
     : cump==='no' ? '<div class="meta-banner bad">'+icX+' Marcada como no cumplida</div>'
     : '<div class="meta-banner pend">'+icClock+' '+cuenta+'</div>';
-  box.innerHTML = '<div class="dv3-card meta-card">'+head+
-    '<div class="meta-card-body">'+
-      banner+
+  return banner+
       '<div class="meta-quote"><span class="ic">'+MM_IC_TARGET+'</span><span class="tx">'+esc(actual.meta)+'</span></div>'+
       '<div class="meta-label">¿Se cumplió?</div>'+
       '<div class="meta-cump-row">'+btnCump('si','Sí',icCheck)+btnCump('no','No',icX)+'</div>'+
       '<textarea id="metaSemanalNotas" class="meta-txt" rows="2" placeholder="¿Por qué? (opcional)">'+esc(actual.notas_cumplimiento||'')+'</textarea>'+
-      '<button onclick="marcarMetaSemanal(\''+(cump||'si')+'\')" class="meta-btn-save secondary">Guardar nota</button>'+
-    '</div></div>';
+      '<button onclick="marcarMetaSemanal(\''+(cump||'si')+'\')" class="meta-btn-save secondary">Guardar nota</button>';
+}
+function _metaSemanalCuerpoHtml(actual, soloLectura){
+  if(actual && actual.meta !== undefined && actual.meta !== '' && !actual.metrics) return _htmlMetaSemanalTexto(actual, soloLectura);
+  if(actual && actual.metrics) return _htmlMetaSemanalMulti(actual, soloLectura);
+  return soloLectura ? '<div class="dv3-empty">Todavía no puso sus metas esta semana.</div>' : _htmlDefinirMetas();
+}
+function _metaSemanalResumenTxt(actual, soloLectura){
+  if(actual && actual.metrics){
+    const conMeta = MM_CFG.filter(function(cfg){ const m=actual.metrics[cfg.key]; return m && Number(m.target)>0; });
+    if(!conMeta.length) return soloLectura ? 'Todavía no puso sus metas esta semana.' : 'Todavía no has puesto tus metas esta semana.';
+    const cumplidas = conMeta.filter(function(cfg){ const m=actual.metrics[cfg.key]; return m.actual!=null && m.actual>=Number(m.target); }).length;
+    if(!actual.cerrada) return cumplidas+' de '+conMeta.length+' cumplidas por ahora · semana en curso';
+    if(cumplidas===conMeta.length) return 'Semana cerrada · '+cumplidas+' de '+conMeta.length+' cumplidas';
+    if(cumplidas===0) return 'Semana cerrada · ninguna cumplida';
+    return 'Semana cerrada · '+cumplidas+' de '+conMeta.length+' cumplidas (parcial)';
+  }
+  if(actual && actual.meta) return esc(actual.meta.length>72 ? actual.meta.slice(0,72)+'…' : actual.meta);
+  return soloLectura ? 'Todavía no puso su meta esta semana.' : 'Todavía no has puesto tu meta esta semana.';
 }
 function renderMetaSemanal(actual, ejec, soloLectura){
   const box = document.getElementById('dshMetaSemanal');
   if(!box) return;
+  window.__MM_ACTUAL = actual; window.__MM_EJEC = ejec; window.__MM_SOLOLECTURA = soloLectura;
   const titulo = soloLectura ? ('Meta de la semana · '+esc(String(ejec||'').split(' ')[0])) : 'Mi meta de la semana';
   const subt = (actual && actual.semana_inicio) ? '<span class="wk">semana del '+esc(actual.semana_inicio)+'</span>' : '';
-  const head = '<div class="dv3-cardhd"><h3>'+MM_IC_TARGET+titulo+'</h3>'+subt+'</div>';
-
-  // Formato viejo (texto libre, guardado antes de pasar a multi-métrica): se respeta tal cual.
-  if(actual && actual.meta !== undefined && actual.meta !== '' && !actual.metrics){
-    _renderMetaSemanalTexto(actual, head, soloLectura);
-    return;
-  }
-  if(actual && actual.metrics){
-    _renderMetaSemanalMulti(actual, head, soloLectura);
-    return;
-  }
-  box.innerHTML = '<div class="dv3-card meta-card">'+head+
-    (soloLectura ? '<div class="dv3-empty">Todavía no puso sus metas esta semana.</div>' : _htmlDefinirMetas()) +
+  const resumen = _metaSemanalResumenTxt(actual, soloLectura);
+  box.innerHTML = '<div class="dv3-card meta-card meta-card-compact">'+
+    '<div class="dv3-cardhd"><h3>'+MM_IC_TARGET+titulo+'</h3>'+subt+'</div>'+
+    '<div class="meta-compact-body">'+
+      '<div class="meta-compact-resumen">'+resumen+'</div>'+
+      '<button onclick="abrirMetaSemanalModal()" class="meta-btn-save" style="margin:0;flex-shrink:0;">'+(soloLectura?'Ver detalle':'Ver / completar')+'</button>'+
+    '</div>'+
   '</div>';
+  if(document.getElementById('metaSemanalModalBody')) _pintarMetaSemanalModalBody();
+}
+function abrirMetaSemanalModal(){
+  const viejo = document.getElementById('metaSemanalModalOv'); if(viejo) viejo.remove();
+  const ov = document.createElement('div');
+  ov.id = 'metaSemanalModalOv';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:rgba(58,34,0,.55);display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit;';
+  ov.onclick = function(e){ if(e.target===ov) ov.remove(); };
+  ov.innerHTML = '<div style="background:#fff;border-radius:16px;max-width:480px;width:100%;max-height:88vh;overflow:auto;box-shadow:0 30px 90px rgba(0,0,0,.4);">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:16px 20px;position:sticky;top:0;background:linear-gradient(120deg,#FFC94D 0%,#F5A623 55%,#E8850C 100%);z-index:1;">'+
+      '<b style="color:#3a2200;font-size:15px;">'+MM_IC_TARGET+' Mi meta de la semana</b>'+
+      '<button onclick="document.getElementById(\'metaSemanalModalOv\').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#3a2200;flex-shrink:0;">&times;</button>'+
+    '</div>'+
+    '<div id="metaSemanalModalBody" style="padding:18px 20px;"></div>'+
+  '</div>';
+  document.body.appendChild(ov);
+  _pintarMetaSemanalModalBody();
+}
+function _pintarMetaSemanalModalBody(){
+  const body = document.getElementById('metaSemanalModalBody');
+  if(!body) return;
+  body.innerHTML = _metaSemanalCuerpoHtml(window.__MM_ACTUAL, window.__MM_SOLOLECTURA);
 }
 async function guardarMetaSemanal(){
   const metrics = {};

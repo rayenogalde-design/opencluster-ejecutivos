@@ -4031,38 +4031,62 @@ const FILTROS_ESTADO = new Proxy({}, {
   get(_, k){ return FILTROS_AVANZADOS[k] ? FILTROS_AVANZADOS[k].estado : ''; },
   set(_, k, v){ if(FILTROS_AVANZADOS[k]){ FILTROS_AVANZADOS[k].estado = v; guardarFiltrosLS(); } return true; }
 });
-// Buckets de pipeline compartidos por funnel + chips de filtro
-const PIPELINE_BUCKETS = [
-  { key:'porCont', label:'Por contactar', cls:'f-porcont', match: pe => pe.indexOf('por contactar') >= 0 || pe.indexOf('por_contactar') >= 0 || pe === 'lead' || pe.indexOf('lead') >= 0 || pe === '' },
-  { key:'cont', label:'Contactado',  cls:'f-cont', match: pe => pe === 'contactado' || (pe.indexOf('contact') >= 0 && pe.indexOf('por ') < 0) },
-  { key:'reun', label:'Reunión',     cls:'f-reun', match: pe => pe.indexOf('reuni') >= 0 },
-  { key:'cot',  label:'Cotizado',    cls:'f-cot',  match: pe => pe.indexOf('cotizad') >= 0 || pe.indexOf('gesti') >= 0 },
-  { key:'seg',  label:'Seguimiento', cls:'f-seg',  match: pe => pe.indexOf('seguim') >= 0 },
-  { key:'llam', label:'Llamada',     cls:'f-llam', match: pe => pe.indexOf('llamad') >= 0 },
-  { key:'gan',  label:'Ganado',      cls:'f-gan',  match: pe => pe.indexOf('ganad') >= 0 || pe.indexOf('cerrad') >= 0 },
-  { key:'perd', label:'Perdido',     cls:'f-perd', match: pe => pe.indexOf('perdid') >= 0 }
+// ════════════════════════════════════════════════════════════════════════════
+// FUENTE ÚNICA DE VERDAD del pipeline de un contacto. Cada etapa fina (usada en
+// Configuración/plantillas) pertenece a un grupo (bandas/embudo) y a un bucket más
+// grueso (chips de filtro, Kanban, selector rápido). Agregar/renombrar una etapa se
+// hace SOLO acá — CFG_ETAPAS, FUNNEL_ETAPAS, PIPELINE_BUCKETS, KANBAN_COLS,
+// _GEST_ESTADOS y grupoPipeline() se derivan de esta lista.
+// ════════════════════════════════════════════════════════════════════════════
+const PIPELINE_ETAPAS = [
+  { key:'no-contactado',            label:'No contactado',            grupo:'PROSPECTO',  bucket:'porCont' },
+  { key:'contactado',               label:'Contactado',               grupo:'EN PROCESO', bucket:'cont' },
+  { key:'seguimiento-1',            label:'Seguimiento 1',            grupo:'EN PROCESO', bucket:'seg' },
+  { key:'seguimiento-2',            label:'Seguimiento 2',            grupo:'EN PROCESO', bucket:'seg' },
+  { key:'seguimiento-3',            label:'Seguimiento 3',            grupo:'EN PROCESO', bucket:'seg' },
+  { key:'break-up',                 label:'Break-up',                 grupo:'EN PROCESO', bucket:'seg' },
+  { key:'llamada',                  label:'Llamada',                  grupo:'EN PROCESO', bucket:'llam' },
+  { key:'email',                    label:'Email',                    grupo:'EN PROCESO', bucket:'cont' },
+  { key:'reunion',                  label:'Reunión',                  grupo:'EN PROCESO', bucket:'reun' },
+  { key:'cotizacion-entregada',     label:'Cotización entregada',     grupo:'COTIZADO',   bucket:'cot' },
+  { key:'seguimiento-cotizacion-1', label:'Seguimiento cotización 1', grupo:'COTIZADO',   bucket:'cot' },
+  { key:'seguimiento-cotizacion-2', label:'Seguimiento cotización 2', grupo:'COTIZADO',   bucket:'cot' },
+  { key:'ganado',                   label:'Ganado',                   grupo:'GANADO',     bucket:'gan' },
+  { key:'perdido',                  label:'Perdido',                  grupo:'PERDIDO',    bucket:'perd' }
 ];
-function _bucketDeContacto(c){
-  const pe = String(c.ultimo_estado || c.pipeline_estado || '').toLowerCase();
-  for(const b of PIPELINE_BUCKETS){ if(b.match(pe)) return b.key; }
-  return 'porCont';
+const _ETAPA_BY_KEY = {}; PIPELINE_ETAPAS.forEach(e => { _ETAPA_BY_KEY[e.key] = e; });
+// Mismos hex que las variables CSS --grp-* (bandas de la tarjeta/ficha, más abajo en <style>).
+const _COLOR_POR_GRUPO = { PROSPECTO:'#6B7280', 'EN PROCESO':'#06B3FD', COTIZADO:'#FF7E00', GANADO:'#059669', PERDIDO:'#DC2626' };
+const _CLASE_POR_GRUPO = { PROSPECTO:'banda-prospecto', 'EN PROCESO':'banda-proceso', COTIZADO:'banda-cotizado', GANADO:'banda-ganado', PERDIDO:'banda-perdido' };
+// Bucket grueso (para filtros/Kanban/selector rápido) de cualquier texto crudo de pipeline_estado,
+// tolerante a valores legacy — pasa por grupoPipeline() (definido más abajo) para clasificar.
+function _bucketKeyDeEstado(estadoRaw){
+  var et = _ETAPA_BY_KEY[grupoPipeline(estadoRaw).key];
+  return et ? et.bucket : 'porCont';
 }
 
-// Embudo de 11 etapas para el dashboard (coloreado por grupo del pipeline).
-// Usa grupoPipeline() para clasificar — NO toca PIPELINE_BUCKETS (que alimenta los filtros).
-const FUNNEL_ETAPAS = [
-  { key:'no-contactado',             label:'No contactado',           color:'#6B7280' },
-  { key:'contactado',                label:'Contactado',              color:'#06B3FD' },
-  { key:'seguimiento-1',             label:'Seguimiento 1',           color:'#06B3FD' },
-  { key:'seguimiento-2',             label:'Seguimiento 2',           color:'#06B3FD' },
-  { key:'llamada',                   label:'Llamada',                 color:'#06B3FD' },
-  { key:'email',                     label:'Email',                   color:'#06B3FD' },
-  { key:'reunion',                   label:'Reunión',                 color:'#06B3FD' },
-  { key:'cotizacion-entregada',      label:'Cotización entregada',    color:'#FF7E00' },
-  { key:'seguimiento-cotizacion-1',  label:'Seguimiento cotización 1',color:'#FF7E00' },
-  { key:'seguimiento-cotizacion-2',  label:'Seguimiento cotización 2',color:'#FF7E00' },
-  { key:'ganado',                    label:'Ganado',                  color:'#059669' }
+// Buckets de pipeline compartidos por chips de filtro + Kanban + selector rápido — agrupación
+// gruesa de las 14 etapas de PIPELINE_ETAPAS (ver campo "bucket" de cada una, arriba).
+const PIPELINE_BUCKETS = [
+  { key:'porCont', label:'Por contactar', cls:'f-porcont' },
+  { key:'cont',    label:'Contactado',    cls:'f-cont' },
+  { key:'reun',    label:'Reunión',       cls:'f-reun' },
+  { key:'cot',     label:'Cotizado',      cls:'f-cot' },
+  { key:'seg',     label:'Seguimiento',   cls:'f-seg' },
+  { key:'llam',    label:'Llamada',       cls:'f-llam' },
+  { key:'gan',     label:'Ganado',        cls:'f-gan' },
+  { key:'perd',    label:'Perdido',       cls:'f-perd' }
 ];
+function _bucketDeContacto(c){
+  return _bucketKeyDeEstado(c.ultimo_estado || c.pipeline_estado || '');
+}
+
+// Embudo del dashboard: mismas etapas de PIPELINE_ETAPAS, EXCLUYENDO Perdido (no es progreso)
+// y Seguimiento 3 / Break-up (intentos de cierre, no etapas de avance) — coloreado por grupo.
+// Usa grupoPipeline() para clasificar — NO toca PIPELINE_BUCKETS (que alimenta los filtros).
+const FUNNEL_ETAPAS = PIPELINE_ETAPAS
+  .filter(e => e.grupo !== 'PERDIDO' && e.key !== 'seguimiento-3' && e.key !== 'break-up')
+  .map(e => ({ key:e.key, label:e.label, color:_COLOR_POR_GRUPO[e.grupo] }));
 let SELECTED_ID = null;
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -7783,24 +7807,37 @@ function cleanPhone(raw){
 }
 function cleanWhatsApp(raw){ return cleanPhone(raw).replace(/^\+/,''); }
 
-// Mapea cualquier texto de estado al grupo + etapa del embudo (4 grupos / 11 etapas)
+// Arma el resultado de grupoPipeline() a partir de una etapa de PIPELINE_ETAPAS (clase/grupo
+// salen de esa etapa; etapaTexto permite un texto de display más específico que el label, ej.
+// "Venta confirmada" en vez de "Ganado").
+function _etapaResult(key, etapaTexto){
+  var et = _ETAPA_BY_KEY[key] || _ETAPA_BY_KEY['contactado'];
+  return { clase:_CLASE_POR_GRUPO[et.grupo], grupo:et.grupo, etapa: etapaTexto || et.label, key: et.key };
+}
+// Mapea cualquier texto de estado (crudo, tolerante a valores legacy: vacío, "Lead", literales
+// de Kanban/gestión rápida, etc.) a la etapa fina de PIPELINE_ETAPAS + su grupo + clase de banda.
 function grupoPipeline(estadoRaw){
   var e = String(estadoRaw||'').toLowerCase().trim();
-  if(e.indexOf('ganad')>=0 || e.indexOf('cerrad')>=0) return {clase:'banda-ganado', grupo:'GANADO', etapa:'Venta confirmada', key:'ganado'};
-  if(e.indexOf('perdid')>=0) return {clase:'banda-perdido', grupo:'PERDIDO', etapa:'Cotización perdida', key:'perdido'};
+  if(e.indexOf('ganad')>=0 || e.indexOf('cerrad')>=0) return _etapaResult('ganado', 'Venta confirmada');
+  if(e.indexOf('perdid')>=0) return _etapaResult('perdido', 'Cotización perdida');
   if(e.indexOf('cotiz')>=0 || e.indexOf('gesti')>=0){
-    if(e.indexOf('seguim')>=0 && e.indexOf('2')>=0) return {clase:'banda-cotizado', grupo:'COTIZADO', etapa:'Seguimiento cotización 2', key:'seguimiento-cotizacion-2'};
-    if(e.indexOf('seguim')>=0) return {clase:'banda-cotizado', grupo:'COTIZADO', etapa:'Seguimiento cotización 1', key:'seguimiento-cotizacion-1'};
-    return {clase:'banda-cotizado', grupo:'COTIZADO', etapa:'Cotización entregada', key:'cotizacion-entregada'};
+    if(e.indexOf('seguim')>=0 && e.indexOf('2')>=0) return _etapaResult('seguimiento-cotizacion-2');
+    if(e.indexOf('seguim')>=0) return _etapaResult('seguimiento-cotizacion-1');
+    return _etapaResult('cotizacion-entregada');
   }
-  if(e.indexOf('reuni')>=0) return {clase:'banda-proceso', grupo:'EN PROCESO', etapa:'Reunión', key:'reunion'};
-  if(e.indexOf('webinar')>=0) return {clase:'banda-proceso', grupo:'EN PROCESO', etapa:'Asistió webinar', key:'reunion'};
-  if(e.indexOf('email')>=0 || e.indexOf('correo')>=0) return {clase:'banda-proceso', grupo:'EN PROCESO', etapa:'Email', key:'email'};
-  if(e.indexOf('llamada')>=0) return {clase:'banda-proceso', grupo:'EN PROCESO', etapa:'Llamada', key:'llamada'};
-  if(e.indexOf('seguim')>=0) return e.indexOf('2')>=0 ? {clase:'banda-proceso', grupo:'EN PROCESO', etapa:'Seguimiento 2', key:'seguimiento-2'} : {clase:'banda-proceso', grupo:'EN PROCESO', etapa:'Seguimiento 1', key:'seguimiento-1'};
-  if(e.indexOf('contactad')>=0) return {clase:'banda-proceso', grupo:'EN PROCESO', etapa:'Contactado', key:'contactado'};
-  if(e==='' || e==='lead' || e.indexOf('por contactar')>=0 || e.indexOf('no contactad')>=0) return {clase:'banda-prospecto', grupo:'PROSPECTO', etapa:'No contactado', key:'no-contactado'};
-  return {clase:'banda-proceso', grupo:'EN PROCESO', etapa:'Contactado', key:'contactado'};
+  if(e.indexOf('reuni')>=0) return _etapaResult('reunion');
+  if(e.indexOf('webinar')>=0) return _etapaResult('reunion', 'Asistió webinar');
+  if(e.indexOf('email')>=0 || e.indexOf('correo')>=0) return _etapaResult('email');
+  if(e.indexOf('break')>=0) return _etapaResult('break-up');
+  if(e.indexOf('llamada')>=0) return _etapaResult('llamada');
+  if(e.indexOf('seguim')>=0){
+    if(e.indexOf('3')>=0) return _etapaResult('seguimiento-3');
+    if(e.indexOf('2')>=0) return _etapaResult('seguimiento-2');
+    return _etapaResult('seguimiento-1');
+  }
+  if(e.indexOf('contactad')>=0) return _etapaResult('contactado');
+  if(e==='' || e==='lead' || e.indexOf('por contactar')>=0 || e.indexOf('no contactad')>=0) return _etapaResult('no-contactado');
+  return _etapaResult('contactado');
 }
 
 // Resuelve el ejecutivo asignado al contacto (por nombre) → objeto de la tabla CRM Ejecutivos
@@ -8476,20 +8513,16 @@ function _toastLeads(n){
 // trabajar cualquier contacto como si fuera suyo. Usa crm_set_pipeline y
 // crm_reasignar_contacto (ya vivos en el backend, no dependen del redeploy).
 // ════════════════════════════════════════════════════════════════════════════
-const _GEST_ESTADOS = ['Por contactar','Contactado','Reunión','Cotizado','Seguimiento','Llamada','Cerrado / Ganado','Perdido'];
+// Etiqueta del selector rápido para cada bucket de PIPELINE_BUCKETS (mismo orden/buckets que
+// filtros y Kanban; solo cambia el texto de "porCont" y "gan" para calzar con el lenguaje del
+// selector rápido de la ficha).
+const _GEST_ESTADO_LABEL = { porCont:'Por contactar', cont:'Contactado', reun:'Reunión', cot:'Cotizado', seg:'Seguimiento', llam:'Llamada', gan:'Cerrado / Ganado', perd:'Perdido' };
+const _GEST_ESTADOS = PIPELINE_BUCKETS.map(function(b){ return _GEST_ESTADO_LABEL[b.key]; });
 function _gestEstadoOpcion(raw){
   const n = s => String(s||'').toLowerCase();
   const exact = _GEST_ESTADOS.find(e => n(e) === n(raw));
   if(exact) return exact;
-  const pe = n(raw);
-  if(pe.indexOf('ganad')>=0 || pe.indexOf('cerrad')>=0) return 'Cerrado / Ganado';
-  if(pe.indexOf('cotiz')>=0 || pe.indexOf('gesti')>=0) return 'Cotizado';
-  if(pe.indexOf('reuni')>=0) return 'Reunión';
-  if(pe.indexOf('seguim')>=0) return 'Seguimiento';
-  if(pe.indexOf('llamad')>=0) return 'Llamada';
-  if(pe.indexOf('perdid')>=0 || pe.indexOf('rechaz')>=0) return 'Perdido';
-  if(pe.indexOf('contact')>=0) return 'Contactado';
-  return 'Por contactar';
+  return _GEST_ESTADO_LABEL[_bucketKeyDeEstado(raw)] || 'Por contactar';
 }
 function gestionContactoBar(c){
   const editable = (typeof puedeEditar==='function') ? puedeEditar(c) : (ROL==='admin');
@@ -8709,14 +8742,9 @@ function _aplicarPipelineData(ejec, plan, seg){
 // ════════════════════════════════════════════════════════════════════════════
 // PANTALLA DE CONFIGURACIÓN (rol ADMIN) — ejecutivos + plantillas (11 + 55)
 // ════════════════════════════════════════════════════════════════════════════
-var CFG_ETAPAS = [
-  ['no-contactado','No contactado'], ['contactado','Contactado'],
-  ['seguimiento-1','Seguimiento 1'], ['seguimiento-2','Seguimiento 2'], ['seguimiento-3','Seguimiento 3'], ['break-up','Break-up'],
-  ['llamada','Llamada'], ['email','Email'], ['reunion','Reunión'],
-  ['cotizacion-entregada','Cotización entregada'],
-  ['seguimiento-cotizacion-1','Seguimiento cotización 1'],
-  ['seguimiento-cotizacion-2','Seguimiento cotización 2'], ['ganado','Ganado']
-];
+// Pares [key,label] para el editor de plantillas — derivado 1:1 de PIPELINE_ETAPAS (agrega
+// "Perdido" al final, que antes faltaba acá).
+var CFG_ETAPAS = PIPELINE_ETAPAS.map(function(e){ return [e.key, e.label]; });
 var CFG_SEGMENTOS = ["Colegios","Centros de rehabilitación","Hogares de ancianos","Distribuidores y ortopedias","Teletón, Mutuales y Clínicas"];
 
 async function cargarConfig(){
@@ -11603,15 +11631,18 @@ function renderListaOlvidados(){
 // ════════════════════════════════════════════════════════════════════════════
 // KANBAN — drag and drop entre columnas del pipeline
 // ════════════════════════════════════════════════════════════════════════════
+// Columnas del Kanban — mismos buckets de PIPELINE_BUCKETS (así una etapa nueva o reclasificada
+// se refleja acá automáticamente). OJO: col.key se escribe LITERAL como pipeline_estado al
+// soltar una tarjeta (ver dropEnKanban) — son datos reales persistidos, no renombrar a la ligera.
 const KANBAN_COLS = [
-  { key: 'Lead',         label: 'Lead',         match: pe => pe === 'lead' || pe === '' },
-  { key: 'Contactado',   label: 'Contactado',   match: pe => pe.indexOf('contact') >= 0 },
-  { key: 'Reunión',      label: 'Reunión',      match: pe => pe.indexOf('reuni') >= 0 },
-  { key: 'Cotizado',     label: 'Cotizado',     match: pe => pe.indexOf('cotizad') >= 0 || pe.indexOf('gesti') >= 0 },
-  { key: 'Seguimiento 1', label: 'Seguimiento', match: pe => pe.indexOf('seguim') >= 0 },
-  { key: 'Llamada',      label: 'Llamada',      match: pe => pe.indexOf('llamad') >= 0 },
-  { key: 'Ganado',       label: 'Ganado',       match: pe => pe.indexOf('ganad') >= 0 || pe.indexOf('cerrad') >= 0 },
-  { key: 'Perdido',      label: 'Perdido',      match: pe => pe.indexOf('perdid') >= 0 }
+  { key: 'Lead',          label: 'Lead',        bucket: 'porCont' },
+  { key: 'Contactado',    label: 'Contactado',  bucket: 'cont' },
+  { key: 'Reunión',       label: 'Reunión',     bucket: 'reun' },
+  { key: 'Cotizado',      label: 'Cotizado',    bucket: 'cot' },
+  { key: 'Seguimiento 1', label: 'Seguimiento', bucket: 'seg' },
+  { key: 'Llamada',       label: 'Llamada',     bucket: 'llam' },
+  { key: 'Ganado',        label: 'Ganado',      bucket: 'gan' },
+  { key: 'Perdido',       label: 'Perdido',     bucket: 'perd' }
 ];
 let KANBAN_DATA = {};
 
@@ -11622,15 +11653,13 @@ async function cargarKanban(){
   let lista = await _cargarContactosBase();
   if(!esActuandoComoAdmin()) lista = lista.filter(esOwner);
   cnt.textContent = lista.length;
-  // Agrupar por columna
+  // Agrupar por columna según el mismo bucket que filtros/selector rápido (ver _bucketKeyDeEstado)
   KANBAN_DATA = {};
   KANBAN_COLS.forEach(col => KANBAN_DATA[col.key] = []);
   lista.forEach(c => {
-    const pe = String(c.ultimo_estado || c.pipeline_estado || '').toLowerCase();
-    for(const col of KANBAN_COLS){
-      if(col.match(pe)){ KANBAN_DATA[col.key].push(c); return; }
-    }
-    KANBAN_DATA['Lead'].push(c);
+    const bk = _bucketKeyDeEstado(c.ultimo_estado || c.pipeline_estado || '');
+    const col = KANBAN_COLS.find(cc => cc.bucket === bk) || KANBAN_COLS[0];
+    KANBAN_DATA[col.key].push(c);
   });
   renderKanban();
 }

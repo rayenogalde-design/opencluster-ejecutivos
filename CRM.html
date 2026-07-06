@@ -2502,12 +2502,26 @@ body{
         #dshKanbanCot .kanban-col[data-col="En gestión"] .col-count{background:var(--gold,#C99935);color:#fff;border-color:transparent;}
         #dshKanbanCot .kanban-col[data-col="Ganada"] .col-count{background:var(--jade,#1AAB6E);color:#fff;border-color:transparent;}
         #dshKanbanCot .kanban-col[data-col="Perdida"] .col-count{background:var(--ruby,#B85060);color:#fff;border-color:transparent;}
+        #vDashboard .novedades-card{border-color:transparent;margin-bottom:14px;background:linear-gradient(120deg,#EAF8FF 0%,#F5FBFF 100%);box-shadow:0 14px 34px -18px rgba(6,179,253,.4),0 6px 18px -14px rgba(0,26,96,.2);}
+        #vDashboard .novedades-body{display:flex;gap:14px;padding:18px 19px;align-items:flex-start;}
+        #vDashboard .nv-ic{flex-shrink:0;width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#3EC6FF,#06B3FD);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 18px -8px rgba(6,179,253,.55);}
+        #vDashboard .nv-txt{flex:1;min-width:0;}
+        #vDashboard .nv-txt h4{margin:2px 0 8px;font-size:14.5px;font-weight:800;color:#004a6b;}
+        #vDashboard .nv-txt ul{margin:0 0 12px;padding-left:18px;}
+        #vDashboard .nv-txt li{font-size:12.5px;color:#1a2440;line-height:1.55;margin-bottom:4px;}
+        #vDashboard .nv-txt li b{color:#005a82;}
+        #vDashboard .nv-btn{background:linear-gradient(135deg,#3EC6FF,#06B3FD);color:#fff;border:none;padding:8px 18px;border-radius:9px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 6px 14px -8px rgba(6,179,253,.5);}
+        #vDashboard .nv-btn:hover{filter:brightness(1.05);}
         @media(max-width:1100px){#vDashboard .dv3-bento,#vDashboard .dv3-kpirow{grid-template-columns:repeat(2,1fr);}#vDashboard .toques-card{grid-column:1/3;grid-row:auto;}#vDashboard .dv3-grid3{grid-template-columns:1fr;}#vDashboard .dv3-gest{grid-column:1/3;grid-row:auto;}}
         </style>
 
         <div class="dv3-top">
           <div class="dv3-hi"><h1 id="dshSaludo">Bienvenido</h1><p id="dshFecha">—</p></div>
         </div>
+
+        <!-- Aviso de novedades del CRM: se guarda en localStorage por navegador, desaparece
+             cuando el usuario hace clic en "Entendido" y no vuelve a salir. -->
+        <div id="dshNovedades"></div>
 
         <!-- Selector admin "Ver dashboard de" (visible). El #dshCampana viejo quedó oculto en el rediseño. -->
         <div id="dshAdminVer"></div>
@@ -5923,8 +5937,33 @@ function _actualizarResumenDia(){
   box.innerHTML = '<div style="font-size:13px;color:#4b5563;font-weight:600;margin:2px 0 10px;">Hoy tienes ' + texto + '.</div>';
 }
 
+var NOVEDADES_CRM_KEY = 'crm_novedades_2026_07_vista';
+function pintarNovedadesBanner(){
+  var box = document.getElementById('dshNovedades');
+  if(!box) return;
+  if(localStorage.getItem(NOVEDADES_CRM_KEY) === '1'){ box.innerHTML=''; return; }
+  var icBell = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>';
+  box.innerHTML = '<div class="dv3-card novedades-card"><div class="novedades-body">'+
+    '<div class="nv-ic">'+icBell+'</div>'+
+    '<div class="nv-txt">'+
+      '<h4>Hay novedades en el CRM</h4>'+
+      '<ul>'+
+        '<li><b>Pipeline de cotizaciones:</b> en el Dashboard, arrastra cada cotización entre Enviada, En gestión, Ganada y Perdida para cambiar su estado.</li>'+
+        '<li><b>Mi meta de la semana:</b> escribe tu objetivo cada lunes y marca el viernes si lo cumpliste.</li>'+
+        '<li><b>Probabilidad de cierre:</b> al abrir el detalle de una cotización que sigue abierta, marca 20%, 50% o 90% según qué tan probable ves el cierre.</li>'+
+      '</ul>'+
+      '<button onclick="cerrarNovedadesBanner()" class="nv-btn">Entendido</button>'+
+    '</div>'+
+  '</div></div>';
+}
+function cerrarNovedadesBanner(){
+  localStorage.setItem(NOVEDADES_CRM_KEY, '1');
+  var box = document.getElementById('dshNovedades');
+  if(box) box.innerHTML = '';
+}
 async function cargarDashboard(){
   setSaludo();
+  try{ pintarNovedadesBanner(); }catch(e){}
   pintarBannerCampana();
   pintarBannerListaPartida();
   pintarListasPrecios();

@@ -4462,6 +4462,20 @@ function esActuandoComoAdmin(){
   return ROL === 'admin' && getModoVista() === 'admin';
 }
 
+// Filtra una lista de contactos según de quién debe verse el dashboard ahora mismo:
+// - Drill-down activo (Rayen viendo el dashboard de un ejecutivo puntual) → SOLO esa persona,
+//   aunque esActuandoComoAdmin() siga siendo true (drill-down sigue siendo "modo admin").
+// - Admin sin drill-down → todo el equipo, sin filtrar.
+// - Ejecutivo normal → solo lo suyo.
+// Reemplaza el patrón repetido "if(!esActuandoComoAdmin()) filter(esOwner)" que no distinguía
+// drill-down de "ver el equipo completo" y por eso mezclaba datos de otra persona.
+function _filtrarPorEjecActivo(lista){
+  if(!Array.isArray(lista)) return [];
+  if(typeof hayDrillDown==='function' && hayDrillDown()) return lista.filter(c => esOwnerDe(c, DRILL_DOWN_EJEC));
+  if(typeof esActuandoComoAdmin==='function' && esActuandoComoAdmin()) return lista;
+  return lista.filter(esOwner);
+}
+
 // Toggle (solo admin) para ver/ocultar los contactos Persona en "Todos los Contactos".
 function toggleTodosPersonas(){
   TODOS_VER_PERSONAS = !TODOS_VER_PERSONAS;
@@ -6174,10 +6188,11 @@ function renderDashV3(r){
   var k=(r&&r.kpis)||{};
   var pv=function(d){ return d?(d.mes||0):0; };
   var pm=function(d){ return d?(d.monto_mes||0):0; };
-  // Para admin, las ventas del mes del EQUIPO se suman desde el ranking por ejecutivo
-  // (excluyendo a Ximena/Finanzas, igual que la tarjeta "Ventas del equipo"); así el anillo
-  // muestra el monto REAL y no un total inflado. El ejecutivo individual ve lo suyo.
-  var _esAdminDash = (typeof esActuandoComoAdmin==='function') && esActuandoComoAdmin();
+  // Para admin viendo TODO el equipo (sin drill-down), las ventas del mes se suman desde el
+  // ranking por ejecutivo (excluyendo a Ximena/Finanzas). Si hay drill-down (Rayen viendo el
+  // dashboard de una persona puntual), _esAdminDash debe ser false: el backend ya mandó el
+  // monto individual correcto en k.ventas_ganadas y no hay que reemplazarlo por el del equipo.
+  var _esAdminDash = (typeof esActuandoComoAdmin==='function') && esActuandoComoAdmin() && !(typeof hayDrillDown==='function' && hayDrillDown());
   var ventasM, ventasC;
   if(_esAdminDash){
     var _vgArr = ((k.ventas_ganadas && k.ventas_ganadas.ranking_equipo) || []).filter(function(x){ return !_excluirRanking(x.ejec); });
@@ -7487,7 +7502,7 @@ async function pintarToquesHoy(){
   let lista;
   try { lista = await _cargarContactosBase(); } catch(e){ lista = CACHE.vTodos || []; }
   if(!Array.isArray(lista)) lista = [];
-  if(typeof esActuandoComoAdmin==='function' && !esActuandoComoAdmin()) lista = lista.filter(esOwner);
+  lista = _filtrarPorEjecActivo(lista);
   const hoy0 = new Date(); hoy0.setHours(0,0,0,0);
   const items = [];
   lista.forEach(c => {
@@ -7651,10 +7666,13 @@ async function pintarLeadsDashboard(){
   let lista;
   try { lista = await _cargarContactosBase(); } catch(e){ lista = CACHE.vTodos || []; }
   if(!Array.isArray(lista)) lista = [];
-  // La tarjeta "Leads urgentes para ti" es SIEMPRE personal: muestra solo los
-  // leads asignados al usuario real, aunque esté en modo admin. Así a Rayen no le
-  // aparecen los leads urgentes de otros ejecutivos (ej. uno asignado a William).
-  lista = lista.filter(esOwner);
+  // La tarjeta "Leads urgentes" es personal por defecto (los del usuario real, aunque esté
+  // en modo admin, para que a Rayen no le falten los suyos). Pero si hay drill-down activo
+  // (Rayen viendo el dashboard de un ejecutivo puntual), se muestran los leads DE ESA
+  // PERSONA — es lo que se está previsualizando.
+  lista = (typeof hayDrillDown==='function' && hayDrillDown())
+    ? lista.filter(c => esOwnerDe(c, DRILL_DOWN_EJEC))
+    : lista.filter(esOwner);
   // Leads urgentes asignados con fecha límite pendiente (= aún no contactados).
   const items = lista.filter(c => _esLead(c) && c.proxima_accion);
   const hoy0 = new Date(); hoy0.setHours(0,0,0,0);

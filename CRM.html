@@ -4288,7 +4288,8 @@ const ACCIONES_POST = [
   'crm_inferir_categorias','crm_actualizar_categorias','crm_cruzar_cotizaciones','crm_invalidar_cache',
   'crm_limpiar_duplicados_interacciones','crm_limpiar_duplicados_cotizaciones',
   'crm_sm_set_probabilidad','crm_sm_set_mensaje',
-  'crm_meta_semanal_guardar','crm_meta_semanal_marcar'
+  'crm_meta_semanal_guardar','crm_meta_semanal_marcar',
+  'crm_mensaje_cotizacion_agregar'
 ];
 async function fetchAPI(accion, params, body){
   if(!deployOK()){
@@ -9810,6 +9811,10 @@ function _detalleCotHTML(c){
     };
     det += '<div style="'+SEC+'"><div style="'+LBL+'">Probabilidad de cierre</div><div style="display:flex;gap:7px;">' + probBtn(20) + probBtn(50) + probBtn(90) + '</div></div>';
   }
+  // Mensajes de la cotización — conversación de ida y vuelta entre quien mira la cotización
+  // (admin o el ejecutivo dueño), notificando siempre a la otra parte. Se carga async al abrir
+  // el modal (ver _cargarMensajesCotizacion, llamada al final de abrirCotModal).
+  det += '<div style="'+SEC+'"><div style="'+LBL+'">Mensajes</div><div id="cotMsgBox"><div style="color:#9aa3bd;font-size:12.5px;">Cargando…</div></div></div>';
   // 1. Contacto
   // Teléfonos: de la cotización (c.telefono) y, de respaldo, del CONTACTO vinculado (celular + empresa).
   var _telPers = String(c.telefono||'').replace(/\D/g,'');
@@ -9950,6 +9955,40 @@ function abrirCotModal(num){
       foot +
     '</div>';
   if(!ov.parentNode) document.body.appendChild(ov);
+  _cargarMensajesCotizacion(c.cotizacion);
+}
+async function _cargarMensajesCotizacion(num){
+  const box = document.getElementById('cotMsgBox');
+  if(!box) return;
+  const r = await fetchAPI('crm_mensajes_cotizacion', { num_cotizacion: num, solicitante: USUARIO });
+  if(!document.getElementById('cotMsgBox')) return; // el modal se cerró mientras cargaba
+  if(!r || !r.ok){ box.innerHTML = '<div style="color:#9aa3bd;font-size:12px;">No se pudieron cargar los mensajes.</div>'; return; }
+  window.__COT_MSGS = r.mensajes || [];
+  _pintarMensajesCotizacion(num);
+}
+function _pintarMensajesCotizacion(num){
+  const box = document.getElementById('cotMsgBox');
+  if(!box) return;
+  const msgs = window.__COT_MSGS || [];
+  const yo = String(USUARIO||'').toLowerCase().split(' ')[0];
+  const lista = msgs.length ? msgs.map(function(m){
+    const esMio = String(m.autor||'').toLowerCase().split(' ')[0] === yo;
+    return '<div style="margin-bottom:8px;padding:8px 10px;border-radius:9px;background:'+(esMio?'#EFF6FF':'#F8FAFC')+';border:1px solid '+(esMio?'#DBEAFE':'#E6E8EF')+';">'+
+      '<div style="font-size:10.5px;font-weight:800;color:#001A60;">'+esc(String(m.autor||'').split(' ')[0])+' <span style="color:#9aa3bd;font-weight:600;">· '+esc(m.fecha||'')+'</span></div>'+
+      '<div style="font-size:12.5px;color:#1a2440;margin-top:2px;white-space:pre-wrap;">'+esc(m.mensaje||'')+'</div>'+
+    '</div>';
+  }).join('') : '<div style="color:#9aa3bd;font-size:12.5px;margin-bottom:8px;">Todavía no hay mensajes en esta cotización.</div>';
+  box.innerHTML = lista +
+    '<textarea id="cotMsgTxt" rows="2" placeholder="Escribe un mensaje…" style="width:100%;box-sizing:border-box;border:1px solid #E6E8EF;border-radius:9px;padding:8px 10px;font-size:12.5px;font-family:inherit;resize:vertical;margin-top:4px;"></textarea>'+
+    '<button onclick="_enviarMensajeCotizacion(\''+String(num).replace(/'/g,"\\'")+'\')" style="margin-top:7px;background:#001A60;color:#fff;border:none;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Enviar</button>';
+}
+async function _enviarMensajeCotizacion(num){
+  const txt = document.getElementById('cotMsgTxt');
+  const mensaje = txt ? txt.value.trim() : '';
+  if(!mensaje) return;
+  const r = await fetchAPI('crm_mensaje_cotizacion_agregar', { num_cotizacion: num, mensaje: mensaje, solicitante: USUARIO });
+  if(!r || !r.ok){ alert('No se pudo enviar: '+((r&&r.error)||'error desconocido')); return; }
+  _cargarMensajesCotizacion(num);
 }
 async function guardarSeguimientoMC(num, btn){
   const c = (CACHE.vMisCot||[]).find(x=>x.cotizacion===num) || {};

@@ -13594,7 +13594,33 @@ function _renderAccionNotif(n){
   if(url === 'ver_tareas'){
     return '<div style="margin-top:14px;"><button onclick="cerrarModalNotif(); goView(\'vTareas\')" style="background:var(--purple-dk);color:white;border:none;padding:7px 14px;border-radius:7px;font-size:12.5px;font-weight:700;cursor:pointer;">Ir a Mis Tareas →</button></div>';
   }
+  if(url.indexOf('abrir_cotizacion:') === 0){
+    const num = url.replace('abrir_cotizacion:', '');
+    const numJS = num.replace(/'/g,"\\'");
+    return '<div style="margin-top:14px;">'+
+      '<textarea id="notifReplyTxt" rows="2" placeholder="Responde aquí…" style="width:100%;box-sizing:border-box;border:1px solid #E6E8EF;border-radius:9px;padding:9px 11px;font-size:13px;font-family:inherit;resize:vertical;"></textarea>'+
+      '<div style="display:flex;gap:8px;margin-top:8px;">'+
+        '<button id="notifReplyBtn" onclick="_responderNotifMensaje(\''+esc(numJS)+'\')" style="background:var(--purple-dk, #5b21b6);color:#fff;border:none;padding:7px 14px;border-radius:7px;font-size:12.5px;font-weight:700;cursor:pointer;">Responder</button>'+
+        '<button onclick="cerrarModalNotif(); abrirCotModal(\''+esc(numJS)+'\')" style="background:#fff;border:1px solid #E6E8EF;color:#6B7280;padding:7px 14px;border-radius:7px;font-size:12.5px;font-weight:700;cursor:pointer;">Ver cotización →</button>'+
+      '</div>'+
+    '</div>';
+  }
   return '';
+}
+async function _responderNotifMensaje(num){
+  const txt = document.getElementById('notifReplyTxt');
+  const mensaje = txt ? txt.value.trim() : '';
+  if(!mensaje){ if(txt) txt.focus(); return; }
+  const btn = document.getElementById('notifReplyBtn');
+  if(btn && btn.disabled) return;
+  if(btn){ btn.disabled = true; btn.textContent = 'Enviando…'; btn.style.opacity='.65'; }
+  const r = await fetchAPI('crm_mensaje_cotizacion_agregar', { num_cotizacion: num, mensaje: mensaje, solicitante: USUARIO });
+  if(!r || !r.ok){
+    alert('No se pudo enviar: '+((r&&r.error)||'error desconocido'));
+    if(btn){ btn.disabled = false; btn.textContent = 'Responder'; btn.style.opacity='1'; }
+    return;
+  }
+  marcarNotifLeida();
 }
 
 function cerrarModalNotif(){ document.getElementById('modalNotif').classList.remove('show'); }

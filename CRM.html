@@ -4289,7 +4289,7 @@ const ACCIONES_POST = [
   'crm_limpiar_duplicados_interacciones','crm_limpiar_duplicados_cotizaciones',
   'crm_sm_set_probabilidad','crm_sm_set_mensaje',
   'crm_meta_semanal_guardar','crm_meta_semanal_marcar',
-  'crm_mensaje_cotizacion_agregar'
+  'crm_mensaje_cotizacion_agregar','crm_mensaje_cotizacion_eliminar'
 ];
 async function fetchAPI(accion, params, body){
   if(!deployOK()){
@@ -9917,11 +9917,6 @@ function _accionesCotHTML(c){
     acc += '<button onclick="marcarEstadoCotMC(\''+esc(numJS)+'\',\'En gestión\',this)" style="background:#fff;color:#6B7280;border:1px solid #E6E8EF;padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">Reabrir</button>';
   }
   if(c.contacto_id) acc += '<button onclick="abrirFichaDesdeCotModal(\''+esc(c.contacto_id)+'\')" style="background:#001A60;color:#fff;border:none;padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">Ver contacto</button>';
-  // Sala Multisensorial: el ejecutivo le cuenta a Rayen si cree que la venta se va a concretar y
-  // cuándo, según sus seguimientos (ella lo ve al pasar el mouse sobre la cotización en esa vista).
-  if(typeof _lineaCot==='function' && _lineaCot(c.cotizacion)==='SM'){
-    acc += '<button onclick="abrirMensajeSMModal(\''+esc(numJS)+'\')" style="background:#fff;color:#5b21b6;border:1px solid #DDD0EC;padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">Mensaje a Rayen</button>';
-  }
   return acc;
 }
 function abrirCotModal(num){
@@ -9966,28 +9961,59 @@ async function _cargarMensajesCotizacion(num){
   window.__COT_MSGS = r.mensajes || [];
   _pintarMensajesCotizacion(num);
 }
+// Da formato legible a la fecha de un mensaje sin importar si llegó como ISO (Date de Sheets),
+// "yyyy-MM-dd HH:mm:ss" o ya venía formateada. Nunca deja pasar el "T"/"Z" crudo a pantalla.
+function _fmtFechaMsg(v){
+  const s = String(v||'').trim();
+  if(!s) return '';
+  const d = new Date(s);
+  if(!isNaN(d.getTime())){
+    const dd = String(d.getDate()).padStart(2,'0'), mm = String(d.getMonth()+1).padStart(2,'0');
+    const hh = String(d.getHours()).padStart(2,'0'), mi = String(d.getMinutes()).padStart(2,'0');
+    return dd+'-'+mm+' '+hh+':'+mi;
+  }
+  return s;
+}
 function _pintarMensajesCotizacion(num){
   const box = document.getElementById('cotMsgBox');
   if(!box) return;
   const msgs = window.__COT_MSGS || [];
   const yo = String(USUARIO||'').toLowerCase().split(' ')[0];
+  const puedeAdmin = typeof esActuandoComoAdmin==='function' && esActuandoComoAdmin();
   const lista = msgs.length ? msgs.map(function(m){
     const esMio = String(m.autor||'').toLowerCase().split(' ')[0] === yo;
-    return '<div style="margin-bottom:8px;padding:8px 10px;border-radius:9px;background:'+(esMio?'#EFF6FF':'#F8FAFC')+';border:1px solid '+(esMio?'#DBEAFE':'#E6E8EF')+';">'+
-      '<div style="font-size:10.5px;font-weight:800;color:#001A60;">'+esc(String(m.autor||'').split(' ')[0])+' <span style="color:#9aa3bd;font-weight:600;">· '+esc(m.fecha||'')+'</span></div>'+
+    const puedeBorrar = esMio || puedeAdmin;
+    return '<div style="margin-bottom:8px;padding:8px 10px;border-radius:9px;background:'+(esMio?'#EFF6FF':'#F8FAFC')+';border:1px solid '+(esMio?'#DBEAFE':'#E6E8EF')+';position:relative;">'+
+      '<div style="font-size:10.5px;font-weight:800;color:#001A60;display:flex;justify-content:space-between;gap:8px;">'+
+        '<span>'+esc(String(m.autor||'').split(' ')[0])+' <span style="color:#9aa3bd;font-weight:600;">· '+esc(_fmtFechaMsg(m.fecha))+'</span></span>'+
+        (puedeBorrar && m.id ? '<span onclick="_borrarMensajeCotizacion(\''+esc(String(m.id))+'\',\''+String(num).replace(/'/g,"\\'")+'\')" title="Borrar mensaje" style="cursor:pointer;color:#9aa3bd;font-weight:700;flex-shrink:0;">&times;</span>' : '')+
+      '</div>'+
       '<div style="font-size:12.5px;color:#1a2440;margin-top:2px;white-space:pre-wrap;">'+esc(m.mensaje||'')+'</div>'+
     '</div>';
   }).join('') : '<div style="color:#9aa3bd;font-size:12.5px;margin-bottom:8px;">Todavía no hay mensajes en esta cotización.</div>';
   box.innerHTML = lista +
     '<textarea id="cotMsgTxt" rows="2" placeholder="Escribe un mensaje…" style="width:100%;box-sizing:border-box;border:1px solid #E6E8EF;border-radius:9px;padding:8px 10px;font-size:12.5px;font-family:inherit;resize:vertical;margin-top:4px;"></textarea>'+
-    '<button onclick="_enviarMensajeCotizacion(\''+String(num).replace(/'/g,"\\'")+'\')" style="margin-top:7px;background:#001A60;color:#fff;border:none;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Enviar</button>';
+    '<button id="cotMsgEnviarBtn" onclick="_enviarMensajeCotizacion(\''+String(num).replace(/'/g,"\\'")+'\')" style="margin-top:7px;background:#001A60;color:#fff;border:none;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Enviar</button>';
 }
 async function _enviarMensajeCotizacion(num){
+  const btn = document.getElementById('cotMsgEnviarBtn');
+  if(btn && btn.disabled) return; // ya se está enviando, ignora clics repetidos
   const txt = document.getElementById('cotMsgTxt');
   const mensaje = txt ? txt.value.trim() : '';
   if(!mensaje) return;
+  if(btn){ btn.disabled = true; btn.textContent = 'Enviando…'; btn.style.opacity = '.65'; btn.style.cursor = 'default'; }
   const r = await fetchAPI('crm_mensaje_cotizacion_agregar', { num_cotizacion: num, mensaje: mensaje, solicitante: USUARIO });
-  if(!r || !r.ok){ alert('No se pudo enviar: '+((r&&r.error)||'error desconocido')); return; }
+  if(!r || !r.ok){
+    alert('No se pudo enviar: '+((r&&r.error)||'error desconocido'));
+    if(btn){ btn.disabled = false; btn.textContent = 'Enviar'; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; }
+    return;
+  }
+  _cargarMensajesCotizacion(num);
+}
+async function _borrarMensajeCotizacion(id, num){
+  if(!confirm('¿Borrar este mensaje?')) return;
+  const r = await fetchAPI('crm_mensaje_cotizacion_eliminar', { id: id, solicitante: USUARIO });
+  if(!r || !r.ok){ alert('No se pudo borrar: '+((r&&r.error)||'error desconocido')); return; }
   _cargarMensajesCotizacion(num);
 }
 async function guardarSeguimientoMC(num, btn){
@@ -10624,13 +10650,11 @@ async function cargarSalaMultisensorial(forzar){
   // Sala Multisensorial es una vista exclusiva de admin — SIEMPRE trae a todo el equipo, sin
   // importar si hay un "ver como" (drill-down) o el toggle ADMIN/EJECUTIVA activo en otra parte
   // del CRM (si no se fuerza esto, el backend devuelve solo las cotizaciones de esa persona).
-  const [r, rp, rm] = await Promise.all([
+  const [r, rp] = await Promise.all([
     fetchAPI('crm_mis_cotizaciones', { ejecutivo: USUARIO, modo_vista: 'admin' }),
-    fetchAPI('crm_sm_probabilidades', {}),
-    fetchAPI('crm_sm_mensajes', {})
+    fetchAPI('crm_sm_probabilidades', {})
   ]);
   if(rp && rp.ok) CACHE.smProb = rp.mapa || {};
-  if(rm && rm.ok) CACHE.smMsg = rm.mapa || {};
   if(!r || !r.ok){
     if(!(CACHE.vMisCot && CACHE.vMisCot.length)) cont.innerHTML = '<div class="error-state">No se pudo cargar. '+esc((r&&r.error)||'')+'</div>';
     return;
@@ -10667,56 +10691,6 @@ async function _smSetProb(num, val){
 function _refrescarProbUI(num){
   if(document.getElementById('smBody')) renderSalaMultisensorial(CACHE.vMisCot);
   if(document.getElementById('cotModalOv') && window.__MC_CUR === num) abrirCotModal(num);
-}
-// "Mensaje a Rayen": el ejecutivo cuenta su evaluación de una cotización de sala (¿se concreta?
-// ¿cuándo, según sus seguimientos?). Se abre desde el modal de la cotización (Mis Cotizaciones o
-// Sala Multisensorial, es el mismo modal). Busca el mensaje actual fresco al abrir, por si otra
-// pestaña ya lo cambió.
-async function abrirMensajeSMModal(num){
-  const numJS = String(num||'').replace(/'/g,"\\'");
-  const viejo = document.getElementById('smMsgModalOv'); if(viejo) viejo.remove();
-  const ov = document.createElement('div');
-  ov.id = 'smMsgModalOv';
-  ov.style.cssText = 'position:fixed;inset:0;z-index:2147483600;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit;';
-  ov.onclick = function(e){ if(e.target===ov) ov.remove(); };
-  ov.innerHTML = '<div style="background:#fff;border-radius:14px;max-width:480px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,.3);padding:34px;text-align:center;color:#9aa3af;font-size:13px;">Cargando…</div>';
-  document.body.appendChild(ov);
-  const r = await fetchAPI('crm_sm_mensajes', {});
-  if(!document.getElementById('smMsgModalOv')) return; // se cerró mientras cargaba
-  if(r && r.ok) CACHE.smMsg = r.mapa || {};
-  const existente = (CACHE.smMsg && CACHE.smMsg[num]) ? CACHE.smMsg[num] : null;
-  ov.innerHTML =
-    '<div style="background:#fff;border-radius:14px;max-width:480px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,.3);overflow:hidden;">' +
-      '<div style="background:linear-gradient(100deg,#5b21b6,#7c3aed);color:#fff;padding:16px 20px;">' +
-        '<div style="font-weight:800;font-size:15px;">Mensaje a Rayen — '+esc(num)+'</div>' +
-        '<div style="font-size:12px;opacity:.9;margin-top:5px;line-height:1.4;">¿Crees que esta venta se va a concretar? Si es así, ¿cuándo estaría cerrando de acuerdo a tus seguimientos?</div>' +
-      '</div>' +
-      '<div style="padding:18px 20px;">' +
-        '<textarea id="smMsgTexto" rows="5" placeholder="Escribe aquí cualquier detalle sobre la probabilidad de compra…" style="width:100%;box-sizing:border-box;border:1px solid #E6E8EF;border-radius:9px;padding:10px 12px;font-size:13px;font-family:inherit;resize:vertical;">'+esc(existente?existente.mensaje:'')+'</textarea>' +
-        (existente && existente.fecha ? '<div style="font-size:11px;color:#9aa3af;margin-top:6px;">Último mensaje: '+esc(String(existente.ejecutivo||'').split(' ')[0])+' · '+esc(existente.fecha)+'</div>' : '') +
-      '</div>' +
-      '<div style="border-top:1px solid #E6E8EF;padding:13px 20px;display:flex;justify-content:flex-end;gap:8px;">' +
-        '<button onclick="document.getElementById(\'smMsgModalOv\').remove()" style="background:#fff;border:1px solid #E6E8EF;color:#6B7280;padding:8px 16px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">Cancelar</button>' +
-        '<button id="smMsgGuardarBtn" onclick="_smGuardarMensaje(\''+numJS+'\')" style="background:#5b21b6;color:#fff;border:none;padding:8px 16px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">Guardar</button>' +
-      '</div>' +
-    '</div>';
-  setTimeout(()=>{ const t=document.getElementById('smMsgTexto'); if(t) t.focus(); }, 50);
-}
-async function _smGuardarMensaje(num){
-  const btn = document.getElementById('smMsgGuardarBtn');
-  const texto = document.getElementById('smMsgTexto');
-  const val = texto ? texto.value.trim() : '';
-  if(btn){ btn.disabled = true; btn.textContent = 'Guardando…'; }
-  const r = await fetchAPI('crm_sm_set_mensaje', { num_cotizacion: num, mensaje: val, solicitante: USUARIO });
-  if(!r || !r.ok){
-    alert('No se pudo guardar: '+((r&&r.error)||'error desconocido'));
-    if(btn){ btn.disabled = false; btn.textContent = 'Guardar'; }
-    return;
-  }
-  CACHE.smMsg = CACHE.smMsg || {};
-  CACHE.smMsg[num] = { mensaje: val, ejecutivo: USUARIO, fecha: 'recién' };
-  const ov = document.getElementById('smMsgModalOv'); if(ov) ov.remove();
-  if(document.getElementById('vSalaMultisensorial') && CACHE.vMisCot) renderSalaMultisensorial(CACHE.vMisCot);
 }
 // Extrae {key normalizada, nombre tal cual venía} por cada producto de UNA cotización, deduplicado.
 function _smExtraerProductos(prodStr){
@@ -10990,20 +10964,10 @@ function renderSalaMultisensorial(todas){
   // una cotización cambia de estado en el CRM — no hace falta tocar nada a mano.
   const _smHead = '<div style="display:flex;align-items:center;gap:10px;padding:0 4px 6px;font-size:10.5px;font-weight:800;color:var(--mist,#9aa3af);text-transform:uppercase;letter-spacing:.4px;">' +
     '<span style="flex:0 0 120px;">N°</span><span style="flex:0 0 90px;">Fecha</span><span style="flex:1 1 200px;">Institución</span><span style="flex:0 0 90px;">Ejecutivo</span><span style="flex:0 0 100px;text-align:right;">Monto</span></div>';
-  const smMsgMap = CACHE.smMsg || {};
   const _smFila = (c, extra) => {
     const numJS = String(c.cotizacion||'').replace(/'/g,"\\'");
-    const num = String(c.cotizacion||'').trim();
-    const msg = smMsgMap[num] && smMsgMap[num].mensaje;
-    // Si el ejecutivo dejó un "Mensaje a Rayen", se ve un ícono junto al N°; el mensaje aparece
-    // al pasar el mouse por encima (tooltip nativo del navegador).
-    const msgTitle = msg ? (fn(c.ejecutivo) + ': ' + msg) : '';
-    const msgIcon = msg ? '<span title="'+esc(msgTitle)+'" style="flex:0 0 auto;color:#5b21b6;cursor:help;" onclick="event.stopPropagation();">' +
-        '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M21 6h-2v9H6v2c0 .55.45 1 1 1h11l4 4V7c0-.55-.45-1-1-1zm-4 6V3c0-.55-.45-1-1-1H3c-.55 0-1 .45-1 1v14l4-4h10c.55 0 1-.45 1-1z"/></svg>' +
-      '</span>' : '';
     return '<div onclick="abrirCotModal(\''+numJS+'\')" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);font-size:12.5px;flex-wrap:wrap;" onmouseover="this.style.background=\'var(--paper,#f9fafb)\'" onmouseout="this.style.background=\'transparent\'">' +
       '<span style="flex:0 0 120px;color:var(--subtle);font-family:Courier New,monospace;">'+esc(c.cotizacion||'')+'</span>' +
-      msgIcon +
       '<span style="flex:0 0 90px;color:var(--subtle);">'+esc(c.fecha||'—')+'</span>' +
       '<span style="flex:1 1 200px;color:var(--ink);">'+esc(c.institucion||c.cliente||'(sin institución)')+'</span>' +
       '<span style="flex:0 0 90px;color:var(--ink);font-weight:700;">'+esc(fn(c.ejecutivo))+'</span>' +

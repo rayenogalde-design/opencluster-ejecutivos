@@ -6699,11 +6699,29 @@ async function dropEnKanbanCot(event, estadoDestino){
   if(!num) return;
   const cot = (CACHE.vMisCot||[]).find(c => String(c.cotizacion)===String(num));
   if(!cot || cot.estado === estadoDestino) return;
-  // Sin botón real de por medio (btn=null) — marcarEstadoCotMC ya tolera eso (ver refactor).
-  // Ella misma pide el motivo si es Perdida, abre el panel de venta si es Ganada, y refresca
-  // CACHE.vMisCot al terminar — por eso alcanza con re-pintar el Kanban después.
-  await marcarEstadoCotMC(num, estadoDestino, null);
+  // Perdida pide el motivo ANTES de mover nada (modal aparte) — se deja el flujo original,
+  // que ya tiene su propio paso intermedio y no es lo que se sentía lento.
+  if(estadoDestino === 'Perdida'){ await marcarEstadoCotMC(num, estadoDestino, null); renderKanbanCotizaciones(); return; }
+  // Movimiento OPTIMISTA: la tarjeta se mueve de columna DE INMEDIATO en pantalla, sin
+  // esperar el viaje de ida y vuelta al servidor (por eso se sentía "pegado" — antes
+  // pasaba por marcarEstadoCotMC, que además recargaba TODAS las cotizaciones antes de
+  // repintar). Si el guardado falla, se revierte sola y avisa.
+  const estadoPrevio = cot.estado;
+  cot.estado = estadoDestino;
   renderKanbanCotizaciones();
+  const r = await fetchAPI('crm_marcar_cotizacion', { solicitante: USUARIO, num: num, estado: estadoDestino, motivo_perdida: '' });
+  if(!r || !r.ok){
+    cot.estado = estadoPrevio;
+    renderKanbanCotizaciones();
+    alert('No se pudo mover la cotización: '+((r&&r.error)||'error desconocido'));
+    return;
+  }
+  try { Object.keys(localStorage).forEach(kk=>{ if(kk.indexOf('crm_perfil_')===0||kk.indexOf('crm_kpis_cache')===0||kk.indexOf('crm_dash')===0) localStorage.removeItem(kk); }); } catch(e){}
+  if(estadoDestino === 'Ganada'){
+    const totalNum = Number(String(cot.total!=null?cot.total:(cot.monto||'')).replace(/[^0-9]/g,''));
+    const _cont = (CACHE.vTodos||[]).find(x=>x.id===cot.contacto_id) || {};
+    abrirPanelCierreVenta(num, { id: cot.contacto_id||cot.id||'', nombre: cot.cliente||_cont.nombre||'', institucion: cot.institucion||_cont.institucion||'', email:_cont.email||'', rut:_cont.rut||'', __totalCotActiva: totalNum, __productos: cot.productos||'', __transporte: cot.transporte||'', __region: cot.region||'', __ciudad: cot.ciudad||'', __direccion: cot.direccion||'' });
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════

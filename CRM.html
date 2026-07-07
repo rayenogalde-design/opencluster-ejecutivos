@@ -2004,6 +2004,10 @@ body{
 .v2-cpill.static:hover{ box-shadow:none; } .v2-cpill.static:active{ transform:none; }
 .v2-cpill.static .v2-cpill-icon{ background:#fff; color:var(--v2-text-soft); }
 .v2-cpill.static .v2-cpill-value{ white-space:normal; font-weight:500; font-size:12px; line-height:1.4; color:var(--v2-text); }
+.v2-cpill-copy{ flex-shrink:0; width:28px; height:28px; border-radius:50%; border:none; background:rgba(255,255,255,0.22); color:inherit; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; padding:0; }
+.v2-cpill-copy:hover{ background:rgba(255,255,255,0.36); }
+.v2-cpill.email .v2-cpill-copy, .v2-cpill.static .v2-cpill-copy{ background:var(--v2-bg); color:var(--v2-text-soft); }
+.v2-cpill.email .v2-cpill-copy:hover, .v2-cpill.static .v2-cpill-copy:hover{ background:var(--v2-divider); }
 .v2-note{ background:#FFFEF5; border-radius:8px; padding:10px 12px; border:0.5px solid #FCE7B0; font-size:12px; line-height:1.5; color:var(--v2-text); margin-bottom:8px; }
 .v2-note-meta{ font-size:10px; color:var(--v2-text-mute); margin-top:4px; }
 @media (max-width:640px){
@@ -7788,8 +7792,19 @@ var V2_SVG = {
   clockBold:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>',
   star:'<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27l5.18 3.13-1.37-5.86L20 9.91l-6-.51L12 4 9.99 9.4 4 9.91l4.19 3.63-1.37 5.86z"/></svg>',
   money:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
-  check:'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+  check:'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  copy:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>'
 };
+
+// Copia un texto y muestra brevemente un check en el botón que se apretó.
+function _copiarConIcono(txt, btn){
+  var s = String(txt||'');
+  if(!s || !btn) return;
+  var original = btn.innerHTML;
+  function ok(){ btn.innerHTML = V2_SVG.check; setTimeout(function(){ btn.innerHTML = original; }, 1200); }
+  try { navigator.clipboard.writeText(s).then(ok, function(){ _copiarFallback(s); ok(); }); }
+  catch(e){ _copiarFallback(s); ok(); }
+}
 
 // Helpers de limpieza (espejo del backend) para armar los <a href> en el cliente
 function cleanPhone(raw){
@@ -11821,10 +11836,10 @@ function renderFicha(container, data){
     '<div class="v2-block" style="margin-bottom:22px;">' +
       '<div class="v2-block-head">' + icoUser + '<span class="v2-block-label">DATOS DE CONTACTO</span><span class="v2-block-aside">toca para contactar</span></div>' +
       '<div class="v2-cpills" style="max-width:460px;">' +
-        (LF.hasTelInst ? '<a href="' + LF.telInstLink + '" class="v2-cpill phone"><span class="v2-cpill-icon">' + icoPhone + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">Llamar (institución)</span><span class="v2-cpill-value">' + esc(LF.telInstDisplay) + '</span></span></a>' : '') +
-        (LF.hasTelPers && LF.telPersDisplay !== LF.telInstDisplay ? '<a href="' + LF.telPersLink + '" class="v2-cpill phone" style="background:#0891B2;"><span class="v2-cpill-icon">' + icoPhone + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">Llamar (celular)</span><span class="v2-cpill-value">' + esc(LF.telPersDisplay) + '</span></span></a>' : '') +
+        (LF.hasTelInst ? '<a href="' + LF.telInstLink + '" class="v2-cpill phone"><span class="v2-cpill-icon">' + icoPhone + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">Llamar (institución)</span><span class="v2-cpill-value">' + esc(LF.telInstDisplay) + '</span></span><button type="button" class="v2-cpill-copy" title="Copiar número" onclick="event.preventDefault();event.stopPropagation();_copiarConIcono(\'' + esc(LF.telInstDisplay) + '\',this)">' + V2_SVG.copy + '</button></a>' : '') +
+        (LF.hasTelPers && LF.telPersDisplay !== LF.telInstDisplay ? '<a href="' + LF.telPersLink + '" class="v2-cpill phone" style="background:#0891B2;"><span class="v2-cpill-icon">' + icoPhone + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">Llamar (celular)</span><span class="v2-cpill-value">' + esc(LF.telPersDisplay) + '</span></span><button type="button" class="v2-cpill-copy" title="Copiar número" onclick="event.preventDefault();event.stopPropagation();_copiarConIcono(\'' + esc(LF.telPersDisplay) + '\',this)">' + V2_SVG.copy + '</button></a>' : '') +
         (LF.hasWa ? '<div onclick="abrirSelectorMensaje(\'' + esc(c.id) + '\',\'whatsapp\')" class="v2-cpill wa" style="cursor:pointer;"><span class="v2-cpill-icon">' + icoWaFill + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">WhatsApp (celular)</span><span class="v2-cpill-value">' + esc(LF.waDisplay) + '</span></span></div>' : '') +
-        (LF.hasMail ? '<div onclick="abrirSelectorMensaje(\'' + esc(c.id) + '\',\'email\')" class="v2-cpill email" style="cursor:pointer;"><span class="v2-cpill-icon">' + V2_SVG.gmail + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">Gmail</span><span class="v2-cpill-value">' + esc(c.email) + '</span></span></div>' : '') +
+        (LF.hasMail ? '<div onclick="abrirSelectorMensaje(\'' + esc(c.id) + '\',\'email\')" class="v2-cpill email" style="cursor:pointer;"><span class="v2-cpill-icon">' + V2_SVG.gmail + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">Gmail</span><span class="v2-cpill-value">' + esc(c.email) + '</span></span><button type="button" class="v2-cpill-copy" title="Copiar correo" onclick="event.preventDefault();event.stopPropagation();_copiarConIcono(\'' + esc(c.email) + '\',this)">' + V2_SVG.copy + '</button></div>' : '') +
         (dir ? '<div class="v2-cpill static"><span class="v2-cpill-icon">' + icoPin + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">Dirección</span><span class="v2-cpill-value">' + esc(dir) + '</span></span></div>' : '') +
       '</div>' +
     '</div>';

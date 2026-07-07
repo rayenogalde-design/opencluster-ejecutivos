@@ -1829,7 +1829,7 @@ body{
 .v2-btn:active{ transform:scale(0.98); } .v2-btn:hover{ filter:brightness(0.96); }
 .v2-btn.call{ flex:1; min-width:90px; background:var(--v2-sky); color:#fff; }
 .v2-btn.wa{ flex:1; min-width:90px; background:#25D366; color:#fff; }
-.v2-btn.mail{ background:#fff; color:var(--v2-text-soft); border:1.5px solid var(--v2-divider); }
+.v2-btn.mail{ flex:1; min-width:90px; background:#fff; color:var(--v2-text-soft); border:1.5px solid var(--v2-divider); }
 /* Deshabilitado = gris neutro (NO el color aclarado). Así los habilitados quedan siempre en color pleno. */
 .v2-btn.disabled{ background:#EEF0F3 !important; color:#9CA3AF !important; border:none !important; pointer-events:none; }
 .v2-btn.disabled svg{ opacity:.6; }
@@ -11794,7 +11794,7 @@ function renderFicha(container, data){
         '<div class="v2-detail-actions">' +
           (LF.hasTel ? '<a href="' + LF.tel + '" class="v2-btn call">' + V2_SVG.phone + 'Llamar</a>' : '<span class="v2-btn call disabled">' + V2_SVG.phone + 'Llamar</span>') +
           (LF.hasWa ? '<button class="v2-btn wa" onclick="abrirSelectorMensaje(\'' + esc(c.id) + '\',\'whatsapp\')">' + V2_SVG.wa + 'WhatsApp</button>' : '<span class="v2-btn wa disabled">' + V2_SVG.wa + 'WhatsApp</span>') +
-          (LF.hasMail ? '<button class="v2-btn mail" onclick="abrirSelectorMensaje(\'' + esc(c.id) + '\',\'email\')" title="Enviar correo (Gmail)">' + V2_SVG.gmail + '</button>' : '<span class="v2-btn mail disabled" title="Sin email">' + V2_SVG.gmail + '</span>') +
+          (LF.hasMail ? '<button class="v2-btn mail" onclick="abrirSelectorMensaje(\'' + esc(c.id) + '\',\'email\')" title="Enviar correo con plantilla (Gmail)">' + V2_SVG.gmail + 'Correo</button>' : '<span class="v2-btn mail disabled" title="Sin email">' + V2_SVG.gmail + 'Correo</span>') +
         '</div>' +
       '</div>' +
       '<div class="v2-detail-divider"></div>' +
@@ -11811,7 +11811,6 @@ function renderFicha(container, data){
         : '') +
       '<button class="btn" onclick="abrirModalNuevaTarea(\'' + esc(c.id) + '\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Nueva tarea</button>' +
       '<button class="btn" onclick="abrirModalNuevaReunion(\'' + esc(c.id) + '\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Agendar reunión</button>' +
-      (c.email ? '<button class="btn" onclick="abrirEmailPlantilla(\'' + esc(c.id) + '\')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> Correo con plantilla</button>' : '') +
       ((ROL === 'admin' || esOwner(c))
         ? '<button class="btn" onclick="eliminarContacto(\'' + esc(c.id) + '\', \'' + esc(c.nombre || c.institucion || '(sin nombre)').replace(/\'/g, "&#39;") + '\')" style="background:var(--ruby-lt);color:var(--ruby-dk);border-color:var(--ruby);margin-left:auto;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Eliminar</button>'
         : '') +
@@ -12310,133 +12309,6 @@ function renderHistorialAgrupado(tl, contacto){
   }
 
   return html;
-}
-
-// Modal para enviar email usando plantillas: selector de plantilla + preview renderizado +
-// botón "Abrir en Gmail" que arme un mailto con asunto y cuerpo precargados.
-async function abrirEmailPlantilla(contactoId){
-  // Localizar el contacto en cache para tener nombre, email, etc.
-  let c = null;
-  ['vMis','vTodos','vSinCat','vCerrar','vOlvidados','vKanban'].forEach(v => {
-    if (!c && CACHE[v]) c = CACHE[v].find(x => String(x.id) === String(contactoId));
-  });
-  if (!c) {
-    try {
-      const lista = await _cargarContactosCrudo();
-      c = (lista || []).find(x => String(x.id) === String(contactoId));
-    } catch(e){}
-  }
-  if (!c) { alert('Contacto no encontrado.'); return; }
-  if (!c.email) { alert('Este contacto no tiene email registrado.'); return; }
-
-  // Crear overlay del modal
-  let overlay = document.getElementById('emailPlantillaOverlay');
-  if (overlay) overlay.remove();
-  overlay = document.createElement('div');
-  overlay.id = 'emailPlantillaOverlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;';
-  overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
-  document.body.appendChild(overlay);
-  overlay.innerHTML =
-    '<div style="background:white;border-radius:14px;max-width:720px;width:100%;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 12px 48px rgba(0,0,0,0.28);">' +
-      '<div style="padding:16px 22px;border-bottom:1px solid var(--border-subtle);display:flex;justify-content:space-between;align-items:center;">' +
-        '<div>' +
-          '<div style="font-family:var(--font-serif);font-size:20px;font-weight:600;color:var(--text-1);">Enviar correo</div>' +
-          '<div style="font-size:12.5px;color:var(--subtle);margin-top:2px;">Para: <b>' + esc(c.nombre || c.institucion) + '</b> · ' + esc(c.email) + '</div>' +
-        '</div>' +
-        '<button onclick="document.getElementById(\'emailPlantillaOverlay\').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--subtle);width:32px;height:32px;border-radius:6px;">×</button>' +
-      '</div>' +
-      '<div style="overflow-y:auto;padding:18px 22px;flex:1;">' +
-        '<div style="margin-bottom:14px;">' +
-          '<label style="display:block;font-size:11.5px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">Plantilla</label>' +
-          '<select id="emPlSelect" style="width:100%;padding:9px 12px;border:1px solid var(--border-subtle);border-radius:8px;font-size:14px;font-family:var(--font-sans);background:white;">' +
-            '<option value="">Cargando plantillas…</option>' +
-          '</select>' +
-        '</div>' +
-        '<div style="margin-bottom:14px;">' +
-          '<label style="display:block;font-size:11.5px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">Asunto</label>' +
-          '<input id="emPlAsunto" type="text" style="width:100%;padding:9px 12px;border:1px solid var(--border-subtle);border-radius:8px;font-size:14px;font-family:var(--font-sans);">' +
-        '</div>' +
-        '<div style="margin-bottom:6px;">' +
-          '<label style="display:block;font-size:11.5px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">Cuerpo del mensaje</label>' +
-          '<textarea id="emPlCuerpo" rows="12" style="width:100%;padding:11px 12px;border:1px solid var(--border-subtle);border-radius:8px;font-size:13.5px;font-family:var(--font-sans);line-height:1.55;resize:vertical;"></textarea>' +
-        '</div>' +
-        '<div style="font-size:11.5px;color:var(--subtle);margin-top:4px;">Las variables como <code>{nombre}</code>, <code>{institucion}</code>, <code>{ejecutivo}</code> ya están reemplazadas con los datos reales del contacto.</div>' +
-      '</div>' +
-      '<div style="padding:14px 22px;border-top:1px solid var(--border-subtle);display:flex;justify-content:flex-end;gap:10px;">' +
-        '<button onclick="document.getElementById(\'emailPlantillaOverlay\').remove()" style="padding:9px 18px;background:white;border:1px solid var(--border-subtle);border-radius:8px;font-weight:600;cursor:pointer;font-family:var(--font-sans);">Cancelar</button>' +
-        '<button onclick="abrirEmailEnGmail()" style="padding:9px 22px;background:var(--purple-dk);color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-family:var(--font-sans);letter-spacing:.2px;">Abrir en Gmail</button>' +
-      '</div>' +
-    '</div>';
-
-  // Guardar contexto para el botón
-  window.__EMAIL_PL_CTX = { contacto: c };
-
-  // Cargar plantillas
-  const r = await fetchAPI('crm_plantillas_email', { solicitante: USUARIO });
-  const sel = document.getElementById('emPlSelect');
-  if (!sel) return;
-  const plantillas = (r && r.ok && Array.isArray(r.plantillas)) ? r.plantillas : [];
-  if (!plantillas.length) {
-    sel.innerHTML = '<option value="">(no hay plantillas — escribe el correo manualmente)</option>';
-    document.getElementById('emPlAsunto').value = '';
-    document.getElementById('emPlCuerpo').value = '';
-    return;
-  }
-  sel.innerHTML = '<option value="">— Elige una plantilla o escribe manualmente —</option>' +
-    plantillas.map(p => '<option value="' + esc(p.id) + '">' + esc(p.nombre) + '</option>').join('');
-  window.__EMAIL_PL_CTX.plantillas = plantillas;
-  sel.onchange = async function(){
-    const id = this.value;
-    if (!id) { document.getElementById('emPlAsunto').value=''; document.getElementById('emPlCuerpo').value=''; return; }
-    const r2 = await fetchAPI('crm_renderizar_plantilla', { plantilla_id: id, contacto_id: c.id, solicitante: USUARIO });
-    if (r2 && r2.ok) {
-      document.getElementById('emPlAsunto').value = r2.asunto || '';
-      document.getElementById('emPlCuerpo').value = r2.cuerpo || '';
-    } else {
-      // Fallback: usar la plantilla cruda y hacer replacements simples en cliente
-      const pl = (window.__EMAIL_PL_CTX.plantillas || []).find(p => String(p.id) === String(id));
-      if (pl) {
-        const repl = s => String(s||'')
-          .replace(/\{nombre\}/g, c.nombre || c.institucion || '')
-          .replace(/\{institucion\}/g, c.institucion || '')
-          .replace(/\{cargo\}/g, c.cargo || '')
-          .replace(/\{ejecutivo\}/g, USUARIO || '');
-        document.getElementById('emPlAsunto').value = repl(pl.asunto);
-        document.getElementById('emPlCuerpo').value = repl(pl.cuerpo);
-      }
-    }
-  };
-}
-
-// Abre Gmail (compose) con el destinatario, asunto y cuerpo ya armados.
-function abrirEmailEnGmail(){
-  const ctx = window.__EMAIL_PL_CTX;
-  if (!ctx || !ctx.contacto) return;
-  const c = ctx.contacto;
-  const asunto = document.getElementById('emPlAsunto').value || '';
-  const cuerpo = document.getElementById('emPlCuerpo').value || '';
-  // URL de Gmail compose con campos pre-cargados
-  const url = 'https://mail.google.com/mail/?view=cm&fs=1' +
-    '&to=' + encodeURIComponent(c.email) +
-    '&su=' + encodeURIComponent(asunto) +
-    '&body=' + encodeURIComponent(cuerpo);
-  window.open(url, '_blank');
-  // Registrar interacción de email en el CRM (best effort)
-  try {
-    fetchAPI('crm_agregar_interaccion', null, {
-      contacto_id: c.id,
-      ejecutivo: USUARIO,
-      tipo: 'email',
-      medio: 'email',
-      origen: 'CRM',
-      asunto: asunto,
-      notas: 'Correo enviado desde CRM con plantilla'
-    });
-  } catch(e){}
-  // Cerrar modal
-  const ov = document.getElementById('emailPlantillaOverlay');
-  if (ov) ov.remove();
 }
 
 // ════════════════════════════════════════════════════════════════════════════

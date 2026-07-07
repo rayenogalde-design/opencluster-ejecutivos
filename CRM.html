@@ -1858,6 +1858,12 @@ body{
 .nc-name{ font-size:15.5px; font-weight:700; letter-spacing:-.015em; color:#001a60; line-height:1.25; margin:0;
   overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
 .nc-sub{ font-size:11.5px; color:#727c98; margin:2px 0 0; font-weight:500; }
+.nc-canales{ display:flex; gap:5px; margin-top:6px; }
+.nc-canal-ico{ width:19px; height:19px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:#f4f6fb; flex-shrink:0; }
+.nc-canal-ico svg{ width:11px; height:11px; }
+.nc-canal-llamada{ color:#0369a1; }
+.nc-canal-whatsapp{ color:#16a34a; }
+.nc-canal-correo{ background:#fff; border:1px solid #eef1f8; }
 .nc-aside{ display:flex; flex-direction:column; align-items:flex-end; gap:7px; flex-shrink:0; }
 .nc-st{ font-size:10px; font-weight:600; padding:3px 9px; border-radius:999px; white-space:nowrap; }
 .nc-st.st-prospecto{ background:#f1f4fa; color:#64748b; }
@@ -8682,6 +8688,19 @@ function renderTarjetaV2(c, view){
     cadRow +
   '</div>';
 
+  // Canales por los que ya se ha contactado a este contacto — iconos chicos para ver de un
+  // vistazo, sin abrir la ficha, si ya se le llamó / escribió por WhatsApp / mandó correo
+  // (pedido de Rayen 2026-07-07). Viene del backend en c.canales_contacto, calculado desde
+  // las Interacciones ya registradas.
+  var canalesUsados = Array.isArray(c.canales_contacto) ? c.canales_contacto : [];
+  var canalIco = { llamada: V2_SVG.phone, whatsapp: V2_SVG.wa, correo: V2_SVG.gmail };
+  var canalLabel = { llamada: 'Ya se le llamó', whatsapp: 'Ya se le escribió por WhatsApp', correo: 'Ya se le mandó correo' };
+  var canalesHtml = canalesUsados.length
+    ? '<div class="nc-canales">' + ['llamada','whatsapp','correo'].filter(function(k){ return canalesUsados.indexOf(k) >= 0; }).map(function(k){
+        return '<span class="nc-canal-ico nc-canal-' + k + '" title="' + canalLabel[k] + '">' + canalIco[k] + '</span>';
+      }).join('') + '</div>'
+    : '';
+
   // Pills: sub_categoría + etiquetas + monto
   var pills = '';
   if(c.sub_categoria) pills += '<span class="nc-pill">' + esc(c.sub_categoria) + '</span>';
@@ -8722,7 +8741,7 @@ function renderTarjetaV2(c, view){
   return '<article class="nc grp-' + grpTok + '" onclick="abrirFichaModal(\'' + esc(c.id) + '\')">' +
     '<div class="nc-head">' +
       '<div class="nc-av">' + esc(iniTxt) + '</div>' +
-      '<div class="nc-ht"><h3 class="nc-name">' + esc(nombre) + '</h3>' + (sub ? '<p class="nc-sub">' + sub + '</p>' : '') + '</div>' +
+      '<div class="nc-ht"><h3 class="nc-name">' + esc(nombre) + '</h3>' + (sub ? '<p class="nc-sub">' + sub + '</p>' : '') + canalesHtml + '</div>' +
       '<div class="nc-aside"><span class="nc-st st-' + grpTok + '">' + esc(g.etapa) + '</span>' + starBtn + '</div>' +
     '</div>' +
     '<div class="nc-body">' + nextBlock + tagsBlock + '</div>' +

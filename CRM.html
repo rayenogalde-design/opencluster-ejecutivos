@@ -4543,8 +4543,9 @@ function initApp(user){
   setTimeout(() => cargarNotificacionesYAbrir(), 1500);
   // Pop-up obligatorio de duplicados (primera tarea del día, solo ejecutivos)
   setTimeout(() => chequearDuplicadosDelDia(), 2200);
-  // Polling cada 60s para refrescar el contador
-  setInterval(() => cargarNotificacionesYAbrir(true), 60000);
+  // Polling cada 15s: casi al instante. Si llega una notificación nueva y el modal no está
+  // abierto en este momento, se abre sola encima de todo (mismo comportamiento que al entrar).
+  setInterval(() => cargarNotificacionesYAbrir(), 15000);
 }
 
 // Pre-carga en background todo lo que el usuario probablemente va a necesitar.
@@ -9915,6 +9916,16 @@ function _detalleCotHTML(c){
   var LBL = 'font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#9aa3bd;margin-bottom:9px;';
   var ACT = 'display:inline-flex;align-items:center;gap:5px;border-radius:8px;padding:6px 11px;font-size:12px;font-weight:700;text-decoration:none;cursor:pointer;font-family:inherit;border:1px solid #E6E8EF;background:#fff;';
   let det = '';
+  // Mensajes de la cotización — conversación de ida y vuelta entre quien mira la cotización
+  // (admin o el ejecutivo dueño), notificando siempre a la otra parte. Va PRIMERO en el detalle
+  // (pedido de Rayen) para que sea lo primero que se vea. Se carga async al abrir el modal
+  // (ver _cargarMensajesCotizacion, llamada al final de abrirCotModal).
+  {
+    const _msgConQuien = (typeof esActuandoComoAdmin==='function' && esActuandoComoAdmin())
+      ? (c.ejecutivo ? String(c.ejecutivo).split(' ')[0] : 'el ejecutivo')
+      : 'Rayen';
+    det += '<div style="'+SEC+'"><div style="'+LBL+'">Mensajes con '+esc(_msgConQuien)+'</div><div id="cotMsgBox"><div style="color:#9aa3bd;font-size:12.5px;">Cargando…</div></div></div>';
+  }
   // Resumen — concatenación de datos que ya están en pantalla (monto, seguimientos, días sin
   // gestión), NO es un análisis de IA. Pensado para ver de un vistazo el estado sin leer toda
   // la ficha.
@@ -9937,10 +9948,6 @@ function _detalleCotHTML(c){
     };
     det += '<div style="'+SEC+'"><div style="'+LBL+'">Probabilidad de cierre</div><div style="display:flex;gap:7px;">' + probBtn(20) + probBtn(50) + probBtn(90) + '</div></div>';
   }
-  // Mensajes de la cotización — conversación de ida y vuelta entre quien mira la cotización
-  // (admin o el ejecutivo dueño), notificando siempre a la otra parte. Se carga async al abrir
-  // el modal (ver _cargarMensajesCotizacion, llamada al final de abrirCotModal).
-  det += '<div style="'+SEC+'"><div style="'+LBL+'">Mensajes</div><div id="cotMsgBox"><div style="color:#9aa3bd;font-size:12.5px;">Cargando…</div></div></div>';
   // 1. Contacto
   // Teléfonos: de la cotización (c.telefono) y, de respaldo, del CONTACTO vinculado (celular + empresa).
   var _telPers = String(c.telefono||'').replace(/\D/g,'');
@@ -13577,9 +13584,11 @@ const NOTIF_LEIDAS_SESION = new Set();
 
 async function cargarNotificacionesYAbrir(soloRefrescarBadge){
   try {
-    // Si el modal está abierto activamente, NO recargar (evita sobrescribir lo que está leyendo)
+    // Si el modal está abierto activamente, NO recargar (evita sobrescribir lo que está leyendo
+    // a mitad de camino). Aplica siempre, sin importar el modo — antes solo se respetaba en el
+    // polling silencioso y el polling "completo" sí podía pisar la lista mientras estaba abierto.
     const modal = document.getElementById('modalNotif');
-    if(modal && modal.classList.contains('show') && soloRefrescarBadge) return;
+    if(modal && modal.classList.contains('show')) return;
 
     const r = await fetchAPI('crm_listar_notificaciones', { solicitante: USUARIO, solo_pendientes: true });
     if(!r.ok) return;

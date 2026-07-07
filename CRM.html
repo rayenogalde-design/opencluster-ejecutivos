@@ -6356,23 +6356,10 @@ function _gestTile(g){
       '<div style="height:5px;border-radius:99px;background:#eef1f8;margin-top:4px;overflow:hidden;"><i style="display:block;height:100%;width:'+Math.round(v/max*100)+'%;background:'+cols[md]+';border-radius:99px;"></i></div></div>'+
       '<span style="font-size:14px;font-weight:700;color:#001a60;min-width:18px;text-align:right;">'+v+'</span></div>';
   }).join('');
-  // Desglose semana por semana dentro del mes. Requiere que el backend mande g.semanas_mes
-  // (ver Claude Files\CRM\MetaSemanal.gs.txt) — si todavía no está instalado, simplemente no
-  // se muestra esta sección, sin romper el resto de la tarjeta.
-  var semanas = (g && Array.isArray(g.semanas_mes)) ? g.semanas_mes : [];
-  var semMax = semanas.reduce(function(m,s){ return Math.max(m, s.cantidad||0); }, 0) || 1;
-  var semanasHtml = semanas.length ? (
-    '<div style="margin-top:12px;padding-top:10px;border-top:1px solid #eef1f8;">' +
-      '<div style="font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#9aa3bd;margin-bottom:7px;">Por semana este mes</div>' +
-      semanas.map(function(s){
-        var v = s.cantidad||0;
-        return '<div style="display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;margin-top:5px;">' +
-          '<div><div style="font-size:10.5px;color:#727c98;">'+esc(s.inicio||'')+'</div>' +
-          '<div style="height:4px;border-radius:99px;background:#eef1f8;margin-top:3px;overflow:hidden;"><i style="display:block;height:100%;width:'+Math.round(v/semMax*100)+'%;background:#0ea5a5;border-radius:99px;"></i></div></div>' +
-          '<span style="font-size:12px;font-weight:700;color:#001a60;">'+v+'</span></div>';
-      }).join('') +
-    '</div>'
-  ) : '';
+  // El desglose semana-por-semana que iba acá se sacó (2026-07-07, pedido de Rayen: "es
+  // confuso") — ahora esa misma serie vive como gráfico "Mis gestiones por semana vs equipo"
+  // en Métricas (ver renderMetricasVsEquipo), una métrica clara por ejecutivo en vez de dos
+  // barras sueltas en el Dashboard.
   return '<div class="dv3-mini dv3-gest" style="--c2:#0ea5a5;">'+
     '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;">'+
       '<span style="font-size:17px;font-weight:800;color:#001a60;letter-spacing:-.015em;display:flex;align-items:center;gap:8px;">'+
@@ -6381,7 +6368,7 @@ function _gestTile(g){
       '<span style="font-size:32px;font-weight:800;color:#001a60;line-height:1;letter-spacing:-.02em;">'+total+'</span>'+
     '</div>'+
     ((typeof esActuandoComoAdmin==='function'&&esActuandoComoAdmin())?'<div onclick="abrirGestionesPorEjecutivo()" style="font-size:11px;font-weight:800;color:#0ea5a5;cursor:pointer;margin-bottom:6px;">Ver por ejecutivo →</div>':'')+
-    rows+semanasHtml+'</div>';
+    rows+'</div>';
 }
 // Detalle al hacer clic en una barra de "Gestiones del mes": a quiénes contactó por ese medio
 // este mes. Usa crm_actividad_equipo (eventos vivos), sin redeploy.
@@ -10619,8 +10606,14 @@ function renderMetricasVsEquipo(cont, comp){
     '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #5b21b6;padding-left:8px;display:flex;justify-content:space-between;align-items:baseline;">' +
       '<span>'+esc(t)+'</span>'+(sub?'<span style="font-weight:600;color:var(--subtle);font-size:11px;">'+esc(sub)+'</span>':'')+'</div>' +
     '<canvas id="'+id+'" height="190" style="margin-top:10px;"></canvas></div>';
+  // Gestiones por semana (últimas 8 semanas) — reemplazó el desglose confuso que iba en la
+  // tarjeta del Dashboard (pedido de Rayen 2026-07-07): acá cada quién ve su propio ritmo
+  // semanal comparado con el promedio del equipo, mismo patrón que los otros "Yo vs equipo".
+  const semanasGestLbl = comp.semanas_gest || [];
+  const avgGestS = key => semanasGestLbl.map((_,i) => arr.length ? Math.round(arr.reduce((s,x)=> s + (((x[key]||[])[i])||0),0)/arr.length*10)/10 : 0);
   cont.innerHTML = '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--oct-navy,#001A60);text-transform:uppercase;letter-spacing:.06em;margin:6px 0 12px;">Mi desempeño vs equipo</div>' +
     _gridMetricas(
+      card('vs-gest','Mis gestiones por semana vs equipo','últimas 8 semanas') +
       card('vs-desemp','Mi desempeño vs equipo','cotizaciones · 6 meses') +
       card('vs-reun','Mis reuniones vs equipo','6 meses') +
       card('vs-cotmes','Monto cotizado del mes vs equipo','') +
@@ -10630,13 +10623,14 @@ function renderMetricasVsEquipo(cont, comp){
       card('vs-fndr','Proyectos postulados a Fondos','equipo · año')
     );
   if(typeof Chart==='undefined') return;
-  function lineChart(id, miData, avgData, color){
+  function lineChart(id, miData, avgData, color, labels){
     const ctx=document.getElementById(id); if(!ctx) return;
-    _METRICAS_CHARTS.push(new Chart(ctx,{ type:'line', data:{ labels:labels6, datasets:[
+    _METRICAS_CHARTS.push(new Chart(ctx,{ type:'line', data:{ labels: labels||labels6, datasets:[
       { label:'Yo', data:miData, borderColor:color, backgroundColor:color, tension:.35, fill:false, pointRadius:3, borderWidth:2.5 },
       { label:'Promedio equipo', data:avgData, borderColor:'#9aa3af', borderDash:[5,4], tension:.35, fill:false, pointRadius:2 }
     ]}, options:{ responsive:true, plugins:{legend:{display:true,labels:{boxWidth:10,font:{size:11}}}}, scales:{ y:{beginAtZero:true,ticks:{font:{size:11}}}, x:{ticks:{font:{size:11}}} } } }));
   }
+  lineChart('vs-gest', miReg.serie_gest_8sem||[], avgGestS('serie_gest_8sem'), '#0EA5A5', semanasGestLbl);
   lineChart('vs-desemp', sliceS(miReg.serie_cot_12m), avgS('serie_cot_12m'), '#5b21b6');
   lineChart('vs-reun', sliceS(miReg.serie_reu_12m), avgS('serie_reu_12m'), '#06B3FD');
   function barChart(id, valKey, color, money, mostrarMeta){

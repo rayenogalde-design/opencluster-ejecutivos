@@ -10617,6 +10617,7 @@ function renderMetricasVsEquipo(cont, comp){
       card('vs-llam','Mis llamadas vs equipo','6 meses') +
       card('vs-desemp','Mi desempeño vs equipo','cotizaciones · 6 meses') +
       card('vs-reun','Mis reuniones vs equipo','6 meses') +
+      card('vs-conv','Tasa de conversión (año) vs equipo','ganadas / cotizadas') +
       card('vs-cotmes','Monto cotizado del mes vs equipo','') +
       card('vs-cotanio','Monto cotizado del año vs equipo','') +
       card('vs-ganmes','Ventas cerradas del mes vs equipo','· · · = meta de cada uno') +
@@ -10671,6 +10672,21 @@ function renderMetricasVsEquipo(cont, comp){
   barChart('vs-ganmes','gan_mes_monto','#16A34A',true,true);
   barChart('vs-gananio','gan_anio_monto','#16A34A',true);
   barChart('vs-fndr','fndr_cant','#5b21b6',false);
+  // Tasa de conversión del año (ganadas/cotizadas, %) — mide EFECTIVIDAD, no solo actividad.
+  // Se calcula sobre el año completo (no mes a mes) porque una cotización se cierra semanas o
+  // meses después de hacerse, así que dividir mes por mes mezclaría cohortes distintas y daría
+  // un número sin sentido. El tooltip siempre muestra el detalle (X de Y) para no confundir un
+  // 50% con muestra chica (1 de 2) con un 50% real (20 de 40).
+  (function convChart(){
+    const ctx=document.getElementById('vs-conv'); if(!ctx) return;
+    const rows = arr.map(x => ({ ejecutivo:x.ejecutivo, cot:x.cot_anio_cant||0, gan:x.gan_anio_cant||0,
+      pct: (x.cot_anio_cant>0) ? Math.round((x.gan_anio_cant||0)/x.cot_anio_cant*1000)/10 : 0 }))
+      .sort((a,b)=>b.pct-a.pct);
+    const cols = rows.map(x => _busqNorm(fn(x.ejecutivo))===_busqNorm(mi) ? '#16A34A' : '#cbd5e1');
+    _METRICAS_CHARTS.push(new Chart(ctx,{ type:'bar', data:{ labels:rows.map(x=>fn(x.ejecutivo)), datasets:[{ data:rows.map(x=>x.pct), backgroundColor:cols, borderRadius:6, maxBarThickness:46 }]},
+      options:{ responsive:true, plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>{ const r=rows[c.dataIndex]; return r.pct+'% ('+r.gan+' ganadas de '+r.cot+' cotizadas)'; }}}},
+        scales:{ y:{beginAtZero:true, max:100, ticks:{callback:v=>v+'%', font:{size:11}}}, x:{ticks:{font:{size:11}}} } } }));
+  })();
 }
 // Bloque anual APILADO por ejecutivo (se ve quién aporta cada mes; leyenda = quién es quién).
 function renderMetricasAnualApilado(cont, comp){

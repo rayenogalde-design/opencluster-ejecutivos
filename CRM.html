@@ -6488,15 +6488,31 @@ function renderDashV3(r){
   var cotiz=pv(k.cotizaciones), reun=pv(k.reuniones), nuevos=pv(k.nuevos_contactos);
   var META=(r&&r.meta_mes)||window.__META_MES_DEFAULT||5000000;
   var pctMeta=META>0?Math.min(100,Math.round(ventasM/META*100)):0;
-  var deCada10=cotiz>0?Math.max(0,Math.min(10,Math.round(ventasC/cotiz*10))):0;
-  var tasaPct=cotiz>0?Math.min(100,Math.round(ventasC/cotiz*100)):0;
+  // Tasa de cierre EXACTA: ganadas / (ganadas + perdidas), ambas por fecha de CIERRE y
+  // en el año. No se compara contra "cotizadas" porque esa cuenta por fecha de creación
+  // y mezcla cotizaciones sin relación con lo que se cerró (ej. 1 cotización nueva de
+  // este mes + 1 venta vieja recién cerrada daba 100% sin que la de este mes se ganara).
+  // Con ganadas+perdidas del año, el % solo refleja cotizaciones que YA tienen resultado
+  // final — nada de cohortes mezcladas ni casos aún abiertos.
+  var ventasCAnio, perdidasAnio;
+  if(_esAdminDash){
+    ventasCAnio = _vgArr.reduce(function(s,x){ return s + (x.anio||0); }, 0);
+    var _perdArr = ((k.ventas_perdidas && k.ventas_perdidas.ranking_equipo) || []).filter(function(x){ return !_excluirRanking(x.ejec); });
+    perdidasAnio = _perdArr.reduce(function(s,x){ return s + (x.anio||0); }, 0);
+  } else {
+    ventasCAnio = (k.ventas_ganadas && k.ventas_ganadas.anio) || 0;
+    perdidasAnio = (k.ventas_perdidas && k.ventas_perdidas.anio) || 0;
+  }
+  var resueltasAnio = ventasCAnio + perdidasAnio;
+  var deCada10=resueltasAnio>0?Math.max(0,Math.min(10,Math.round(ventasCAnio/resueltasAnio*10))):0;
+  var tasaPct=resueltasAnio>0?Math.min(100,Math.round(ventasCAnio/resueltasAnio*100)):0;
   var metaCont=(window.__META_CONTACTOS||60);
   var pctCont=metaCont>0?Math.min(100,Math.round(nuevos/metaCont*100)):0;
   var rings=document.getElementById('dshRings');
   if(rings){
     rings.innerHTML=
       _ringTile('#16a34a',pctMeta+'%',pctMeta,_DV3.vent,'Ventas del mes',_montoCorto(ventasM),'meta '+_montoCorto(META),"abrirDetalleKpi('ventas_ganadas','mes')")+
-      _ringTile('#ff7e00',tasaPct+'%',tasaPct,_DV3.close,'Tasa de cierre',deCada10+' <span class="u">de 10</span>','cotizaciones que ganas',"abrirDetalleKpi('cotizaciones','mes')")+
+      _ringTile('#ff7e00',tasaPct+'%',tasaPct,_DV3.close,'Tasa de cierre',deCada10+' <span class="u">de 10</span>','de las cotiz. cerradas este año',"abrirDetalleKpi('ventas_ganadas','anio')")+
       _ringTile('#06b3fd',nuevos,pctCont,_DV3.users,'Contactos',nuevos+' <span class="u">/'+metaCont+'</span>','nuevos este mes',"abrirDetalleKpi('nuevos_contactos','mes')")+
       _teamTile(k.ventas_ganadas);
   }

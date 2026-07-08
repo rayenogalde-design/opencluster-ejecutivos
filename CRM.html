@@ -2860,7 +2860,10 @@ body{
           </select>
           <div style="color:var(--subtle);font-size:13.5px;font-weight:600;"><b id="cntMisCot" style="color:var(--ink);">0</b> cotizaciones</div>
         </div>
-        <div id="listMisCot"><div class="loading-state"><div class="spinner"></div>Cargando…</div></div>
+        <div style="display:flex;gap:18px;align-items:flex-start;">
+          <div id="miscotVistaSidebar" style="flex:0 0 152px;display:flex;flex-direction:column;gap:6px;position:sticky;top:12px;"></div>
+          <div id="listMisCot" style="flex:1;min-width:0;"><div class="loading-state"><div class="spinner"></div>Cargando…</div></div>
+        </div>
       </div>
 
       <!-- ═══ Ventas del Mes (por fecha de cierre — comisiones) ═══ -->
@@ -9582,6 +9585,11 @@ let MISCOT_PERIODO = (function(){ try { return localStorage.getItem('crm_miscot_
 function setMisCotPeriodo(p){ MISCOT_PERIODO = p || 'anio'; try{ localStorage.setItem('crm_miscot_periodo', MISCOT_PERIODO); }catch(e){} renderMisCotizaciones(); }
 let MISCOT_ORDEN = (function(){ try{ return localStorage.getItem('crm_miscot_orden')||'seguimiento'; }catch(e){ return 'seguimiento'; } })();
 function setMisCotOrden(o){ MISCOT_ORDEN = o||'seguimiento'; try{ localStorage.setItem('crm_miscot_orden', MISCOT_ORDEN); }catch(e){} renderMisCotizaciones(); }
+// Vista de "Mis Cotizaciones": 'mes' (agrupado, como siempre) o 'publico'/'privado' (listado
+// plano tipo tabla, igual al de Ayudas Técnicas — pedido de Rayen 2026-07-08 para ver todo
+// de una sola vez sin tener que desplegar mes por mes).
+let MISCOT_VISTA = (function(){ try{ return localStorage.getItem('crm_miscot_vista')||'mes'; }catch(e){ return 'mes'; } })();
+function setMisCotVista(v){ MISCOT_VISTA = v||'mes'; try{ localStorage.setItem('crm_miscot_vista', MISCOT_VISTA); }catch(e){} renderMisCotizaciones(); }
 function _fechaCotTs(c){
   var s = String(c && c.fecha || '').trim();
   if(!s) return (c && c.mes) ? new Date(c.mes+'-15').getTime() : 0;
@@ -9894,26 +9902,58 @@ function renderMisCotizaciones(){
     container.innerHTML = metaHtml + kpiHtml + '<div class="loading-state" style="padding:30px 20px;">' + (q||filtro ? 'Ninguna cotización coincide.' : 'No hay cotizaciones registradas.') + '</div>';
     return;
   }
+  // Panel lateral "Ver": elegir entre agrupado por mes o listado plano por sector — selección
+  // simple aparte de los filtros de arriba, para no amontonar más selects confusos ahí.
+  const sideEl = document.getElementById('miscotVistaSidebar');
+  if(sideEl){
+    const _vBtn = (val,label) => {
+      const activo = MISCOT_VISTA === val;
+      return '<button onclick="setMisCotVista(\''+val+'\')" style="text-align:left;padding:10px 13px;border-radius:9px;border:1px solid '+(activo?'#001A60':'var(--smoke,#e5e7eb)')+';background:'+(activo?'#001A60':'#fff')+';color:'+(activo?'#fff':'var(--ink)')+';font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">'+label+'</button>';
+    };
+    sideEl.innerHTML = '<div style="font-size:10px;font-weight:800;color:var(--mist,#9aa3af);text-transform:uppercase;letter-spacing:.5px;margin:2px 0 2px 2px;">Ver</div>' +
+      _vBtn('mes','Por mes') + _vBtn('publico','Sector público') + _vBtn('privado','Sector privado');
+  }
+  const peso = { vencido:0, pendiente:1, al_dia:2, fndr:2, concurso:2, sin_fecha:3, ganada:4, perdida:5 };
+  const pw = s => (peso[s]!==undefined ? peso[s] : 9);
+  const ordenar = arr => {
+    if(MISCOT_ORDEN==='fecha_desc'){ arr.sort((a,b)=> _fechaCotTs(b)-_fechaCotTs(a)); }
+    else if(MISCOT_ORDEN==='fecha_asc'){ arr.sort((a,b)=> _fechaCotTs(a)-_fechaCotTs(b)); }
+    else { arr.sort((a,b)=> pw(a.estado_seguimiento)-pw(b.estado_seguimiento) || (b.dias_sin_gestion||0)-(a.dias_sin_gestion||0)); }
+    return arr;
+  };
+  let html = metaHtml + kpiHtml;
+  window.__MC_ORDEN = [];   // orden de N° de cotización en pantalla → navegar Anterior/Siguiente en el modal
+
+  if(MISCOT_VISTA === 'publico' || MISCOT_VISTA === 'privado'){
+    // Listado plano (sin agrupar por mes), filtrado por sector — mismo diseño de tabla que
+    // el resumen de Ayudas Técnicas/Sala Multisensorial, para ver todo de una sola vez.
+    const esPub = MISCOT_VISTA === 'publico';
+    const listaSector = ordenar(lista.filter(c => crmEsPublicoFE_(c.institucion, c.email) === esPub));
+    listaSector.forEach(cc => window.__MC_ORDEN.push(cc.cotizacion));
+    if(!listaSector.length){
+      html += '<div class="loading-state" style="padding:24px;">Ninguna cotización de '+(esPub?'sector público':'sector privado')+' en este período.</div>';
+    } else {
+      const montoSector = listaSector.reduce((s,c)=> s + (c.monto||0), 0);
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+        '<span style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);">'+(esPub?'Sector público':'Sector privado')+' <span style="font-weight:600;color:var(--subtle);font-size:11px;">· '+listaSector.length+' · '+fmtCLP(montoSector)+'</span></span>' +
+      '</div>' + _mcHead() + listaSector.map(_mcFilaTabla).join('');
+    }
+    container.innerHTML = html;
+    return;
+  }
+
   const grupos = {};
   if(MISCOT_PERIODO !== 'anio'){
     grupos[MISCOT_PERIODO] = lista.slice();   // un solo grupo = el mes elegido (ganadas por mes de venta)
   } else {
     lista.forEach(c => { const kk = c.mes || '0000-00'; (grupos[kk] = grupos[kk] || []).push(c); });
   }
-  const peso = { vencido:0, pendiente:1, al_dia:2, fndr:2, concurso:2, sin_fecha:3, ganada:4, perdida:5 };
-  const pw = s => (peso[s]!==undefined ? peso[s] : 9);
-  let html = metaHtml + kpiHtml;
-  window.__MC_ORDEN = [];   // orden de N° de cotización en pantalla → navegar Anterior/Siguiente en el modal
-  const abrirBusqueda = !!(q || filtro);  // si está buscando, abrir los meses para que vea resultados
   Object.keys(grupos).sort((a,b)=> b.localeCompare(a)).forEach(ym => {
-    const arr = grupos[ym];
-    if(MISCOT_ORDEN==='fecha_desc'){ arr.sort((a,b)=> _fechaCotTs(b)-_fechaCotTs(a)); }
-    else if(MISCOT_ORDEN==='fecha_asc'){ arr.sort((a,b)=> _fechaCotTs(a)-_fechaCotTs(b)); }
-    else { arr.sort((a,b)=> pw(a.estado_seguimiento)-pw(b.estado_seguimiento) || (b.dias_sin_gestion||0)-(a.dias_sin_gestion||0)); }
+    const arr = ordenar(grupos[ym]);
     arr.forEach(function(cc){ window.__MC_ORDEN.push(cc.cotizacion); });
     const nGan = arr.filter(c=>c.ganada).length;
     const nVenc = arr.filter(c=>c.estado_seguimiento==='vencido').length;
-    html += '<details class="mc-mes"' + (abrirBusqueda?' open':'') + ' style="margin-bottom:10px;border:1px solid var(--smoke,#e5e7eb);border-radius:10px;overflow:hidden;">' +
+    html += '<details class="mc-mes" open style="margin-bottom:10px;border:1px solid var(--smoke,#e5e7eb);border-radius:10px;overflow:hidden;">' +
       '<summary style="list-style:none;cursor:pointer;padding:12px 15px;background:#fafbfc;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
         '<svg class="mc-chev" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--mist,#9aa3af);"><polyline points="9 18 15 12 9 6"/></svg>' +
         '<span style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--oct-navy,#001A60);text-transform:uppercase;letter-spacing:.5px;">' + esc(_mesLabel(ym)) + '</span>' +
@@ -10053,6 +10093,22 @@ function _msgBadge(count){
   if(!n) return '';
   return '<span title="'+n+' mensaje'+(n>1?'s':'')+' en esta cotización" style="display:inline-flex;align-items:center;gap:3px;background:#EFF6FF;color:#1D4ED8;border:1px solid #DBEAFE;border-radius:999px;padding:2px 7px;font-size:10.5px;font-weight:800;flex-shrink:0;">' +
     '<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M21 11.5a8.38 8.38 0 0 1-3.8 7.05L3 21l1.66-5.94A8.38 8.38 0 1 1 21 11.5z"/></svg>' + n + '</span>';
+}
+// Listado plano tipo tabla (mismo diseño que el resumen de Ayudas Técnicas/Sala Multisensorial:
+// N° · Fecha · Institución · Ejecutivo · Monto, una fila debajo de otra, sin agrupar por mes).
+function _mcHead(){
+  return '<div style="display:flex;align-items:center;gap:10px;padding:0 4px 6px;font-size:10.5px;font-weight:800;color:var(--mist,#9aa3af);text-transform:uppercase;letter-spacing:.4px;">' +
+    '<span style="flex:0 0 120px;">N°</span><span style="flex:0 0 90px;">Fecha</span><span style="flex:1 1 200px;">Institución</span><span style="flex:0 0 90px;">Ejecutivo</span><span style="flex:0 0 100px;text-align:right;">Monto</span></div>';
+}
+function _mcFilaTabla(c){
+  const numJS = String(c.cotizacion||'').replace(/'/g,"\\'");
+  return '<div onclick="abrirCotModal(\''+numJS+'\')" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);font-size:12.5px;flex-wrap:wrap;" onmouseover="this.style.background=\'var(--paper,#f9fafb)\'" onmouseout="this.style.background=\'transparent\'">' +
+    '<span style="flex:0 0 120px;color:var(--subtle);font-family:Courier New,monospace;display:flex;align-items:center;gap:5px;">'+esc(c.cotizacion||'')+_msgBadge(c.mensajes_count)+'</span>' +
+    '<span style="flex:0 0 90px;color:var(--subtle);">'+esc(c.fecha||'—')+'</span>' +
+    '<span style="flex:1 1 200px;color:var(--ink);">'+esc(c.institucion||c.cliente||'(sin institución)')+'</span>' +
+    '<span style="flex:0 0 90px;color:var(--ink);font-weight:700;">'+esc(String(c.ejecutivo||'').trim().split(' ')[0])+'</span>' +
+    '<span style="flex:0 0 100px;text-align:right;font-weight:700;color:var(--ink);">'+((c.monto&&c.monto>0)?fmtCLP(c.monto):'—')+'</span>' +
+  '</div>';
 }
 function _cardMisCot(c){
   const sem = _SEM_MISCOT[c.estado_seguimiento] || _SEM_MISCOT.sin_fecha;

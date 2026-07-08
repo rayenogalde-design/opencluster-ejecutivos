@@ -2365,6 +2365,7 @@ body{
           <div id="actPeriodoBar" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;"></div>
         </div>
         <div id="actBody"></div>
+        <div id="informeMensualPrint" style="margin-top:26px;"></div>
       </div>
 
       <!-- ═══ Configuración (admin) ═══ -->
@@ -2897,8 +2898,9 @@ body{
         @media print {
           body * { visibility: hidden; }
           #vSalaMultisensorial, #vSalaMultisensorial *,
-          #vAyudasTecnicas, #vAyudasTecnicas * { visibility: visible; }
-          #vSalaMultisensorial, #vAyudasTecnicas { position: absolute; left: 0; top: 0; width: 100%; }
+          #vAyudasTecnicas, #vAyudasTecnicas *,
+          #informeMensualPrint, #informeMensualPrint * { visibility: visible; }
+          #vSalaMultisensorial, #vAyudasTecnicas, #informeMensualPrint { position: absolute; left: 0; top: 0; width: 100%; }
           .sm-no-print { display: none !important; }
           #smPrintHeader, #atPrintHeader { display: block !important; }
           canvas, table { break-inside: avoid; }
@@ -15814,6 +15816,137 @@ function actCacheKey(){ return ACT_PERIODO + '|' + (ACT_PERIODO==='desde' ? (act
 // Hoy en formato YYYY-MM-DD (hora local).
 function actHoyISO(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 
+// ════════════════════════════════════════════════════════════════════════════
+// INFORME MENSUAL DEL EQUIPO — pedido de Rayen 2026-07-08: un botón de un clic por mes
+// (en vez de armar el rango a mano) + tabla por ejecutivo con montos + tendencia de los
+// últimos 6 meses + Descargar/Enviar a Mario. Trabajo REALIZADO, sin perdidas/pendientes.
+// ════════════════════════════════════════════════════════════════════════════
+let INFORME_MES = '';
+let INFORME_DATA = null;
+let INFORME_COMP = null;
+function _actMesesRecientes(n){
+  const out = []; const ahora = new Date();
+  for(let i=0;i<n;i++){
+    const d = new Date(ahora.getFullYear(), ahora.getMonth()-i, 1);
+    out.push({ ym: d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'), label: (_MES_NOMBRE[d.getMonth()]||'')+' '+d.getFullYear() });
+  }
+  return out;
+}
+function actIrAMes(ym){
+  const p = ym.split('-'); const y = parseInt(p[0],10), m = parseInt(p[1],10)-1;
+  const ini = new Date(y,m,1), fin = new Date(y,m+1,0);
+  const iso = dd => dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0')+'-'+String(dd.getDate()).padStart(2,'0');
+  ACT_DESDE = iso(ini); ACT_HASTA = iso(fin);
+  cargarActividadEquipo('rango', true);
+  cargarInformeMensual(ym);
+}
+async function cargarInformeMensual(ym){
+  INFORME_MES = ym;
+  const cont = document.getElementById('informeMensualPrint');
+  if(cont) cont.innerHTML = '<div class="loading-state"><div class="spinner"></div>Armando el informe…</div>';
+  const [r, comp] = await Promise.all([
+    fetchAPI('crm_informe_mensual', { ejecutivo: USUARIO, mes: ym }),
+    fetchAPI('crm_comparativo_equipo', { solicitante: USUARIO })
+  ]);
+  if(!r || !r.ok){
+    if(cont) cont.innerHTML = '<div class="error-state">'+esc((r&&r.error)||'No se pudo armar el informe')+'</div>';
+    return;
+  }
+  INFORME_DATA = r;
+  INFORME_COMP = (comp && comp.ok) ? comp : null;
+  renderInformeMensual();
+}
+function _informeTeamSerie(campo){
+  if(!INFORME_COMP || !INFORME_COMP.comparativo) return null;
+  const out = new Array(12).fill(0);
+  INFORME_COMP.comparativo.forEach(function(x){ (x[campo]||[]).forEach(function(v,i){ out[i] += (v||0); }); });
+  return out;
+}
+function _informeUltimos6(serie){
+  if(!serie) return { labels:[], valores:[] };
+  const cur = new Date().getMonth();
+  const idxs = []; for(let i=Math.max(0,cur-5); i<=cur; i++) idxs.push(i);
+  return { labels: idxs.map(i=>(_MES_NOMBRE[i]||'').substring(0,3)), valores: idxs.map(i=>serie[i]||0) };
+}
+function _informeBarraMini(titulo, color, labels, valores){
+  const max = Math.max(1, Math.max.apply(null, valores));
+  const filas = labels.map((lbl,i)=>{
+    const v = valores[i]; const w = Math.round(v/max*100);
+    return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">'+
+      '<span style="width:30px;font-size:10.5px;color:var(--subtle);flex-shrink:0;text-transform:capitalize;">'+esc(lbl)+'</span>'+
+      '<div style="flex:1;background:#F1F5F9;border-radius:5px;overflow:hidden;height:14px;"><div style="width:'+w+'%;background:'+color+';height:100%;border-radius:5px;"></div></div>'+
+      '<span style="width:30px;text-align:right;font-size:11px;font-weight:800;color:var(--ink);flex-shrink:0;">'+v+'</span>'+
+    '</div>';
+  }).join('');
+  return '<div style="flex:1;min-width:190px;"><div style="font-size:11px;font-weight:800;color:var(--ink);margin-bottom:8px;">'+esc(titulo)+'</div>'+filas+'</div>';
+}
+function renderInformeMensual(){
+  const d = INFORME_DATA; if(!d) return;
+  const cont = document.getElementById('informeMensualPrint'); if(!cont) return;
+  const pm = INFORME_MES.split('-'); const mesLbl = (_MES_NOMBRE[parseInt(pm[1],10)-1]||'')+' '+pm[0];
+  const col = (v, extra) => '<td style="padding:8px 10px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;'+(extra||'')+'">'+v+'</td>';
+  const filas = (d.ejecutivos||[]).map(function(f){
+    return '<tr>'+
+      '<td style="padding:8px 10px;border-bottom:1px solid var(--smoke,#e5e7eb);font-weight:700;color:var(--oct-navy,#001A60);">'+esc(String(f.ejecutivo).split(' ')[0])+'</td>'+
+      col(f.contactos_nuevos)+col(f.cotizaciones)+col(fmtCLP(f.monto_cotizado))+
+      col(f.reuniones)+col(f.llamadas)+col(f.correos)+col(f.whatsapp)+
+      col(f.ganadas,'font-weight:700;color:#16A34A;')+col(fmtCLP(f.monto_ganado),'font-weight:700;color:#16A34A;')+
+    '</tr>';
+  }).join('');
+  const eq = d.equipo||{};
+  const filaTotal = '<tr style="background:#F0F4FA;font-weight:800;color:var(--oct-navy,#001A60);">'+
+    '<td style="padding:9px 10px;">Total equipo</td>'+
+    col(eq.contactos_nuevos)+col(eq.cotizaciones)+col(fmtCLP(eq.monto_cotizado))+
+    col(eq.reuniones)+col(eq.llamadas)+col(eq.correos)+col(eq.whatsapp)+
+    col(eq.ganadas,'color:#16A34A;')+col(fmtCLP(eq.monto_ganado),'color:#16A34A;')+
+  '</tr>';
+  const tCon = _informeUltimos6(_informeTeamSerie('serie_contactos_12m'));
+  const tCot = _informeUltimos6(_informeTeamSerie('serie_cot_12m'));
+  const tGan = _informeUltimos6(_informeTeamSerie('serie_gan_12m'));
+  const tendenciaHtml = (INFORME_COMP && tCon.labels.length) ?
+    '<div style="margin:22px 0 10px;"><h3 style="font-size:14px;font-weight:800;color:var(--oct-navy,#001A60);margin:0;">Tendencia del equipo — últimos 6 meses</h3></div>'+
+    '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;display:flex;gap:26px;flex-wrap:wrap;">'+
+      _informeBarraMini('Contactos nuevos', '#FF7E00', tCon.labels, tCon.valores)+
+      _informeBarraMini('Cotizaciones', '#5b21b6', tCot.labels, tCot.valores)+
+      _informeBarraMini('Ventas ganadas', '#16A34A', tGan.labels, tGan.valores)+
+    '</div>' : '';
+  cont.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">'+
+      '<div><h3 style="font-size:16px;font-weight:800;color:var(--oct-navy,#001A60);margin:0;">Informe mensual — '+esc(mesLbl)+'</h3>'+
+      '<div style="font-size:12px;color:var(--subtle);margin-top:2px;">Trabajo realizado por el equipo (no incluye perdidas ni pendientes)</div></div>'+
+      '<div class="sm-no-print" style="display:flex;gap:8px;">'+
+        '<button onclick="descargarInformeMensual()" style="background:#fff;border:1px solid var(--smoke,#e5e7eb);color:var(--ink);border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;">Descargar</button>'+
+        '<button onclick="enviarInformeMensualAMario()" style="background:#001A60;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;">Enviar a Mario</button>'+
+      '</div>'+
+    '</div>'+
+    '<table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-top:14px;">'+
+      '<tr style="background:var(--oct-navy,#001A60);color:#fff;">'+
+        '<th style="padding:8px 10px;text-align:left;">Ejecutivo</th>'+
+        '<th style="padding:8px 10px;text-align:right;">Contactos nuevos</th>'+
+        '<th style="padding:8px 10px;text-align:right;">Cotizaciones</th>'+
+        '<th style="padding:8px 10px;text-align:right;">Monto cotizado</th>'+
+        '<th style="padding:8px 10px;text-align:right;">Reuniones</th>'+
+        '<th style="padding:8px 10px;text-align:right;">Llamadas</th>'+
+        '<th style="padding:8px 10px;text-align:right;">Correos</th>'+
+        '<th style="padding:8px 10px;text-align:right;">WhatsApp</th>'+
+        '<th style="padding:8px 10px;text-align:right;">Ventas ganadas</th>'+
+        '<th style="padding:8px 10px;text-align:right;">Monto ganado</th>'+
+      '</tr>'+filas+filaTotal+
+    '</table>'+tendenciaHtml;
+}
+function descargarInformeMensual(){
+  if(!INFORME_DATA){ alert('Elige un mes primero.'); return; }
+  window.print();
+}
+async function enviarInformeMensualAMario(){
+  if(!INFORME_MES){ alert('Elige un mes primero.'); return; }
+  const pm = INFORME_MES.split('-'); const mesLbl = (_MES_NOMBRE[parseInt(pm[1],10)-1]||'')+' '+pm[0];
+  if(!confirm('¿Enviar a Mario el informe de '+mesLbl+' en PDF?\n(Te llega copia a ti.)')) return;
+  const r = await fetchAPI('crm_informe_mensual_enviar', { solicitante: USUARIO, mes: INFORME_MES });
+  if(r && r.ok) alert('Informe de '+mesLbl+' enviado a Mario, con copia a ti.');
+  else alert('No se pudo enviar: '+((r&&r.error)||'error'));
+}
+
 async function cargarActividadEquipo(periodo, forzar){
   if(periodo) ACT_PERIODO = periodo;
   ACT_EJEC_ABIERTO = null;
@@ -15884,9 +16017,18 @@ function renderActPeriodoBar(){
       '<button onclick="actSetRango()" style="padding:7px 14px;border-radius:8px;border:none;background:var(--navy,#001A60);color:#fff;font-size:12.5px;font-weight:800;cursor:pointer;font-family:var(--font-sans);">Ver</button>'+
     '</div>';
 
+  // Informe mensual: un clic por mes (arma el rango solo y muestra la tabla/tendencia abajo).
+  const mesesChips = _actMesesRecientes(6).map(function(mo){
+    const act = INFORME_MES === mo.ym;
+    return '<button onclick="actIrAMes(\''+mo.ym+'\')" style="padding:7px 13px;border-radius:999px;border:1px solid '+(act?'#16A34A':'#E3E8EF')+';background:'+(act?'#16A34A':'#fff')+';color:'+(act?'#fff':'var(--subtle,#64748B)')+';font-size:12.5px;font-weight:'+(act?'800':'600')+';cursor:pointer;font-family:var(--font-sans);">'+esc(mo.label)+'</button>';
+  }).join('');
+
   bar.innerHTML =
     '<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:9px;">'+selEjec+presets+marcar+'</div>'+
-    '<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">'+rango+'</div>';
+    '<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:9px;">'+rango+'</div>'+
+    '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'+
+      '<span style="font-size:11.5px;font-weight:700;color:var(--subtle);">Informe mensual:</span>'+mesesChips+
+    '</div>';
 }
 // Cambia el foco de ejecutivo (filtro de cliente, no re-consulta el servidor).
 function actSetEjec(v){ ACT_EJEC_FILTRO = v||''; ACT_EJEC_ABIERTO = null; if(ACT_DATA){ renderActPeriodoBar(); renderActividadEquipo(); } else cargarActividadEquipo(); }

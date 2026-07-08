@@ -6676,7 +6676,7 @@ function renderKanbanCotizaciones(){
             'ondragend="this.classList.remove(\'dragging\');" '+
             'onclick="abrirCotModal(\''+numJS+'\')">'+
             '<div class="kc-name">'+esc(c.cliente || c.institucion || ('Cotización '+(c.cotizacion||'')))+'</div>'+
-            '<div class="kc-inst">'+esc(String(c.cotizacion||''))+'</div>'+
+            '<div class="kc-inst" style="display:flex;align-items:center;gap:5px;">'+esc(String(c.cotizacion||''))+_msgBadge(c.mensajes_count)+'</div>'+
             (monto ? '<div class="kc-foot"><span class="kc-cot">'+esc(monto)+'</span></div>' : '') +
           '</div>';
         }).join('') +
@@ -10028,6 +10028,16 @@ function _detalleCotHTML(c){
   return det;
 }
 // Fila compacta de cotización: clic abre la tarjeta-modal con todo el detalle.
+// Indicador de mensajes en una cotización — mismo ícono/color en todas las listas donde
+// aparece una cotización (Mis Cotizaciones, Kanban, Sala Multisensorial, Ayudas Técnicas),
+// para saber de un vistazo si hay conversación sin tener que abrirla (pedido de Rayen
+// 2026-07-07: "no hay forma de que me recuerde todas las cotizaciones que hay").
+function _msgBadge(count){
+  var n = Number(count) || 0;
+  if(!n) return '';
+  return '<span title="'+n+' mensaje'+(n>1?'s':'')+' en esta cotización" style="display:inline-flex;align-items:center;gap:3px;background:#EFF6FF;color:#1D4ED8;border:1px solid #DBEAFE;border-radius:999px;padding:2px 7px;font-size:10.5px;font-weight:800;flex-shrink:0;">' +
+    '<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M21 11.5a8.38 8.38 0 0 1-3.8 7.05L3 21l1.66-5.94A8.38 8.38 0 1 1 21 11.5z"/></svg>' + n + '</span>';
+}
 function _cardMisCot(c){
   const sem = _SEM_MISCOT[c.estado_seguimiento] || _SEM_MISCOT.sin_fecha;
   const monto = (c.monto && c.monto>0) ? fmtCLP(c.monto) : '';
@@ -10038,7 +10048,7 @@ function _cardMisCot(c){
       '<div style="flex:1;min-width:190px;">' +
         '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
           '<span style="font-family:Courier New,monospace;font-weight:800;color:var(--purple-dk,#5b21b6);font-size:12.5px;">' + esc(c.cotizacion||'—') + '</span>' +
-          '<span style="font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px;background:'+sem.bg+';color:'+sem.color+';">' + esc(c.estado||sem.txt) + '</span>' + adminEjec +
+          '<span style="font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px;background:'+sem.bg+';color:'+sem.color+';">' + esc(c.estado||sem.txt) + '</span>' + adminEjec + _msgBadge(c.mensajes_count) +
         '</div>' +
         '<div style="font-size:12.5px;color:var(--subtle);margin-top:3px;">' + esc(c.cliente || c.institucion || '(sin nombre)') + (c.cliente && c.institucion ? ' · ' + esc(c.institucion) : '') + '</div>' +
         '<div style="font-size:11px;color:var(--mist,#9aa3af);margin-top:2px;font-weight:600;">Cotizada: ' + esc(c.fecha || '—') + '</div>' +
@@ -11200,7 +11210,7 @@ function _renderVistaLinea(todas, tipo){
   const _smFila = (c, extra) => {
     const numJS = String(c.cotizacion||'').replace(/'/g,"\\'");
     return '<div onclick="abrirCotModal(\''+numJS+'\')" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);font-size:12.5px;flex-wrap:wrap;" onmouseover="this.style.background=\'var(--paper,#f9fafb)\'" onmouseout="this.style.background=\'transparent\'">' +
-      '<span style="flex:0 0 120px;color:var(--subtle);font-family:Courier New,monospace;">'+esc(c.cotizacion||'')+'</span>' +
+      '<span style="flex:0 0 120px;color:var(--subtle);font-family:Courier New,monospace;display:flex;align-items:center;gap:5px;">'+esc(c.cotizacion||'')+_msgBadge(c.mensajes_count)+'</span>' +
       '<span style="flex:0 0 90px;color:var(--subtle);">'+esc(c.fecha||'—')+'</span>' +
       '<span style="flex:1 1 200px;color:var(--ink);">'+esc(c.institucion||c.cliente||'(sin institución)')+'</span>' +
       '<span style="flex:0 0 90px;color:var(--ink);font-weight:700;">'+esc(fn(c.ejecutivo))+'</span>' +

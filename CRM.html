@@ -10994,18 +10994,73 @@ async function cargarAyudasTecnicas(forzar){ return _cargarVistaLinea('AT', forz
 window.__SM_PROB_BUSY = window.__SM_PROB_BUSY || {};
 async function _smSetProb(num, val){
   if(window.__SM_PROB_BUSY[num]) return;
-  window.__SM_PROB_BUSY[num] = true;
   CACHE.smProb = CACHE.smProb || {};
   const prev = CACHE.smProb[num] || 0;
   const nuevo = (prev === val) ? 0 : val;
+  // Al marcar 50% o 90% (no al desmarcar ni al 20%), hay que decir para cuándo se proyecta la
+  // venta y dejar una nota — pedido de Rayen 2026-07-08. Se pide ANTES de guardar nada.
+  if(nuevo === 50 || nuevo === 90){
+    pedirProyeccionVenta(function(datos){
+      if(!datos) return; // canceló: no se marca nada
+      _smAplicarProb(num, nuevo, prev, datos.mes, datos.nota);
+    });
+    return;
+  }
+  _smAplicarProb(num, nuevo, prev, '', '');
+}
+async function _smAplicarProb(num, nuevo, prev, mesProyectado, nota){
+  window.__SM_PROB_BUSY[num] = true;
   CACHE.smProb[num] = nuevo;
   _refrescarProbUI(num); // optimista
-  const r = await fetchAPI('crm_sm_set_probabilidad', { num_cotizacion: num, probabilidad: nuevo, solicitante: USUARIO });
+  const r = await fetchAPI('crm_sm_set_probabilidad', { num_cotizacion: num, probabilidad: nuevo, mes_proyectado: mesProyectado||'', nota: nota||'', solicitante: USUARIO });
   if(!r || !r.ok){
     CACHE.smProb[num] = prev;
     _refrescarProbUI(num);
+    if(r && r.error) alert('No se pudo guardar: '+r.error);
   }
   window.__SM_PROB_BUSY[num] = false;
+}
+// Modal: al marcar 50%/90% de probabilidad, pide el mes proyectado de venta + una nota
+// obligatoria con el contexto. Llama cb({mes, nota}) o cb(null) si cancela.
+function pedirProyeccionVenta(cb){
+  if(document.getElementById('proyeccionVentaOv')) return;
+  const meses = [];
+  const ahora = new Date();
+  for(let i=0;i<12;i++){
+    const d = new Date(ahora.getFullYear(), ahora.getMonth()+i, 1);
+    meses.push({ val: d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'), lbl: (_MES_NOMBRE[d.getMonth()]||'')+' '+d.getFullYear() });
+  }
+  const opts = meses.map(m=>'<option value="'+m.val+'">'+esc(m.lbl)+'</option>').join('');
+  const ov = document.createElement('div');
+  ov.id = 'proyeccionVentaOv';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2147483600;display:flex;align-items:center;justify-content:center;padding:20px;';
+  ov.innerHTML =
+    '<div style="background:#fff;border-radius:14px;padding:24px;max-width:420px;width:100%;font-family:var(--font-sans);">'+
+      '<h3 style="margin:0 0 6px;font-size:16px;font-weight:800;color:#001A60;">¿Cuándo se proyecta esta venta?</h3>'+
+      '<p style="margin:0 0 16px;font-size:12.5px;color:#64748B;">Marcaste esta cotización con buena probabilidad de cierre — necesitamos saber para cuándo y el contexto, para que salga en el informe.</p>'+
+      '<label style="font-size:12px;font-weight:700;color:#1a1a2e;display:block;margin-bottom:5px;">Mes proyectado de venta <span style="color:#e74c3c;">*</span></label>'+
+      '<select id="pv-mes" style="width:100%;padding:9px 11px;border:1px solid #E6E8EF;border-radius:8px;font-size:13.5px;margin-bottom:14px;box-sizing:border-box;font-family:inherit;">'+opts+'</select>'+
+      '<label style="font-size:12px;font-weight:700;color:#1a1a2e;display:block;margin-bottom:5px;">Nota <span style="color:#e74c3c;">*</span></label>'+
+      '<textarea id="pv-nota" rows="3" placeholder="Ej: cliente esperando aprobación de presupuesto municipal, dice que compra en agosto…" style="width:100%;padding:9px 11px;border:1px solid #E6E8EF;border-radius:8px;font-size:13px;resize:vertical;box-sizing:border-box;font-family:inherit;"></textarea>'+
+      '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px;">'+
+        '<button onclick="_cerrarProyeccionVenta(null)" style="background:#fff;border:1px solid #E6E8EF;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;color:#64748B;cursor:pointer;font-family:inherit;">Cancelar</button>'+
+        '<button onclick="_confirmarProyeccionVenta()" style="background:#001A60;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Guardar</button>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(ov);
+  window.__proyeccionVentaCb = cb;
+}
+function _cerrarProyeccionVenta(datos){
+  const cb = window.__proyeccionVentaCb; window.__proyeccionVentaCb = null;
+  const ov = document.getElementById('proyeccionVentaOv'); if(ov) ov.remove();
+  if(cb) cb(datos);
+}
+function _confirmarProyeccionVenta(){
+  const mesEl = document.getElementById('pv-mes');
+  const notaEl = document.getElementById('pv-nota');
+  const nota = notaEl ? notaEl.value.trim() : '';
+  if(!nota){ alert('Escribe una nota con el contexto de esta proyección.'); if(notaEl) notaEl.focus(); return; }
+  _cerrarProyeccionVenta({ mes: mesEl ? mesEl.value : '', nota: nota });
 }
 // Repinta dondequiera que se esté mostrando la probabilidad de esta cotización: la vista de su
 // línea de negocio (Sala Multisensorial o Ayudas Técnicas, si está abierta) y/o el modal de detalle
@@ -15933,13 +15988,19 @@ function renderInformeMensual(){
   // cada cotización, en el mismo informe (no aparte). No depende del mes elegido arriba.
   const prospectos = d.prospectos || [];
   const filasProsp = prospectos.map(function(p){
+    const mesLblP = p.mes_proyectado ? _mesLabel(p.mes_proyectado) : '—';
     return '<tr>'+
       '<td style="padding:7px 10px;border-bottom:1px solid var(--smoke,#e5e7eb);color:#57606A;font-family:Courier New,monospace;">'+esc(p.num_cotizacion)+'</td>'+
       '<td style="padding:7px 10px;border-bottom:1px solid var(--smoke,#e5e7eb);color:var(--ink);">'+esc(p.institucion)+'</td>'+
       '<td style="padding:7px 10px;border-bottom:1px solid var(--smoke,#e5e7eb);font-weight:700;color:var(--oct-navy,#001A60);">'+esc(String(p.ejecutivo).split(' ')[0])+'</td>'+
       '<td style="padding:7px 10px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;">'+fmtCLP(p.monto)+'</td>'+
       '<td style="padding:7px 10px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;font-weight:700;color:'+(p.probabilidad===90?'#16A34A':'#0891B2')+';">'+p.probabilidad+'%</td>'+
-    '</tr>';
+      '<td style="padding:7px 10px;border-bottom:1px solid var(--smoke,#e5e7eb);font-weight:700;color:#5b21b6;">'+esc(mesLblP)+'</td>'+
+    '</tr>'+
+    '<tr><td colspan="6" style="padding:3px 10px 10px;border-bottom:1px solid var(--smoke,#e5e7eb);font-size:11px;color:#57606A;">'+
+      '<b>Productos:</b> '+esc(p.productos||'(sin detalle)')+
+      (p.nota?' &middot; <b>Nota:</b> '+esc(p.nota):'')+
+    '</td></tr>';
   }).join('');
   const prospectosHtml = '<div style="margin:22px 0 10px;">'+
       '<h3 style="font-size:14px;font-weight:800;color:#5b21b6;margin:0;">Prospectos de venta — 50% y 90% de probabilidad</h3>'+
@@ -15953,11 +16014,12 @@ function renderInformeMensual(){
           '<th style="padding:7px 10px;text-align:left;">Ejecutivo</th>'+
           '<th style="padding:7px 10px;text-align:right;">Monto</th>'+
           '<th style="padding:7px 10px;text-align:right;">Probabilidad</th>'+
+          '<th style="padding:7px 10px;text-align:left;">Proyectado para</th>'+
         '</tr>'+filasProsp+
         '<tr style="background:#F5F3FF;font-weight:800;color:#5b21b6;">'+
           '<td style="padding:8px 10px;" colspan="3">Total ('+prospectos.length+' cotizaciones) — proyección ponderada</td>'+
           '<td style="padding:8px 10px;text-align:right;">'+fmtCLP(d.prospectos_total||0)+'</td>'+
-          '<td style="padding:8px 10px;text-align:right;">'+fmtCLP(d.prospectos_ponderado||0)+'</td>'+
+          '<td style="padding:8px 10px;text-align:right;" colspan="2">'+fmtCLP(d.prospectos_ponderado||0)+'</td>'+
         '</tr>'+
       '</table>');
   cont.innerHTML =

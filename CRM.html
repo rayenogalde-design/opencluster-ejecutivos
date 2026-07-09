@@ -2835,34 +2835,14 @@ body{
           <p id="subtMisCot">Todas tus cotizaciones por mes, con su estado y cuáles tienen seguimiento pendiente. El 1er seguimiento de una cotización vence al día 3 de enviada.</p>
         </div>
         <div style="margin:14px 0;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
-          <div class="searchbox" style="flex:1;min-width:280px;max-width:480px;">
+          <div class="searchbox" style="flex:1;min-width:280px;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
             <input type="text" id="searchMisCot" oninput="filtrarMisCotizaciones(this.value)" placeholder="Buscar por N°, cliente o institución…">
           </div>
-          <select id="filtroMisCotEjec" onchange="renderMisCotizaciones()" style="display:none;padding:8px 12px;border:1px solid var(--border-subtle);border-radius:8px;font-size:13px;font-family:var(--font-sans);">
-            <option value="">Todos los ejecutivos</option>
-          </select>
-          <select id="filtroMisCot" onchange="renderMisCotizaciones()" style="padding:8px 12px;border:1px solid var(--border-subtle);border-radius:8px;font-size:13px;font-family:var(--font-sans);">
-            <option value="">Todas</option>
-            <option value="pendientes">Con seguimiento pendiente</option>
-            <option value="activas">Por gestionar (abiertas)</option>
-            <option value="ganada">Ganadas</option>
-            <option value="perdida">Perdidas</option>
-          </select>
-          <select id="filtroMisCotLinea" onchange="renderMisCotizaciones()" style="padding:8px 12px;border:1px solid var(--border-subtle);border-radius:8px;font-size:13px;font-family:var(--font-sans);">
-            <option value="">AT y SM</option>
-            <option value="AT">Ayudas Técnicas (AT)</option>
-            <option value="SM">Salas Multisensoriales (SM)</option>
-          </select>
-          <select id="ordenMisCot" onchange="setMisCotOrden(this.value)" style="padding:8px 12px;border:1px solid var(--border-subtle);border-radius:8px;font-size:13px;font-family:var(--font-sans);">
-            <option value="seguimiento">Orden: urgencia</option>
-            <option value="fecha_desc">Orden: fecha (recientes primero)</option>
-            <option value="fecha_asc">Orden: fecha (antiguas primero)</option>
-          </select>
           <div style="color:var(--subtle);font-size:13.5px;font-weight:600;"><b id="cntMisCot" style="color:var(--ink);">0</b> cotizaciones</div>
         </div>
         <div style="display:flex;gap:18px;align-items:flex-start;">
-          <div id="miscotVistaSidebar" style="flex:0 0 152px;display:flex;flex-direction:column;gap:6px;position:sticky;top:12px;"></div>
+          <div id="miscotVistaSidebar" style="flex:0 0 176px;display:flex;flex-direction:column;gap:14px;position:sticky;top:12px;"></div>
           <div id="listMisCot" style="flex:1;min-width:0;"><div class="loading-state"><div class="spinner"></div>Cargando…</div></div>
         </div>
       </div>
@@ -9548,10 +9528,10 @@ function _aplicarTituloMisCot(){
 function filtrarMisCotizaciones(q){ FILTROS.vMisCot = q; renderMisCotizaciones(); }
 // Selector de ejecutivo (solo admin): primeros nombres distintos, sin duplicar por tildes (William Marín/Marin).
 function _poblarSelectorEjecMisCot(){
-  const sel = document.getElementById('filtroMisCotEjec');
-  if(!sel) return;
+  const cont = document.getElementById('miscotEjecSidebar');
+  if(!cont) return;
   const esAdmin = (typeof esActuandoComoAdmin==='function') && esActuandoComoAdmin();
-  if(!esAdmin){ sel.style.display='none'; sel.value=''; return; }
+  if(!esAdmin){ cont.innerHTML=''; MISCOT_EJEC_FILTRO=''; return; }
   const vistos = {}, nombres = [];
   (CACHE.vMisCot||[]).forEach(c => {
     const fn = String(c.ejecutivo||'').trim().split(' ')[0];
@@ -9560,10 +9540,11 @@ function _poblarSelectorEjecMisCot(){
     if(!vistos[k]){ vistos[k]=1; nombres.push(fn); }
   });
   nombres.sort((a,b)=>a.localeCompare(b));
-  const cur = sel.value;
-  sel.innerHTML = '<option value="">Todos los ejecutivos</option>' + nombres.map(n=>'<option value="'+esc(n)+'">'+esc(n)+'</option>').join('');
-  sel.value = cur;
-  sel.style.display = '';
+  cont.innerHTML = '<div style="font-size:10px;font-weight:800;color:var(--mist,#9aa3af);text-transform:uppercase;letter-spacing:.5px;margin:0 0 6px 2px;">Ejecutivo</div>' +
+    '<select onchange="setMisCotEjec(this.value)" style="width:100%;padding:8px 10px;border:1px solid var(--border-subtle);border-radius:8px;font-size:12.5px;font-family:var(--font-sans);box-sizing:border-box;">' +
+      '<option value="">Todos los ejecutivos</option>' +
+      nombres.map(n=>'<option value="'+esc(n)+'"'+(MISCOT_EJEC_FILTRO===n?' selected':'')+'>'+esc(n)+'</option>').join('') +
+    '</select>';
 }
 
 const _SEM_MISCOT = {
@@ -9592,6 +9573,14 @@ function setMisCotOrden(o){ MISCOT_ORDEN = o||'seguimiento'; try{ localStorage.s
 // de una sola vez sin tener que desplegar mes por mes).
 let MISCOT_VISTA = (function(){ try{ return localStorage.getItem('crm_miscot_vista')||'mes'; }catch(e){ return 'mes'; } })();
 function setMisCotVista(v){ MISCOT_VISTA = v||'mes'; try{ localStorage.setItem('crm_miscot_vista', MISCOT_VISTA); }catch(e){} renderMisCotizaciones(); }
+// Filtros que antes vivían en selects arriba de la lista — movidos al costado (pedido de
+// Rayen 2026-07-08: "solo arriba deja el buscador, ponle esos filtros ahí, hacia abajito").
+let MISCOT_LINEA = '';   // '' = AT y SM | 'AT' | 'SM'
+let MISCOT_ESTADO = '';  // '' = Todas | 'pendientes' | 'activas' | 'ganada' | 'perdida'
+let MISCOT_EJEC_FILTRO = ''; // solo admin
+function setMisCotLinea(v){ MISCOT_LINEA = v||''; renderMisCotizaciones(); }
+function setMisCotEstado(v){ MISCOT_ESTADO = v||''; renderMisCotizaciones(); }
+function setMisCotEjec(v){ MISCOT_EJEC_FILTRO = v||''; renderMisCotizaciones(); }
 function _fechaCotTs(c){
   var s = String(c && c.fecha || '').trim();
   if(!s) return (c && c.mes) ? new Date(c.mes+'-15').getTime() : 0;
@@ -9656,8 +9645,7 @@ async function _cargarMetasReales(){
 function renderMetaBarMisCot(base, anio){
   const d = new Date();
   const mesHoy = anio + '-' + String(d.getMonth()+1).padStart(2,'0');
-  const selEj = document.getElementById('filtroMisCotEjec');
-  const ejecSel = selEj ? selEj.value : '';
+  const ejecSel = MISCOT_EJEC_FILTRO || '';
   const admin = (typeof esActuandoComoAdmin==='function') && esActuandoComoAdmin();
   let meta, titulo;
   if(admin && !ejecSel){ meta = CACHE.metaEquipoReal || META_EQUIPO_MONTO; titulo = 'META MENSUAL DEL EQUIPO'; }
@@ -9693,8 +9681,7 @@ function renderMetaBarMisCot(base, anio){
   '</div>';
 }
 function _kpiMisCotFiltrar(filtro){
-  const sel = document.getElementById('filtroMisCot');
-  if(sel) sel.value = filtro;
+  MISCOT_ESTADO = filtro || '';
   renderMisCotizaciones();
 }
 // Celebración al ganar una venta: cartel "¡Felicitaciones!" + confeti.
@@ -9845,16 +9832,13 @@ function renderMisCotizaciones(){
   try{ if(document.getElementById('dshKanbanCot')) renderKanbanCotizaciones(); }catch(e){}
   const container = document.getElementById('listMisCot');
   const cnt = document.getElementById('cntMisCot');
-  try{ var _ordSel=document.getElementById('ordenMisCot'); if(_ordSel && _ordSel.value!==MISCOT_ORDEN) _ordSel.value=MISCOT_ORDEN; }catch(e){}
   const anio = CACHE.vMisCotAnio || String(new Date().getFullYear());
   // Base tras el filtro de ejecutivo (los KPIs reflejan al ejecutivo elegido, NO la búsqueda).
   let base = (CACHE.vMisCot || []).slice();
-  const selEj = document.getElementById('filtroMisCotEjec');
-  const ejecFiltro = selEj ? selEj.value : '';
+  const ejecFiltro = MISCOT_EJEC_FILTRO || '';
   if(ejecFiltro){ const efn = _busqNorm(ejecFiltro); base = base.filter(c => _busqNorm(String(c.ejecutivo||'').trim().split(' ')[0]) === efn); }
   // Filtro por línea AT / SM: aplica a la BASE para que KPIs, meta y lista queden todos por línea.
-  const selLinea = document.getElementById('filtroMisCotLinea');
-  const lineaFiltro = selLinea ? selLinea.value : '';
+  const lineaFiltro = MISCOT_LINEA || '';
   if(lineaFiltro){ base = base.filter(c => _lineaCot(c.cotizacion) === lineaFiltro); }
   const k = _kpisDeMisCot(base, anio);
   const metaHtml = renderMetaBarMisCot(base, anio);
@@ -9886,8 +9870,7 @@ function renderMisCotizaciones(){
   // Lista filtrada (búsqueda + estado) para el detalle por mes
   let lista = base.slice();
   const q = _busqNorm(FILTROS.vMisCot || '').trim();
-  const sel = document.getElementById('filtroMisCot');
-  const filtro = sel ? sel.value : '';
+  const filtro = MISCOT_ESTADO || '';
   if(q) lista = lista.filter(c => _busqNorm(c.cotizacion).includes(q) || _busqNorm(c.cliente).includes(q) || _busqNorm(c.institucion).includes(q));
   if(filtro === 'pendientes') lista = lista.filter(c => c.estado_seguimiento==='pendiente' || c.estado_seguimiento==='vencido');
   else if(filtro === 'activas') lista = lista.filter(c => !c.cerrada);
@@ -9908,12 +9891,23 @@ function renderMisCotizaciones(){
   // simple aparte de los filtros de arriba, para no amontonar más selects confusos ahí.
   const sideEl = document.getElementById('miscotVistaSidebar');
   if(sideEl){
-    const _vBtn = (val,label) => {
-      const activo = MISCOT_VISTA === val;
-      return '<button onclick="setMisCotVista(\''+val+'\')" style="text-align:left;padding:10px 13px;border-radius:9px;border:1px solid '+(activo?'#001A60':'var(--smoke,#e5e7eb)')+';background:'+(activo?'#001A60':'#fff')+';color:'+(activo?'#fff':'var(--ink)')+';font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">'+label+'</button>';
+    // Grupo genérico de botones apilados (mismo estilo para Ver/Línea/Estado/Orden) — pedido
+    // de Rayen 2026-07-08: todos los filtros que estaban arriba en selects, al costado.
+    const _grupoBtns = (titulo, opciones, valorActual, onClickFn) => {
+      const btns = opciones.map(function(o){
+        const activo = valorActual === o.v;
+        return '<button onclick="'+onClickFn+'(\''+o.v+'\')" style="text-align:left;padding:9px 12px;border-radius:9px;border:1px solid '+(activo?'#001A60':'var(--smoke,#e5e7eb)')+';background:'+(activo?'#001A60':'#fff')+';color:'+(activo?'#fff':'var(--ink)')+';font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">'+o.l+'</button>';
+      }).join('');
+      return '<div><div style="font-size:10px;font-weight:800;color:var(--mist,#9aa3af);text-transform:uppercase;letter-spacing:.5px;margin:0 0 6px 2px;">'+titulo+'</div>' +
+        '<div style="display:flex;flex-direction:column;gap:6px;">'+btns+'</div></div>';
     };
-    sideEl.innerHTML = '<div style="font-size:10px;font-weight:800;color:var(--mist,#9aa3af);text-transform:uppercase;letter-spacing:.5px;margin:2px 0 2px 2px;">Ver</div>' +
-      _vBtn('mes','Por mes') + _vBtn('publico','Sector público') + _vBtn('privado','Sector privado');
+    sideEl.innerHTML =
+      _grupoBtns('Ver', [{v:'mes',l:'Por mes'},{v:'publico',l:'Sector público'},{v:'privado',l:'Sector privado'}], MISCOT_VISTA, 'setMisCotVista') +
+      _grupoBtns('Línea', [{v:'',l:'AT y SM'},{v:'AT',l:'Ayudas Técnicas'},{v:'SM',l:'Sala Multisensorial'}], MISCOT_LINEA, 'setMisCotLinea') +
+      _grupoBtns('Estado', [{v:'',l:'Todas'},{v:'pendientes',l:'Con seguimiento pendiente'},{v:'activas',l:'Por gestionar (abiertas)'},{v:'ganada',l:'Ganadas'},{v:'perdida',l:'Perdidas'}], MISCOT_ESTADO, 'setMisCotEstado') +
+      _grupoBtns('Orden', [{v:'seguimiento',l:'Urgencia'},{v:'fecha_desc',l:'Fecha: recientes primero'},{v:'fecha_asc',l:'Fecha: antiguas primero'}], MISCOT_ORDEN, 'setMisCotOrden') +
+      '<div id="miscotEjecSidebar"></div>';
+    try{ _poblarSelectorEjecMisCot(); }catch(e){}
   }
   const peso = { vencido:0, pendiente:1, al_dia:2, fndr:2, concurso:2, sin_fecha:3, ganada:4, perdida:5 };
   const pw = s => (peso[s]!==undefined ? peso[s] : 9);

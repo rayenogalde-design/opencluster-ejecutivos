@@ -15928,6 +15928,38 @@ function renderInformeMensual(){
       _informeBarraMini('Cotizaciones', '#5b21b6', tCot.labels, tCot.valores)+
       _informeBarraMini('Ventas ganadas', '#16A34A', tGan.labels, tGan.valores)+
     '</div>' : '';
+  // Prospectos de venta (50%/90%, Ayudas Técnicas + Sala Multisensorial) — pedido de Rayen
+  // 2026-07-08: sumar el pipeline abierto marcado con buena probabilidad, con el detalle de
+  // cada cotización, en el mismo informe (no aparte). No depende del mes elegido arriba.
+  const prospectos = d.prospectos || [];
+  const filasProsp = prospectos.map(function(p){
+    return '<tr>'+
+      '<td style="padding:7px 10px;border-bottom:1px solid var(--smoke,#e5e7eb);color:#57606A;font-family:Courier New,monospace;">'+esc(p.num_cotizacion)+'</td>'+
+      '<td style="padding:7px 10px;border-bottom:1px solid var(--smoke,#e5e7eb);color:var(--ink);">'+esc(p.institucion)+'</td>'+
+      '<td style="padding:7px 10px;border-bottom:1px solid var(--smoke,#e5e7eb);font-weight:700;color:var(--oct-navy,#001A60);">'+esc(String(p.ejecutivo).split(' ')[0])+'</td>'+
+      '<td style="padding:7px 10px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;">'+fmtCLP(p.monto)+'</td>'+
+      '<td style="padding:7px 10px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;font-weight:700;color:'+(p.probabilidad===90?'#16A34A':'#0891B2')+';">'+p.probabilidad+'%</td>'+
+    '</tr>';
+  }).join('');
+  const prospectosHtml = '<div style="margin:22px 0 10px;">'+
+      '<h3 style="font-size:14px;font-weight:800;color:#5b21b6;margin:0;">Prospectos de venta — 50% y 90% de probabilidad</h3>'+
+      '<div style="font-size:12px;color:var(--subtle);margin-top:2px;">Cotizaciones abiertas de Ayudas Técnicas y Sala Multisensorial marcadas por el ejecutivo. Es el pipeline actual, no depende del mes de arriba.</div>'+
+    '</div>'+
+    (!prospectos.length ? '<div style="color:var(--subtle);font-size:12.5px;">Ninguna cotización marcada en 50% o 90% por ahora.</div>' :
+      '<table style="width:100%;border-collapse:collapse;font-size:12.5px;">'+
+        '<tr style="background:#5b21b6;color:#fff;">'+
+          '<th style="padding:7px 10px;text-align:left;">N°</th>'+
+          '<th style="padding:7px 10px;text-align:left;">Institución/Cliente</th>'+
+          '<th style="padding:7px 10px;text-align:left;">Ejecutivo</th>'+
+          '<th style="padding:7px 10px;text-align:right;">Monto</th>'+
+          '<th style="padding:7px 10px;text-align:right;">Probabilidad</th>'+
+        '</tr>'+filasProsp+
+        '<tr style="background:#F5F3FF;font-weight:800;color:#5b21b6;">'+
+          '<td style="padding:8px 10px;" colspan="3">Total ('+prospectos.length+' cotizaciones) — proyección ponderada</td>'+
+          '<td style="padding:8px 10px;text-align:right;">'+fmtCLP(d.prospectos_total||0)+'</td>'+
+          '<td style="padding:8px 10px;text-align:right;">'+fmtCLP(d.prospectos_ponderado||0)+'</td>'+
+        '</tr>'+
+      '</table>');
   cont.innerHTML =
     '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">'+
       '<div><h3 style="font-size:16px;font-weight:800;color:var(--oct-navy,#001A60);margin:0;">Informe mensual — '+esc(mesLbl)+'</h3>'+
@@ -15950,7 +15982,7 @@ function renderInformeMensual(){
         '<th style="padding:8px 10px;text-align:right;">Ventas ganadas</th>'+
         '<th style="padding:8px 10px;text-align:right;">Monto ganado</th>'+
       '</tr>'+filas+filaTotal+
-    '</table>'+tendenciaHtml;
+    '</table>'+tendenciaHtml+prospectosHtml;
 }
 // Genera y abre el PDF REAL (el mismo que le llegaría a Mario) en una pestaña nueva — así hay
 // una vista previa exacta antes de enviar, no solo la tabla en pantalla (pedido de Rayen

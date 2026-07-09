@@ -15957,20 +15957,34 @@ function renderInformeMensual(){
 // 2026-07-08: "¿cómo veo yo un preview de lo que voy a enviar?").
 async function descargarInformeMensual(btn){
   if(!INFORME_MES){ alert('Elige un mes primero.'); return; }
+  // La pestaña se abre AHORA, antes de esperar la respuesta del servidor — si se abre
+  // después de un await, Chrome/Edge la bloquean como pop-up no solicitado y no pasa
+  // nada visible (justo lo que reportó Rayen 2026-07-08). Se abre en blanco y se le pone
+  // la URL real del PDF apenas está listo.
+  const win = window.open('', '_blank');
+  if(win){ try{ win.document.write('<title>Generando informe…</title><body style="font-family:sans-serif;padding:40px;color:#555;">Generando el PDF, un momento…</body>'); }catch(e){} }
   const prev = btn ? btn.textContent : '';
   if(btn){ btn.disabled = true; btn.textContent = 'Generando…'; }
   const r = await fetchAPI('crm_informe_mensual_pdf', { ejecutivo: USUARIO, mes: INFORME_MES });
   if(btn){ btn.disabled = false; btn.textContent = prev; }
-  if(!r || !r.ok){ alert('No se pudo generar el PDF: '+((r&&r.error)||'error desconocido')); return; }
+  if(!r || !r.ok){
+    if(win && !win.closed) win.close();
+    alert('No se pudo generar el PDF: '+((r&&r.error)||'error desconocido')+(win?'':'\n\n(Además el navegador bloqueó la pestaña — revisa el ícono de "pop-up bloqueado" en la barra de direcciones y permite pestañas de este sitio.)'));
+    return;
+  }
   try{
     const bin = atob(r.base64);
     const bytes = new Uint8Array(bin.length);
     for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
     const blob = new Blob([bytes], {type:'application/pdf'});
     const url = URL.createObjectURL(blob);
-    window.open(url, '_blank');
+    if(win && !win.closed) win.location.href = url;
+    else {
+      window.open(url, '_blank');
+      alert('El navegador bloqueó la pestaña automática. Se acaba de intentar abrir de nuevo — si sigue sin aparecer, revisa el ícono de "pop-up bloqueado" en la barra de direcciones y permite pestañas de este sitio.');
+    }
     setTimeout(()=>{ try{ URL.revokeObjectURL(url); }catch(e){} }, 60000);
-  }catch(e){ alert('No se pudo abrir el PDF.'); }
+  }catch(e){ if(win && !win.closed) win.close(); alert('No se pudo abrir el PDF.'); }
 }
 async function enviarInformeMensualAMario(){
   if(!INFORME_MES){ alert('Elige un mes primero.'); return; }

@@ -9485,8 +9485,12 @@ function renderListaCerrar(){
 /* ════ Vista MIS COTIZACIONES — por cotización, agrupadas por mes, con semáforo de seguimiento ════ */
 async function cargarMisCotizaciones(forzar){
   const container = document.getElementById('listMisCot');
-  // Render instantáneo desde la caché de sesión (refresca en background) → al reabrir es inmediato.
-  if(!forzar && CACHE.vMisCot && CACHE.vMisCot.length){ try { _aplicarTituloMisCot(); _poblarSelectorEjecMisCot(); renderMisCotizaciones(); } catch(e){} }
+  // Render instantáneo desde la caché de sesión mientras refresca atrás — sea o no "forzar"
+  // (forzar solo tiene que decir "no uses caché del SERVIDOR", no "borra la pantalla mientras
+  // esperas"). Antes, cualquier acción (marcar perdida, guardar seguimiento) mostraba un
+  // spinner en blanco un rato largo y daba la impresión de que no se había hecho nada —
+  // pedido de Rayen 2026-07-08: "necesito que el cambio sea inmediato".
+  if(CACHE.vMisCot && CACHE.vMisCot.length){ try { _aplicarTituloMisCot(); _poblarSelectorEjecMisCot(); renderMisCotizaciones(); } catch(e){} }
   else container.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando…</div>';
   const ejec = (typeof getEjecutivoEfectivo === 'function' ? getEjecutivoEfectivo() : '') || USUARIO;
   const params = { ejecutivo: ejec, modo_vista: MODO_VISTA };
@@ -10276,7 +10280,8 @@ async function guardarSeguimientoMC(num, btn){
   }
   // CONFIRMACIÓN DE GUARDADO: recargamos y verificamos que el seguimiento quedó de verdad.
   // Si no se confirma, avisamos al instante y mostramos el texto para que NO se pierda.
-  CACHE.vMisCot = null;
+  // (No se vacía CACHE.vMisCot antes de este llamado: así la lista sigue mostrando lo que
+  // ya había mientras se refresca, en vez de quedar en blanco con un spinner.)
   await cargarMisCotizaciones(true);
   try{ if(document.getElementById('cotModalOv') && window.__MC_CUR===num) abrirCotModal(num); }catch(e){}
   if(notas){
@@ -10355,16 +10360,26 @@ async function marcarEstadoCotMC(num, estado, btn, motivo){
   if(!r || !r.ok){ if(btn){ btn.disabled=false; btn.textContent=prev; } alert('No se pudo: '+((r&&r.error)||'error desconocido')); return; }
   try { Object.keys(localStorage).forEach(kk=>{ if(kk.indexOf('crm_perfil_')===0||kk.indexOf('crm_kpis_cache')===0||kk.indexOf('crm_dash')===0) localStorage.removeItem(kk); }); } catch(e){}
   try{ _cerrarCotModal(); }catch(e){}
+  // Actualización OPTIMISTA: se refleja el nuevo estado en la lista YA cargada al instante
+  // (sin esperar la vuelta del servidor) — pedido de Rayen 2026-07-08: "necesito que el cambio
+  // sea inmediato, si apareció como perdida, pum, se movió". El refresco real de abajo sigue
+  // corriendo en segundo plano para que días-sin-gestión y el resto de campos calculados por
+  // el backend queden exactos, pero la pantalla ya no se queda esperando en blanco.
+  const cc = (CACHE.vMisCot||[]).find(x=>x.cotizacion===num) || {};
+  cc.estado = estado;
+  cc.ganada = (estado === 'Ganada');
+  cc.cerrada = (estado === 'Ganada' || estado === 'Perdida');
+  if(estado==='Ganada'||estado==='Perdida') cc.estado_seguimiento = estado==='Ganada' ? 'ganada' : 'perdida';
+  if(estado==='Ganada') cc.mes_cierre = _hoyISO().substring(0,7);
+  try{ renderMisCotizaciones(); }catch(e){}
   if(estado==='Ganada'){
-    const cc=(CACHE.vMisCot||[]).find(x=>x.cotizacion===num) || {};
     const totalNum = Number(String(cc.total!=null?cc.total:(cc.monto||'')).replace(/[^0-9]/g,''));
     const _cont=(CACHE.vTodos||[]).find(x=>x.id===cc.contacto_id)||{};
-    CACHE.vMisCot = null; cargarMisCotizaciones(true);
+    cargarMisCotizaciones(true);
     abrirPanelCierreVenta(num, { id: cc.contacto_id||cc.id||'', nombre: cc.cliente||_cont.nombre||'', institucion: cc.institucion||_cont.institucion||'', email:_cont.email||'', rut:_cont.rut||'', __totalCotActiva: totalNum, __productos: cc.productos||'', __transporte: cc.transporte||'', __region: cc.region||'', __ciudad: cc.ciudad||'', __direccion: cc.direccion||'' });
     return;
   }
-  CACHE.vMisCot = null;
-  await cargarMisCotizaciones(true);
+  cargarMisCotizaciones(true);
 }
 
 /* ════ Vista MÉTRICAS — Muro de Honor + gráficos anuales del equipo (replica el Portal) ════ */

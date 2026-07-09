@@ -15948,6 +15948,7 @@ async function cargarActividadEquipo(periodo, forzar){
   if(periodo) ACT_PERIODO = periodo;
   ACT_EJEC_ABIERTO = null;
   renderActPeriodoBar();
+  if(ACT_PERIODO === '6meses'){ return cargarActividad6Meses(forzar); }
   const key = actCacheKey();
   const hit = ACT_CACHE[key];
   const body = document.getElementById('actBody');
@@ -15973,6 +15974,43 @@ async function cargarActividadEquipo(periodo, forzar){
   renderActividadEquipo();
 }
 
+// "Últimos 6 meses" — pedido de Rayen 2026-07-08: además de la métrica del período elegido,
+// poder ver la tendencia del equipo en los últimos 6 meses. Reutiliza los mismos helpers de
+// barras del Informe Mensual (_informeUltimos6/_informeBarraMini) y los datos de
+// crm_comparativo_equipo (ya usados en Métricas), sin backend nuevo.
+let ACT_COMP_DATA = null;
+async function cargarActividad6Meses(forzar){
+  const body = document.getElementById('actBody');
+  if(!forzar && window.__ACT_COMP_CACHE && (Date.now()-window.__ACT_COMP_CACHE.t) < 120000){
+    ACT_COMP_DATA = window.__ACT_COMP_CACHE.data; renderActividad6Meses(); return;
+  }
+  if(body) body.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando tendencia de 6 meses…</div>';
+  const r = await fetchAPI('crm_comparativo_equipo', { solicitante: USUARIO });
+  if(!r || !r.ok){ if(body) body.innerHTML = '<div class="error-state">'+esc((r&&r.error)||'No se pudo cargar')+'</div>'; return; }
+  ACT_COMP_DATA = r;
+  window.__ACT_COMP_CACHE = { t: Date.now(), data: r };
+  renderActividad6Meses();
+}
+function renderActividad6Meses(){
+  const d = ACT_COMP_DATA; if(!d) return;
+  const sub = document.getElementById('actSubtitulo');
+  if(sub) sub.textContent = 'Últimos 6 meses · todo el equipo';
+  const serie = campo => { const out = new Array(12).fill(0); (d.comparativo||[]).forEach(x=>{ (x[campo]||[]).forEach(function(v,i){ out[i] += (v||0); }); }); return out; };
+  const u6 = campo => _informeUltimos6(serie(campo));
+  const tCon = u6('serie_contactos_12m'), tCot = u6('serie_cot_12m'), tGan = u6('serie_gan_12m'), tLlam = u6('serie_llamadas_12m'), tReu = u6('serie_reu_12m');
+  document.getElementById('actBody').innerHTML =
+    '<div style="background:#fff;border:1px solid var(--oct-border,#eee);border-radius:14px;padding:20px 22px;">'+
+      '<h3 style="font-size:14px;font-weight:800;color:var(--oct-navy,#001A60);margin:0 0 14px;">Tendencia del equipo — últimos 6 meses</h3>'+
+      '<div style="display:flex;gap:28px;flex-wrap:wrap;">'+
+        _informeBarraMini('Contactos nuevos', '#FF7E00', tCon.labels, tCon.valores)+
+        _informeBarraMini('Cotizaciones', '#5b21b6', tCot.labels, tCot.valores)+
+        _informeBarraMini('Ventas ganadas', '#16A34A', tGan.labels, tGan.valores)+
+        _informeBarraMini('Llamadas', '#06B3FD', tLlam.labels, tLlam.valores)+
+        _informeBarraMini('Reuniones', '#D97706', tReu.labels, tReu.valores)+
+      '</div>'+
+    '</div>';
+}
+
 // Volver al equipo SIN re-consultar al servidor (usa lo ya cargado).
 function volverActEquipo(){
   ACT_EJEC_ABIERTO = null;
@@ -15993,6 +16031,7 @@ function renderActPeriodoBar(){
     { k:'ayer',   label:'Ayer' },
     { k:'semana', label:'Esta semana' },
     { k:'mes',    label:'Este mes' },
+    { k:'6meses', label:'Últimos 6 meses' },
     { k:'desde',  label:'Desde mi última revisión' }
   ];
   const presets = ops.map(o=>{
@@ -16076,13 +16115,9 @@ function renderActividadEquipo(){
 
   let resto;
   if(ejecFoco){
-    // Foco en un ejecutivo: en vez de las tarjetas del equipo, su línea de tiempo completa.
-    const feed = ((d.eventos||[]).filter(ev=>ev.ejecutivo===ejecFoco.nombre)).slice(0,120);
-    const feedHtml = feed.length ? feed.map(ev=>actFeedRow(ev,false)).join('')
-      : '<div style="padding:26px;text-align:center;color:var(--subtle);font-size:13px;">Sin actividad registrada en este período.</div>';
-    resto =
-      '<div style="display:flex;align-items:baseline;gap:9px;margin:24px 0 12px;"><h2 style="font-size:15px;font-weight:800;color:var(--oct-navy,#001A60);margin:0;">Todo lo que hizo '+esc(actEjecMeta(ejecFoco.nombre).full||ejecFoco.nombre)+'</h2><span style="font-size:12px;color:var(--subtle);">'+feed.length+' acciones · o toca un KPI arriba para filtrar por tipo</span></div>'+
-      '<div style="background:#fff;border:1px solid var(--oct-border,#eee);border-radius:12px;overflow:hidden;">'+feedHtml+'</div>';
+    // Foco en un ejecutivo (vía el selector "Todo el equipo ▾"): solo sus métricas arriba —
+    // el detalle de cada KPI se despliega tocándolo, no un listado crudo siempre visible.
+    resto = '<div style="margin:14px 0 12px;font-size:12px;color:var(--subtle);">Toca un KPI arriba para ver su detalle.</div>';
   } else {
     const cards = (d.ejecutivos||[]).map(actCardEjecutivo).join('');
     resto =
@@ -16090,8 +16125,10 @@ function renderActividadEquipo(){
       '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;">'+cards+'</div>';
   }
 
+  ACT_KPI_ABIERTO = null;   // nueva pantalla de datos → ningún detalle queda abierto de entrada
   document.getElementById('actBody').innerHTML =
-    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;">'+kpis+'</div>'+resto;
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;">'+kpis+'</div>'+
+    '<div id="actKpiDetalle"></div>'+resto;
 }
 
 function actCardEjecutivo(e){
@@ -16118,24 +16155,24 @@ function actCardEjecutivo(e){
 
 function abrirActEjecutivo(nombre){
   ACT_EJEC_ABIERTO = nombre;
+  ACT_KPI_ABIERTO = null;   // al entrar a un ejecutivo, ningún detalle queda abierto de entrada
   const e = (ACT_DATA && ACT_DATA.ejecutivos || []).find(x=>x.nombre===nombre);
   if(!e){ cargarActividadEquipo(); return; }
   const m = actEjecMeta(nombre);
   const periodoLabel = (ACT_DATA.periodo && ACT_DATA.periodo.label) ? ACT_DATA.periodo.label : '';
 
+  // Cada tarjeta es un KPI clickeable: toca para desplegar/cerrar su detalle justo debajo
+  // (en #actKpiDetalle), sin salir de esta pantalla — pedido de Rayen 2026-07-08: "quiero ver
+  // todas sus métricas por debajo, en una sola página; toco un KPI, se abre, toco de nuevo, se cierra".
   const medioBlock = ACT_MEDIOS.map(mm=>{
     const val = e[mm.k]||0;
-    return '<div style="background:#F9FAFB;border-radius:10px;padding:13px 14px;display:flex;align-items:center;gap:11px;">'+
+    return '<div onclick="abrirActKpi(\''+mm.k+'\')" style="cursor:pointer;background:#F9FAFB;border-radius:10px;padding:13px 14px;display:flex;align-items:center;gap:11px;">'+
       '<span style="width:34px;height:34px;border-radius:9px;background:#fff;border:1px solid var(--oct-border,#eee);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">'+actIcon(mm.ico,mm.color,17)+'</span>'+
       '<div><div style="font-size:22px;font-weight:800;color:var(--oct-navy,#001A60);line-height:1;">'+val+'</div><div style="font-size:11px;color:var(--subtle);margin-top:3px;">'+mm.label+'</div></div>'+
     '</div>';
   }).join('');
 
-  const sec = (valor,label,color)=>('<div style="background:#fff;border:1px solid var(--oct-border,#eee);border-radius:10px;padding:14px 16px;"><div style="font-size:24px;font-weight:800;color:'+(color||'var(--oct-navy,#001A60)')+';line-height:1;">'+(valor||0)+'</div><div style="font-size:11px;color:var(--subtle);margin-top:4px;">'+esc(label)+'</div></div>');
-
-  const feed = ((ACT_DATA && ACT_DATA.eventos) || []).filter(ev=>ev.ejecutivo===nombre).slice(0,60);
-  const feedHtml = feed.length ? feed.map(ev=>actFeedRow(ev,false)).join('') :
-    '<div style="padding:26px;text-align:center;color:var(--subtle);font-size:13px;">Sin actividad registrada en este período.</div>';
+  const sec = (valor,label,color,tipo,soloGanadas)=>('<div onclick="abrirActKpi(\''+tipo+'\''+(soloGanadas?',true':'')+')" style="cursor:pointer;background:#fff;border:1px solid var(--oct-border,#eee);border-radius:10px;padding:14px 16px;"><div style="font-size:24px;font-weight:800;color:'+(color||'var(--oct-navy,#001A60)')+';line-height:1;">'+(valor||0)+'</div><div style="font-size:11px;color:var(--subtle);margin-top:4px;">'+esc(label)+'</div></div>');
 
   document.getElementById('actBody').innerHTML =
     '<button onclick="volverActEquipo()" style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #E3E8EF;border-radius:8px;padding:8px 13px;font-size:12.5px;font-weight:700;color:var(--subtle);cursor:pointer;margin-bottom:16px;font-family:var(--font-sans);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Volver al equipo</button>'+
@@ -16147,11 +16184,10 @@ function abrirActEjecutivo(nombre){
     '<h3 style="font-size:12.5px;font-weight:800;color:var(--oct-navy,#001A60);margin:0 0 10px;text-transform:uppercase;letter-spacing:.05em;">¿Cómo contactó?</h3>'+
     '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:20px;">'+medioBlock+'</div>'+
     '<h3 style="font-size:12.5px;font-weight:800;color:var(--oct-navy,#001A60);margin:0 0 10px;text-transform:uppercase;letter-spacing:.05em;">Resultados</h3>'+
-    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:20px;">'+
-      sec(e.contactos_nuevos,'Contactos nuevos')+sec(e.seguimientos,'Seguimientos','#92580e')+sec(e.cambios_estado,'Cambios de estado')+sec(e.cotizaciones,'Cotizaciones')+sec(e.ganadas,'Ventas ganadas','#16A34A')+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:6px;">'+
+      sec(e.contactos_nuevos,'Contactos nuevos','','contacto_nuevo')+sec(e.seguimientos,'Seguimientos','#92580e','seguimiento')+sec(e.cambios_estado,'Cambios de estado','','cambio_estado')+sec(e.cotizaciones,'Cotizaciones','','cotizacion')+sec(e.ganadas,'Ventas ganadas','#16A34A','cotizacion',true)+
     '</div>'+
-    '<h3 style="font-size:12.5px;font-weight:800;color:var(--oct-navy,#001A60);margin:0 0 10px;text-transform:uppercase;letter-spacing:.05em;">Actividad reciente</h3>'+
-    '<div style="background:#fff;border:1px solid var(--oct-border,#eee);border-radius:12px;overflow:hidden;">'+feedHtml+'</div>';
+    '<div id="actKpiDetalle"></div>';
 }
 
 function actFeedRow(f, showEjec){
@@ -16203,14 +16239,28 @@ function _catMedioAct(medio){
   if(m.indexOf('visita')>=0||m.indexOf('presencial')>=0) return 'visitas';
   return 'otros';
 }
+// Detalle de un KPI: se abre/cierra EN LA MISMA PANTALLA (sin navegar a otra vista) — pedido
+// de Rayen 2026-07-08: "toco su KPI, se abre en pantalla; toco de nuevo, se cierra". Funciona
+// tanto en la vista general del equipo como dentro de la tarjeta de un ejecutivo (ACT_EJEC_ABIERTO).
+let ACT_KPI_ABIERTO = null;
+function cerrarActKpiDetalle(){ ACT_KPI_ABIERTO = null; const c=document.getElementById('actKpiDetalle'); if(c) c.innerHTML=''; }
 function abrirActKpi(tipo, soloGanadas){
   const d = ACT_DATA; if(!d){ cargarActividadEquipo(); return; }
+  const key = tipo + (soloGanadas ? '_ganada' : '');
+  const cont = document.getElementById('actKpiDetalle');
+  if(ACT_KPI_ABIERTO === key){ cerrarActKpiDetalle(); return; }  // toca de nuevo el mismo KPI → cierra
+  ACT_KPI_ABIERTO = key;
+  if(!cont) return;
   const _mergeMedio = (tipo==='llamadas'||tipo==='emails'||tipo==='whatsapp');
   let evs = (d.eventos || []).filter(ev=> ev.tipo===tipo || (_mergeMedio && ev.tipo==='seguimiento' && _catMedioAct(ev.medio)===tipo));
   if(soloGanadas) evs = evs.filter(ev=>ev.ganada);
-  // Si hay un ejecutivo en foco, el detalle del KPI también se limita a él.
-  const foco = ACT_EJEC_FILTRO ? (d.ejecutivos||[]).find(x=>String(x.nombre).split(' ')[0].toLowerCase()===ACT_EJEC_FILTRO.toLowerCase() || String(x.nombre).toLowerCase().indexOf(ACT_EJEC_FILTRO.toLowerCase())>=0) : null;
-  if(foco) evs = evs.filter(ev=>ev.ejecutivo===foco.nombre);
+  // Acotado al ejecutivo abierto (tarjeta) o, si no hay ninguno, al filtro "Todo el equipo ▾".
+  let nombreFoco = ACT_EJEC_ABIERTO || null;
+  if(!nombreFoco && ACT_EJEC_FILTRO){
+    const foco = (d.ejecutivos||[]).find(x=>String(x.nombre).split(' ')[0].toLowerCase()===ACT_EJEC_FILTRO.toLowerCase() || String(x.nombre).toLowerCase().indexOf(ACT_EJEC_FILTRO.toLowerCase())>=0);
+    nombreFoco = foco ? foco.nombre : null;
+  }
+  if(nombreFoco) evs = evs.filter(ev=>ev.ejecutivo===nombreFoco);
   const titulos = {
     llamadas:'Llamadas', emails:'Emails', whatsapp:'WhatsApp', entrantes:'Entrantes (nos contactaron)',
     reuniones:'Reuniones', seguimiento:'Seguimientos', contacto_nuevo:'Contactos nuevos', cambio_estado:'Cambios de estado',
@@ -16223,15 +16273,19 @@ function abrirActKpi(tipo, soloGanadas){
   const titulo = titulos[tipo] || 'Detalle';
   const color = colores[tipo] || 'var(--navy,#001A60)';
   const periodoLabel = (d.periodo && d.periodo.label) ? d.periodo.label : '';
-  const lista = evs.length ? evs.map(ev=>actFeedRow(ev,true)).join('') :
+  const lista = evs.length ? evs.map(ev=>actFeedRow(ev,!nombreFoco)).join('') :
     '<div style="padding:26px;text-align:center;color:var(--subtle);font-size:13px;">Nadie registró '+esc(titulo.toLowerCase())+' en este período.</div>';
-  document.getElementById('actBody').innerHTML =
-    '<button onclick="volverActEquipo()" style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #E3E8EF;border-radius:8px;padding:8px 13px;font-size:12.5px;font-weight:700;color:var(--subtle);cursor:pointer;margin-bottom:16px;font-family:var(--font-sans);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Volver al equipo</button>'+
-    '<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;background:#fff;border:1px solid var(--oct-border,#eee);border-radius:14px;border-top:4px solid '+color+';padding:18px 20px;margin-bottom:16px;flex-wrap:wrap;">'+
-      '<div><div style="font-size:20px;font-weight:800;color:var(--oct-navy,#001A60);letter-spacing:-.02em;">'+esc(titulo)+'</div><div style="font-size:12px;color:var(--subtle);">'+esc(periodoLabel)+' · todo el equipo</div></div>'+
-      '<div style="text-align:right;"><div style="font-size:30px;font-weight:800;color:'+color+';line-height:1;">'+evs.length+'</div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--subtle);">en total</div></div>'+
+  cont.innerHTML =
+    '<div style="margin-top:14px;">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;background:#fff;border:1px solid var(--oct-border,#eee);border-radius:14px;border-top:4px solid '+color+';padding:16px 20px;margin-bottom:0;flex-wrap:wrap;">'+
+      '<div><div style="font-size:18px;font-weight:800;color:var(--oct-navy,#001A60);letter-spacing:-.02em;">'+esc(titulo)+'</div><div style="font-size:12px;color:var(--subtle);">'+esc(periodoLabel)+(nombreFoco?'':' · todo el equipo')+'</div></div>'+
+      '<div style="display:flex;align-items:center;gap:14px;">'+
+        '<div style="text-align:right;"><div style="font-size:28px;font-weight:800;color:'+color+';line-height:1;">'+evs.length+'</div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--subtle);">en total</div></div>'+
+        '<button onclick="cerrarActKpiDetalle()" title="Cerrar" style="background:#F9FAFB;border:1px solid var(--oct-border,#eee);border-radius:8px;width:30px;height:30px;cursor:pointer;color:var(--subtle);font-size:16px;line-height:1;">&times;</button>'+
+      '</div>'+
     '</div>'+
-    '<div style="background:#fff;border:1px solid var(--oct-border,#eee);border-radius:12px;overflow:hidden;">'+lista+'</div>';
+    '<div style="background:#fff;border:1px solid var(--oct-border,#eee);border-top:none;border-radius:0 0 12px 12px;overflow:hidden;max-height:420px;overflow-y:auto;">'+lista+'</div>'+
+    '</div>';
 }
 
 async function cargarAuditoria(){

@@ -11839,19 +11839,23 @@ function _smExportarPDF(){ _lineaExportarPDF('SM'); }
 // Por eso todos los "gráficos" de acá son tablas/barras de HTML puro, sin canvas.
 // ════════════════════════════════════════════════════════════════════════════
 
-// Fila de barra horizontal hecha 100% con tablas (nada de flex/canvas) — es la técnica más
-// simple que sobrevive intacta la conversión de Apps Script a PDF.
+// Fila de barra horizontal con ANCHOS FIJOS EN PÍXELES (nada de %, nada de tablas anidadas,
+// nada de flex/canvas) — la primera versión usaba una tabla al 100% metida dentro de una celda
+// sin ancho propio, y el conversor de Apps Script (que no hace un layout tan sofisticado como un
+// navegador) la colapsaba a casi nada: la barra quedaba invisible. Con px fijos no hay ambigüedad.
+const _SM_INF_BARRA_PX = 200;
 function _smInfBarra(lbl, valor, max, color, detalle){
-  const pct = max > 0 ? Math.max(1, Math.round(valor/max*100)) : 0;
+  const pct = max > 0 ? Math.max(2, Math.round(valor/max*100)) : 0;
+  const anchoPx = Math.round(_SM_INF_BARRA_PX * pct / 100);
   return '<tr>' +
-    '<td style="padding:3px 8px 3px 0;font-size:11px;color:#374151;white-space:nowrap;width:120px;">'+esc(lbl)+'</td>' +
-    '<td style="padding:3px 0;">' +
-      '<table style="width:100%;border-collapse:collapse;"><tr>' +
-        '<td style="background:'+color+';width:'+pct+'%;height:11px;line-height:11px;font-size:1px;">&nbsp;</td>' +
-        '<td style="background:#EEF0F3;width:'+(100-pct)+'%;height:11px;line-height:11px;font-size:1px;">&nbsp;</td>' +
+    '<td style="padding:4px 10px 4px 0;font-size:11px;color:#374151;white-space:nowrap;width:130px;">'+esc(lbl)+'</td>' +
+    '<td style="padding:4px 0;width:'+_SM_INF_BARRA_PX+'px;">' +
+      '<table cellpadding="0" cellspacing="0" border="0" style="width:'+_SM_INF_BARRA_PX+'px;background:#EEF0F3;"><tr>' +
+        '<td style="width:'+anchoPx+'px;background:'+color+';height:12px;font-size:1px;line-height:12px;">&nbsp;</td>' +
+        '<td style="font-size:1px;line-height:12px;">&nbsp;</td>' +
       '</tr></table>' +
     '</td>' +
-    '<td style="padding:3px 0 3px 10px;font-size:11.5px;font-weight:800;color:#111827;text-align:right;white-space:nowrap;">'+esc(String(valor))+(detalle?' <span style="font-weight:600;color:#9aa3af;font-size:10px;">'+esc(detalle)+'</span>':'')+'</td>' +
+    '<td style="padding:4px 0 4px 12px;font-size:11.5px;font-weight:800;color:#111827;text-align:right;white-space:nowrap;">'+esc(String(valor))+(detalle?' <span style="font-weight:600;color:#9aa3af;font-size:10px;">'+esc(detalle)+'</span>':'')+'</td>' +
   '</tr>';
 }
 function _smInfTablaBarras(titulo, filas){
@@ -11859,7 +11863,7 @@ function _smInfTablaBarras(titulo, filas){
   const max = Math.max.apply(null, filas.map(f=>f.valor));
   return '<div style="margin:16px 0 4px;">' +
     '<h3 style="font-size:13px;font-weight:800;color:#001A60;margin:0 0 6px;">'+esc(titulo)+'</h3>' +
-    '<table style="width:100%;border-collapse:collapse;">' +
+    '<table cellpadding="0" cellspacing="0" border="0">' +
       filas.map(f=>_smInfBarra(f.lbl, f.valor, max, f.color||'#06B3FD', f.detalle)).join('') +
     '</table>' +
   '</div>';
@@ -11915,7 +11919,7 @@ async function _smGenerarInforme(){
   const periodoLbl = mesesOrdenados.length ? (mesesOrdenados.length===1 ? mesLbl(mesesOrdenados[0]) : mesLbl(mesesOrdenados[0])+' – '+mesLbl(mesesOrdenados[mesesOrdenados.length-1])) : '';
 
   // ---- KPI (tabla 4 columnas, sin flex) ----
-  const kpiCelda = (lbl,val,color) => '<td style="width:25%;padding:12px 10px;border:1px solid #E5E7EB;">' +
+  const kpiCelda = (lbl,val,color) => '<td style="width:25%;padding:12px 10px;border:1px solid #E5E7EB;border-top:3px solid '+color+';">' +
     '<div style="font-size:9px;font-weight:800;color:#9aa3af;text-transform:uppercase;letter-spacing:.3px;">'+esc(lbl)+'</div>' +
     '<div style="font-size:19px;font-weight:800;color:'+color+';margin-top:3px;">'+esc(String(val))+'</div>' +
   '</td>';
@@ -11973,7 +11977,7 @@ async function _smGenerarInforme(){
 
   // ---- Productos + Stock, AL FINAL (pedido explícito de Rayen) ----
   const topProd = Object.keys(prodMap).sort((a,b)=>prodMap[b].count-prodMap[a].count).slice(0,15);
-  const prodFila = k => '<tr>' +
+  const prodFila = (k,i) => '<tr style="background:'+(i%2?'#F7F9FC':'#fff')+';">' +
     '<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;">'+esc(prodMap[k].display)+'</td>' +
     '<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;text-align:right;font-weight:700;">'+prodMap[k].count+' <span style="color:#9aa3af;font-weight:600;">('+prodMap[k].unidades+' u.)</span></td>' +
     '<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;text-align:right;color:#0891B2;font-weight:700;">'+(prodPorProb[50][k]?prodPorProb[50][k].unidades:0)+'</td>' +
@@ -11995,7 +11999,7 @@ async function _smGenerarInforme(){
     const demanda = (c50?c50.unidades:0) + (c90?c90.unidades:0);
     return { nombre: p.nombre, cantidad: p.cantidad, d50: c50?c50.unidades:0, d90: c90?c90.unidades:0, demanda, falta: demanda > p.cantidad };
   }).filter(r => r.demanda > 0).sort((a,b) => (b.falta - a.falta) || (b.demanda - a.demanda));
-  const stockFila = r => '<tr>' +
+  const stockFila = (r,i) => '<tr style="background:'+(i%2?'#F7F9FC':'#fff')+';">' +
     '<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;">'+esc(r.nombre)+'</td>' +
     '<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;text-align:right;font-weight:800;">'+r.cantidad+'</td>' +
     '<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;text-align:right;color:#0891B2;font-weight:700;">'+r.d50+'</td>' +

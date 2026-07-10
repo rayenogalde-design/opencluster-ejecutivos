@@ -12040,10 +12040,20 @@ async function _smGenerarInforme(){
   '<div style="margin-top:16px;">' +
     '<h3 style="font-size:13px;font-weight:800;color:#001A60;margin:0 0 4px;">Disponibles para ofrecer <span style="font-weight:600;color:#9aa3af;font-size:10.5px;">— en stock, sin cotizaciones al 50%/90% todavía</span></h3>' +
     (!stockSinCotizar.length ? '<div style="color:#9aa3af;font-size:11.5px;">Todo lo que llegó en la Orden de Compra ya tiene alguna cotización al 50% o 90%.</div>' :
-      '<table style="width:60%;border-collapse:collapse;font-size:12px;">' +
-        '<tr style="background:#F0F4FA;"><th style="padding:6px 8px;text-align:left;">Producto</th><th style="padding:6px 8px;text-align:right;">Stock</th></tr>' +
-        stockSinCotizar.map(stockSinCotizarFila).join('') +
-      '</table>') +
+      (() => {
+        // 2 columnas lado a lado (pedido de Rayen: "que no ocupe tanto espacio hacia abajo") —
+        // se reparte la lista por mitad, primera columna arriba y segunda columna abajo alineadas.
+        const mitad = Math.ceil(stockSinCotizar.length/2);
+        const col1 = stockSinCotizar.slice(0, mitad), col2 = stockSinCotizar.slice(mitad);
+        const miniTabla = arr => !arr.length ? '' : '<table style="width:100%;border-collapse:collapse;font-size:11.5px;">' +
+          '<tr style="background:#F0F4FA;"><th style="padding:5px 8px;text-align:left;">Producto</th><th style="padding:5px 8px;text-align:right;">Stock</th></tr>' +
+          arr.map(stockSinCotizarFila).join('') +
+        '</table>';
+        return '<table style="width:100%;border-collapse:collapse;"><tr>' +
+          '<td style="width:50%;padding:0 8px 0 0;vertical-align:top;">'+miniTabla(col1)+'</td>' +
+          '<td style="width:50%;padding:0 0 0 8px;vertical-align:top;">'+miniTabla(col2)+'</td>' +
+        '</tr></table>';
+      })()) +
   '</div>';
 
   // ---- Detalle de cotizaciones, TODAS (Ganadas/Descartadas/En gestión) — pedido de Rayen: quiere

@@ -11148,6 +11148,23 @@ function _refrescarProbUI(num){
   if(document.getElementById('cotModalOv') && window.__MC_CUR === num) abrirCotModal(num);
 }
 // Extrae {key normalizada, nombre tal cual venía} por cada producto de UNA cotización, deduplicado.
+// Filtro de la tarjeta "Stock disponible": por texto (nombre de producto) y/o "solo con demanda".
+// Vive fuera de _renderVistaLinea porque se dispara con cada tecla — no hace sentido re-renderizar
+// toda la pestaña (y perder el estado abierto/cerrado de cada fila) solo para filtrar.
+function _smStockAplicarFiltro(){
+  const q = _smProdNorm(document.getElementById('smStockBuscar').value);
+  const soloDemanda = document.getElementById('smStockSoloDemanda').checked;
+  let visibles = 0;
+  document.querySelectorAll('.sm-stock-row').forEach(function(row){
+    const coincideTexto = !q || row.getAttribute('data-n').indexOf(q) >= 0;
+    const coincideDemanda = !soloDemanda || row.getAttribute('data-dem') === '1';
+    const mostrar = coincideTexto && coincideDemanda;
+    row.style.display = mostrar ? '' : 'none';
+    if(mostrar) visibles++;
+  });
+  const vacio = document.getElementById('smStockVacio');
+  if(vacio) vacio.style.display = visibles ? 'none' : 'block';
+}
 function _smExtraerProductos(prodStr){
   const vistos = new Set(); const out = [];
   String(prodStr||'').split(',').map(x=>x.trim()).filter(Boolean).forEach(item=>{
@@ -11399,47 +11416,66 @@ function _renderVistaLinea(todas, tipo){
       let key = _smProdNorm(p.nombre);
       if(_SM_PROD_ALIAS[key]) key = _SM_PROD_ALIAS[key];
       const c50 = prodPorProb[50][key], c90 = prodPorProb[90][key];
-      const cotizaciones = [].concat(c50?c50.cotizaciones:[], c90?c90.cotizaciones:[]);
+      const cot90 = (c90?c90.cotizaciones:[]).slice().sort((a,b)=>String(a.numero).localeCompare(String(b.numero)));
+      const cot50 = (c50?c50.cotizaciones:[]).slice().sort((a,b)=>String(a.numero).localeCompare(String(b.numero)));
       const demanda = (c50?c50.unidades:0) + (c90?c90.unidades:0);
-      return { nombre: p.nombre, cantidad: p.cantidad, demanda, cotizaciones, falta: demanda > p.cantidad };
+      return { nombre: p.nombre, cantidad: p.cantidad, demanda, cot90, cot50, falta: demanda > p.cantidad };
     }).sort((a,b) => (b.falta - a.falta) || (b.demanda - a.demanda) || a.nombre.localeCompare(b.nombre,'es'));
     const nFalta = stockRows.filter(r=>r.falta).length;
+    const nConDemanda = stockRows.filter(r=>r.demanda>0).length;
     // Cada cotización que tiene ese producto marcado 50%/90% — para que Rayen sepa a quién le estaría
     // dando el producto, no solo cuántas unidades. Clickeable: abre el modal completo de esa cotización
-    // (mismo abrirCotModal que usa el resto del CRM).
-    const _stockCotizLista = cs => !cs.length ? '' : '<div style="margin-top:6px;display:flex;flex-direction:column;gap:3px;">' +
+    // (mismo abrirCotModal que usa el resto del CRM). Agrupadas por probabilidad (90% primero) para
+    // que se entienda de un vistazo qué tan urgente es cada una.
+    const _stockCotizGrupo = (cs, color, etiqueta) => !cs.length ? '' :
+      '<div style="font-size:9.5px;font-weight:800;color:'+color+';text-transform:uppercase;letter-spacing:.3px;margin:6px 0 3px;">'+etiqueta+'</div>' +
       cs.map(x => {
         const numJS = String(x.numero||'').replace(/'/g,"\\'");
-        return '<div onclick="abrirCotModal(\''+numJS+'\')" style="cursor:pointer;font-size:11px;color:var(--ink);padding:3px 8px;background:var(--paper,#f9fafb);border-radius:6px;" onmouseover="this.style.background=\'#EEF2FF\'" onmouseout="this.style.background=\'var(--paper,#f9fafb)\'">' +
-          '<span style="font-family:Courier New,monospace;font-weight:700;color:#001A60;">'+esc(x.numero||'')+'</span> — '+esc(x.institucion)+' <span style="color:var(--subtle);">('+esc(x.ejecutivo)+')</span> ' +
-          '<span style="font-weight:800;color:'+(x.probabilidad===90?'#16A34A':'#0891B2')+';">'+x.probabilidad+'%</span>' +
+        return '<div onclick="event.stopPropagation();abrirCotModal(\''+numJS+'\')" style="cursor:pointer;font-size:11.5px;color:var(--ink);padding:4px 9px;background:var(--paper,#f9fafb);border-radius:6px;margin-bottom:3px;" onmouseover="this.style.background=\'#EEF2FF\'" onmouseout="this.style.background=\'var(--paper,#f9fafb)\'">' +
+          '<span style="font-family:Courier New,monospace;font-weight:700;color:#001A60;">'+esc(x.numero||'')+'</span> — '+esc(x.institucion)+' <span style="color:var(--subtle);">('+esc(x.ejecutivo)+')</span>' +
         '</div>';
-      }).join('') +
-    '</div>';
-    productosHtml += '<div style="background:#fff;border:2px solid #001A60;border-radius:12px;padding:16px 18px;margin-bottom:18px;overflow-x:auto;">' +
-      '<div style="font-family:Montserrat,sans-serif;font-size:14px;font-weight:800;color:#001A60;margin-bottom:4px;">Stock disponible — Orden de Compra N° 028/2026 (contenedor)</div>' +
-      '<div style="font-size:12px;color:var(--subtle);margin-bottom:12px;">'+
-        (nFalta ? '<b style="color:#DC2626;">'+nFalta+' producto'+(nFalta===1?'':'s')+' con demanda al 50%+90% por sobre el stock que llega.</b> ' : 'Ningún producto tiene, por ahora, más demanda al 50%+90% que stock disponible. ') +
-        'Toca cualquier N° de cotización para abrirla. El resto de la lista, para referencia.'+
-      '</div>' +
-      '<table style="width:100%;border-collapse:collapse;font-size:13px;min-width:520px;">' +
-      '<tr><th style="text-align:left;padding:7px 4px;color:var(--subtle);font-size:11px;">Producto</th>' +
-        '<th style="text-align:right;padding:7px 4px;color:#001A60;font-size:11px;">Stock</th>' +
-        '<th style="text-align:right;padding:7px 4px;color:#5b21b6;font-size:11px;">Cotizado 50%+90%</th>' +
-        '<th style="text-align:left;padding:7px 4px 7px 16px;color:var(--subtle);font-size:11px;">Estado</th>' +
-        '<th style="text-align:left;padding:7px 4px;color:var(--subtle);font-size:11px;">Cotizaciones (a quién se le estaría dando)</th></tr>' +
-      stockRows.map(r => '<tr>' +
-        '<td style="padding:7px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);vertical-align:top;">'+esc(r.nombre)+'</td>' +
-        '<td style="padding:7px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;font-weight:800;vertical-align:top;">'+r.cantidad+'</td>' +
-        '<td style="padding:7px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;color:var(--subtle);vertical-align:top;">'+(r.demanda||'—')+'</td>' +
-        '<td style="padding:7px 4px 7px 16px;border-bottom:1px solid var(--smoke,#e5e7eb);vertical-align:top;">' +
+      }).join('');
+    const rowsHtml = stockRows.map((r, idx) => {
+      const pctBar = Math.min(100, Math.round((r.demanda / Math.max(r.cantidad,1)) * 100));
+      const barColor = r.falta ? '#DC2626' : (r.demanda ? '#16A34A' : '#CBD5E1');
+      const detId = 'smStockDet'+idx;
+      const abierto = r.falta; // los que faltan se muestran ya abiertos, para que salten a la vista
+      const totalCot = r.cot90.length + r.cot50.length;
+      return '<div class="sm-stock-row" data-n="'+esc(_smProdNorm(r.nombre))+'" data-dem="'+(r.demanda?1:0)+'" style="border-bottom:1px solid var(--smoke,#e5e7eb);">' +
+        '<div onclick="var d=document.getElementById(\''+detId+'\'); var v=document.getElementById(\''+detId+'v\'); var open=d.style.display!==\'none\'; d.style.display=open?\'none\':\'block\'; v.textContent=open?\'▸\':\'▾\';" ' +
+          'style="cursor:pointer;display:flex;align-items:center;gap:12px;padding:9px 4px;flex-wrap:wrap;">' +
+          '<span style="flex:1 1 220px;font-size:13px;color:var(--ink);">'+esc(r.nombre)+'</span>' +
+          '<span style="flex:0 0 140px;height:8px;border-radius:5px;background:#EEF0F3;overflow:hidden;position:relative;">' +
+            '<span style="display:block;height:100%;width:'+pctBar+'%;background:'+barColor+';"></span>' +
+          '</span>' +
+          '<span style="flex:0 0 auto;font-size:12px;color:var(--subtle);white-space:nowrap;">Stock <b style="color:var(--ink);">'+r.cantidad+'</b> · Cotizado <b style="color:var(--ink);">'+(r.demanda||0)+'</b></span>' +
           (r.falta
-            ? '<span style="font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;background:#DC262618;color:#DC2626;">Falta stock</span>'
-            : '<span style="font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;background:#16A34A18;color:#16A34A;">Alcanza</span>') +
-        '</td>' +
-        '<td style="padding:7px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);vertical-align:top;">'+(r.cotizaciones.length ? _stockCotizLista(r.cotizaciones) : '<span style="color:var(--subtle);">—</span>')+'</td>' +
-      '</tr>').join('') +
-      '</table>' +
+            ? '<span style="flex:0 0 auto;font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;background:#DC262618;color:#DC2626;white-space:nowrap;">Falta stock</span>'
+            : '<span style="flex:0 0 auto;font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;background:#16A34A18;color:#16A34A;white-space:nowrap;">Alcanza</span>') +
+          '<span id="'+detId+'v" style="flex:0 0 16px;color:var(--subtle);font-size:12px;">'+(abierto?'▾':'▸')+'</span>' +
+        '</div>' +
+        '<div id="'+detId+'" style="display:'+(abierto?'block':'none')+';padding:0 4px 12px 4px;">' +
+          (totalCot
+            ? _stockCotizGrupo(r.cot90,'#16A34A','90% de probabilidad') + _stockCotizGrupo(r.cot50,'#0891B2','50% de probabilidad')
+            : '<div style="font-size:11.5px;color:var(--subtle);padding:2px 9px;">Sin cotizaciones al 50% o 90% todavía.</div>') +
+        '</div>' +
+      '</div>';
+    }).join('');
+    productosHtml += '<div style="background:#fff;border:2px solid #001A60;border-radius:12px;padding:16px 18px;margin-bottom:18px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:4px;">' +
+        '<div style="font-family:Montserrat,sans-serif;font-size:14px;font-weight:800;color:#001A60;">Stock disponible — Orden de Compra N° 028/2026 (contenedor)</div>' +
+        '<input id="smStockBuscar" type="text" oninput="_smStockAplicarFiltro()" placeholder="Buscar producto…" class="sm-no-print" ' +
+          'style="padding:6px 12px;border:1px solid var(--smoke,#e5e7eb);border-radius:8px;font-size:12.5px;font-family:inherit;min-width:200px;">' +
+      '</div>' +
+      '<div style="font-size:12px;color:var(--subtle);margin-bottom:10px;">'+
+        (nFalta ? '<b style="color:#DC2626;">'+nFalta+' producto'+(nFalta===1?'':'s')+' con demanda al 50%+90% por sobre el stock que llega.</b> ' : 'Ningún producto tiene, por ahora, más demanda al 50%+90% que stock disponible. ') +
+        'Toca un producto para ver sus cotizaciones (quién y a qué probabilidad); toca el N° para abrirla.'+
+      '</div>' +
+      '<label class="sm-no-print" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink);cursor:pointer;margin-bottom:10px;">' +
+        '<input type="checkbox" id="smStockSoloDemanda" onchange="_smStockAplicarFiltro()"> Ver solo los '+nConDemanda+' con cotizaciones al 50%/90%' +
+      '</label>' +
+      '<div id="smStockLista">' + rowsHtml + '</div>' +
+      '<div id="smStockVacio" style="display:none;padding:16px 4px;color:var(--subtle);font-size:12.5px;">Ningún producto calza con la búsqueda.</div>' +
       '<div style="font-size:10.5px;color:var(--subtle);margin-top:10px;">"escalera grande" y "Tubo de burbujas Luminea" quedan con SKU asumido por Rayen a partir de la factura — pendiente de confirmar con el proveedor.</div>' +
     '</div>';
   }
@@ -11783,6 +11819,9 @@ window.addEventListener('beforeprint', function(){
     const cfg = _LINEA_CFG[tipo];
     if(!document.getElementById(cfg.view)) return;
     document.querySelectorAll('#'+cfg.view+' .sm-tab').forEach(function(el){ el.style.display = 'block'; });
+    // Filas de "Stock disponible": todas abiertas en el PDF, sin importar si estaban colapsadas en
+    // pantalla — impreso no se puede hacer clic, así que tiene que salir todo desplegado.
+    document.querySelectorAll('#'+cfg.view+' .sm-stock-row > div[id^="smStockDet"]').forEach(function(el){ el.style.display = 'block'; });
     const st = window.__LINEA_STATE[tipo];
     (st.charts || []).forEach(function(ch){ try{ ch.resize(); }catch(e){} });
   });

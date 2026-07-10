@@ -11868,6 +11868,32 @@ function _smInfTablaBarras(titulo, filas){
     '</table>' +
   '</div>';
 }
+// Barra APILADA (una sola barra dividida en segmentos de colores, con leyenda abajo) — se ve más
+// "gráfico" que una lista de barras sueltas; pedido de Rayen 2026-07-10 ("que sean bonitos, un
+// poquito elegante"). Anchos en px fijos, misma razón que _smInfBarra: nada de % sin ancho propio.
+const _SM_INF_APILADA_PX = 460;
+function _smInfBarraApilada(titulo, segmentos){
+  const total = segmentos.reduce((s,x)=>s+x.valor,0);
+  if(!total) return '<div style="margin:18px 0 4px;"><h3 style="font-size:13px;font-weight:800;color:#001A60;margin:0 0 4px;">'+esc(titulo)+'</h3><div style="color:#9aa3af;font-size:11.5px;">Sin datos.</div></div>';
+  let acumulado = 0;
+  const celdas = segmentos.map((s,i)=>{
+    let px = i===segmentos.length-1 ? (_SM_INF_APILADA_PX - acumulado) : Math.round(s.valor/total*_SM_INF_APILADA_PX);
+    acumulado += px;
+    return '<td style="width:'+Math.max(0,px)+'px;background:'+s.color+';height:26px;font-size:1px;line-height:26px;">&nbsp;</td>';
+  }).join('');
+  const leyenda = segmentos.map(s=>{
+    const p = Math.round(s.valor/total*1000)/10;
+    return '<td style="padding:0 20px 0 0;white-space:nowrap;vertical-align:top;">' +
+      '<span style="display:inline-block;width:10px;height:10px;background:'+s.color+';margin-right:5px;"></span>' +
+      '<span style="font-size:11.5px;color:#374151;">'+esc(s.lbl)+' <b style="color:#111827;">'+s.valor+'</b> <span style="color:#9aa3af;">('+p+'%'+(s.detalle?' · '+esc(s.detalle):'')+')</span></span>' +
+    '</td>';
+  }).join('');
+  return '<div style="margin:18px 0 4px;">' +
+    '<h3 style="font-size:13px;font-weight:800;color:#001A60;margin:0 0 8px;">'+esc(titulo)+'</h3>' +
+    '<table cellpadding="0" cellspacing="0" border="0" style="width:'+_SM_INF_APILADA_PX+'px;"><tr>'+celdas+'</tr></table>' +
+    '<table cellpadding="0" cellspacing="0" border="0" style="margin-top:9px;"><tr>'+leyenda+'</tr></table>' +
+  '</div>';
+}
 async function _smGenerarInforme(){
   const todas = CACHE.vMisCot || [];
   const sm = todas.filter(c => _lineaCot(c.cotizacion) === 'SM');
@@ -11928,25 +11954,25 @@ async function _smGenerarInforme(){
     '<tr>'+kpiCelda('Mercado público', pubCount+' · '+pct(pubCount)+'%', '#0891B2')+kpiCelda('Mercado privado', privCount+' · '+pct(privCount)+'%', '#C99935')+kpiCelda('En gestión al 50%', probCounts[50], '#0891B2')+kpiCelda('En gestión al 90%', probCounts[90], '#16A34A')+'</tr>'+
   '</table>';
 
-  // ---- Gráficos (tablas de barras) ----
+  // ---- Gráficos: 3 barras apiladas (más "de gráfico") + 2 listas de barras ----
   const graficosHtml =
-    _smInfTablaBarras('Por ejecutivo', Object.entries(porEjec).sort((a,b)=>b[1].count-a[1].count).map(([k,v])=>({lbl:k, valor:v.count, color:'#001A60', detalle:fmtCLP(v.monto)}))) +
-    _smInfTablaBarras('Estado', [
+    _smInfBarraApilada('Estado de las cotizaciones', [
       {lbl:'Ganada', valor:ganadas, color:'#16A34A', detalle:fmtCLP(montoGanadas)},
       {lbl:'Descartada', valor:grupos.descartadas.length, color:'#DC2626', detalle:fmtCLP(montoDescartadas)},
       {lbl:'En gestión', valor:grupos.ofrecidas.length, color:'#F59E0B', detalle:fmtCLP(montoGrupo(grupos.ofrecidas))}
     ]) +
-    _smInfTablaBarras('Por mes', mesesOrdenados.map(m=>({lbl:mesLbl(m), valor:porMes[m].count, color:'#5b21b6', detalle:fmtCLP(porMes[m].monto)}))) +
-    _smInfTablaBarras('Probabilidad de cierre · en gestión', [
+    _smInfBarraApilada('Mercado público vs. privado', [
+      {lbl:'Público', valor:pubCount, color:'#0891B2', detalle:fmtCLP(pubMonto)},
+      {lbl:'Privado', valor:privCount, color:'#C99935', detalle:fmtCLP(privMonto)}
+    ]) +
+    _smInfBarraApilada('Probabilidad de cierre · en gestión', [
       {lbl:'Sin marcar', valor:probCounts[0], color:'#9aa3af', detalle:fmtCLP(probMontos[0])},
       {lbl:'20%', valor:probCounts[20], color:'#F59E0B', detalle:fmtCLP(probMontos[20])},
       {lbl:'50%', valor:probCounts[50], color:'#0891B2', detalle:fmtCLP(probMontos[50])},
       {lbl:'90%', valor:probCounts[90], color:'#16A34A', detalle:fmtCLP(probMontos[90])}
     ]) +
-    _smInfTablaBarras('Público vs. privado', [
-      {lbl:'Público', valor:pubCount, color:'#0891B2', detalle:fmtCLP(pubMonto)},
-      {lbl:'Privado', valor:privCount, color:'#C99935', detalle:fmtCLP(privMonto)}
-    ]);
+    _smInfTablaBarras('Por ejecutivo', Object.entries(porEjec).sort((a,b)=>b[1].count-a[1].count).map(([k,v])=>({lbl:k, valor:v.count, color:'#001A60', detalle:fmtCLP(v.monto)}))) +
+    _smInfTablaBarras('Por mes', mesesOrdenados.map(m=>({lbl:mesLbl(m), valor:porMes[m].count, color:'#5b21b6', detalle:fmtCLP(porMes[m].monto)})));
 
   // ---- Párrafo resumen (mismo estilo que en pantalla, con "Descartadas") ----
   const parrafoHtml = '<div style="font-size:13.5px;color:#1a2440;line-height:1.7;background:#F7F3EE;border-left:4px solid #001A60;border-radius:8px;padding:14px 18px;margin:18px 0;">' +
@@ -12015,6 +12041,43 @@ async function _smGenerarInforme(){
       '</table>') +
   '</div>';
 
+  // ---- Detalle de cotizaciones, TODAS (Ganadas/Descartadas/En gestión) — pedido de Rayen: quiere
+  // saber quiénes son, incluidas las descartadas, con ejecutivo/monto/fecha/cliente/institución. ----
+  const detFila = (c,i,extraTd) => '<tr style="background:'+(i%2?'#F7F9FC':'#fff')+';">' +
+    '<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;font-family:Courier New,monospace;color:#64748B;">'+esc(c.cotizacion||'')+'</td>' +
+    '<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;">'+esc(c.fecha||'—')+'</td>' +
+    '<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;">'+esc(c.cliente||'—')+'</td>' +
+    '<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;">'+esc(c.institucion||'—')+'</td>' +
+    '<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;font-weight:700;color:#001A60;">'+esc(fn(c.ejecutivo))+'</td>' +
+    '<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;text-align:right;font-weight:700;">'+fmtCLP(_smMontoProductos(c))+'</td>' +
+    (extraTd||'') +
+  '</tr>';
+  const detCabecera = (conProb) => '<tr style="background:#F0F4FA;">' +
+    '<th style="padding:6px 8px;text-align:left;">N°</th><th style="padding:6px 8px;text-align:left;">Fecha</th>' +
+    '<th style="padding:6px 8px;text-align:left;">Cliente</th><th style="padding:6px 8px;text-align:left;">Institución</th>' +
+    '<th style="padding:6px 8px;text-align:left;">Ejecutivo</th><th style="padding:6px 8px;text-align:right;">Monto</th>' +
+    (conProb?'<th style="padding:6px 8px;text-align:right;">Probabilidad</th>':'') +
+  '</tr>';
+  const detTablaHtml = (titulo, color, arr, conProb) => '<div style="margin-top:16px;">' +
+    '<h3 style="font-size:13px;font-weight:800;color:'+color+';margin:0 0 6px;">'+esc(titulo)+' <span style="font-weight:600;color:#9aa3af;font-size:11px;">· '+arr.length+'</span></h3>' +
+    (!arr.length ? '<div style="color:#9aa3af;font-size:11.5px;">Ninguna.</div>' :
+      '<table style="width:100%;border-collapse:collapse;font-size:11.5px;">' + detCabecera(conProb) +
+        arr.map((c,i)=>{
+          if(!conProb) return detFila(c,i);
+          const p = probMap[String(c.cotizacion||'').trim()]||0;
+          return detFila(c,i,'<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;text-align:right;font-weight:800;color:'+(p===90?'#16A34A':p===50?'#0891B2':p===20?'#F59E0B':'#9aa3af')+';">'+p+'%</td>');
+        }).join('') +
+      '</table>') +
+  '</div>';
+  const ofrecidasOrdenadas = grupos.ofrecidas.slice().sort((a,b)=>(probMap[String(b.cotizacion||'').trim()]||0)-(probMap[String(a.cotizacion||'').trim()]||0));
+  const detalleCotizacionesHtml = '<div style="margin-top:8px;">' +
+    '<h2 style="font-size:15px;font-weight:800;color:#001A60;margin:0 0 2px;">Detalle de cotizaciones</h2>' +
+    '<div style="color:#9aa3af;font-size:11px;">Todas las cotizaciones del período, con ejecutivo, monto, fecha e institución/cliente.</div>' +
+    detTablaHtml('Ganadas', '#16A34A', grupos.ganadas, false) +
+    detTablaHtml('En gestión', '#F59E0B', ofrecidasOrdenadas, true) +
+    detTablaHtml('Descartadas', '#DC2626', grupos.descartadas, false) +
+  '</div>';
+
   const ahora = new Date();
   const fechaGenerada = ahora.toLocaleDateString('es-CL', {day:'2-digit',month:'long',year:'numeric'});
 
@@ -12028,6 +12091,8 @@ async function _smGenerarInforme(){
     '<div style="margin-top:22px;border-top:2px solid #001A60;padding-top:4px;"></div>' +
     productosHtml +
     stockHtml +
+    '<div style="margin-top:22px;border-top:2px solid #001A60;padding-top:4px;"></div>' +
+    detalleCotizacionesHtml +
   '</body></html>';
 
   const win = window.open('', '_blank');

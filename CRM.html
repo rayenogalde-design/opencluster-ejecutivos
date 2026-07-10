@@ -2895,17 +2895,12 @@ body{
           /* El gráfico de barras de productos no se entiende impreso (queda muy angosto/alto);
              la tabla "Resumen de productos cotizados" de más abajo ya trae el mismo dato mejor. */
           .sm-print-skip { display: none !important; }
-          /* TODOS los gráficos de Chart.js (canvas) quedan fuera del PDF: dependen de que el
-             navegador termine de pintar el canvas justo antes de imprimir, y esa carrera a veces
-             pierde — salen hojas en blanco donde debería ir el gráfico. Los KPI y las tablas de más
-             abajo (que SÍ son HTML normal, sin esa carrera) ya traen los mismos números, así que el
-             informe queda completo igual, solo que sin el dibujo. */
-          canvas { display: none !important; }
-          /* Las 4 tarjetas de "Resumen" (420px mín.) y las 3 de "Por institución" (380px mín.) usan
-             auto-fit, así que en el ancho angosto de una hoja impresa quedan en UNA sola columna y
-             se apilan en más de una página — aunque ahora estén vacías de gráfico, el título y el
-             "detalle" clickeado siguen ahí, así que igual conviene 2 columnas para que la pestaña
-             quepa en una sola hoja. */
+          /* Las 4 tarjetas de gráficos de "Resumen" (420px mín.) y las 3 de "Por institución"
+             (380px mín.) usan auto-fit, así que en el ancho angosto de una hoja impresa quedan en
+             UNA sola columna y se apilan en más de una página. Forzamos 2 columnas (2x2 / 2+1) para
+             que las tarjetas de una misma pestaña quepan juntas en una sola hoja — los gráficos son
+             responsive (Chart.js + resize() en beforeprint), así que se achican solos al angostar
+             la columna. */
           div[style*="auto-fit,minmax("] { grid-template-columns: 1fr 1fr !important; gap: 10px !important; margin-bottom: 10px !important; }
           /* En el PDF, la tarjeta "Stock disponible" solo muestra los productos que sí tienen alguna
              cotización al 50%/90% — imprimir los 39 completos (la mayoría sin ninguna cotización

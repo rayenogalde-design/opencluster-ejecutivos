@@ -10907,6 +10907,57 @@ function _smProdNorm(name){
     .replace(/\s*-\s*/g,' ').replace(/^sistema\s+/,'').replace(/\s+incluye.*$/,'')
     .replace(/\s+/g,' ').trim();
 }
+// Stock físico de Sala Multisensorial — Orden de Compra N° 028/2026 (contenedor Qinera).
+// Solo cubre esta línea de negocio (SM); Ayudas Técnicas no tiene stock cargado acá.
+// "escalera grande" y "Tubo de burbujas Luminea" quedan con SKU asumido por Rayen a partir de la
+// foto de la factura (no venía en el catálogo) — si el cruce contra ellos se ve raro, es por eso.
+const STOCK_SM_RAW = [
+  {sku:"BJ-EXPRX24", nombre:"24 tarjetas y 24 pegatinas adicionales Proximity", cantidad:3},
+  {sku:"BJ-EMAVIBX", nombre:"Amplificador vibroacústico adicional", cantidad:6},
+  {sku:"BJ-EX4-C", nombre:"Armario para SHX Compact/ kit vibro bluetooth", cantidad:6},
+  {sku:"BJ-EIBLUVX", nombre:"Barra LED UV SHX", cantidad:1},
+  {sku:"BJ-KUV", nombre:"Bolsa material Ultravioleta", cantidad:5},
+  {sku:"BJ-BUTV", nombre:"Butaca relax vibroacústica", cantidad:3},
+  {sku:"BJ-LCTRL1", nombre:"Button 1", cantidad:2},
+  {sku:"BJ-LCTRL", nombre:"Button 6", cantidad:7},
+  {sku:"BJ-EMCA-V", nombre:"Cama de agua vibroacústica", cantidad:1},
+  {sku:"BJ-LCCFIB", nombre:"Cielo Luminea circular", cantidad:1},
+  {sku:"BJ-EMCV", nombre:"Cojín vibroacústico", cantidad:5},
+  {sku:"BJ-EDA", nombre:"Difusor de aromaterapia", cantidad:2},
+  {sku:"BJ-LDFIB", nombre:"Ducha Luminea", cantidad:2},
+  {sku:"BJ-EPS061-C", nombre:"escalera grande", cantidad:1},
+  {sku:"BJ-EEGC", nombre:"Espejo grande curvo", cantidad:2},
+  {sku:"BJ-EEGR", nombre:"Espejo grande recto", cantidad:13},
+  {sku:"BJ-EX47", nombre:"Estrellas SHX", cantidad:4},
+  {sku:"BJ-EIFUVL", nombre:"Foco de luz UV LED", cantidad:4},
+  {sku:"BJ-EKIA", nombre:"Kit de iniciación de aromaterapia", cantidad:5},
+  {sku:"BJ-KVSL", nombre:"Kit vibroacústico Bluetooth", cantidad:3},
+  {sku:"BJ-EXKV", nombre:"Kit Voz SHX", cantidad:5},
+  {sku:"BJ-LLLT", nombre:"Línea led de 5m Luminea", cantidad:10},
+  {sku:"BJ-SD12319", nombre:"Manta de peso azul y roja - mediana - 2,2kg", cantidad:1},
+  {sku:"BJ-SD12320", nombre:"Manta de peso gris y roja - grande - 3,6kg", cantidad:1},
+  {sku:"BJ-EX26", nombre:"Panel táctil SHX", cantidad:1},
+  {sku:"BJ-EMPB70", nombre:"Piscina de bolas alta", cantidad:1},
+  {sku:"BJ-LPIS-V", nombre:"Piscina Luminea vibroacústica", cantidad:6},
+  {sku:"BJ-EMPT-V", nombre:"Puff transformable vibroacústico", cantidad:9},
+  {sku:"BJ-EMRV", nombre:"Respaldo foam cóncavo", cantidad:2},
+  {sku:"BJ-EMRX", nombre:"Respaldo foam convexo", cantidad:1},
+  {sku:"BJ-LRIN23", nombre:"Rincon Luminea con tablet", cantidad:8},
+  {sku:"BJ-EMSC", nombre:"Sensory Cube grande", cantidad:4},
+  {sku:"BJ-SF11", nombre:"Sensory Feet 1.1", cantidad:1},
+  {sku:"BJ-EMSST", nombre:"Sensory Step", cantidad:1},
+  {sku:"BJ-EX04", nombre:"SHX Compact", cantidad:6},
+  {sku:"BJ-EXPRX", nombre:"SHX Proximity", cantidad:7},
+  {sku:"BJ-EX02", nombre:"SHX Rack", cantidad:1},
+  {sku:"BJ-LTUB", nombre:"Tubo de burbujas Luminea", cantidad:1},
+  {sku:"BJ-EX41", nombre:"Ventilador SHX", cantidad:5},
+];
+const STOCK_SM = {};
+STOCK_SM_RAW.forEach(p=>{
+  let k = _smProdNorm(p.nombre);
+  if(_SM_PROD_ALIAS[k]) k = _SM_PROD_ALIAS[k];
+  STOCK_SM[k] = p;
+});
 /* ════ Config compartida entre las 2 líneas de negocio con vista admin propia: Sala Multisensorial
    (SM) y Ayudas Técnicas (AT). Mismo motor de carga/render para las dos — solo cambian los ids
    del DOM, el label y algunos textos. Reusa la lista que ya trae 'crm_mis_cotizaciones' en modo
@@ -11315,8 +11366,10 @@ function _renderVistaLinea(todas, tipo){
     '<canvas id="'+cfg.chartProd+'" height="'+Math.max(260, topProd.length*30)+'" style="margin-top:10px;cursor:pointer;"></canvas></div>';
   productosHtml += '<div id="'+cfg.detalleProd+'" class="sm-no-print" style="display:none;background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:18px;"></div>';
   const prodKeysGrupo = Object.keys(prodMap).sort((a,b)=>prodMap[b].count-prodMap[a].count).slice(0,15);
+  const _stockCol = tipo === 'SM';
   productosHtml += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;overflow-x:auto;">' +
     '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #16A34A;padding-left:8px;margin-bottom:10px;">Resumen de productos cotizados <span style="font-weight:600;color:var(--subtle);font-size:11px;">· cotizaciones y unidades entre paréntesis</span></div>' +
+    (_stockCol ? '<p style="font-size:11.5px;color:var(--subtle);margin:-4px 0 10px;">Columna <b>Stock</b>: unidades físicas disponibles según la Orden de Compra N° 028/2026 (contenedor). En rojo, cuando lo cotizado al 50%+90% de probabilidad supera el stock disponible.</p>' : '') +
     '<table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:640px;">' +
     '<tr><th style="text-align:left;padding:6px 4px;color:var(--subtle);font-size:11px;">Producto</th>' +
       '<th style="text-align:right;padding:6px 4px;color:var(--ink);font-size:11px;">Total</th>' +
@@ -11325,9 +11378,21 @@ function _renderVistaLinea(todas, tipo){
       '<th style="text-align:right;padding:6px 4px;color:#9aa3af;font-size:11px;">Sin marcar</th>' +
       '<th style="text-align:right;padding:6px 4px;color:#F59E0B;font-size:11px;">20%</th>' +
       '<th style="text-align:right;padding:6px 4px;color:#0891B2;font-size:11px;">50%</th>' +
-      '<th style="text-align:right;padding:6px 4px;color:#16A34A;font-size:11px;">90%</th></tr>' +
+      '<th style="text-align:right;padding:6px 4px;color:#16A34A;font-size:11px;">90%</th>' +
+      (_stockCol ? '<th style="text-align:right;padding:6px 4px;color:#001A60;font-size:11px;">Stock</th>' : '') +
+    '</tr>' +
     prodKeysGrupo.map(k => {
       const c50 = prodPorProb[50][k], c90 = prodPorProb[90][k];
+      let stockCell = '';
+      if(_stockCol){
+        const st = STOCK_SM[k];
+        const demanda = (c50?c50.unidades:0) + (c90?c90.unidades:0);
+        const falta = st && demanda > st.cantidad;
+        stockCell = '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;font-weight:800;color:'+(!st?'var(--subtle)':(falta?'#DC2626':'#16A34A'))+';">' +
+          (!st ? '—' : st.cantidad) +
+          (falta ? ' <span style="font-size:9px;font-weight:800;padding:2px 6px;border-radius:999px;background:#DC262618;color:#DC2626;">FALTA</span>' : '') +
+        '</td>';
+      }
       return '<tr>' +
       '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);">'+esc(prodMap[k].display)+'</td>' +
       '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;font-weight:800;">'+prodMap[k].count+' <span style="color:var(--subtle);font-weight:600;">('+prodMap[k].unidades+' u.)</span></td>' +
@@ -11337,6 +11402,7 @@ function _renderVistaLinea(todas, tipo){
       '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;">'+(prodPorProb[20][k]?prodPorProb[20][k].count:0)+'</td>' +
       '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;font-weight:700;">'+(c50?c50.count+' ('+c50.unidades+' u.)':0)+'</td>' +
       '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;font-weight:700;">'+(c90?c90.count+' ('+c90.unidades+' u.)':0)+'</td>' +
+      stockCell +
     '</tr>';
     }).join('') +
     '</table></div>';

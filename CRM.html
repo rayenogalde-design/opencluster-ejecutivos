@@ -2971,7 +2971,8 @@ body{
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button onclick="_lineaInformeOfrecidas('AT')" title="Filtra a solo en gestión y abre el PDF — para ver qué se necesita para responder a esa demanda" style="background:#fff;color:#5b21b6;border:1px solid #DDD0EC;border-radius:9px;padding:9px 16px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">Informe de en gestión</button>
-            <button onclick="_lineaExportarPDF('AT')" style="background:#001A60;color:#fff;border:none;border-radius:9px;padding:9px 16px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">Exportar PDF</button>
+            <button onclick="_lineaExportarPDF('AT')" style="background:#fff;color:#001A60;border:1px solid #DDD0EC;border-radius:9px;padding:9px 16px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">Exportar pantalla (PDF)</button>
+            <button id="atInformeBtn" onclick="_atGenerarInforme()" title="Informe con estructura fija: KPI, gráficos, resumen, cotizaciones y detalle — pensado para el jefe" style="background:#001A60;color:#fff;border:none;border-radius:9px;padding:9px 16px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">Generar Informe</button>
           </div>
         </div>
         <div id="atPrintHeader" style="padding:0 0 16px;">
@@ -11874,9 +11875,14 @@ function _smInfChartCard(titulo, imgUrl){
 }
 const _SM_INF_CHART_W = 380, _SM_INF_CHART_H = 220;
 const _SM_INF_LEYENDA_ABAJO = { plugins: { legend: { position:'bottom', labels:{ boxWidth:10, font:{size:10}, padding:10 } } } };
-async function _smGenerarInforme(){
+// Generalizado a cualquier línea de negocio (tipo: 'SM' | 'AT') — pedido de Rayen 2026-07-10: el
+// mismo informe (KPI, gráficos-imagen, resumen, cotizaciones, detalle) para Ayudas Técnicas. La
+// sección de Stock (Orden de Compra 028/2026) es EXCLUSIVA de Sala Multisensorial: Ayudas Técnicas
+// no tiene ese concepto de contenedor/stock físico, así que se omite entera cuando tipo==='AT'.
+async function _lineaGenerarInforme(tipo){
+  const cfg = _LINEA_CFG[tipo];
   const todas = CACHE.vMisCot || [];
-  const sm = todas.filter(c => _lineaCot(c.cotizacion) === 'SM');
+  const sm = todas.filter(c => _lineaCot(c.cotizacion) === tipo);
   if(!sm.length){ alert('Todavía se están cargando los datos. Espera unos segundos y vuelve a intentar.'); return; }
   const probMap = CACHE.smProb || {};
   const fn = s => String(s||'').trim().split(/\s+/)[0] || '(sin ejecutivo)';
@@ -11930,7 +11936,7 @@ async function _smGenerarInforme(){
     '<div style="font-size:19px;font-weight:800;color:'+color+';margin-top:3px;">'+esc(String(val))+'</div>' +
   '</td>';
   const kpiHtml = '<table style="width:100%;border-collapse:collapse;margin:14px 0 4px;">' +
-    '<tr>'+kpiCelda('Cotizaciones sala', total, '#001A60')+kpiCelda('Monto cotizado', fmtCLP(montoTotal), '#5b21b6')+kpiCelda('Ganadas', ganadas+' · '+pct(ganadas)+'%', '#16A34A')+kpiCelda('Proyección ponderada', fmtCLP(Math.round(proyeccionPonderada)), '#5b21b6')+'</tr>'+
+    '<tr>'+kpiCelda(cfg.kpiCotLabel, total, '#001A60')+kpiCelda('Monto cotizado', fmtCLP(montoTotal), '#5b21b6')+kpiCelda('Ganadas', ganadas+' · '+pct(ganadas)+'%', '#16A34A')+kpiCelda('Proyección ponderada', fmtCLP(Math.round(proyeccionPonderada)), '#5b21b6')+'</tr>'+
     '<tr>'+kpiCelda('Mercado público', pubCount+' · '+pct(pubCount)+'%', '#0891B2')+kpiCelda('Mercado privado', privCount+' · '+pct(privCount)+'%', '#C99935')+kpiCelda('En gestión al 50%', probCounts[50], '#0891B2')+kpiCelda('En gestión al 90%', probCounts[90], '#16A34A')+'</tr>'+
   '</table>';
 
@@ -11964,7 +11970,7 @@ async function _smGenerarInforme(){
 
   // ---- Párrafo resumen (mismo estilo que en pantalla, con "Descartadas") ----
   const parrafoHtml = '<div style="font-size:13.5px;color:#1a2440;line-height:1.7;background:#F7F3EE;border-left:4px solid #001A60;border-radius:8px;padding:14px 18px;margin:18px 0;">' +
-    'De las <b>'+total+'</b> cotizaciones de sala multisensorial del período, <b>'+ganadas+'</b> están ganadas ('+fmtCLP(montoGanadas)+'), <b>'+grupos.descartadas.length+'</b> descartadas y <b>'+grupos.ofrecidas.length+'</b> siguen en gestión. ' +
+    'De las <b>'+total+'</b> cotizaciones de '+cfg.labelCorto+' del período, <b>'+ganadas+'</b> están ganadas ('+fmtCLP(montoGanadas)+'), <b>'+grupos.descartadas.length+'</b> descartadas y <b>'+grupos.ofrecidas.length+'</b> siguen en gestión. ' +
     'El mercado público representa el '+pct(pubCount)+'% de las cotizaciones ('+fmtCLP(pubMonto)+') y el privado el '+pct(privCount)+'% ('+fmtCLP(privMonto)+'). ' +
     'Según la probabilidad de cierre marcada en las cotizaciones en gestión, la proyección estimada de venta es de <b>'+fmtCLP(Math.round(proyeccionPonderada))+'</b>.' +
   '</div>';
@@ -12005,10 +12011,12 @@ async function _smGenerarInforme(){
     '</table>' +
   '</div>';
 
-  // Stock vs. cotizado al 50%/90% — Y también los que están en stock pero SIN ninguna cotización
-  // a esa probabilidad todavía (pedido de Rayen: no desaparecerlos, mostrarlos aparte como
-  // "disponibles para ofrecer, sin cotizar"). El cruce contra probabilidad sigue siendo solo
-  // 50%/90%, como pidió antes — lo único nuevo es que ahora el producto SIN demanda no se oculta.
+  // Stock vs. cotizado al 50%/90% — SOLO Sala Multisensorial (Ayudas Técnicas no tiene Orden de
+  // Compra/contenedor). Y también los que están en stock pero SIN ninguna cotización a esa
+  // probabilidad todavía (pedido de Rayen: no desaparecerlos, mostrarlos aparte como "disponibles
+  // para ofrecer, sin cotizar"). El cruce contra probabilidad sigue siendo solo 50%/90%.
+  let stockHtml = '';
+  if(tipo === 'SM'){
   const stockTodos = STOCK_SM_RAW.map(p => {
     let key = _smProdNorm(p.nombre);
     if(_SM_PROD_ALIAS[key]) key = _SM_PROD_ALIAS[key];
@@ -12029,7 +12037,7 @@ async function _smGenerarInforme(){
     '<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;">'+esc(r.nombre)+'</td>' +
     '<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;text-align:right;font-weight:800;">'+r.cantidad+'</td>' +
   '</tr>';
-  const stockHtml = '<div style="margin-top:16px;">' +
+  stockHtml = '<div style="margin-top:16px;">' +
     '<h3 style="font-size:13px;font-weight:800;color:#001A60;margin:0 0 4px;">Stock cotizado al 50%/90% <span style="font-weight:600;color:#9aa3af;font-size:10.5px;">— Orden de Compra N° 028/2026</span></h3>' +
     (!stockRows.length ? '<div style="color:#9aa3af;font-size:11.5px;">Ningún producto de stock tiene todavía cotizaciones al 50% o 90%.</div>' :
       '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
@@ -12055,6 +12063,7 @@ async function _smGenerarInforme(){
         '</tr></table>';
       })()) +
   '</div>';
+  } // fin if(tipo==='SM') — stockHtml queda '' para Ayudas Técnicas
 
   // ---- Detalle de cotizaciones, TODAS (Ganadas/Descartadas/En gestión) — pedido de Rayen: quiere
   // saber quiénes son, incluidas las descartadas, con ejecutivo/monto/fecha/cliente/institución. ----
@@ -12106,7 +12115,7 @@ async function _smGenerarInforme(){
   const fechaGenerada = ahora.toLocaleDateString('es-CL', {day:'2-digit',month:'long',year:'numeric'});
 
   const html = '<html><body style="font-family:Arial,sans-serif;color:#1a1a2e;padding:24px;">' +
-    '<h1 style="color:#001A60;margin:0 0 2px;font-size:21px;">Informe Salas Multisensoriales</h1>' +
+    '<h1 style="color:#001A60;margin:0 0 2px;font-size:21px;">Informe '+esc(cfg.label)+'</h1>' +
     '<div style="color:#64748B;font-size:12px;margin-bottom:6px;">'+esc(periodoLbl)+' &middot; Generado el '+esc(fechaGenerada)+' &middot; OpenCluster Tech</div>' +
     kpiHtml +
     graficosHtml +
@@ -12121,10 +12130,10 @@ async function _smGenerarInforme(){
 
   const win = window.open('', '_blank');
   if(win){ try{ win.document.write('<title>Generando informe…</title><body style="font-family:sans-serif;padding:40px;color:#555;">Generando el informe, un momento…</body>'); }catch(e){} }
-  const btn = document.getElementById('smInformeBtn');
+  const btn = document.getElementById(tipo==='SM' ? 'smInformeBtn' : 'atInformeBtn');
   const prevTxt = btn ? btn.textContent : '';
   if(btn){ btn.disabled = true; btn.textContent = 'Generando…'; }
-  const r = await fetchAPI('crm_html_a_pdf', { solicitante: USUARIO, html: html, nombre_archivo: 'Informe Salas Multisensoriales - '+periodoLbl });
+  const r = await fetchAPI('crm_html_a_pdf', { solicitante: USUARIO, html: html, nombre_archivo: 'Informe '+cfg.label+' - '+periodoLbl });
   if(btn){ btn.disabled = false; btn.textContent = prevTxt; }
   if(!r || !r.ok){
     if(win && !win.closed) win.close();
@@ -12142,6 +12151,8 @@ async function _smGenerarInforme(){
     setTimeout(()=>{ try{ URL.revokeObjectURL(url); }catch(e){} }, 60000);
   }catch(e){ if(win && !win.closed) win.close(); alert('No se pudo abrir el informe.'); }
 }
+function _smGenerarInforme(){ return _lineaGenerarInforme('SM'); }
+function _atGenerarInforme(){ return _lineaGenerarInforme('AT'); }
 window.addEventListener('beforeprint', function(){
   ['SM','AT'].forEach(function(tipo){
     const cfg = _LINEA_CFG[tipo];

@@ -2902,6 +2902,10 @@ body{
              responsive (Chart.js + resize() en beforeprint), así que se achican solos al angostar
              la columna. */
           div[style*="auto-fit,minmax("] { grid-template-columns: 1fr 1fr !important; gap: 10px !important; margin-bottom: 10px !important; }
+          /* En el PDF, la tarjeta "Stock disponible" solo muestra los productos que sí tienen alguna
+             cotización al 50%/90% — imprimir los 39 completos (la mayoría sin ninguna cotización
+             todavía) es una hoja larga sin valor; en pantalla se sigue viendo la lista completa. */
+          .sm-stock-row[data-dem="0"] { display: none !important; }
           div[style*="border-radius:12px"] { padding: 10px 12px !important; margin-bottom: 10px !important; }
           canvas { margin-top: 4px !important; }
         }
@@ -11397,7 +11401,10 @@ function _renderVistaLinea(todas, tipo){
   }
 
   // ---- Tab: Productos (totales bien claros, arriba de todo) ----
-  const topProd = Object.values(prodMap).sort((a,b)=>b.count-a.count).slice(0,15);
+  // El gráfico de barras es solo un vistazo rápido (top 6) — la tabla "Resumen de productos
+  // cotizados" de más abajo ya tiene el detalle completo (15, con Ganadas/Perdidas/50%/90%), así
+  // que no hace falta que el gráfico también sea grande.
+  const topProd = Object.values(prodMap).sort((a,b)=>b.count-a.count).slice(0,6);
   let productosHtml = topProd.length ? _smParrafo(
     'El producto más cotizado es <b>'+esc(topProd[0].display)+'</b>, presente en '+topProd[0].count+' de las '+total+' cotizaciones ('+pct(topProd[0].count)+'%)' +
     (topProd[1] ? ', seguido de <b>'+esc(topProd[1].display)+'</b> ('+topProd[1].count+').' : '.') +
@@ -11418,8 +11425,9 @@ function _renderVistaLinea(todas, tipo){
       const c50 = prodPorProb[50][key], c90 = prodPorProb[90][key];
       const cot90 = (c90?c90.cotizaciones:[]).slice().sort((a,b)=>String(a.numero).localeCompare(String(b.numero)));
       const cot50 = (c50?c50.cotizaciones:[]).slice().sort((a,b)=>String(a.numero).localeCompare(String(b.numero)));
-      const demanda = (c50?c50.unidades:0) + (c90?c90.unidades:0);
-      return { nombre: p.nombre, cantidad: p.cantidad, demanda, cot90, cot50, falta: demanda > p.cantidad };
+      const demanda90 = c90?c90.unidades:0, demanda50 = c50?c50.unidades:0;
+      const demanda = demanda50 + demanda90;
+      return { nombre: p.nombre, cantidad: p.cantidad, demanda, demanda90, demanda50, cot90, cot50, falta: demanda > p.cantidad };
     }).sort((a,b) => (b.falta - a.falta) || (b.demanda - a.demanda) || a.nombre.localeCompare(b.nombre,'es'));
     const nFalta = stockRows.filter(r=>r.falta).length;
     const nConDemanda = stockRows.filter(r=>r.demanda>0).length;
@@ -11448,7 +11456,11 @@ function _renderVistaLinea(todas, tipo){
           '<span style="flex:0 0 140px;height:8px;border-radius:5px;background:#EEF0F3;overflow:hidden;position:relative;">' +
             '<span style="display:block;height:100%;width:'+pctBar+'%;background:'+barColor+';"></span>' +
           '</span>' +
-          '<span style="flex:0 0 auto;font-size:12px;color:var(--subtle);white-space:nowrap;">Stock <b style="color:var(--ink);">'+r.cantidad+'</b> · Cotizado <b style="color:var(--ink);">'+(r.demanda||0)+'</b></span>' +
+          '<span style="flex:0 0 auto;font-size:12px;color:var(--subtle);white-space:nowrap;">Stock <b style="color:var(--ink);">'+r.cantidad+'</b>' +
+            (r.demanda90 ? ' · <b style="color:#16A34A;">90%: '+r.demanda90+'</b>' : '') +
+            (r.demanda50 ? ' · <b style="color:#0891B2;">50%: '+r.demanda50+'</b>' : '') +
+            (!r.demanda ? ' · Cotizado <b style="color:var(--ink);">0</b>' : '') +
+          '</span>' +
           (r.falta
             ? '<span style="flex:0 0 auto;font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;background:#DC262618;color:#DC2626;white-space:nowrap;">Falta stock</span>'
             : '<span style="flex:0 0 auto;font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;background:#16A34A18;color:#16A34A;white-space:nowrap;">Alcanza</span>') +
@@ -11479,9 +11491,9 @@ function _renderVistaLinea(todas, tipo){
       '<div style="font-size:10.5px;color:var(--subtle);margin-top:10px;">"escalera grande" y "Tubo de burbujas Luminea" quedan con SKU asumido por Rayen a partir de la factura — pendiente de confirmar con el proveedor.</div>' +
     '</div>';
   }
-  productosHtml += '<div class="sm-print-skip" style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:18px;">' +
-    '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #F59E0B;padding-left:8px;">Qué es lo que más se cotiza <span style="font-weight:600;color:var(--subtle);font-size:11px;">· total de cotizaciones donde aparece cada ítem</span></div>' +
-    '<canvas id="'+cfg.chartProd+'" height="'+Math.max(260, topProd.length*30)+'" style="margin-top:10px;cursor:pointer;"></canvas></div>';
+  productosHtml += '<div class="sm-print-skip" style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:14px 18px;margin-bottom:18px;max-width:520px;">' +
+    '<div style="font-family:Montserrat,sans-serif;font-size:12.5px;font-weight:800;color:var(--ink);border-left:3px solid #F59E0B;padding-left:8px;">Top 6 más cotizados</div>' +
+    '<canvas id="'+cfg.chartProd+'" height="'+(topProd.length*24)+'" style="margin-top:8px;cursor:pointer;"></canvas></div>';
   productosHtml += '<div id="'+cfg.detalleProd+'" class="sm-no-print" style="display:none;background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:18px;"></div>';
   productosHtml += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;overflow-x:auto;">' +
     '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #16A34A;padding-left:8px;margin-bottom:10px;">Resumen de productos cotizados <span style="font-weight:600;color:var(--subtle);font-size:11px;">· cotizaciones y unidades entre paréntesis</span></div>' +

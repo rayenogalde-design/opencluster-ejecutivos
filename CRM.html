@@ -11806,22 +11806,22 @@ function _lineaLimpiarBusqueda(tipo){
 }
 function _smLimpiarBusqueda(){ _lineaLimpiarBusqueda('SM'); }
 // Exportar PDF a mano (no basta con window.print()): con pestañas, solo la activa está en el DOM
-// visible y las otras 3 nunca llegaron a dibujar sus gráficos (se crean recién al abrir la pestaña).
-// El resize de los canvas de Chart.js NO se puede hacer antes de llamar a print() — el navegador
-// recién aplica el CSS de @media print en su propio momento interno, así que un resize() hecho
-// antes queda con las medidas de pantalla y el gráfico sale en blanco/mal ubicado. El evento
-// correcto para esto es beforeprint (se dispara justo cuando el navegador ya va a imprimir).
-function _lineaExportarPDF(tipo){
+// visible. Antes esto creaba los gráficos de las otras 3 pestañas de golpe (vía tabInitFn) mientras
+// esas pestañas seguían en display:none — Chart.js mide el canvas al crearlo, así que quedaba con
+// 0 de ancho/alto y el gráfico salía en blanco en el PDF, sin importar el resize() que se hace
+// después en beforeprint. El arreglo real es visitar cada pestaña UNA POR UNA con _lineaTab (que sí
+// la deja visible de verdad) y esperar un par de frames a que Chart.js la pinte, antes de imprimir.
+async function _lineaExportarPDF(tipo){
   const st = window.__LINEA_STATE[tipo];
   if(!(CACHE.vMisCot && CACHE.vMisCot.length) || !st.tabInitFn){
     alert('Todavía se están cargando los datos. Espera unos segundos (que aparezcan los números arriba) y vuelve a intentar.');
     return;
   }
-  if(st.tabInitFn){
-    st.tabDone = st.tabDone || {};
-    Object.keys(st.tabInitFn).forEach(function(id){
-      if(!st.tabDone[id]){ st.tabInitFn[id](); st.tabDone[id] = true; }
-    });
+  const esperarPintado = function(){ return new Promise(function(r){ requestAnimationFrame(function(){ requestAnimationFrame(r); }); }); };
+  const tabs = Object.keys(st.tabInitFn);
+  for(let i=0; i<tabs.length; i++){
+    _lineaTab(tipo, tabs[i]);
+    await esperarPintado();
   }
   window.print();
 }

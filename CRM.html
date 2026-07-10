@@ -11839,61 +11839,41 @@ function _smExportarPDF(){ _lineaExportarPDF('SM'); }
 // Por eso todos los "gráficos" de acá son tablas/barras de HTML puro, sin canvas.
 // ════════════════════════════════════════════════════════════════════════════
 
-// Fila de barra horizontal con ANCHOS FIJOS EN PÍXELES (nada de %, nada de tablas anidadas,
-// nada de flex/canvas) — la primera versión usaba una tabla al 100% metida dentro de una celda
-// sin ancho propio, y el conversor de Apps Script (que no hace un layout tan sofisticado como un
-// navegador) la colapsaba a casi nada: la barra quedaba invisible. Con px fijos no hay ambigüedad.
-const _SM_INF_BARRA_PX = 200;
-function _smInfBarra(lbl, valor, max, color, detalle){
-  const pct = max > 0 ? Math.max(2, Math.round(valor/max*100)) : 0;
-  const anchoPx = Math.round(_SM_INF_BARRA_PX * pct / 100);
-  return '<tr>' +
-    '<td style="padding:4px 10px 4px 0;font-size:11px;color:#374151;white-space:nowrap;width:130px;">'+esc(lbl)+'</td>' +
-    '<td style="padding:4px 0;width:'+_SM_INF_BARRA_PX+'px;">' +
-      '<table cellpadding="0" cellspacing="0" border="0" style="width:'+_SM_INF_BARRA_PX+'px;background:#EEF0F3;"><tr>' +
-        '<td style="width:'+anchoPx+'px;background:'+color+';height:12px;font-size:1px;line-height:12px;">&nbsp;</td>' +
-        '<td style="font-size:1px;line-height:12px;">&nbsp;</td>' +
-      '</tr></table>' +
-    '</td>' +
-    '<td style="padding:4px 0 4px 12px;font-size:11.5px;font-weight:800;color:#111827;text-align:right;white-space:nowrap;">'+esc(String(valor))+(detalle?' <span style="font-weight:600;color:#9aa3af;font-size:10px;">'+esc(detalle)+'</span>':'')+'</td>' +
-  '</tr>';
+// Los "gráficos" hechos con celdas de tabla coloreadas (2 intentos: % y px fijos) NO sobreviven
+// la conversión de Apps Script a PDF — Rayen los vio en blanco las dos veces. En vez de seguir
+// peleando con el CSS que ese conversor entiende o no, se renderiza el gráfico REAL con Chart.js
+// (misma librería que ya se usa en pantalla) sobre un canvas oculto, se exporta como imagen PNG
+// (chart.toBase64Image()) y esa imagen se incrusta en el HTML con <img>. Una imagen siempre se ve
+// igual sin importar qué tan básico sea el conversor — no depende de que entienda CSS para nada.
+function _smInfChartImg(type, data, opciones, w, h){
+  w = w || 380; h = h || 230;
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  canvas.style.position = 'absolute'; canvas.style.left = '-9999px'; canvas.style.top = '0';
+  document.body.appendChild(canvas);
+  let url = '';
+  try {
+    const chart = new Chart(canvas.getContext('2d'), Object.assign({ type: type, data: data },
+      { options: Object.assign({ responsive:false, maintainAspectRatio:false, animation:false }, opciones||{}) }));
+    url = chart.toBase64Image('image/png', 1);
+    chart.destroy();
+  } finally {
+    document.body.removeChild(canvas);
+  }
+  return url;
 }
-function _smInfTablaBarras(titulo, filas){
-  if(!filas.length) return '<div style="margin:16px 0 4px;"><h3 style="font-size:13px;font-weight:800;color:#001A60;margin:0 0 4px;">'+esc(titulo)+'</h3><div style="color:#9aa3af;font-size:11.5px;">Sin datos.</div></div>';
-  const max = Math.max.apply(null, filas.map(f=>f.valor));
-  return '<div style="margin:16px 0 4px;">' +
-    '<h3 style="font-size:13px;font-weight:800;color:#001A60;margin:0 0 6px;">'+esc(titulo)+'</h3>' +
-    '<table cellpadding="0" cellspacing="0" border="0">' +
-      filas.map(f=>_smInfBarra(f.lbl, f.valor, max, f.color||'#06B3FD', f.detalle)).join('') +
-    '</table>' +
-  '</div>';
+// Tarjeta con borde + título + imagen del gráfico — se arman de a 2 por fila (pedido de Rayen:
+// "una al lado de la otra, que ocupen menos espacio").
+function _smInfChartCard(titulo, imgUrl){
+  return '<td style="width:50%;padding:8px;vertical-align:top;">' +
+    '<div style="border:1px solid #E5E7EB;border-radius:10px;padding:12px;text-align:center;">' +
+      '<div style="font-size:12px;font-weight:800;color:#001A60;margin-bottom:6px;">'+esc(titulo)+'</div>' +
+      (imgUrl ? '<img src="'+imgUrl+'" width="'+Math.round((_SM_INF_CHART_W-24))+'" style="max-width:100%;">' : '<div style="color:#9aa3af;font-size:11.5px;padding:30px 0;">Sin datos.</div>') +
+    '</div>' +
+  '</td>';
 }
-// Barra APILADA (una sola barra dividida en segmentos de colores, con leyenda abajo) — se ve más
-// "gráfico" que una lista de barras sueltas; pedido de Rayen 2026-07-10 ("que sean bonitos, un
-// poquito elegante"). Anchos en px fijos, misma razón que _smInfBarra: nada de % sin ancho propio.
-const _SM_INF_APILADA_PX = 460;
-function _smInfBarraApilada(titulo, segmentos){
-  const total = segmentos.reduce((s,x)=>s+x.valor,0);
-  if(!total) return '<div style="margin:18px 0 4px;"><h3 style="font-size:13px;font-weight:800;color:#001A60;margin:0 0 4px;">'+esc(titulo)+'</h3><div style="color:#9aa3af;font-size:11.5px;">Sin datos.</div></div>';
-  let acumulado = 0;
-  const celdas = segmentos.map((s,i)=>{
-    let px = i===segmentos.length-1 ? (_SM_INF_APILADA_PX - acumulado) : Math.round(s.valor/total*_SM_INF_APILADA_PX);
-    acumulado += px;
-    return '<td style="width:'+Math.max(0,px)+'px;background:'+s.color+';height:26px;font-size:1px;line-height:26px;">&nbsp;</td>';
-  }).join('');
-  const leyenda = segmentos.map(s=>{
-    const p = Math.round(s.valor/total*1000)/10;
-    return '<td style="padding:0 20px 0 0;white-space:nowrap;vertical-align:top;">' +
-      '<span style="display:inline-block;width:10px;height:10px;background:'+s.color+';margin-right:5px;"></span>' +
-      '<span style="font-size:11.5px;color:#374151;">'+esc(s.lbl)+' <b style="color:#111827;">'+s.valor+'</b> <span style="color:#9aa3af;">('+p+'%'+(s.detalle?' · '+esc(s.detalle):'')+')</span></span>' +
-    '</td>';
-  }).join('');
-  return '<div style="margin:18px 0 4px;">' +
-    '<h3 style="font-size:13px;font-weight:800;color:#001A60;margin:0 0 8px;">'+esc(titulo)+'</h3>' +
-    '<table cellpadding="0" cellspacing="0" border="0" style="width:'+_SM_INF_APILADA_PX+'px;"><tr>'+celdas+'</tr></table>' +
-    '<table cellpadding="0" cellspacing="0" border="0" style="margin-top:9px;"><tr>'+leyenda+'</tr></table>' +
-  '</div>';
-}
+const _SM_INF_CHART_W = 380, _SM_INF_CHART_H = 220;
+const _SM_INF_LEYENDA_ABAJO = { plugins: { legend: { position:'bottom', labels:{ boxWidth:10, font:{size:10}, padding:10 } } } };
 async function _smGenerarInforme(){
   const todas = CACHE.vMisCot || [];
   const sm = todas.filter(c => _lineaCot(c.cotizacion) === 'SM');
@@ -11954,25 +11934,33 @@ async function _smGenerarInforme(){
     '<tr>'+kpiCelda('Mercado público', pubCount+' · '+pct(pubCount)+'%', '#0891B2')+kpiCelda('Mercado privado', privCount+' · '+pct(privCount)+'%', '#C99935')+kpiCelda('En gestión al 50%', probCounts[50], '#0891B2')+kpiCelda('En gestión al 90%', probCounts[90], '#16A34A')+'</tr>'+
   '</table>';
 
-  // ---- Gráficos: 3 barras apiladas (más "de gráfico") + 2 listas de barras ----
-  const graficosHtml =
-    _smInfBarraApilada('Estado de las cotizaciones', [
-      {lbl:'Ganada', valor:ganadas, color:'#16A34A', detalle:fmtCLP(montoGanadas)},
-      {lbl:'Descartada', valor:grupos.descartadas.length, color:'#DC2626', detalle:fmtCLP(montoDescartadas)},
-      {lbl:'En gestión', valor:grupos.ofrecidas.length, color:'#F59E0B', detalle:fmtCLP(montoGrupo(grupos.ofrecidas))}
-    ]) +
-    _smInfBarraApilada('Mercado público vs. privado', [
-      {lbl:'Público', valor:pubCount, color:'#0891B2', detalle:fmtCLP(pubMonto)},
-      {lbl:'Privado', valor:privCount, color:'#C99935', detalle:fmtCLP(privMonto)}
-    ]) +
-    _smInfBarraApilada('Probabilidad de cierre · en gestión', [
-      {lbl:'Sin marcar', valor:probCounts[0], color:'#9aa3af', detalle:fmtCLP(probMontos[0])},
-      {lbl:'20%', valor:probCounts[20], color:'#F59E0B', detalle:fmtCLP(probMontos[20])},
-      {lbl:'50%', valor:probCounts[50], color:'#0891B2', detalle:fmtCLP(probMontos[50])},
-      {lbl:'90%', valor:probCounts[90], color:'#16A34A', detalle:fmtCLP(probMontos[90])}
-    ]) +
-    _smInfTablaBarras('Por ejecutivo', Object.entries(porEjec).sort((a,b)=>b[1].count-a[1].count).map(([k,v])=>({lbl:k, valor:v.count, color:'#001A60', detalle:fmtCLP(v.monto)}))) +
-    _smInfTablaBarras('Por mes', mesesOrdenados.map(m=>({lbl:mesLbl(m), valor:porMes[m].count, color:'#5b21b6', detalle:fmtCLP(porMes[m].monto)})));
+  // ---- Gráficos REALES (Chart.js → imagen PNG), en tarjetas de a 2 por fila ----
+  const ejecEntries = Object.entries(porEjec).sort((a,b)=>b[1].count-a[1].count);
+  const imgEstado = _smInfChartImg('doughnut', {
+    labels: ['Ganada','Descartada','En gestión'],
+    datasets: [{ data: [ganadas, grupos.descartadas.length, grupos.ofrecidas.length], backgroundColor: ['#16A34A','#DC2626','#F59E0B'] }]
+  }, _SM_INF_LEYENDA_ABAJO, _SM_INF_CHART_W, _SM_INF_CHART_H);
+  const imgPubPriv = _smInfChartImg('doughnut', {
+    labels: ['Público','Privado'],
+    datasets: [{ data: [pubCount, privCount], backgroundColor: ['#0891B2','#C99935'] }]
+  }, _SM_INF_LEYENDA_ABAJO, _SM_INF_CHART_W, _SM_INF_CHART_H);
+  const imgProb = _smInfChartImg('doughnut', {
+    labels: ['Sin marcar','20%','50%','90%'],
+    datasets: [{ data: [probCounts[0],probCounts[20],probCounts[50],probCounts[90]], backgroundColor: ['#9aa3af','#F59E0B','#0891B2','#16A34A'] }]
+  }, _SM_INF_LEYENDA_ABAJO, _SM_INF_CHART_W, _SM_INF_CHART_H);
+  const imgEjec = ejecEntries.length ? _smInfChartImg('bar', {
+    labels: ejecEntries.map(([k])=>k),
+    datasets: [{ data: ejecEntries.map(([,v])=>v.count), backgroundColor: '#001A60', borderRadius: 4 }]
+  }, { indexAxis:'y', plugins:{legend:{display:false}}, scales:{x:{ticks:{font:{size:10}}}, y:{ticks:{font:{size:10}}}} }, _SM_INF_CHART_W, _SM_INF_CHART_H) : '';
+  const imgMes = mesesOrdenados.length ? _smInfChartImg('bar', {
+    labels: mesesOrdenados.map(mesLbl),
+    datasets: [{ data: mesesOrdenados.map(m=>porMes[m].count), backgroundColor: '#5b21b6', borderRadius: 4 }]
+  }, { plugins:{legend:{display:false}}, scales:{x:{ticks:{font:{size:10}}}, y:{ticks:{font:{size:10}}}} }, _SM_INF_CHART_W, _SM_INF_CHART_H) : '';
+  const graficosHtml = '<table style="width:100%;border-collapse:collapse;margin-top:8px;">' +
+    '<tr>'+_smInfChartCard('Estado de las cotizaciones', imgEstado)+_smInfChartCard('Público vs. privado', imgPubPriv)+'</tr>' +
+    '<tr>'+_smInfChartCard('Probabilidad de cierre · en gestión', imgProb)+_smInfChartCard('Por ejecutivo', imgEjec)+'</tr>' +
+    '<tr>'+_smInfChartCard('Por mes', imgMes)+'<td style="width:50%;"></td></tr>' +
+  '</table>';
 
   // ---- Párrafo resumen (mismo estilo que en pantalla, con "Descartadas") ----
   const parrafoHtml = '<div style="font-size:13.5px;color:#1a2440;line-height:1.7;background:#F7F3EE;border-left:4px solid #001A60;border-radius:8px;padding:14px 18px;margin:18px 0;">' +

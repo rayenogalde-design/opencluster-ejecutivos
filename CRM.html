@@ -11253,9 +11253,10 @@ function _renderVistaLinea(todas, tipo){
   grupos.ofrecidas.forEach(c => {
     const p = probMap[String(c.cotizacion||'').trim()] || 0;
     _smExtraerProductos(c.productos).forEach(({key,display,qty}) => {
-      if(!prodPorProb[p][key]) prodPorProb[p][key] = {display, count:0, unidades:0};
+      if(!prodPorProb[p][key]) prodPorProb[p][key] = {display, count:0, unidades:0, cotizaciones:[]};
       prodPorProb[p][key].count++;
       prodPorProb[p][key].unidades += qty;
+      prodPorProb[p][key].cotizaciones.push({ numero: c.cotizacion, institucion: c.institucion||c.cliente||'(sin institución)', ejecutivo: fn(c.ejecutivo), probabilidad: p });
     });
   });
   const montoGrupo = arr => arr.reduce((s,c)=>s+_smMontoProductos(c), 0);
@@ -11370,15 +11371,68 @@ function _renderVistaLinea(todas, tipo){
     ' Estos ítems se repiten en la mayoría de los proyectos porque forman parte del paquete base de '+cfg.labelCorto+' que se cotiza casi completo.'
   ) : '';
   productosHtml += '<p class="sm-no-print" style="font-size:11.5px;color:var(--subtle);margin:0 0 10px;">Haz clic en cualquier barra para ver esas cotizaciones abajo.</p>';
+  const prodKeysGrupo = Object.keys(prodMap).sort((a,b)=>prodMap[b].count-prodMap[a].count).slice(0,15);
+  const _stockCol = tipo === 'SM';
+  // ---- Tarjeta aparte, BIEN visible arriba de todo lo demás de esta pestaña: lista simple de
+  // stock físico disponible (OC 028/2026) cruzada contra lo cotizado al 50%/90%. Antes esto vivía
+  // como una columna más al final de la tabla grande de productos (había que hacer scroll horizontal
+  // para verla) — Rayen no la encontraba, así que ahora es su propia tarjeta, arriba, con lo que
+  // falta primero. ----
+  if(_stockCol){
+    const stockRows = STOCK_SM_RAW.map(p => {
+      let key = _smProdNorm(p.nombre);
+      if(_SM_PROD_ALIAS[key]) key = _SM_PROD_ALIAS[key];
+      const c50 = prodPorProb[50][key], c90 = prodPorProb[90][key];
+      const cotizaciones = [].concat(c50?c50.cotizaciones:[], c90?c90.cotizaciones:[]);
+      const demanda = (c50?c50.unidades:0) + (c90?c90.unidades:0);
+      return { nombre: p.nombre, cantidad: p.cantidad, demanda, cotizaciones, falta: demanda > p.cantidad };
+    }).sort((a,b) => (b.falta - a.falta) || (b.demanda - a.demanda) || a.nombre.localeCompare(b.nombre,'es'));
+    const nFalta = stockRows.filter(r=>r.falta).length;
+    // Cada cotización que tiene ese producto marcado 50%/90% — para que Rayen sepa a quién le estaría
+    // dando el producto, no solo cuántas unidades. Clickeable: abre el modal completo de esa cotización
+    // (mismo abrirCotModal que usa el resto del CRM).
+    const _stockCotizLista = cs => !cs.length ? '' : '<div style="margin-top:6px;display:flex;flex-direction:column;gap:3px;">' +
+      cs.map(x => {
+        const numJS = String(x.numero||'').replace(/'/g,"\\'");
+        return '<div onclick="abrirCotModal(\''+numJS+'\')" style="cursor:pointer;font-size:11px;color:var(--ink);padding:3px 8px;background:var(--paper,#f9fafb);border-radius:6px;" onmouseover="this.style.background=\'#EEF2FF\'" onmouseout="this.style.background=\'var(--paper,#f9fafb)\'">' +
+          '<span style="font-family:Courier New,monospace;font-weight:700;color:#001A60;">'+esc(x.numero||'')+'</span> — '+esc(x.institucion)+' <span style="color:var(--subtle);">('+esc(x.ejecutivo)+')</span> ' +
+          '<span style="font-weight:800;color:'+(x.probabilidad===90?'#16A34A':'#0891B2')+';">'+x.probabilidad+'%</span>' +
+        '</div>';
+      }).join('') +
+    '</div>';
+    productosHtml += '<div style="background:#fff;border:2px solid #001A60;border-radius:12px;padding:16px 18px;margin-bottom:18px;overflow-x:auto;">' +
+      '<div style="font-family:Montserrat,sans-serif;font-size:14px;font-weight:800;color:#001A60;margin-bottom:4px;">Stock disponible — Orden de Compra N° 028/2026 (contenedor)</div>' +
+      '<div style="font-size:12px;color:var(--subtle);margin-bottom:12px;">'+
+        (nFalta ? '<b style="color:#DC2626;">'+nFalta+' producto'+(nFalta===1?'':'s')+' con demanda al 50%+90% por sobre el stock que llega.</b> ' : 'Ningún producto tiene, por ahora, más demanda al 50%+90% que stock disponible. ') +
+        'Toca cualquier N° de cotización para abrirla. El resto de la lista, para referencia.'+
+      '</div>' +
+      '<table style="width:100%;border-collapse:collapse;font-size:13px;min-width:520px;">' +
+      '<tr><th style="text-align:left;padding:7px 4px;color:var(--subtle);font-size:11px;">Producto</th>' +
+        '<th style="text-align:right;padding:7px 4px;color:#001A60;font-size:11px;">Stock</th>' +
+        '<th style="text-align:right;padding:7px 4px;color:#5b21b6;font-size:11px;">Cotizado 50%+90%</th>' +
+        '<th style="text-align:left;padding:7px 4px 7px 16px;color:var(--subtle);font-size:11px;">Estado</th>' +
+        '<th style="text-align:left;padding:7px 4px;color:var(--subtle);font-size:11px;">Cotizaciones (a quién se le estaría dando)</th></tr>' +
+      stockRows.map(r => '<tr>' +
+        '<td style="padding:7px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);vertical-align:top;">'+esc(r.nombre)+'</td>' +
+        '<td style="padding:7px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;font-weight:800;vertical-align:top;">'+r.cantidad+'</td>' +
+        '<td style="padding:7px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;color:var(--subtle);vertical-align:top;">'+(r.demanda||'—')+'</td>' +
+        '<td style="padding:7px 4px 7px 16px;border-bottom:1px solid var(--smoke,#e5e7eb);vertical-align:top;">' +
+          (r.falta
+            ? '<span style="font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;background:#DC262618;color:#DC2626;">Falta stock</span>'
+            : '<span style="font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;background:#16A34A18;color:#16A34A;">Alcanza</span>') +
+        '</td>' +
+        '<td style="padding:7px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);vertical-align:top;">'+(r.cotizaciones.length ? _stockCotizLista(r.cotizaciones) : '<span style="color:var(--subtle);">—</span>')+'</td>' +
+      '</tr>').join('') +
+      '</table>' +
+      '<div style="font-size:10.5px;color:var(--subtle);margin-top:10px;">"escalera grande" y "Tubo de burbujas Luminea" quedan con SKU asumido por Rayen a partir de la factura — pendiente de confirmar con el proveedor.</div>' +
+    '</div>';
+  }
   productosHtml += '<div class="sm-print-skip" style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:18px;">' +
     '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #F59E0B;padding-left:8px;">Qué es lo que más se cotiza <span style="font-weight:600;color:var(--subtle);font-size:11px;">· total de cotizaciones donde aparece cada ítem</span></div>' +
     '<canvas id="'+cfg.chartProd+'" height="'+Math.max(260, topProd.length*30)+'" style="margin-top:10px;cursor:pointer;"></canvas></div>';
   productosHtml += '<div id="'+cfg.detalleProd+'" class="sm-no-print" style="display:none;background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:18px;"></div>';
-  const prodKeysGrupo = Object.keys(prodMap).sort((a,b)=>prodMap[b].count-prodMap[a].count).slice(0,15);
-  const _stockCol = tipo === 'SM';
   productosHtml += '<div style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:16px 18px;overflow-x:auto;">' +
     '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:var(--ink);border-left:3px solid #16A34A;padding-left:8px;margin-bottom:10px;">Resumen de productos cotizados <span style="font-weight:600;color:var(--subtle);font-size:11px;">· cotizaciones y unidades entre paréntesis</span></div>' +
-    (_stockCol ? '<p style="font-size:11.5px;color:var(--subtle);margin:-4px 0 10px;">Columna <b>Stock</b>: unidades físicas disponibles según la Orden de Compra N° 028/2026 (contenedor). En rojo, cuando lo cotizado al 50%+90% de probabilidad supera el stock disponible.</p>' : '') +
     '<table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:640px;">' +
     '<tr><th style="text-align:left;padding:6px 4px;color:var(--subtle);font-size:11px;">Producto</th>' +
       '<th style="text-align:right;padding:6px 4px;color:var(--ink);font-size:11px;">Total</th>' +
@@ -11387,21 +11441,9 @@ function _renderVistaLinea(todas, tipo){
       '<th style="text-align:right;padding:6px 4px;color:#9aa3af;font-size:11px;">Sin marcar</th>' +
       '<th style="text-align:right;padding:6px 4px;color:#F59E0B;font-size:11px;">20%</th>' +
       '<th style="text-align:right;padding:6px 4px;color:#0891B2;font-size:11px;">50%</th>' +
-      '<th style="text-align:right;padding:6px 4px;color:#16A34A;font-size:11px;">90%</th>' +
-      (_stockCol ? '<th style="text-align:right;padding:6px 4px;color:#001A60;font-size:11px;">Stock</th>' : '') +
-    '</tr>' +
+      '<th style="text-align:right;padding:6px 4px;color:#16A34A;font-size:11px;">90%</th></tr>' +
     prodKeysGrupo.map(k => {
       const c50 = prodPorProb[50][k], c90 = prodPorProb[90][k];
-      let stockCell = '';
-      if(_stockCol){
-        const st = STOCK_SM[k];
-        const demanda = (c50?c50.unidades:0) + (c90?c90.unidades:0);
-        const falta = st && demanda > st.cantidad;
-        stockCell = '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;font-weight:800;color:'+(!st?'var(--subtle)':(falta?'#DC2626':'#16A34A'))+';">' +
-          (!st ? '—' : st.cantidad) +
-          (falta ? ' <span style="font-size:9px;font-weight:800;padding:2px 6px;border-radius:999px;background:#DC262618;color:#DC2626;">FALTA</span>' : '') +
-        '</td>';
-      }
       return '<tr>' +
       '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);">'+esc(prodMap[k].display)+'</td>' +
       '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;font-weight:800;">'+prodMap[k].count+' <span style="color:var(--subtle);font-weight:600;">('+prodMap[k].unidades+' u.)</span></td>' +
@@ -11411,7 +11453,6 @@ function _renderVistaLinea(todas, tipo){
       '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;">'+(prodPorProb[20][k]?prodPorProb[20][k].count:0)+'</td>' +
       '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;font-weight:700;">'+(c50?c50.count+' ('+c50.unidades+' u.)':0)+'</td>' +
       '<td style="padding:6px 4px;border-bottom:1px solid var(--smoke,#e5e7eb);text-align:right;font-weight:700;">'+(c90?c90.count+' ('+c90.unidades+' u.)':0)+'</td>' +
-      stockCell +
     '</tr>';
     }).join('') +
     '</table></div>';

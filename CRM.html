@@ -12005,14 +12005,19 @@ async function _smGenerarInforme(){
     '</table>' +
   '</div>';
 
-  // Stock vs. cotizado — ÚNICAMENTE 50%/90% (pedido explícito: nada de comparar contra el total).
-  const stockRows = STOCK_SM_RAW.map(p => {
+  // Stock vs. cotizado al 50%/90% — Y también los que están en stock pero SIN ninguna cotización
+  // a esa probabilidad todavía (pedido de Rayen: no desaparecerlos, mostrarlos aparte como
+  // "disponibles para ofrecer, sin cotizar"). El cruce contra probabilidad sigue siendo solo
+  // 50%/90%, como pidió antes — lo único nuevo es que ahora el producto SIN demanda no se oculta.
+  const stockTodos = STOCK_SM_RAW.map(p => {
     let key = _smProdNorm(p.nombre);
     if(_SM_PROD_ALIAS[key]) key = _SM_PROD_ALIAS[key];
     const c50 = prodPorProb[50][key], c90 = prodPorProb[90][key];
     const demanda = (c50?c50.unidades:0) + (c90?c90.unidades:0);
     return { nombre: p.nombre, cantidad: p.cantidad, d50: c50?c50.unidades:0, d90: c90?c90.unidades:0, demanda, falta: demanda > p.cantidad };
-  }).filter(r => r.demanda > 0).sort((a,b) => (b.falta - a.falta) || (b.demanda - a.demanda));
+  }).sort((a,b) => a.nombre.localeCompare(b.nombre,'es'));
+  const stockRows = stockTodos.filter(r=>r.demanda>0).sort((a,b) => (b.falta - a.falta) || (b.demanda - a.demanda));
+  const stockSinCotizar = stockTodos.filter(r=>r.demanda===0);
   const stockFila = (r,i) => '<tr style="background:'+(i%2?'#F7F9FC':'#fff')+';">' +
     '<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;">'+esc(r.nombre)+'</td>' +
     '<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;text-align:right;font-weight:800;">'+r.cantidad+'</td>' +
@@ -12020,12 +12025,24 @@ async function _smGenerarInforme(){
     '<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;text-align:right;color:#16A34A;font-weight:700;">'+r.d90+'</td>' +
     '<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;">'+(r.falta ? '<span style="font-size:10.5px;font-weight:800;color:#DC2626;">Falta stock</span>' : '<span style="font-size:10.5px;font-weight:800;color:#16A34A;">Alcanza</span>')+'</td>' +
   '</tr>';
+  const stockSinCotizarFila = (r,i) => '<tr style="background:'+(i%2?'#F7F9FC':'#fff')+';">' +
+    '<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;">'+esc(r.nombre)+'</td>' +
+    '<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;text-align:right;font-weight:800;">'+r.cantidad+'</td>' +
+  '</tr>';
   const stockHtml = '<div style="margin-top:16px;">' +
-    '<h3 style="font-size:13px;font-weight:800;color:#001A60;margin:0 0 4px;">Stock disponible vs. cotizado al 50%/90% <span style="font-weight:600;color:#9aa3af;font-size:10.5px;">— Orden de Compra N° 028/2026</span></h3>' +
+    '<h3 style="font-size:13px;font-weight:800;color:#001A60;margin:0 0 4px;">Stock cotizado al 50%/90% <span style="font-weight:600;color:#9aa3af;font-size:10.5px;">— Orden de Compra N° 028/2026</span></h3>' +
     (!stockRows.length ? '<div style="color:#9aa3af;font-size:11.5px;">Ningún producto de stock tiene todavía cotizaciones al 50% o 90%.</div>' :
       '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
         '<tr style="background:#F0F4FA;"><th style="padding:6px 8px;text-align:left;">Producto</th><th style="padding:6px 8px;text-align:right;">Stock</th><th style="padding:6px 8px;text-align:right;">Unid. al 50%</th><th style="padding:6px 8px;text-align:right;">Unid. al 90%</th><th style="padding:6px 8px;text-align:left;">Estado</th></tr>' +
         stockRows.map(stockFila).join('') +
+      '</table>') +
+  '</div>' +
+  '<div style="margin-top:16px;">' +
+    '<h3 style="font-size:13px;font-weight:800;color:#001A60;margin:0 0 4px;">Disponibles para ofrecer <span style="font-weight:600;color:#9aa3af;font-size:10.5px;">— en stock, sin cotizaciones al 50%/90% todavía</span></h3>' +
+    (!stockSinCotizar.length ? '<div style="color:#9aa3af;font-size:11.5px;">Todo lo que llegó en la Orden de Compra ya tiene alguna cotización al 50% o 90%.</div>' :
+      '<table style="width:60%;border-collapse:collapse;font-size:12px;">' +
+        '<tr style="background:#F0F4FA;"><th style="padding:6px 8px;text-align:left;">Producto</th><th style="padding:6px 8px;text-align:right;">Stock</th></tr>' +
+        stockSinCotizar.map(stockSinCotizarFila).join('') +
       '</table>') +
   '</div>';
 
@@ -12040,20 +12057,29 @@ async function _smGenerarInforme(){
     '<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;text-align:right;font-weight:700;">'+fmtCLP(_smMontoProductos(c))+'</td>' +
     (extraTd||'') +
   '</tr>';
-  const detCabecera = (conProb) => '<tr style="background:#F0F4FA;">' +
+  // modo: '' | 'prob' (columna Probabilidad, para En gestión) | 'motivo' (columna Motivo de
+  // descarte, para Descartadas — pedido de Rayen: quiere ver por qué se descartó cada una, bien
+  // ordenado en esta misma lista).
+  const detCabecera = (modo) => '<tr style="background:#F0F4FA;">' +
     '<th style="padding:6px 8px;text-align:left;">N°</th><th style="padding:6px 8px;text-align:left;">Fecha</th>' +
     '<th style="padding:6px 8px;text-align:left;">Cliente</th><th style="padding:6px 8px;text-align:left;">Institución</th>' +
     '<th style="padding:6px 8px;text-align:left;">Ejecutivo</th><th style="padding:6px 8px;text-align:right;">Monto</th>' +
-    (conProb?'<th style="padding:6px 8px;text-align:right;">Probabilidad</th>':'') +
+    (modo==='prob'?'<th style="padding:6px 8px;text-align:right;">Probabilidad</th>':'') +
+    (modo==='motivo'?'<th style="padding:6px 8px;text-align:left;">Motivo de descarte</th>':'') +
   '</tr>';
-  const detTablaHtml = (titulo, color, arr, conProb) => '<div style="margin-top:16px;">' +
+  const detTablaHtml = (titulo, color, arr, modo) => '<div style="margin-top:16px;">' +
     '<h3 style="font-size:13px;font-weight:800;color:'+color+';margin:0 0 6px;">'+esc(titulo)+' <span style="font-weight:600;color:#9aa3af;font-size:11px;">· '+arr.length+'</span></h3>' +
     (!arr.length ? '<div style="color:#9aa3af;font-size:11.5px;">Ninguna.</div>' :
-      '<table style="width:100%;border-collapse:collapse;font-size:11.5px;">' + detCabecera(conProb) +
+      '<table style="width:100%;border-collapse:collapse;font-size:11.5px;">' + detCabecera(modo) +
         arr.map((c,i)=>{
-          if(!conProb) return detFila(c,i);
-          const p = probMap[String(c.cotizacion||'').trim()]||0;
-          return detFila(c,i,'<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;text-align:right;font-weight:800;color:'+(p===90?'#16A34A':p===50?'#0891B2':p===20?'#F59E0B':'#9aa3af')+';">'+p+'%</td>');
+          if(modo==='prob'){
+            const p = probMap[String(c.cotizacion||'').trim()]||0;
+            return detFila(c,i,'<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;text-align:right;font-weight:800;color:'+(p===90?'#16A34A':p===50?'#0891B2':p===20?'#F59E0B':'#9aa3af')+';">'+p+'%</td>');
+          }
+          if(modo==='motivo'){
+            return detFila(c,i,'<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;color:#7F1D1D;">'+esc(c.motivo_perdida||'Sin motivo registrado')+'</td>');
+          }
+          return detFila(c,i);
         }).join('') +
       '</table>') +
   '</div>';
@@ -12061,9 +12087,9 @@ async function _smGenerarInforme(){
   const detalleCotizacionesHtml = '<div style="margin-top:8px;">' +
     '<h2 style="font-size:15px;font-weight:800;color:#001A60;margin:0 0 2px;">Detalle de cotizaciones</h2>' +
     '<div style="color:#9aa3af;font-size:11px;">Todas las cotizaciones del período, con ejecutivo, monto, fecha e institución/cliente.</div>' +
-    detTablaHtml('Ganadas', '#16A34A', grupos.ganadas, false) +
-    detTablaHtml('En gestión', '#F59E0B', ofrecidasOrdenadas, true) +
-    detTablaHtml('Descartadas', '#DC2626', grupos.descartadas, false) +
+    detTablaHtml('Ganadas', '#16A34A', grupos.ganadas, '') +
+    detTablaHtml('En gestión', '#F59E0B', ofrecidasOrdenadas, 'prob') +
+    detTablaHtml('Descartadas', '#DC2626', grupos.descartadas, 'motivo') +
   '</div>';
 
   const ahora = new Date();

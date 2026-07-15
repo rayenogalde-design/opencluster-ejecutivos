@@ -1482,6 +1482,13 @@ function _catMkShareRow(){
 const WEBINAR_API='https://script.google.com/macros/s/AKfycbws21oUtUYoOck3ScLpIFYybeLMz6QpfD-Tk2FtI-Iv69gTuEqzIRgmSLzuiarsiiK2MA/exec';
 function _webEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function _webTopN(obj,n){return Object.entries(obj||{}).sort((a,b)=>b[1]-a[1]).slice(0,n);}
+function _webOrigenLabel(key){
+  var k=String(key||'').trim();
+  if(k==='invita-colega') return 'Invita a un colega';
+  if(k==='instagram') return 'Instagram';
+  if(k===''||k==='webinar-pie-maule-2026-inscripcion') return 'Directo / link original';
+  return k;
+}
 
 async function copiarLinkWebinar(){
   var url='https://webinar.opencluster-tech.cl/';
@@ -1522,18 +1529,19 @@ async function OCT_toggleRegion(btn){
   try{
     var results=await Promise.all([
       fetch(WEBINAR_API+'?action=kpis&webinar='+encodeURIComponent(w)).then(function(r){return r.json();}),
-      fetch(WEBINAR_API+'?action=respuestas&webinar='+encodeURIComponent(w)).then(function(r){return r.json();})
+      fetch(WEBINAR_API+'?action=respuestas&webinar='+encodeURIComponent(w)).then(function(r){return r.json();}),
+      fetch(WEBINAR_API+'?action=kpis_visitas&webinar='+encodeURIComponent(w)).then(function(r){return r.json();}).catch(function(){return {ok:false};})
     ]);
-    var kpisR=results[0], respR=results[1];
+    var kpisR=results[0], respR=results[1], visitasR=results[2];
     if(!kpisR.ok||!respR.ok) throw new Error('API error');
-    body.innerHTML=_renderWebinarDetail(kpisR,respR);
+    body.innerHTML=_renderWebinarDetail(kpisR,respR,visitasR);
     region.dataset.loaded='1';
   }catch(e){
     body.innerHTML='<div class="webinar-error">No se pudieron cargar los datos. Verifica conexión y reintenta.</div>';
   }
 }
 
-function _renderWebinarDetail(kpis,resp){
+function _renderWebinarDetail(kpis,resp,visitas){
   if((kpis.total||0)===0){
     return '<div class="webinar-empty">Aún no hay inscripciones para este webinar.</div>';
   }
@@ -1543,6 +1551,21 @@ function _renderWebinarDetail(kpis,resp){
   h+='<div class="webinar-stat"><div class="n">'+(kpis.comunas||0)+'</div><div class="l">Comunas</div></div>';
   h+='<div class="webinar-stat"><div class="n">'+(kpis.establecimientos||0)+'</div><div class="l">Estab.</div></div>';
   h+='</div>';
+  var visitasOk=visitas&&visitas.ok;
+  if(visitasOk){
+    var totalVisitas=visitas.total||0;
+    var tasa=totalVisitas>0?Math.round((kpis.total||0)/totalVisitas*100):null;
+    h+='<div class="webinar-stats-row">';
+    h+='<div class="webinar-stat"><div class="n">'+totalVisitas+'</div><div class="l">Aperturas</div></div>';
+    h+='<div class="webinar-stat"><div class="n">'+(tasa!==null?tasa+'%':'—')+'</div><div class="l">Tasa inscripción</div></div>';
+    h+='</div>';
+    var tOrigen=_webTopN(visitas.porOrigen,6);
+    if(tOrigen.length){
+      h+='<div class="webinar-list-title">Aperturas por canal</div><ul class="webinar-list">';
+      tOrigen.forEach(function(p){h+='<li><span>'+_webEsc(_webOrigenLabel(p[0]))+'</span><strong>'+p[1]+'</strong></li>';});
+      h+='</ul>';
+    }
+  }
   var tT=_webTopN(kpis.temas,5);
   if(tT.length){
     h+='<div class="webinar-list-title">Temas más solicitados</div><ul class="webinar-list">';

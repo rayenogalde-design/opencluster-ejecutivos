@@ -10939,50 +10939,85 @@ function _smProdNorm(name){
     .replace(/\s*-\s*/g,' ').replace(/^sistema\s+/,'').replace(/\s+incluye.*$/,'')
     .replace(/\s+/g,' ').trim();
 }
-// Stock físico de Sala Multisensorial — Orden de Compra N° 028/2026 (contenedor Qinera).
+// Stock de Sala Multisensorial, fusionado de 2 fuentes reales (por SKU exacto):
+// - bodega: stock FÍSICO, ya en bodega, disponible para vender/armar HOY (Sheet de Rayen, 2026-07-16).
+// - camino: cargamento en camino, Orden de Compra N° 028/2026 (contenedor Qinera), llega ~11-ago-2026.
+// cantidad = bodega + camino (total combinado, usado para calcular si "alcanza" contra la demanda).
 // Solo cubre esta línea de negocio (SM); Ayudas Técnicas no tiene stock cargado acá.
 // "escalera grande" y "Tubo de burbujas Luminea" quedan con SKU asumido por Rayen a partir de la
 // foto de la factura (no venía en el catálogo) — si el cruce contra ellos se ve raro, es por eso.
+// Productos con SKU distinto entre bodega y contenedor (ej. línea LED, piscina Luminea normal vs
+// vibroacústica) quedan como líneas separadas a propósito — no se asumió que son el mismo producto.
 const STOCK_SM_RAW = [
-  {sku:"BJ-EXPRX24", nombre:"24 tarjetas y 24 pegatinas adicionales Proximity", cantidad:3},
-  {sku:"BJ-EMAVIBX", nombre:"Amplificador vibroacústico adicional", cantidad:6},
-  {sku:"BJ-EX4-C", nombre:"Armario para SHX Compact/ kit vibro bluetooth", cantidad:6},
-  {sku:"BJ-EIBLUVX", nombre:"Barra LED UV SHX", cantidad:1},
-  {sku:"BJ-KUV", nombre:"Bolsa material Ultravioleta", cantidad:5},
-  {sku:"BJ-BUTV", nombre:"Butaca relax vibroacústica", cantidad:3},
-  {sku:"BJ-LCTRL1", nombre:"Button 1", cantidad:2},
-  {sku:"BJ-LCTRL", nombre:"Button 6", cantidad:7},
-  {sku:"BJ-EMCA-V", nombre:"Cama de agua vibroacústica", cantidad:1},
-  {sku:"BJ-LCCFIB", nombre:"Cielo Luminea circular", cantidad:1},
-  {sku:"BJ-EMCV", nombre:"Cojín vibroacústico", cantidad:5},
-  {sku:"BJ-EDA", nombre:"Difusor de aromaterapia", cantidad:2},
-  {sku:"BJ-LDFIB", nombre:"Ducha Luminea", cantidad:2},
-  {sku:"BJ-EPS061-C", nombre:"escalera grande", cantidad:1},
-  {sku:"BJ-EEGC", nombre:"Espejo grande curvo", cantidad:2},
-  {sku:"BJ-EEGR", nombre:"Espejo grande recto", cantidad:13},
-  {sku:"BJ-EX47", nombre:"Estrellas SHX", cantidad:4},
-  {sku:"BJ-EIFUVL", nombre:"Foco de luz UV LED", cantidad:4},
-  {sku:"BJ-EKIA", nombre:"Kit de iniciación de aromaterapia", cantidad:5},
-  {sku:"BJ-KVSL", nombre:"Kit vibroacústico Bluetooth", cantidad:3},
-  {sku:"BJ-EXKV", nombre:"Kit Voz SHX", cantidad:5},
-  {sku:"BJ-LLLT", nombre:"Línea led de 5m Luminea", cantidad:10},
-  {sku:"BJ-SD12319", nombre:"Manta de peso azul y roja - mediana - 2,2kg", cantidad:1},
-  {sku:"BJ-SD12320", nombre:"Manta de peso gris y roja - grande - 3,6kg", cantidad:1},
-  {sku:"BJ-EX26", nombre:"Panel táctil SHX", cantidad:1},
-  {sku:"BJ-EMPB70", nombre:"Piscina de bolas alta", cantidad:1},
-  {sku:"BJ-LPIS-V", nombre:"Piscina Luminea vibroacústica", cantidad:6},
-  {sku:"BJ-EMPT-V", nombre:"Puff transformable vibroacústico", cantidad:9},
-  {sku:"BJ-EMRV", nombre:"Respaldo foam cóncavo", cantidad:2},
-  {sku:"BJ-EMRX", nombre:"Respaldo foam convexo", cantidad:1},
-  {sku:"BJ-LRIN23", nombre:"Rincon Luminea con tablet", cantidad:8},
-  {sku:"BJ-EMSC", nombre:"Sensory Cube grande", cantidad:4},
-  {sku:"BJ-SF11", nombre:"Sensory Feet 1.1", cantidad:1},
-  {sku:"BJ-EMSST", nombre:"Sensory Step", cantidad:1},
-  {sku:"BJ-EX04", nombre:"SHX Compact", cantidad:6},
-  {sku:"BJ-EXPRX", nombre:"SHX Proximity", cantidad:7},
-  {sku:"BJ-EX02", nombre:"SHX Rack", cantidad:1},
-  {sku:"BJ-LTUB", nombre:"Tubo de burbujas Luminea", cantidad:1},
-  {sku:"BJ-EX41", nombre:"Ventilador SHX", cantidad:5},
+  {sku:"BJ-EXPRX24", nombre:"24 tarjetas y 24 pegatinas adicionales Proximity", bodega:0, camino:3, cantidad:3},
+  {sku:"BJ-EMAVIBX", nombre:"Amplificador vibroacústico adicional", bodega:1, camino:6, cantidad:7},
+  {sku:"BJ-EX4-C", nombre:"Armario para SHX Compact/ kit vibro bluetooth", bodega:0, camino:6, cantidad:6},
+  {sku:"BJ-EIBLUVX", nombre:"Barra LED UV SHX", bodega:0, camino:1, cantidad:1},
+  {sku:"BJ-KUV", nombre:"Bolsa material Ultravioleta", bodega:0, camino:5, cantidad:5},
+  {sku:"BJ-BUTV", nombre:"Butaca relax vibroacústica", bodega:1, camino:3, cantidad:4},
+  {sku:"BJ-LCTRL1", nombre:"Button 1", bodega:3, camino:2, cantidad:5},
+  {sku:"BJ-LCTRL", nombre:"Button 6", bodega:0, camino:7, cantidad:7},
+  {sku:"BJ-EMCA-V", nombre:"Cama de agua vibroacústica", bodega:0, camino:1, cantidad:1},
+  {sku:"BJ-LCCFIB", nombre:"Cielo Luminea circular", bodega:0, camino:1, cantidad:1},
+  {sku:"BJ-EMCV", nombre:"Cojín vibroacústico", bodega:0, camino:5, cantidad:5},
+  {sku:"BJ-EDA", nombre:"Difusor de aromaterapia", bodega:1, camino:2, cantidad:3},
+  {sku:"BJ-LDFIB", nombre:"Ducha Luminea", bodega:0, camino:2, cantidad:2},
+  {sku:"BJ-EPS061-C", nombre:"escalera grande", bodega:0, camino:1, cantidad:1},
+  {sku:"BJ-EEGC", nombre:"Espejo grande curvo", bodega:0, camino:2, cantidad:2},
+  {sku:"BJ-EEGR", nombre:"Espejo grande recto", bodega:0, camino:13, cantidad:13},
+  {sku:"BJ-EX47", nombre:"Estrellas SHX", bodega:3, camino:4, cantidad:7},
+  {sku:"BJ-EIFUVL", nombre:"Foco de luz UV LED", bodega:0, camino:4, cantidad:4},
+  {sku:"BJ-EKIA", nombre:"Kit de iniciación de aromaterapia", bodega:2, camino:5, cantidad:7},
+  {sku:"BJ-KVSL", nombre:"Kit vibroacústico Bluetooth", bodega:0, camino:3, cantidad:3},
+  {sku:"BJ-EXKV", nombre:"Kit Voz SHX", bodega:1, camino:5, cantidad:6},
+  {sku:"BJ-LLLT", nombre:"Línea led de 5m Luminea", bodega:0, camino:10, cantidad:10},
+  {sku:"BJ-SD12319", nombre:"Manta de peso azul y roja - mediana - 2,2kg", bodega:0, camino:1, cantidad:1},
+  {sku:"BJ-SD12320", nombre:"Manta de peso gris y roja - grande - 3,6kg", bodega:0, camino:1, cantidad:1},
+  {sku:"BJ-EX26", nombre:"Panel táctil SHX", bodega:0, camino:1, cantidad:1},
+  {sku:"BJ-EMPB70", nombre:"Piscina de bolas alta", bodega:0, camino:1, cantidad:1},
+  {sku:"BJ-LPIS-V", nombre:"Piscina Luminea vibroacústica", bodega:0, camino:6, cantidad:6},
+  {sku:"BJ-EMPT-V", nombre:"Puff transformable vibroacústico", bodega:0, camino:9, cantidad:9},
+  {sku:"BJ-EMRV", nombre:"Respaldo foam cóncavo", bodega:0, camino:2, cantidad:2},
+  {sku:"BJ-EMRX", nombre:"Respaldo foam convexo", bodega:0, camino:1, cantidad:1},
+  {sku:"BJ-LRIN23", nombre:"Rincon Luminea con tablet", bodega:0, camino:8, cantidad:8},
+  {sku:"BJ-EMSC", nombre:"Sensory Cube grande", bodega:1, camino:4, cantidad:5},
+  {sku:"BJ-SF11", nombre:"Sensory Feet 1.1", bodega:1, camino:1, cantidad:2},
+  {sku:"BJ-EMSST", nombre:"Sensory Step", bodega:0, camino:1, cantidad:1},
+  {sku:"BJ-EX04", nombre:"SHX Compact", bodega:1, camino:6, cantidad:7},
+  {sku:"BJ-EXPRX", nombre:"SHX Proximity", bodega:1, camino:7, cantidad:8},
+  {sku:"BJ-EX02", nombre:"SHX Rack", bodega:0, camino:1, cantidad:1},
+  {sku:"BJ-LTUB", nombre:"Tubo de burbujas Luminea", bodega:0, camino:1, cantidad:1},
+  {sku:"BJ-EX41", nombre:"Ventilador SHX", bodega:0, camino:5, cantidad:5},
+  // Solo en bodega (no vienen en este contenedor):
+  {sku:"BJ-EMAVIB-1", nombre:"Preamplificador con filtro", bodega:1, camino:0, cantidad:1},
+  {sku:"BJ-LFIB3", nombre:"Fibra óptica Luminea 3 mt", bodega:1, camino:0, cantidad:1},
+  {sku:"MP-EX46-2", nombre:"Estante para pompas SHX", bodega:1, camino:0, cantidad:1},
+  {sku:"BJ-51091000", nombre:"Pelota terapéutica 55 cm diámetro", bodega:1, camino:0, cantidad:1},
+  {sku:"BJ-51090000", nombre:"Pelota terapéutica 45 cm diámetro", bodega:1, camino:0, cantidad:1},
+  {sku:"BJ-43700100", nombre:"Maní terapéutico", bodega:1, camino:0, cantidad:1},
+  {sku:"BJ-234", nombre:"Enabler Socket +", bodega:12, camino:0, cantidad:12},
+  {sku:"BJ-E16807", nombre:"Set de disco táctiles", bodega:1, camino:0, cantidad:1},
+  {sku:"BJ-LLL", nombre:"Línea LED 5mts con perfil de instalación", bodega:2, camino:0, cantidad:2},
+  {sku:"MP-EX46-1", nombre:"Máquina de burbujas", bodega:1, camino:0, cantidad:1},
+  {sku:"BJ-KMAS", nombre:"Kit de masaje", bodega:1, camino:0, cantidad:1},
+  {sku:"BJ-EKBE300", nombre:"Kit de bola de espejo", bodega:1, camino:0, cantidad:1},
+  {sku:"BJ-LCFIB", nombre:"Cortina Luminea", bodega:2, camino:0, cantidad:2},
+  {sku:"MP-LEMBCTF", nombre:"Base cuadrada para rincón Luminea", bodega:1, camino:0, cantidad:1},
+  {sku:"BJ-EV120040", nombre:"Columpio Plataforma de Balanceo Advantage", bodega:2, camino:0, cantidad:2},
+  {sku:"BJ-EV120050", nombre:"Columpio Rulo 2 en 1", bodega:1, camino:0, cantidad:1},
+  {sku:"BJ-EVPG", nombre:"Peonza Gigante", bodega:1, camino:0, cantidad:1},
+  {sku:"BJ-EV0132", nombre:"Columpio Saco Cocoon", bodega:1, camino:0, cantidad:1},
+  {sku:"BJ-EV073B", nombre:"Balancín 120x30x60", bodega:1, camino:0, cantidad:1},
+  {sku:"BJ-EMBT-V", nombre:"Balancín vibroacústico", bodega:1, camino:0, cantidad:1},
+  {sku:"BJ-LPIS", nombre:"Piscina de pelota Luminea", bodega:1, camino:0, cantidad:1},
+  {sku:null, nombre:"Parlante Powerful 2.1 Speaker Set", bodega:1, camino:0, cantidad:1},
+  {sku:null, nombre:"Difusor de aromaterapia 3 en 1 (Fridababy)", bodega:3, camino:0, cantidad:3},
+  {sku:null, nombre:"Difusor de aromaterapia (Essencials)", bodega:2, camino:0, cantidad:2},
+  {sku:null, nombre:"Columpio Nido (Focusswing)", bodega:1, camino:0, cantidad:1},
+  {sku:null, nombre:"Rollo presión (dañado, por reparar)", bodega:1, camino:0, cantidad:1},
+  {sku:null, nombre:"Chaleco de peso talla L (Quantech)", bodega:2, camino:0, cantidad:2},
+  {sku:null, nombre:"Mordedor sensorial (Quantech)", bodega:6, camino:0, cantidad:6},
+  {sku:null, nombre:"Bosul Ball (Quantech)", bodega:1, camino:0, cantidad:1},
 ];
 const STOCK_SM = {};
 STOCK_SM_RAW.forEach(p=>{
@@ -11430,7 +11465,7 @@ function _renderVistaLinea(todas, tipo){
       const cot50 = (c50?c50.cotizaciones:[]).slice().sort((a,b)=>String(a.numero).localeCompare(String(b.numero)));
       const demanda90 = c90?c90.unidades:0, demanda50 = c50?c50.unidades:0;
       const demanda = demanda50 + demanda90;
-      return { nombre: p.nombre, cantidad: p.cantidad, demanda, demanda90, demanda50, cot90, cot50, falta: demanda > p.cantidad };
+      return { nombre: p.nombre, cantidad: p.cantidad, bodega: p.bodega, camino: p.camino, demanda, demanda90, demanda50, cot90, cot50, falta: demanda > p.cantidad };
     }).sort((a,b) => (b.falta - a.falta) || (b.demanda - a.demanda) || a.nombre.localeCompare(b.nombre,'es'));
     const nFalta = stockRows.filter(r=>r.falta).length;
     const nConDemanda = stockRows.filter(r=>r.demanda>0).length;
@@ -11446,6 +11481,13 @@ function _renderVistaLinea(todas, tipo){
           '<span style="font-family:Courier New,monospace;font-weight:700;color:#001A60;">'+esc(x.numero||'')+'</span> — '+esc(x.institucion)+' <span style="color:var(--subtle);">('+esc(x.ejecutivo)+')</span>' +
         '</div>';
       }).join('');
+    // Desglose bodega/en camino, para que Rayen sepa dónde ir a buscar cada producto — no solo cuánto hay en total.
+    const _stockDesglose = r => {
+      const partes = [];
+      if(r.bodega) partes.push('<b style="color:var(--ink);">'+r.bodega+'</b> en bodega');
+      if(r.camino) partes.push('<b style="color:#0891B2;">'+r.camino+'</b> en camino');
+      return partes.length ? ' ('+partes.join(' + ')+')' : '';
+    };
     const rowsHtml = stockRows.map((r, idx) => {
       const pctBar = Math.min(100, Math.round((r.demanda / Math.max(r.cantidad,1)) * 100));
       const barColor = r.falta ? '#DC2626' : (r.demanda ? '#16A34A' : '#CBD5E1');
@@ -11459,7 +11501,7 @@ function _renderVistaLinea(todas, tipo){
           '<span style="flex:0 0 140px;height:8px;border-radius:5px;background:#EEF0F3;overflow:hidden;position:relative;">' +
             '<span style="display:block;height:100%;width:'+pctBar+'%;background:'+barColor+';"></span>' +
           '</span>' +
-          '<span style="flex:0 0 auto;font-size:12px;color:var(--subtle);white-space:nowrap;">Stock <b style="color:var(--ink);">'+r.cantidad+'</b>' +
+          '<span style="flex:0 0 auto;font-size:12px;color:var(--subtle);white-space:nowrap;">Stock <b style="color:var(--ink);">'+r.cantidad+'</b>'+_stockDesglose(r) +
             (r.demanda90 ? ' · <b style="color:#16A34A;">90%: '+r.demanda90+'</b>' : '') +
             (r.demanda50 ? ' · <b style="color:#0891B2;">50%: '+r.demanda50+'</b>' : '') +
             (!r.demanda ? ' · Cotizado <b style="color:var(--ink);">0</b>' : '') +
@@ -11478,12 +11520,12 @@ function _renderVistaLinea(todas, tipo){
     }).join('');
     productosHtml += '<div style="background:#fff;border:2px solid #001A60;border-radius:12px;padding:16px 18px;margin-bottom:18px;">' +
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:4px;">' +
-        '<div style="font-family:Montserrat,sans-serif;font-size:14px;font-weight:800;color:#001A60;">Stock disponible — Orden de Compra N° 028/2026 (contenedor)</div>' +
+        '<div style="font-family:Montserrat,sans-serif;font-size:14px;font-weight:800;color:#001A60;">Stock disponible — bodega + en camino (OC 028/2026)</div>' +
         '<input id="smStockBuscar" type="text" oninput="_smStockAplicarFiltro()" placeholder="Buscar producto…" class="sm-no-print" ' +
           'style="padding:6px 12px;border:1px solid var(--smoke,#e5e7eb);border-radius:8px;font-size:12.5px;font-family:inherit;min-width:200px;">' +
       '</div>' +
       '<div style="font-size:12px;color:var(--subtle);margin-bottom:10px;">'+
-        (nFalta ? '<b style="color:#DC2626;">'+nFalta+' producto'+(nFalta===1?'':'s')+' con demanda al 50%+90% por sobre el stock que llega.</b> ' : 'Ningún producto tiene, por ahora, más demanda al 50%+90% que stock disponible. ') +
+        (nFalta ? '<b style="color:#DC2626;">'+nFalta+' producto'+(nFalta===1?'':'s')+' con demanda al 50%+90% por sobre el stock total (bodega + en camino).</b> ' : 'Ningún producto tiene, por ahora, más demanda al 50%+90% que stock disponible. ') +
         'Toca un producto para ver sus cotizaciones (quién y a qué probabilidad); toca el N° para abrirla.'+
       '</div>' +
       '<label class="sm-no-print" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink);cursor:pointer;margin-bottom:10px;">' +
@@ -11491,7 +11533,7 @@ function _renderVistaLinea(todas, tipo){
       '</label>' +
       '<div id="smStockLista">' + rowsHtml + '</div>' +
       '<div id="smStockVacio" style="display:none;padding:16px 4px;color:var(--subtle);font-size:12.5px;">Ningún producto calza con la búsqueda.</div>' +
-      '<div style="font-size:10.5px;color:var(--subtle);margin-top:10px;">"escalera grande" y "Tubo de burbujas Luminea" quedan con SKU asumido por Rayen a partir de la factura — pendiente de confirmar con el proveedor.</div>' +
+      '<div style="font-size:10.5px;color:var(--subtle);margin-top:10px;">"escalera grande" y "Tubo de burbujas Luminea" quedan con SKU asumido por Rayen a partir de la factura — pendiente de confirmar con el proveedor. Stock de bodega actualizado el 16-jul-2026.</div>' +
     '</div>';
   }
   productosHtml += '<div class="sm-print-skip" style="background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:14px 18px;margin-bottom:18px;max-width:520px;">' +
@@ -12022,13 +12064,15 @@ async function _lineaGenerarInforme(tipo){
     if(_SM_PROD_ALIAS[key]) key = _SM_PROD_ALIAS[key];
     const c50 = prodPorProb[50][key], c90 = prodPorProb[90][key];
     const demanda = (c50?c50.unidades:0) + (c90?c90.unidades:0);
-    return { nombre: p.nombre, cantidad: p.cantidad, d50: c50?c50.unidades:0, d90: c90?c90.unidades:0, demanda, falta: demanda > p.cantidad };
+    return { nombre: p.nombre, cantidad: p.cantidad, bodega: p.bodega, camino: p.camino, d50: c50?c50.unidades:0, d90: c90?c90.unidades:0, demanda, falta: demanda > p.cantidad };
   }).sort((a,b) => a.nombre.localeCompare(b.nombre,'es'));
   const stockRows = stockTodos.filter(r=>r.demanda>0).sort((a,b) => (b.falta - a.falta) || (b.demanda - a.demanda));
   const stockSinCotizar = stockTodos.filter(r=>r.demanda===0);
+  const ubicacionTxt = r => (r.bodega?r.bodega+' bodega':'') + (r.bodega&&r.camino?' + ':'') + (r.camino?r.camino+' camino':'');
   const stockFila = (r,i) => '<tr style="background:'+(i%2?'#F7F9FC':'#fff')+';">' +
     '<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;">'+esc(r.nombre)+'</td>' +
     '<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;text-align:right;font-weight:800;">'+r.cantidad+'</td>' +
+    '<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;font-size:10.5px;color:#64748B;">'+esc(ubicacionTxt(r))+'</td>' +
     '<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;text-align:right;color:#0891B2;font-weight:700;">'+r.d50+'</td>' +
     '<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;text-align:right;color:#16A34A;font-weight:700;">'+r.d90+'</td>' +
     '<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;">'+(r.falta ? '<span style="font-size:10.5px;font-weight:800;color:#DC2626;">Falta stock</span>' : '<span style="font-size:10.5px;font-weight:800;color:#16A34A;">Alcanza</span>')+'</td>' +
@@ -12036,25 +12080,26 @@ async function _lineaGenerarInforme(tipo){
   const stockSinCotizarFila = (r,i) => '<tr style="background:'+(i%2?'#F7F9FC':'#fff')+';">' +
     '<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;">'+esc(r.nombre)+'</td>' +
     '<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;text-align:right;font-weight:800;">'+r.cantidad+'</td>' +
+    '<td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;font-size:10.5px;color:#64748B;">'+esc(ubicacionTxt(r))+'</td>' +
   '</tr>';
   stockHtml = '<div style="margin-top:16px;">' +
-    '<h3 style="font-size:13px;font-weight:800;color:#001A60;margin:0 0 4px;">Stock cotizado al 50%/90% <span style="font-weight:600;color:#9aa3af;font-size:10.5px;">— Orden de Compra N° 028/2026</span></h3>' +
+    '<h3 style="font-size:13px;font-weight:800;color:#001A60;margin:0 0 4px;">Stock cotizado al 50%/90% <span style="font-weight:600;color:#9aa3af;font-size:10.5px;">— bodega + Orden de Compra N° 028/2026</span></h3>' +
     (!stockRows.length ? '<div style="color:#9aa3af;font-size:11.5px;">Ningún producto de stock tiene todavía cotizaciones al 50% o 90%.</div>' :
       '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
-        '<tr style="background:#F0F4FA;"><th style="padding:6px 8px;text-align:left;">Producto</th><th style="padding:6px 8px;text-align:right;">Stock</th><th style="padding:6px 8px;text-align:right;">Unid. al 50%</th><th style="padding:6px 8px;text-align:right;">Unid. al 90%</th><th style="padding:6px 8px;text-align:left;">Estado</th></tr>' +
+        '<tr style="background:#F0F4FA;"><th style="padding:6px 8px;text-align:left;">Producto</th><th style="padding:6px 8px;text-align:right;">Stock</th><th style="padding:6px 8px;text-align:left;">Dónde</th><th style="padding:6px 8px;text-align:right;">Unid. al 50%</th><th style="padding:6px 8px;text-align:right;">Unid. al 90%</th><th style="padding:6px 8px;text-align:left;">Estado</th></tr>' +
         stockRows.map(stockFila).join('') +
       '</table>') +
   '</div>' +
   '<div style="margin-top:16px;">' +
     '<h3 style="font-size:13px;font-weight:800;color:#001A60;margin:0 0 4px;">Disponibles para ofrecer <span style="font-weight:600;color:#9aa3af;font-size:10.5px;">— en stock, sin cotizaciones al 50%/90% todavía</span></h3>' +
-    (!stockSinCotizar.length ? '<div style="color:#9aa3af;font-size:11.5px;">Todo lo que llegó en la Orden de Compra ya tiene alguna cotización al 50% o 90%.</div>' :
+    (!stockSinCotizar.length ? '<div style="color:#9aa3af;font-size:11.5px;">Todo lo que hay en bodega y en la Orden de Compra ya tiene alguna cotización al 50% o 90%.</div>' :
       (() => {
         // 2 columnas lado a lado (pedido de Rayen: "que no ocupe tanto espacio hacia abajo") —
         // se reparte la lista por mitad, primera columna arriba y segunda columna abajo alineadas.
         const mitad = Math.ceil(stockSinCotizar.length/2);
         const col1 = stockSinCotizar.slice(0, mitad), col2 = stockSinCotizar.slice(mitad);
         const miniTabla = arr => !arr.length ? '' : '<table style="width:100%;border-collapse:collapse;font-size:11.5px;">' +
-          '<tr style="background:#F0F4FA;"><th style="padding:5px 8px;text-align:left;">Producto</th><th style="padding:5px 8px;text-align:right;">Stock</th></tr>' +
+          '<tr style="background:#F0F4FA;"><th style="padding:5px 8px;text-align:left;">Producto</th><th style="padding:5px 8px;text-align:right;">Stock</th><th style="padding:5px 8px;text-align:left;">Dónde</th></tr>' +
           arr.map(stockSinCotizarFila).join('') +
         '</table>';
         return '<table style="width:100%;border-collapse:collapse;"><tr>' +

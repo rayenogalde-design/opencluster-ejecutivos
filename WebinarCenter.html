@@ -101,6 +101,27 @@
   .cat-share-btn:disabled{opacity:.6;cursor:default;}
   .cat-share-btn svg{width:15px;height:15px;flex-shrink:0;}
 
+  /* Detalle de inscritos (vista en pantalla) */
+  .wc-detail-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:6px 4px 14px;flex-wrap:wrap;}
+  .wc-detail-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--navy);}
+  .wc-detail-close{background:rgba(0,26,96,.06);border:none;color:var(--navy);padding:8px 16px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;}
+  .wc-detail-close:hover{background:rgba(0,26,96,.12);}
+  .wc-search{width:100%;padding:12px 16px;border-radius:10px;border:1px solid rgba(0,26,96,.15);font-size:13px;margin-bottom:16px;font-family:'Open Sans',sans-serif;background:#fff;}
+  .wc-search:focus{outline:none;border-color:var(--sky);}
+  .wc-person{background:#fff;border:1px solid rgba(0,26,96,.08);border-left:4px solid var(--accent,#06b3fd);border-radius:12px;
+    padding:14px 18px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,26,96,.04);}
+  .wc-person-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+  .wc-person-name{font-family:'Montserrat',sans-serif;font-weight:700;font-size:14.5px;color:var(--navy);}
+  .wc-person-fecha{font-size:11px;color:var(--subtle);white-space:nowrap;}
+  .wc-person-badge{display:inline-block;background:#e8f9ee;color:#16A34A;font-size:9.5px;font-weight:800;padding:2px 9px;border-radius:20px;margin-left:8px;vertical-align:middle;text-transform:uppercase;letter-spacing:.3px;}
+  .wc-person-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px;}
+  .wc-tag{background:var(--bg);color:var(--navy);font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;}
+  .wc-tag-tema{background:color-mix(in srgb,var(--accent,#06b3fd) 12%,#fff);color:var(--accent,#06b3fd);font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;}
+  .wc-person-contact{font-size:11.5px;color:var(--subtle);margin-top:9px;}
+  .wc-person-quote{background:var(--bg);border-radius:8px;padding:10px 14px;margin-top:9px;font-size:12px;color:var(--text);line-height:1.55;font-style:italic;}
+  .wc-person-quote b{font-style:normal;color:var(--navy);font-weight:700;font-size:9.5px;text-transform:uppercase;display:block;margin-bottom:4px;letter-spacing:.4px;}
+  .wc-empty{text-align:center;color:var(--subtle);padding:36px;font-size:13px;}
+
   .footer{margin-top:auto;padding:36px 24px 28px;text-align:center;opacity:0;animation:fadeUp .8s 1.3s forwards;}
   .footer-line{width:40px;height:2px;background:linear-gradient(90deg,var(--sky),var(--navy));margin:0 auto 14px;border-radius:2px;}
   .footer-text{font-size:10px;color:var(--subtle);letter-spacing:.8px;font-weight:600;text-transform:uppercase;}
@@ -156,6 +177,16 @@
       <div class="ln"></div>
     </div>
     <div class="grid" id="wcRegionsGrid"><!-- se llena solo desde WEBINAR_REGIONES --></div>
+  </div>
+
+  <!-- ═══════════ Detalle: inscritos de una región (vista en pantalla, ordenada) ═══════════ -->
+  <div class="section" id="wcDetail" style="display:none;">
+    <div class="wc-detail-head">
+      <div class="wc-detail-title" id="wcDetailTitle">Inscritos</div>
+      <button type="button" class="wc-detail-close" onclick="_wcCerrarDetalle()">Cerrar</button>
+    </div>
+    <input type="text" class="wc-search" id="wcSearch" placeholder="Buscar por nombre, establecimiento o comuna…" oninput="_wcFiltrarInscritos()">
+    <div id="wcDetailList"></div>
   </div>
 
   <div class="footer">
@@ -223,6 +254,10 @@ function _wcBuildRegionCards(){
         '</span>'+
       '</div>'+
       '<div class="cat-share-row">'+
+        '<button type="button" class="cat-share-btn" data-key="'+r.key+'" data-label="'+_webEsc(r.label)+'" data-accent="'+(r.accent||'#06b3fd')+'" onclick="_wcVerInscritos(this.dataset.key,this.dataset.label,this.dataset.accent)">'+
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'+
+          '<span>Ver Inscritos</span>'+
+        '</button>'+
         '<button type="button" class="cat-share-btn" data-key="'+r.key+'" data-label="'+_webEsc(r.label)+'" onclick="_webGenerarInforme(this.dataset.key,this.dataset.label,this)">'+
           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'+
           '<span>Generar Informe</span>'+
@@ -249,6 +284,76 @@ async function _wcLoadKPIs(){
         el.textContent='Aún no hay inscritos.';
       }
     }catch(e){console.error('Webinar KPIs error',e); var el2=document.getElementById('chips-'+w); if(el2) el2.textContent='No se pudo cargar.';}
+  }
+}
+
+/* ── Ver Inscritos: vista en pantalla, ordenada, de los datos de la planilla (no el PDF) ── */
+var _WC_DATOS_CACHE={}; // webinarKey -> array de respuestas (para no repetir el fetch al filtrar)
+
+function _wcCerrarDetalle(){
+  document.getElementById('wcDetail').style.display='none';
+}
+
+function _wcTarjetaPersona(r,accent){
+  var chips=[r.cargo,r.dependencia,r.tipoEstablecimiento,r.comuna].filter(Boolean);
+  var contacto=[r.email,r.celular].filter(Boolean).join(' &middot; ');
+  var temas=(r.temas||[]).map(function(t){return '<span class="wc-tag-tema">'+_webEsc(t)+'</span>';}).join('');
+  var pregunta=String(r.pregunta||'').trim();
+  var comentarios=String(r.comentarios||'').trim();
+  return '<div class="wc-person" style="--accent:'+accent+';">'+
+    '<div class="wc-person-head">'+
+      '<div class="wc-person-name">'+_webEsc(r.nombre||'(sin nombre)')+' — '+_webEsc(r.establecimiento||'')+'</div>'+
+      '<div class="wc-person-fecha">'+_webEsc(r.fecha||'')+'</div>'+
+    '</div>'+
+    (chips.length?'<div class="wc-person-chips">'+chips.map(function(c){return '<span class="wc-tag">'+_webEsc(c)+'</span>';}).join('')+'</div>':'')+
+    (contacto?'<div class="wc-person-contact">'+contacto+'</div>':'')+
+    (temas?'<div class="wc-person-chips">'+temas+'</div>':'')+
+    (pregunta?'<div class="wc-person-quote"><b>Pregunta al expositor</b>'+_webEsc(pregunta)+'</div>':'')+
+    (comentarios?'<div class="wc-person-quote"><b>Comentarios</b>'+_webEsc(comentarios)+'</div>':'')+
+  '</div>';
+}
+
+function _wcRenderPersonas(lista,accent){
+  var cont=document.getElementById('wcDetailList');
+  if(!lista.length){ cont.innerHTML='<div class="wc-empty">No hay inscritos que coincidan con tu búsqueda.</div>'; return; }
+  var ordenado=lista.slice().reverse(); // más recientes primero
+  cont.innerHTML=ordenado.map(function(r){return _wcTarjetaPersona(r,accent);}).join('');
+}
+
+function _wcFiltrarInscritos(){
+  var key=document.getElementById('wcDetail').dataset.key;
+  var accent=document.getElementById('wcDetail').dataset.accent;
+  var datos=_WC_DATOS_CACHE[key]||[];
+  var q=(document.getElementById('wcSearch').value||'').toLowerCase().trim();
+  if(!q){ _wcRenderPersonas(datos,accent); return; }
+  var filtrado=datos.filter(function(r){
+    return (r.nombre||'').toLowerCase().indexOf(q)!==-1 ||
+           (r.establecimiento||'').toLowerCase().indexOf(q)!==-1 ||
+           (r.comuna||'').toLowerCase().indexOf(q)!==-1;
+  });
+  _wcRenderPersonas(filtrado,accent);
+}
+
+async function _wcVerInscritos(webinarKey,regionLabel,accent){
+  var det=document.getElementById('wcDetail');
+  det.dataset.key=webinarKey;
+  det.dataset.accent=accent;
+  document.getElementById('wcDetailTitle').textContent='Inscritos — '+regionLabel;
+  document.getElementById('wcSearch').value='';
+  det.style.display='';
+  det.scrollIntoView({behavior:'smooth',block:'start'});
+  document.getElementById('wcDetailList').innerHTML='<div class="wc-empty">Cargando…</div>';
+  try{
+    if(!_WC_DATOS_CACHE[webinarKey]){
+      var res=await fetch(WEBINAR_API+'?action=respuestas&webinar='+encodeURIComponent(webinarKey));
+      var data=await res.json();
+      if(!data.ok) throw new Error(data.error||'No se pudo leer la planilla.');
+      _WC_DATOS_CACHE[webinarKey]=data.respuestas||[];
+    }
+    _wcRenderPersonas(_WC_DATOS_CACHE[webinarKey],accent);
+  }catch(e){
+    console.error(e);
+    document.getElementById('wcDetailList').innerHTML='<div class="wc-empty">No se pudieron cargar los inscritos. Reintenta.</div>';
   }
 }
 

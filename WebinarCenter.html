@@ -274,32 +274,37 @@ function _webInfChartImg(type,data,opciones,w,h){
   }
   return url;
 }
-const _WEBINF_W=920, _WEBINF_H=420;
-const _WEBINF_LEYENDA_ABAJO={plugins:{legend:{position:'bottom',labels:{boxWidth:16,font:{size:18},padding:18}}}};
-function _webInfChartCard(titulo,imgUrl){
-  return '<div style="border:1px solid #E5E7EB;border-radius:12px;padding:20px;text-align:center;margin-bottom:18px;">'+
-      '<div style="font-size:20px;font-weight:800;color:#001A60;margin-bottom:12px;">'+_webEsc(titulo)+'</div>'+
-      (imgUrl?'<img src="'+imgUrl+'" width="'+Math.round(_WEBINF_W-40)+'" style="max-width:100%;">':'<div style="color:#9aa3af;font-size:15px;padding:40px 0;">Sin datos.</div>')+
+// Ancho fijo razonable para todos los gráficos (ni gigante ni chico); el ALTO se calcula
+// aparte para cada barra horizontal según cuántas categorías tenga, para que no queden
+// espacios en blanco enormes cuando hay pocas (ej. "Sala sensorial" con solo 4 opciones).
+const _WEBINF_W=640;
+const _WEBINF_FONT=19;
+const _WEBINF_LEYENDA_ABAJO={plugins:{legend:{position:'bottom',labels:{boxWidth:14,font:{size:_WEBINF_FONT},padding:14}}}};
+function _webInfChartCard(titulo,imgUrl,imgW){
+  return '<div style="border:1px solid #E5E7EB;border-radius:12px;padding:16px;text-align:center;margin-bottom:16px;">'+
+      '<div style="font-size:16px;font-weight:800;color:#001A60;margin-bottom:10px;">'+_webEsc(titulo)+'</div>'+
+      (imgUrl?'<img src="'+imgUrl+'" width="'+(imgW||_WEBINF_W)+'" style="max-width:100%;">':'<div style="color:#9aa3af;font-size:13px;padding:30px 0;">Sin datos.</div>')+
     '</div>';
 }
 function _webInfKpiCelda(lbl,val,color){
-  return '<td style="width:25%;padding:16px 12px;border:1px solid #E5E7EB;border-top:4px solid '+color+';">'+
-    '<div style="font-size:12px;font-weight:800;color:#9aa3af;text-transform:uppercase;letter-spacing:.3px;">'+_webEsc(lbl)+'</div>'+
-    '<div style="font-size:27px;font-weight:800;color:'+color+';margin-top:5px;">'+_webEsc(String(val))+'</div>'+
+  return '<td style="width:25%;padding:14px 10px;border:1px solid #E5E7EB;border-top:4px solid '+color+';">'+
+    '<div style="font-size:11px;font-weight:800;color:#9aa3af;text-transform:uppercase;letter-spacing:.3px;">'+_webEsc(lbl)+'</div>'+
+    '<div style="font-size:23px;font-weight:800;color:'+color+';margin-top:4px;">'+_webEsc(String(val))+'</div>'+
   '</td>';
 }
 function _webInfDoughnut(labels,valores,colores){
-  return _webInfChartImg('doughnut',{labels:labels,datasets:[{data:valores,backgroundColor:colores}]},_WEBINF_LEYENDA_ABAJO,_WEBINF_W,_WEBINF_H);
+  return _webInfChartImg('doughnut',{labels:labels,datasets:[{data:valores,backgroundColor:colores}]},_WEBINF_LEYENDA_ABAJO,_WEBINF_W,340);
 }
 function _webInfBarH(labels,valores,color){
   if(!labels.length) return '';
+  var h=Math.max(160,labels.length*50+40); // alto según cantidad de categorías — sin espacios muertos
   return _webInfChartImg('bar',{labels:labels,datasets:[{data:valores,backgroundColor:color,borderRadius:4}]},
-    {indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:16}}},y:{ticks:{font:{size:16}}}}},_WEBINF_W,_WEBINF_H);
+    {indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:_WEBINF_FONT}}},y:{ticks:{font:{size:_WEBINF_FONT}}}}},_WEBINF_W,h);
 }
 function _webInfBarV(labels,valores,color){
   if(!labels.length) return '';
   return _webInfChartImg('bar',{labels:labels,datasets:[{data:valores,backgroundColor:color,borderRadius:4}]},
-    {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:16}}},y:{ticks:{font:{size:16}}}}},_WEBINF_W,_WEBINF_H);
+    {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:_WEBINF_FONT}}},y:{ticks:{font:{size:_WEBINF_FONT}}}}},_WEBINF_W,320);
 }
 
 /* ── Análisis de las respuestas abiertas (Pregunta al expositor + Comentarios) ──

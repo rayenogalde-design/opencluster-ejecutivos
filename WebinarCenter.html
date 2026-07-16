@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenCluster Tech — Webinar Center</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Open+Sans:wght@400;600;700&family=Playfair+Display:wght@400;600;700&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box;}
+  :root{
+    --navy:#001a60;--sky:#06b3fd;--ltblue:#d6eeff;--pale:#eaf6ff;
+    --orange:#ff7e00;--gold:#C9A96E;--gold-lt:#E8D5A8;
+    --text:#1a2535;--subtle:#64748b;--bg:#F4F6FB;
+  }
+  body{font-family:'Open Sans',sans-serif;background:var(--bg);min-height:100vh;overflow-x:hidden;}
+
+  .hero-bg{position:absolute;top:0;left:0;right:0;height:340px;
+    background:linear-gradient(170deg,#0A0F1E 0%,var(--navy) 35%,#0a2e8a 60%,var(--sky) 100%);z-index:0;}
+  .hero-bg::before{content:'';position:absolute;bottom:80px;left:0;right:0;height:1.5px;
+    background:linear-gradient(90deg,transparent 5%,var(--gold) 30%,var(--gold-lt) 50%,var(--gold) 70%,transparent 95%);opacity:.4;}
+  .hero-bg::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:100px;
+    background:linear-gradient(to bottom,transparent,var(--bg));}
+
+  .page{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;min-height:100vh;}
+
+  .back{position:fixed;top:16px;left:16px;z-index:100;display:inline-flex;align-items:center;gap:7px;
+    background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.85);
+    padding:7px 14px;border-radius:9px;font-size:11px;font-weight:600;text-decoration:none;
+    font-family:'Open Sans',sans-serif;transition:.2s;}
+  .back:hover{background:rgba(255,255,255,.28);color:#fff;}
+
+  .header{width:100%;padding:56px 24px 0;text-align:center;}
+  .logo-line{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:26px;opacity:0;animation:fadeUp .8s .15s forwards;}
+  .logo-bar{width:50px;height:1.5px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);}
+  .logo-diamond{width:7px;height:7px;background:var(--gold);transform:rotate(45deg);flex-shrink:0;}
+  .brand{font-family:'Montserrat',sans-serif;font-size:11px;letter-spacing:4px;color:rgba(255,255,255,.7);text-transform:uppercase;font-weight:700;}
+
+  .title-section{margin-bottom:8px;opacity:0;animation:fadeUp .8s .35s forwards;}
+  .title-section h1{font-family:'Playfair Display',serif;font-size:40px;font-weight:700;color:#fff;letter-spacing:-.5px;line-height:1.15;}
+  .title-accent{display:block;font-family:'Playfair Display',serif;font-style:italic;font-weight:400;color:var(--gold-lt);font-size:29px;margin-top:4px;}
+  .subtitle{font-size:13.5px;color:rgba(255,255,255,.55);font-weight:400;letter-spacing:.3px;margin-top:16px;opacity:0;animation:fadeUp .8s .55s forwards;}
+  .divider{width:60px;height:2px;margin:26px auto 0;opacity:0;animation:fadeUp .8s .65s forwards;
+    background:linear-gradient(90deg,rgba(255,255,255,.3),var(--gold),rgba(255,255,255,.3));}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+
+  .section{max-width:1060px;width:100%;padding:8px 24px 0;}
+  .section-head{display:flex;align-items:center;gap:12px;margin:30px 4px 14px;opacity:0;animation:fadeUp .7s .7s forwards;}
+  .section-head h2{font-family:'Montserrat',sans-serif;font-size:11px;font-weight:800;letter-spacing:2.2px;text-transform:uppercase;color:var(--subtle);white-space:nowrap;}
+  .section-head .ln{flex:1;height:1px;background:linear-gradient(90deg,rgba(0,26,96,.14),transparent);}
+
+  /* Acciones (Abrir encuesta / Copiar link) — franja bajo el encabezado */
+  .top-actions{max-width:1060px;width:100%;padding:18px 24px 0;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;opacity:0;animation:fadeUp .7s .6s forwards;}
+  .top-btn{display:inline-flex;align-items:center;gap:7px;padding:10px 18px;border-radius:9px;font-size:12.5px;font-weight:700;text-decoration:none;cursor:pointer;font-family:inherit;border:1.5px solid transparent;transition:.15s;}
+  .top-btn.primary{background:var(--gold);color:#1A2233;border-color:var(--gold);}
+  .top-btn.primary:hover{background:#d4b87f;}
+  .top-btn.outline{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.3);}
+  .top-btn.outline:hover{background:rgba(255,255,255,.22);}
+
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;padding-bottom:8px;}
+
+  .cat-card{border-radius:16px;text-decoration:none;color:var(--text);background:#fff;
+    transition:all .35s cubic-bezier(.25,.8,.25,1);
+    box-shadow:0 2px 8px rgba(0,26,96,.05),0 1px 3px rgba(0,0,0,.04);
+    overflow:hidden;position:relative;display:flex;flex-direction:column;align-items:stretch;
+    border:1px solid rgba(0,26,96,.06);opacity:0;animation:fadeUp .7s forwards;}
+  .cat-card:nth-child(1){animation-delay:.8s;}
+  .cat-card:nth-child(2){animation-delay:.9s;}
+  .cat-card:nth-child(3){animation-delay:1s;}
+  .cat-card:nth-child(4){animation-delay:1.1s;}
+  .cat-card:hover{transform:translateY(-2px);
+    box-shadow:0 10px 24px rgba(0,26,96,.1),0 3px 9px rgba(6,179,253,.06);
+    border-color:color-mix(in srgb,var(--accent) 35%,transparent);}
+  .cat-card:hover .cat-icon{transform:scale(1.05);}
+
+  .cat-card-row{display:flex;align-items:stretch;width:100%;}
+  .cat-stripe{position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:16px 0 0 16px;
+    background:var(--accent);transition:width .3s;}
+  .cat-card:hover .cat-stripe{width:5px;}
+
+  .cat-icon{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    margin:18px 0 18px 22px;transition:transform .35s;
+    background:color-mix(in srgb,var(--accent) 13%,#fff);}
+  .cat-icon svg{width:23px;height:23px;stroke:var(--accent);}
+
+  .cat-text{flex:1;min-width:0;padding:16px 16px 16px 16px;}
+  .cat-label{font-family:'Montserrat',sans-serif;font-size:8.5px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--accent);margin-bottom:3px;}
+  .cat-title{font-family:'Playfair Display',serif;font-size:16.5px;font-weight:700;color:var(--navy);line-height:1.25;margin-bottom:4px;display:block;}
+  .cat-desc{font-size:11.5px;color:var(--subtle);line-height:1.45;}
+  .cat-desc b{color:var(--navy);font-weight:800;}
+
+  .cat-share-row{display:flex;gap:8px;padding:12px 16px 16px;border-top:1px solid rgba(0,26,96,.08);}
+  .cat-share-btn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 10px;border-radius:9px;
+    background:color-mix(in srgb,var(--accent) 10%,#fff);color:var(--accent);font-weight:700;font-size:12.5px;cursor:pointer;
+    border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);transition:background .15s;user-select:none;font-family:inherit;}
+  .cat-share-btn:hover{background:color-mix(in srgb,var(--accent) 18%,#fff);}
+  .cat-share-btn:active{transform:scale(.97);}
+  .cat-share-btn:disabled{opacity:.6;cursor:default;}
+  .cat-share-btn svg{width:15px;height:15px;flex-shrink:0;}
+
+  .footer{margin-top:auto;padding:36px 24px 28px;text-align:center;opacity:0;animation:fadeUp .8s 1.3s forwards;}
+  .footer-line{width:40px;height:2px;background:linear-gradient(90deg,var(--sky),var(--navy));margin:0 auto 14px;border-radius:2px;}
+  .footer-text{font-size:10px;color:var(--subtle);letter-spacing:.8px;font-weight:600;text-transform:uppercase;}
+
+  @media(max-width:680px){
+    .grid{grid-template-columns:1fr;}
+    .header{padding:44px 16px 0;}
+    .title-section h1{font-size:30px;}
+    .title-accent{font-size:22px;}
+    .back{top:12px;left:12px;}
+  }
+</style>
+</head>
+<body>
+<div class="hero-bg"></div>
+
+<a class="back" href="index.html">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+  Volver a la central
+</a>
+
+<div class="page">
+  <div class="header">
+    <div class="logo-line">
+      <div class="logo-bar"></div><div class="logo-diamond"></div>
+      <div class="brand">OpenCluster Tech · Central</div>
+      <div class="logo-diamond"></div><div class="logo-bar"></div>
+    </div>
+    <div class="title-section">
+      <h1>Webinar<span class="title-accent">Center</span></h1>
+    </div>
+    <div class="subtitle">Resultados en vivo de la serie de webinars PIE, región por región</div>
+    <div class="divider"></div>
+  </div>
+
+  <div class="top-actions">
+    <a class="top-btn primary" href="https://webinar.opencluster-tech.cl/" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      Abrir encuesta
+    </a>
+    <button type="button" class="top-btn outline" id="webinar-copy-btn" onclick="copiarLinkWebinar()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      Copiar link
+    </button>
+  </div>
+
+  <!-- ═══════════ Regiones · Serie 2026 ═══════════
+       Para sumar una región nueva (Biobío/Ñuble, Araucanía, RM…): agregar una línea en
+       WEBINAR_REGIONES (más abajo, en el script) — la tarjeta y el informe se arman solos. -->
+  <div class="section">
+    <div class="section-head">
+      <h2>Por región · Serie 2026</h2>
+      <div class="ln"></div>
+    </div>
+    <div class="grid" id="wcRegionsGrid"><!-- se llena solo desde WEBINAR_REGIONES --></div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-line"></div>
+    <div class="footer-text">OpenCluster Tech · Webinar Center</div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+// ════════════════════════════════════════════
+// WEBINAR CENTER — regiones + informe PDF
+// ════════════════════════════════════════════
+const WEBINAR_API='https://script.google.com/macros/s/AKfycbws21oUtUYoOck3ScLpIFYybeLMz6QpfD-Tk2FtI-Iv69gTuEqzIRgmSLzuiarsiiK2MA/exec';
+// Reutiliza el conversor HTML→PDF que ya usa el CRM (accion "crm_html_a_pdf"). Es un endpoint
+// genérico del Apps Script del CRM — no le importa qué HTML le mandes, así que no hace falta
+// tocar el Apps Script del Webinar para generar el informe.
+const WEBINAR_INFORME_API='https://script.google.com/macros/s/AKfycbz3Vscxz-OlTHehsnEqqTD1qfql4xzstgWM81RG79P5IiLTkRvaYTU2sNoWV_QpceeowA/exec';
+
+// Agregar una región nueva (Biobío/Ñuble, Araucanía, RM…) cuando tenga su propio webinar en
+// vivo es solo sumar una línea acá — la tarjeta y el informe de esa región se arman solos.
+const WEBINAR_REGIONES=[
+  { key:'PIE_Maule_2026', label:'Región del Maule', accent:'#06b3fd' }
+];
+
+// Quién está usando la Central ahora (para el campo "solicitante" del informe). Si no viene
+// por parámetro de la URL (?u=Nombre), queda genérico — no bloquea la generación del PDF.
+const WEBINAR_USUARIO=new URLSearchParams(location.search).get('u')||'Webinar Center';
+
+function _webEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function _webTopN(obj,n){return Object.entries(obj||{}).sort((a,b)=>b[1]-a[1]).slice(0,n);}
+function _webOrigenLabel(key){
+  var k=String(key||'').trim();
+  if(k==='invita-colega') return 'Invita a un colega';
+  if(k==='instagram') return 'Instagram';
+  if(k===''||k==='webinar-pie-maule-2026-inscripcion') return 'Directo / link original';
+  return k;
+}
+
+async function copiarLinkWebinar(){
+  var url='https://webinar.opencluster-tech.cl/';
+  var btn=document.getElementById('webinar-copy-btn');
+  var original=btn.innerHTML;
+  try{
+    await navigator.clipboard.writeText(url);
+    btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><polyline points="20 6 9 17 4 12"/></svg> Copiado';
+  }catch(e){btn.innerHTML='Copia manual: '+url;}
+  setTimeout(function(){btn.innerHTML=original;},1800);
+}
+
+const _WC_REGION_ICON='<svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+
+function _wcBuildRegionCards(){
+  var grid=document.getElementById('wcRegionsGrid');
+  var h='';
+  WEBINAR_REGIONES.forEach(function(r){
+    h+='<div class="cat-card" data-webinar="'+r.key+'" style="--accent:'+(r.accent||'#06b3fd')+';">'+
+      '<div class="cat-card-row">'+
+        '<span class="cat-stripe"></span>'+
+        '<span class="cat-icon">'+_WC_REGION_ICON+'</span>'+
+        '<span class="cat-text">'+
+          '<span class="cat-label">Webinar PIE</span>'+
+          '<span class="cat-title">'+_webEsc(r.label)+'</span>'+
+          '<span class="cat-desc" id="chips-'+r.key+'">Cargando datos…</span>'+
+        '</span>'+
+      '</div>'+
+      '<div class="cat-share-row">'+
+        '<button type="button" class="cat-share-btn" data-key="'+r.key+'" data-label="'+_webEsc(r.label)+'" onclick="_webGenerarInforme(this.dataset.key,this.dataset.label,this)">'+
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'+
+          '<span>Generar Informe</span>'+
+        '</button>'+
+      '</div>'+
+    '</div>';
+  });
+  grid.innerHTML=h;
+}
+
+/** Carga Inscritos/Confirmados/Tasa por región, directo en la descripción de la tarjeta. */
+async function _wcLoadKPIs(){
+  for(var i=0;i<WEBINAR_REGIONES.length;i++){
+    var w=WEBINAR_REGIONES[i].key;
+    try{
+      var res=await fetch(WEBINAR_API+'?action=kpis&webinar='+encodeURIComponent(w));
+      var data=await res.json();
+      var el=document.getElementById('chips-'+w);
+      if(el&&data.ok){
+        var confirmados=data.confirmados||0;
+        var tasa=(data.total||0)>0?Math.round(confirmados/data.total*100):0;
+        el.innerHTML='<b>'+(data.total||0)+'</b> inscritos &middot; <b>'+confirmados+'</b> confirmados ('+tasa+'%)';
+      } else if(el){
+        el.textContent='Aún no hay inscritos.';
+      }
+    }catch(e){console.error('Webinar KPIs error',e); var el2=document.getElementById('chips-'+w); if(el2) el2.textContent='No se pudo cargar.';}
+  }
+}
+
+/* ── Informe PDF: mismo mecanismo que el informe de Sala Multisensorial/Ayudas Técnicas del
+   CRM — Chart.js renderiza cada gráfico sobre un canvas oculto, se exporta a imagen PNG
+   (chart.toBase64Image), y esa imagen se incrusta en el HTML final. La conversión a PDF ocurre
+   en el servidor (Apps Script) y ESA conversión no ejecuta JavaScript, así que un canvas vivo
+   saldría en blanco — por eso todo llega como <img>, nunca como <canvas>. ── */
+function _webInfChartImg(type,data,opciones,w,h){
+  w=w||380; h=h||220;
+  var canvas=document.createElement('canvas');
+  canvas.width=w; canvas.height=h;
+  canvas.style.position='absolute'; canvas.style.left='-9999px'; canvas.style.top='0';
+  document.body.appendChild(canvas);
+  var url='';
+  try{
+    var chart=new Chart(canvas.getContext('2d'), Object.assign({type:type,data:data},
+      {options:Object.assign({responsive:false,maintainAspectRatio:false,animation:false},opciones||{})}));
+    url=chart.toBase64Image('image/png',1);
+    chart.destroy();
+  } finally {
+    document.body.removeChild(canvas);
+  }
+  return url;
+}
+const _WEBINF_W=380, _WEBINF_H=220;
+const _WEBINF_LEYENDA_ABAJO={plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10},padding:10}}}};
+function _webInfChartCard(titulo,imgUrl){
+  return '<td style="width:50%;padding:8px;vertical-align:top;">'+
+    '<div style="border:1px solid #E5E7EB;border-radius:10px;padding:12px;text-align:center;">'+
+      '<div style="font-size:12px;font-weight:800;color:#001A60;margin-bottom:6px;">'+_webEsc(titulo)+'</div>'+
+      (imgUrl?'<img src="'+imgUrl+'" width="'+Math.round(_WEBINF_W-24)+'" style="max-width:100%;">':'<div style="color:#9aa3af;font-size:11.5px;padding:30px 0;">Sin datos.</div>')+
+    '</div>'+
+  '</td>';
+}
+function _webInfKpiCelda(lbl,val,color){
+  return '<td style="width:25%;padding:12px 10px;border:1px solid #E5E7EB;border-top:3px solid '+color+';">'+
+    '<div style="font-size:9px;font-weight:800;color:#9aa3af;text-transform:uppercase;letter-spacing:.3px;">'+_webEsc(lbl)+'</div>'+
+    '<div style="font-size:19px;font-weight:800;color:'+color+';margin-top:3px;">'+_webEsc(String(val))+'</div>'+
+  '</td>';
+}
+function _webInfDoughnut(labels,valores,colores){
+  return _webInfChartImg('doughnut',{labels:labels,datasets:[{data:valores,backgroundColor:colores}]},_WEBINF_LEYENDA_ABAJO,_WEBINF_W,_WEBINF_H);
+}
+function _webInfBarH(labels,valores,color){
+  if(!labels.length) return '';
+  return _webInfChartImg('bar',{labels:labels,datasets:[{data:valores,backgroundColor:color,borderRadius:4}]},
+    {indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10}}},y:{ticks:{font:{size:10}}}}},_WEBINF_W,_WEBINF_H);
+}
+function _webInfBarV(labels,valores,color){
+  if(!labels.length) return '';
+  return _webInfChartImg('bar',{labels:labels,datasets:[{data:valores,backgroundColor:color,borderRadius:4}]},
+    {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10}}},y:{ticks:{font:{size:10}}}}},_WEBINF_W,_WEBINF_H);
+}
+
+async function _webGenerarInforme(webinarKey,regionLabel,btnEl){
+  var lbl=btnEl?btnEl.querySelector('span'):null;
+  var prevTxt=lbl?lbl.textContent:'';
+  if(btnEl){btnEl.disabled=true;} if(lbl){lbl.textContent='Generando…';}
+  try{
+    var results=await Promise.all([
+      fetch(WEBINAR_API+'?action=kpis&webinar='+encodeURIComponent(webinarKey)).then(function(r){return r.json();}),
+      fetch(WEBINAR_API+'?action=respuestas&webinar='+encodeURIComponent(webinarKey)).then(function(r){return r.json();}),
+      fetch(WEBINAR_API+'?action=kpis_visitas&webinar='+encodeURIComponent(webinarKey)).then(function(r){return r.json();}).catch(function(){return {ok:false};})
+    ]);
+    var kpis=results[0], resp=results[1], visitas=results[2];
+    if(!kpis.ok||!resp.ok) throw new Error('No se pudo leer la planilla del webinar.');
+    if((kpis.total||0)===0){ alert('Todavía no hay inscritos en '+regionLabel+'.'); return; }
+
+    var confirmados=kpis.confirmados||0;
+    var tasaConf=Math.round(confirmados/kpis.total*100);
+    var visitasOk=visitas&&visitas.ok;
+    var totalVisitas=visitasOk?(visitas.total||0):0;
+    var tasaInsc=visitasOk&&totalVisitas>0?Math.round(kpis.total/totalVisitas*100):null;
+    var conPregunta=(resp.respuestas||[]).filter(function(r){return String(r.pregunta||'').trim();}).length;
+    var pctPregunta=kpis.total>0?Math.round(conPregunta/kpis.total*100):0;
+
+    var kpiHtml='<table style="width:100%;border-collapse:collapse;margin:14px 0 4px;">'+
+      '<tr>'+_webInfKpiCelda('Inscritos',kpis.total,'#001A60')+_webInfKpiCelda('Confirmados',confirmados,'#16A34A')+_webInfKpiCelda('Tasa de confirmación',tasaConf+'%','#16A34A')+_webInfKpiCelda('Comunas',kpis.comunas||0,'#0891B2')+'</tr>'+
+      '<tr>'+_webInfKpiCelda('Establecimientos',kpis.establecimientos||0,'#C99935')+_webInfKpiCelda('Aperturas de página',visitasOk?totalVisitas:'—','#5b21b6')+_webInfKpiCelda('Tasa de inscripción',tasaInsc!==null?tasaInsc+'%':'—','#5b21b6')+_webInfKpiCelda('Dejó pregunta al expositor',pctPregunta+'%','#0891B2')+'</tr>'+
+    '</table>';
+
+    var tDep=_webTopN(kpis.dependencia,6);
+    var tTipo=_webTopN(kpis.tipo,6);
+    var tCargo=_webTopN(kpis.cargo,6);
+    var tSala=_webTopN(kpis.sala,6);
+    var tTemas=_webTopN(kpis.temas,6);
+    var tDia=_webTopN(kpis.dia,6);
+    var tFranja=_webTopN(kpis.franja,5);
+    var tOrigen=visitasOk?_webTopN(visitas.porOrigen,6):[];
+
+    var paletaCat=['#001A60','#06b3fd','#C99935','#16A34A','#5b21b6','#DC2626'];
+    var imgDep=_webInfDoughnut(tDep.map(function(p){return p[0];}),tDep.map(function(p){return p[1];}),paletaCat);
+    var imgTipo=_webInfDoughnut(tTipo.map(function(p){return p[0];}),tTipo.map(function(p){return p[1];}),paletaCat);
+    var imgCargo=_webInfDoughnut(tCargo.map(function(p){return p[0];}),tCargo.map(function(p){return p[1];}),paletaCat);
+    var imgSala=_webInfBarH(tSala.map(function(p){return p[0];}),tSala.map(function(p){return p[1];}),'#06b3fd');
+    var imgTemas=_webInfBarH(tTemas.map(function(p){return p[0];}),tTemas.map(function(p){return p[1];}),'#001A60');
+    var imgDia=_webInfBarV(tDia.map(function(p){return p[0];}),tDia.map(function(p){return p[1];}),'#5b21b6');
+    var imgFranja=_webInfBarV(tFranja.map(function(p){return p[0];}),tFranja.map(function(p){return p[1];}),'#0891B2');
+    var imgOrigen=visitasOk&&tOrigen.length?_webInfDoughnut(tOrigen.map(function(p){return _webOrigenLabel(p[0]);}),tOrigen.map(function(p){return p[1];}),paletaCat):'';
+
+    var graficosHtml='<table style="width:100%;border-collapse:collapse;margin-top:8px;">'+
+      '<tr>'+_webInfChartCard('Dependencia administrativa',imgDep)+_webInfChartCard('Tipo de establecimiento',imgTipo)+'</tr>'+
+      '<tr>'+_webInfChartCard('Cargo de quien se inscribe',imgCargo)+_webInfChartCard('Estado de la sala sensorial',imgSala)+'</tr>'+
+      '<tr>'+_webInfChartCard('Temas de mayor interés',imgTemas)+(visitasOk?_webInfChartCard('Aperturas por canal',imgOrigen):'<td style="width:50%;"></td>')+'</tr>'+
+      '<tr>'+_webInfChartCard('Día preferido',imgDia)+_webInfChartCard('Horario preferido',imgFranja)+'</tr>'+
+    '</table>';
+
+    var depTop=tDep[0], tipoTop=tTipo[0], temaTop=tTemas[0];
+    var parrafoHtml='<div style="font-size:13.5px;color:#1a2440;line-height:1.7;background:#F7F3EE;border-left:4px solid #001A60;border-radius:8px;padding:14px 18px;margin:18px 0;">'+
+      'De las <b>'+kpis.total+'</b> personas inscritas en el webinar de '+_webEsc(regionLabel)+', <b>'+confirmados+'</b> ya confirmaron su asistencia ('+tasaConf+'%). '+
+      (depTop?('La mayoría pertenece a establecimientos de dependencia <b>'+_webEsc(depTop[0])+'</b> ('+depTop[1]+' de '+kpis.total+'), '):'')+
+      (tipoTop?('principalmente <b>'+_webEsc(tipoTop[0])+'</b>. '):'')+
+      (temaTop?('El tema de mayor interés fue <b>'+_webEsc(temaTop[0])+'</b>, mencionado por '+temaTop[1]+' personas. '):'')+
+      (visitasOk?('La página registró <b>'+totalVisitas+'</b> aperturas'+(tasaInsc!==null?(', con una tasa de inscripción del '+tasaInsc+'%'):'')+'.'):'')+
+    '</div>';
+
+    var ultimos=(resp.respuestas||[]).slice(-30).reverse();
+    var tablaHtml='<div style="margin-top:8px;">'+
+      '<h2 style="font-size:15px;font-weight:800;color:#001A60;margin:0 0 2px;">Inscritos recientes</h2>'+
+      '<div style="color:#9aa3af;font-size:11px;margin-bottom:6px;">Últimos '+ultimos.length+' registros, más recientes primero.</div>'+
+      '<table style="width:100%;border-collapse:collapse;font-size:11px;">'+
+      '<thead><tr style="background:#001A60;color:#fff;">'+
+        '<th style="padding:6px 8px;text-align:left;">Fecha</th><th style="padding:6px 8px;text-align:left;">Nombre</th><th style="padding:6px 8px;text-align:left;">Establecimiento</th><th style="padding:6px 8px;text-align:left;">Comuna</th><th style="padding:6px 8px;text-align:left;">Email</th>'+
+      '</tr></thead><tbody>'+
+      ultimos.map(function(r,i){
+        return '<tr style="background:'+(i%2?'#F7F9FC':'#fff')+';"><td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;">'+_webEsc(r.fecha||'')+'</td><td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;">'+_webEsc(r.nombre||'')+'</td><td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;">'+_webEsc(r.establecimiento||'')+'</td><td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;">'+_webEsc(r.comuna||'')+'</td><td style="padding:6px 8px;border-bottom:1px solid #E5E7EB;">'+_webEsc(r.email||'')+'</td></tr>';
+      }).join('')+
+      '</tbody></table>'+
+    '</div>';
+
+    var ahora=new Date();
+    var fechaGenerada=ahora.toLocaleDateString('es-CL',{day:'2-digit',month:'long',year:'numeric'});
+    var html='<html><body style="font-family:Arial,sans-serif;color:#1a1a2e;padding:24px;">'+
+      '<h1 style="color:#001A60;margin:0 0 2px;font-size:21px;">Informe Webinar &middot; '+_webEsc(regionLabel)+'</h1>'+
+      '<div style="color:#64748B;font-size:12px;margin-bottom:6px;">Generado el '+_webEsc(fechaGenerada)+' &middot; OpenCluster Tech</div>'+
+      kpiHtml+graficosHtml+parrafoHtml+
+      '<div style="margin-top:22px;border-top:2px solid #001A60;padding-top:4px;"></div>'+
+      tablaHtml+
+    '</body></html>';
+
+    await _webCrmHtmlAPdf(html,'Informe Webinar '+regionLabel+' - '+fechaGenerada);
+  }catch(e){
+    console.error(e);
+    alert('No se pudo generar el informe: '+(e&&e.message||e));
+  }finally{
+    if(btnEl){btnEl.disabled=false;} if(lbl){lbl.textContent=prevTxt;}
+  }
+}
+
+/** Convierte el HTML del informe a PDF reutilizando el mismo endpoint que ya usa el CRM
+ * (accion "crm_html_a_pdf") — genérico, no distingue de qué proyecto viene el HTML. */
+async function _webCrmHtmlAPdf(html,nombreArchivo){
+  var win=window.open('','_blank');
+  if(win){ try{ win.document.write('<title>Generando informe…</title><body style="font-family:sans-serif;padding:40px;color:#555;">Generando el informe, un momento…</body>'); }catch(e){} }
+  var r;
+  try{
+    var resp=await fetch(WEBINAR_INFORME_API,{
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({accion:'crm_html_a_pdf',solicitante:WEBINAR_USUARIO,html:html,nombre_archivo:nombreArchivo})
+    });
+    r=await resp.json();
+  }catch(e){
+    if(win&&!win.closed) win.close();
+    alert('No se pudo generar el informe: '+e);
+    return;
+  }
+  if(!r||!r.ok){
+    if(win&&!win.closed) win.close();
+    alert('No se pudo generar el informe: '+((r&&r.error)||'error desconocido'));
+    return;
+  }
+  try{
+    var bin=atob(r.base64);
+    var bytes=new Uint8Array(bin.length);
+    for(var i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+    var blob=new Blob([bytes],{type:'application/pdf'});
+    var url=URL.createObjectURL(blob);
+    if(win&&!win.closed) win.location.href=url; else window.open(url,'_blank');
+    setTimeout(function(){ try{URL.revokeObjectURL(url);}catch(e){} },60000);
+  }catch(e){
+    if(win&&!win.closed) win.close();
+    alert('No se pudo abrir el informe.');
+  }
+}
+
+_wcBuildRegionCards();
+_wcLoadKPIs();
+</script>
+</body>
+</html>

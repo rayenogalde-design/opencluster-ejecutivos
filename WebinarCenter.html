@@ -274,20 +274,18 @@ function _webInfChartImg(type,data,opciones,w,h){
   }
   return url;
 }
-const _WEBINF_W=380, _WEBINF_H=220;
-const _WEBINF_LEYENDA_ABAJO={plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10},padding:10}}}};
+const _WEBINF_W=920, _WEBINF_H=420;
+const _WEBINF_LEYENDA_ABAJO={plugins:{legend:{position:'bottom',labels:{boxWidth:16,font:{size:18},padding:18}}}};
 function _webInfChartCard(titulo,imgUrl){
-  return '<td style="width:50%;padding:8px;vertical-align:top;">'+
-    '<div style="border:1px solid #E5E7EB;border-radius:10px;padding:12px;text-align:center;">'+
-      '<div style="font-size:12px;font-weight:800;color:#001A60;margin-bottom:6px;">'+_webEsc(titulo)+'</div>'+
-      (imgUrl?'<img src="'+imgUrl+'" width="'+Math.round(_WEBINF_W-24)+'" style="max-width:100%;">':'<div style="color:#9aa3af;font-size:11.5px;padding:30px 0;">Sin datos.</div>')+
-    '</div>'+
-  '</td>';
+  return '<div style="border:1px solid #E5E7EB;border-radius:12px;padding:20px;text-align:center;margin-bottom:18px;">'+
+      '<div style="font-size:20px;font-weight:800;color:#001A60;margin-bottom:12px;">'+_webEsc(titulo)+'</div>'+
+      (imgUrl?'<img src="'+imgUrl+'" width="'+Math.round(_WEBINF_W-40)+'" style="max-width:100%;">':'<div style="color:#9aa3af;font-size:15px;padding:40px 0;">Sin datos.</div>')+
+    '</div>';
 }
 function _webInfKpiCelda(lbl,val,color){
-  return '<td style="width:25%;padding:12px 10px;border:1px solid #E5E7EB;border-top:3px solid '+color+';">'+
-    '<div style="font-size:9px;font-weight:800;color:#9aa3af;text-transform:uppercase;letter-spacing:.3px;">'+_webEsc(lbl)+'</div>'+
-    '<div style="font-size:19px;font-weight:800;color:'+color+';margin-top:3px;">'+_webEsc(String(val))+'</div>'+
+  return '<td style="width:25%;padding:16px 12px;border:1px solid #E5E7EB;border-top:4px solid '+color+';">'+
+    '<div style="font-size:12px;font-weight:800;color:#9aa3af;text-transform:uppercase;letter-spacing:.3px;">'+_webEsc(lbl)+'</div>'+
+    '<div style="font-size:27px;font-weight:800;color:'+color+';margin-top:5px;">'+_webEsc(String(val))+'</div>'+
   '</td>';
 }
 function _webInfDoughnut(labels,valores,colores){
@@ -296,12 +294,12 @@ function _webInfDoughnut(labels,valores,colores){
 function _webInfBarH(labels,valores,color){
   if(!labels.length) return '';
   return _webInfChartImg('bar',{labels:labels,datasets:[{data:valores,backgroundColor:color,borderRadius:4}]},
-    {indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10}}},y:{ticks:{font:{size:10}}}}},_WEBINF_W,_WEBINF_H);
+    {indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:16}}},y:{ticks:{font:{size:16}}}}},_WEBINF_W,_WEBINF_H);
 }
 function _webInfBarV(labels,valores,color){
   if(!labels.length) return '';
   return _webInfChartImg('bar',{labels:labels,datasets:[{data:valores,backgroundColor:color,borderRadius:4}]},
-    {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10}}},y:{ticks:{font:{size:10}}}}},_WEBINF_W,_WEBINF_H);
+    {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:16}}},y:{ticks:{font:{size:16}}}}},_WEBINF_W,_WEBINF_H);
 }
 
 async function _webGenerarInforme(webinarKey,regionLabel,btnEl){
@@ -350,12 +348,16 @@ async function _webGenerarInforme(webinarKey,regionLabel,btnEl){
     var imgFranja=_webInfBarV(tFranja.map(function(p){return p[0];}),tFranja.map(function(p){return p[1];}),'#0891B2');
     var imgOrigen=visitasOk&&tOrigen.length?_webInfDoughnut(tOrigen.map(function(p){return _webOrigenLabel(p[0]);}),tOrigen.map(function(p){return p[1];}),paletaCat):'';
 
-    var graficosHtml='<table style="width:100%;border-collapse:collapse;margin-top:8px;">'+
-      '<tr>'+_webInfChartCard('Dependencia administrativa',imgDep)+_webInfChartCard('Tipo de establecimiento',imgTipo)+'</tr>'+
-      '<tr>'+_webInfChartCard('Cargo de quien se inscribe',imgCargo)+_webInfChartCard('Estado de la sala sensorial',imgSala)+'</tr>'+
-      '<tr>'+_webInfChartCard('Temas de mayor interés',imgTemas)+(visitasOk?_webInfChartCard('Aperturas por canal',imgOrigen):'<td style="width:50%;"></td>')+'</tr>'+
-      '<tr>'+_webInfChartCard('Día preferido',imgDia)+_webInfChartCard('Horario preferido',imgFranja)+'</tr>'+
-    '</table>';
+    var graficosHtml='<div style="margin-top:12px;">'+
+      _webInfChartCard('Dependencia administrativa',imgDep)+
+      _webInfChartCard('Tipo de establecimiento',imgTipo)+
+      _webInfChartCard('Cargo de quien se inscribe',imgCargo)+
+      _webInfChartCard('Estado de la sala sensorial',imgSala)+
+      _webInfChartCard('Temas de mayor interés',imgTemas)+
+      (visitasOk?_webInfChartCard('Aperturas por canal',imgOrigen):'')+
+      _webInfChartCard('Día preferido',imgDia)+
+      _webInfChartCard('Horario preferido',imgFranja)+
+    '</div>';
 
     var depTop=tDep[0], tipoTop=tTipo[0], temaTop=tTemas[0];
     var parrafoHtml='<div style="font-size:13.5px;color:#1a2440;line-height:1.7;background:#F7F3EE;border-left:4px solid #001A60;border-radius:8px;padding:14px 18px;margin:18px 0;">'+

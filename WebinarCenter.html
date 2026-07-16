@@ -302,6 +302,37 @@ function _webInfBarV(labels,valores,color){
     {plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:16}}},y:{ticks:{font:{size:16}}}}},_WEBINF_W,_WEBINF_H);
 }
 
+/* ── Análisis de las respuestas abiertas (Pregunta al expositor + Comentarios) ──
+   1) Palabras más repetidas: conteo mecánico de palabras (se filtran conectores comunes),
+      sin interpretar ni categorizar sentido — solo frecuencia real de lo escrito.
+   2) Voces del equipo PIE: se muestran las respuestas MÁS EXTENSAS tal cual las escribieron
+      (no resumidas ni reescritas), como muestra representativa — no es todo el texto porque
+      igual son ~60+ respuestas, sería un informe demasiado largo. */
+var _WEB_STOPWORDS=new Set(['de','la','el','en','que','y','a','los','las','un','una','unos','unas','para','con','no','se','su','sus','por','es','del','al','más','mas','o','como','lo','le','les','ya','este','esta','estos','estas','ese','esa','esos','esas','entre','cuando','muy','sin','sobre','también','tambien','me','hasta','hay','donde','quien','quienes','desde','todo','toda','todos','todas','nos','durante','uno','ni','contra','otros','otras','otro','otra','ante','ellos','ellas','e','esto','eso','mi','mis','tu','tus','antes','algunos','algunas','algo','qué','que','cual','cuales','tanto','tanta','mucho','mucha','muchos','muchas','poco','poca','pocos','pocas','nada','nosotros','nosotras','estoy','estamos','están','estan','está','esta','ser','son','fue','han','ha','he','sea','sean','sí','si','pero','porque','cómo','así','asi','solo','sólo','sobre','sino','sea','cada','cada','está','esté','hacer','hace','hacia','puede','pueden','debe','deben','tiene','tienen','tener','desde','sido','ser','va','van','vez','años','año','así','manera','forma','parte','misma','mismo','mismos','mismas']);
+function _webPalabrasFrecuentes(textos,topN){
+  var counts={};
+  textos.forEach(function(t){
+    String(t||'').toLowerCase()
+      .replace(/[^a-záéíóúñü\s]/gi,' ')
+      .split(/\s+/)
+      .forEach(function(w){
+        if(w.length<4) return;
+        if(_WEB_STOPWORDS.has(w)) return;
+        counts[w]=(counts[w]||0)+1;
+      });
+  });
+  return Object.entries(counts).sort(function(a,b){return b[1]-a[1];}).slice(0,topN||15);
+}
+function _webTopVoces(resp,n){
+  var items=[];
+  (resp.respuestas||[]).forEach(function(r){
+    var texto=[r.pregunta,r.comentarios].filter(Boolean).join(' — ').trim();
+    if(texto) items.push({texto:texto,cargo:r.cargo||'',comuna:r.comuna||'',len:texto.length});
+  });
+  items.sort(function(a,b){return b.len-a.len;});
+  return items.slice(0,n||15);
+}
+
 async function _webGenerarInforme(webinarKey,regionLabel,btnEl){
   var lbl=btnEl?btnEl.querySelector('span'):null;
   var prevTxt=lbl?lbl.textContent:'';
@@ -337,6 +368,8 @@ async function _webGenerarInforme(webinarKey,regionLabel,btnEl){
     var tDia=_webTopN(kpis.dia,6);
     var tFranja=_webTopN(kpis.franja,5);
     var tOrigen=visitasOk?_webTopN(visitas.porOrigen,6):[];
+    var textosAbiertos=(resp.respuestas||[]).flatMap(function(r){return [r.pregunta,r.comentarios];});
+    var tPalabras=_webPalabrasFrecuentes(textosAbiertos,15);
 
     var paletaCat=['#001A60','#06b3fd','#C99935','#16A34A','#5b21b6','#DC2626'];
     var imgDep=_webInfDoughnut(tDep.map(function(p){return p[0];}),tDep.map(function(p){return p[1];}),paletaCat);
@@ -347,6 +380,7 @@ async function _webGenerarInforme(webinarKey,regionLabel,btnEl){
     var imgDia=_webInfBarV(tDia.map(function(p){return p[0];}),tDia.map(function(p){return p[1];}),'#5b21b6');
     var imgFranja=_webInfBarV(tFranja.map(function(p){return p[0];}),tFranja.map(function(p){return p[1];}),'#0891B2');
     var imgOrigen=visitasOk&&tOrigen.length?_webInfDoughnut(tOrigen.map(function(p){return _webOrigenLabel(p[0]);}),tOrigen.map(function(p){return p[1];}),paletaCat):'';
+    var imgPalabras=_webInfBarH(tPalabras.map(function(p){return p[0];}),tPalabras.map(function(p){return p[1];}),'#DC2626');
 
     var graficosHtml='<div style="margin-top:12px;">'+
       _webInfChartCard('Dependencia administrativa',imgDep)+
@@ -357,6 +391,7 @@ async function _webGenerarInforme(webinarKey,regionLabel,btnEl){
       (visitasOk?_webInfChartCard('Aperturas por canal',imgOrigen):'')+
       _webInfChartCard('Día preferido',imgDia)+
       _webInfChartCard('Horario preferido',imgFranja)+
+      _webInfChartCard('Palabras más repetidas en preguntas y comentarios',imgPalabras)+
     '</div>';
 
     var depTop=tDep[0], tipoTop=tTipo[0], temaTop=tTemas[0];
@@ -382,6 +417,20 @@ async function _webGenerarInforme(webinarKey,regionLabel,btnEl){
       '</tbody></table>'+
     '</div>';
 
+    var voces=_webTopVoces(resp,15);
+    var vocesHtml=voces.length?(
+      '<div style="margin-top:8px;">'+
+        '<h2 style="font-size:15px;font-weight:800;color:#001A60;margin:0 0 2px;">Lo que escribió el equipo PIE</h2>'+
+        '<div style="color:#9aa3af;font-size:11px;margin-bottom:10px;">Respuestas más extensas de "Pregunta al expositor" y "Comentarios", tal cual las escribieron — muestra representativa, no el total.</div>'+
+        voces.map(function(v){
+          return '<div style="background:#F7F9FC;border-left:3px solid #06b3fd;border-radius:6px;padding:12px 16px;margin-bottom:10px;font-size:13px;line-height:1.65;color:#1a2440;">'+
+            '“'+_webEsc(v.texto)+'”'+
+            '<div style="font-size:11px;color:#9aa3af;margin-top:6px;">'+_webEsc(v.cargo)+(v.cargo&&v.comuna?' &middot; ':'')+_webEsc(v.comuna)+'</div>'+
+          '</div>';
+        }).join('')+
+      '</div>'
+    ):'';
+
     var ahora=new Date();
     var fechaGenerada=ahora.toLocaleDateString('es-CL',{day:'2-digit',month:'long',year:'numeric'});
     var html='<html><body style="font-family:Arial,sans-serif;color:#1a1a2e;padding:24px;">'+
@@ -390,6 +439,8 @@ async function _webGenerarInforme(webinarKey,regionLabel,btnEl){
       kpiHtml+graficosHtml+parrafoHtml+
       '<div style="margin-top:22px;border-top:2px solid #001A60;padding-top:4px;"></div>'+
       tablaHtml+
+      '<div style="margin-top:22px;border-top:2px solid #001A60;padding-top:4px;"></div>'+
+      vocesHtml+
     '</body></html>';
 
     await _webCrmHtmlAPdf(html,'Informe Webinar '+regionLabel+' - '+fechaGenerada);

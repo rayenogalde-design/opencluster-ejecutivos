@@ -385,10 +385,12 @@ function closeFicha(){ fichaOverlay.classList.remove('open'); }
 fichaOverlay.addEventListener('click', function(e){ if(e.target===fichaOverlay) closeFicha(); });
 document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeFicha(); });
 let soloSinPrecio = false;
+let filtroExtra = null;
 const sinPrecioBtn = document.getElementById('sinPrecioBtn');
 if(sinPrecioBtn){
   sinPrecioBtn.addEventListener('click', function(){
     soloSinPrecio = !soloSinPrecio;
+    filtroExtra = soloSinPrecio ? function(p){ return p.costoNeto==null; } : null;
     sinPrecioBtn.classList.toggle('on', soloSinPrecio);
     sinPrecioBtn.textContent = soloSinPrecio ? 'Ver todos de nuevo' : 'Ver solo estos';
     applyFilters();
@@ -435,7 +437,7 @@ function matches(p, nq){
 }
 function applyFilters(){
   const nq = normalize(input.value.trim());
-  render(DATA.filter(p => (!activeFam || p.familiaKey===activeFam) && (!activeMarca || p.proveedorReal===activeMarca) && (typeof soloSinPrecio==='undefined' || !soloSinPrecio || p.costoNeto==null) && matches(p, nq)));
+  render(DATA.filter(p => (!activeFam || p.familiaKey===activeFam) && (!activeMarca || p.proveedorReal===activeMarca) && (typeof filtroExtra==='undefined' || !filtroExtra || filtroExtra(p)) && matches(p, nq)));
 }
 input.addEventListener('input', applyFilters);
 chipsEl.addEventListener('click', (e) => {

@@ -559,6 +559,11 @@ function openFicha(p){
 function closeFicha(){ fichaOverlay.classList.remove('open'); }
 fichaOverlay.addEventListener('click', function(e){ if(e.target===fichaOverlay) closeFicha(); });
 document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ closeFicha(); quoteClose(); } });
+let filtroExtra = null;
+if(new URLSearchParams(location.search).get('filtro')==='sinprecio'){
+  filtroExtra = function(p){ return !!p.costoIncierto; };
+  setTimeout(function(){ applyFilters(); }, 0);
+}
 
 
 const PAGE_SIZE = 60;
@@ -600,7 +605,7 @@ function matches(p, nq){
 }
 function applyFilters(){
   const nq = normalize(input.value.trim());
-  render(DATA.filter(p => (!activeFam || p.familiaKey===activeFam) && (!activeMarca || p.proveedorReal===activeMarca) && (typeof soloSinPrecio==='undefined' || !soloSinPrecio || p.costoNeto==null) && matches(p, nq)));
+  render(DATA.filter(p => (!activeFam || p.familiaKey===activeFam) && (!activeMarca || p.proveedorReal===activeMarca) && (typeof filtroExtra==='undefined' || !filtroExtra || filtroExtra(p)) && matches(p, nq)));
 }
 input.addEventListener('input', applyFilters);
 chipsEl.addEventListener('click', (e) => {

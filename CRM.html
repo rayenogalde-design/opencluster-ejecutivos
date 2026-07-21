@@ -11200,15 +11200,15 @@ function _refrescarProbUI(num){
 // Vive fuera de _renderVistaLinea porque se dispara con cada tecla — no hace sentido re-renderizar
 // toda la pestaña (y perder el estado abierto/cerrado de cada fila) solo para filtrar.
 function _smStockAplicarFiltro(){
-  const q = _smProdNorm(document.getElementById('smStockBuscar').value);
-  const soloDemanda = document.getElementById('smStockSoloDemanda').checked;
+  const buscador = document.getElementById('smStockBuscar');
+  const q = _smProdNorm(buscador ? buscador.value : '');
   let visibles = 0;
   document.querySelectorAll('.sm-stock-row').forEach(function(row){
-    const coincideTexto = !q || row.getAttribute('data-n').indexOf(q) >= 0;
-    const coincideDemanda = !soloDemanda || row.getAttribute('data-dem') === '1';
-    const mostrar = coincideTexto && coincideDemanda;
+    const mostrar = !q || row.getAttribute('data-n').indexOf(q) >= 0;
     row.style.display = mostrar ? '' : 'none';
     if(mostrar) visibles++;
+    // Si el que calza está adentro de <details> "Alcanza" colapsado, se abre solo para que se vea.
+    if(mostrar && q){ const det = row.closest('details'); if(det) det.open = true; }
   });
   const vacio = document.getElementById('smStockVacio');
   if(vacio) vacio.style.display = visibles ? 'none' : 'block';
@@ -11463,6 +11463,10 @@ function _renderVistaLinea(todas, tipo){
   // para verla) — Rayen no la encontraba, así que ahora es su propia tarjeta, arriba, con lo que
   // falta primero. ----
   if(_stockCol){
+    // 2026-07-21 (pedido de Rayen): esta tarjeta es solo para cruzar contra demanda REAL (50%/90%)
+    // — los productos sin ninguna cotización a esa probabilidad no aportan nada acá, así que se
+    // excluyen desde la fuente (ya no hay checkbox "ver todos", quedaban puros ceros ensuciando
+    // la vista). Esos siguen apareciendo en la tarjeta "Disponibles para ofrecer" de más abajo.
     const stockRows = STOCK_SM_RAW.map(p => {
       let key = _smProdNorm(p.nombre);
       if(_SM_PROD_ALIAS[key]) key = _SM_PROD_ALIAS[key];
@@ -11471,10 +11475,18 @@ function _renderVistaLinea(todas, tipo){
       const cot50 = (c50?c50.cotizaciones:[]).slice().sort((a,b)=>String(a.numero).localeCompare(String(b.numero)));
       const demanda90 = c90?c90.unidades:0, demanda50 = c50?c50.unidades:0;
       const demanda = demanda50 + demanda90;
-      return { nombre: p.nombre, cantidad: p.cantidad, bodega: p.bodega, camino: p.camino, demanda, demanda90, demanda50, cot90, cot50, falta: demanda > p.cantidad };
-    }).sort((a,b) => (b.falta - a.falta) || (b.demanda - a.demanda) || a.nombre.localeCompare(b.nombre,'es'));
-    const nFalta = stockRows.filter(r=>r.falta).length;
-    const nConDemanda = stockRows.filter(r=>r.demanda>0).length;
+      // falta90: no alcanza ni para las cotizaciones más seguras (90%), solas.
+      // falta50: alcanza para el 90% solo, pero no si además se suman las del 50%.
+      const falta90 = demanda90 > p.cantidad;
+      const falta = demanda > p.cantidad;
+      return { nombre: p.nombre, cantidad: p.cantidad, bodega: p.bodega, camino: p.camino, demanda, demanda90, demanda50, cot90, cot50, falta, falta90, falta50: falta && !falta90 };
+    }).filter(r => r.demanda > 0)
+      .sort((a,b) => (b.falta90 - a.falta90) || (b.falta - a.falta) || (b.demanda - a.demanda) || a.nombre.localeCompare(b.nombre,'es'));
+    const faltaRows = stockRows.filter(r => r.falta);
+    const alcanzaRows = stockRows.filter(r => !r.falta);
+    const nFalta = faltaRows.length;
+    const nFalta90 = stockRows.filter(r=>r.falta90).length;
+    const nFalta50 = stockRows.filter(r=>r.falta50).length;
     // Cada cotización que tiene ese producto marcado 50%/90% — para que Rayen sepa a quién le estaría
     // dando el producto, no solo cuántas unidades. Clickeable: abre el modal completo de esa cotización
     // (mismo abrirCotModal que usa el resto del CRM). Agrupadas por probabilidad (90% primero) para
@@ -11494,13 +11506,13 @@ function _renderVistaLinea(todas, tipo){
       if(r.camino) partes.push('<b style="color:#0891B2;">'+r.camino+'</b> en camino');
       return partes.length ? ' ('+partes.join(' + ')+')' : '';
     };
-    const rowsHtml = stockRows.map((r, idx) => {
+    const _buildStockRow = (r, idx, prefix) => {
       const pctBar = Math.min(100, Math.round((r.demanda / Math.max(r.cantidad,1)) * 100));
-      const barColor = r.falta ? '#DC2626' : (r.demanda ? '#16A34A' : '#CBD5E1');
-      const detId = 'smStockDet'+idx;
+      const barColor = r.falta ? '#DC2626' : '#16A34A';
+      const detId = 'smStockDet'+prefix+idx;
       const abierto = r.falta; // los que faltan se muestran ya abiertos, para que salten a la vista
       const totalCot = r.cot90.length + r.cot50.length;
-      return '<div class="sm-stock-row" data-n="'+esc(_smProdNorm(r.nombre))+'" data-dem="'+(r.demanda?1:0)+'" style="border-bottom:1px solid var(--smoke,#e5e7eb);">' +
+      return '<div class="sm-stock-row" data-n="'+esc(_smProdNorm(r.nombre))+'" data-dem="1" style="border-bottom:1px solid var(--smoke,#e5e7eb);">' +
         '<div onclick="var d=document.getElementById(\''+detId+'\'); var v=document.getElementById(\''+detId+'v\'); var open=d.style.display!==\'none\'; d.style.display=open?\'none\':\'block\'; v.textContent=open?\'▸\':\'▾\';" ' +
           'style="cursor:pointer;display:flex;align-items:center;gap:12px;padding:9px 4px;flex-wrap:wrap;">' +
           '<span style="flex:1 1 220px;font-size:13px;color:var(--ink);">'+esc(r.nombre)+'</span>' +
@@ -11510,11 +11522,12 @@ function _renderVistaLinea(todas, tipo){
           '<span style="flex:0 0 auto;font-size:12px;color:var(--subtle);white-space:nowrap;">Stock <b style="color:var(--ink);">'+r.cantidad+'</b>'+_stockDesglose(r) +
             (r.demanda90 ? ' · <b style="color:#16A34A;">90%: '+r.demanda90+'</b>' : '') +
             (r.demanda50 ? ' · <b style="color:#0891B2;">50%: '+r.demanda50+'</b>' : '') +
-            (!r.demanda ? ' · Cotizado <b style="color:var(--ink);">0</b>' : '') +
           '</span>' +
-          (r.falta
-            ? '<span style="flex:0 0 auto;font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;background:#DC262618;color:#DC2626;white-space:nowrap;">Falta stock</span>'
-            : '<span style="flex:0 0 auto;font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;background:#16A34A18;color:#16A34A;white-space:nowrap;">Alcanza</span>') +
+          (r.falta90
+            ? '<span style="flex:0 0 auto;font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;background:#DC262618;color:#DC2626;white-space:nowrap;">Falta hasta para el 90%</span>'
+            : r.falta
+              ? '<span style="flex:0 0 auto;font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;background:#F59E0B18;color:#B45309;white-space:nowrap;">Falta si cierra el 50%</span>'
+              : '<span style="flex:0 0 auto;font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;background:#16A34A18;color:#16A34A;white-space:nowrap;">Alcanza</span>') +
           '<span id="'+detId+'v" style="flex:0 0 16px;color:var(--subtle);font-size:12px;">'+(abierto?'▾':'▸')+'</span>' +
         '</div>' +
         '<div id="'+detId+'" style="display:'+(abierto?'block':'none')+';padding:0 4px 12px 4px;">' +
@@ -11523,21 +11536,33 @@ function _renderVistaLinea(todas, tipo){
             : '<div style="font-size:11.5px;color:var(--subtle);padding:2px 9px;">Sin cotizaciones al 50% o 90% todavía.</div>') +
         '</div>' +
       '</div>';
-    }).join('');
+    };
+    const faltaRowsHtml = faltaRows.map((r,idx) => _buildStockRow(r,idx,'f')).join('');
+    const alcanzaRowsHtml = alcanzaRows.map((r,idx) => _buildStockRow(r,idx,'a')).join('');
+    // Titular arriba de todo: lo más urgente primero (no alcanza ni para lo más seguro, el 90%),
+    // luego lo que solo se complica si además cierra el 50% — pedido de Rayen 2026-07-21.
+    const _tituloUrgencia = !stockRows.length ? 'Todavía no hay ninguna cotización al 50% o 90% para cruzar contra el stock.' :
+      (nFalta90 ? '<b style="color:#DC2626;">'+nFalta90+' producto'+(nFalta90===1?'':'s')+' no alcanza'+(nFalta90===1?'':'n')+' ni para tus cotizaciones al 90%.</b> ' : '') +
+      (nFalta50 ? '<b style="color:#B45309;">'+nFalta50+' producto'+(nFalta50===1?'':'s')+' no alcanza'+(nFalta50===1?'':'n')+' si además cierras las del 50%.</b> ' : '') +
+      (!nFalta90 && !nFalta50 ? 'Ningún producto con demanda al 50%/90% se queda sin stock por ahora. ' : '');
     productosHtml += '<div style="background:#fff;border:2px solid #001A60;border-radius:12px;padding:16px 18px;margin-bottom:18px;">' +
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:4px;">' +
         '<div style="font-family:Montserrat,sans-serif;font-size:14px;font-weight:800;color:#001A60;">Stock disponible — bodega + en camino (OC 028/2026)</div>' +
         '<input id="smStockBuscar" type="text" oninput="_smStockAplicarFiltro()" placeholder="Buscar producto…" class="sm-no-print" ' +
           'style="padding:6px 12px;border:1px solid var(--smoke,#e5e7eb);border-radius:8px;font-size:12.5px;font-family:inherit;min-width:200px;">' +
       '</div>' +
-      '<div style="font-size:12px;color:var(--subtle);margin-bottom:10px;">'+
-        (nFalta ? '<b style="color:#DC2626;">'+nFalta+' producto'+(nFalta===1?'':'s')+' con demanda al 50%+90% por sobre el stock total (bodega + en camino).</b> ' : 'Ningún producto tiene, por ahora, más demanda al 50%+90% que stock disponible. ') +
+      '<div style="font-size:12px;color:var(--subtle);margin-bottom:12px;">'+ _tituloUrgencia +
         'Toca un producto para ver sus cotizaciones (quién y a qué probabilidad); toca el N° para abrirla.'+
       '</div>' +
-      '<label class="sm-no-print" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink);cursor:pointer;margin-bottom:10px;">' +
-        '<input type="checkbox" id="smStockSoloDemanda" onchange="_smStockAplicarFiltro()"> Ver solo los '+nConDemanda+' con cotizaciones al 50%/90%' +
-      '</label>' +
-      '<div id="smStockLista">' + rowsHtml + '</div>' +
+      '<div id="smStockLista">' +
+        (faltaRows.length ? '<div style="font-size:10.5px;font-weight:800;color:#DC2626;text-transform:uppercase;letter-spacing:.3px;margin:0 0 4px;">Falta stock (' + faltaRows.length + ')</div>' + faltaRowsHtml : '') +
+        (alcanzaRows.length
+          ? '<details' + (faltaRows.length ? '' : ' open') + ' style="margin-top:' + (faltaRows.length ? '14px' : '0') + ';">' +
+              '<summary style="cursor:pointer;list-style:none;font-size:10.5px;font-weight:800;color:#16A34A;text-transform:uppercase;letter-spacing:.3px;padding:6px 0;">Alcanza (' + alcanzaRows.length + ') — toca para ' + (faltaRows.length ? 'ver' : 'ocultar') + '</summary>' +
+              alcanzaRowsHtml +
+            '</details>'
+          : '') +
+      '</div>' +
       '<div id="smStockVacio" style="display:none;padding:16px 4px;color:var(--subtle);font-size:12.5px;">Ningún producto calza con la búsqueda.</div>' +
       '<div style="font-size:10.5px;color:var(--subtle);margin-top:10px;">"escalera grande" y "Tubo de burbujas Luminea" quedan con SKU asumido por Rayen a partir de la factura — pendiente de confirmar con el proveedor. Stock de bodega actualizado el 16-jul-2026.</div>' +
     '</div>';

@@ -211,51 +211,5 @@
   </div>
 </div>
 
-<script>
-var _CAT_SVG_SHARE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>';
-var _CAT_SVG_LINK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
-function _catCardHref(el){ var a=el.closest('a'); return a?a.getAttribute('href'):location.href; }
-function _catAbsUrl(href){ try{ return new URL(href, location.href).href; }catch(e){ return href; } }
-function _catTitulo(el){ var a=el.closest('a'); var t=a&&a.querySelector('.cat-title,.card-title'); return t?t.textContent.trim():'OpenCluster Tech'; }
-function _catCopiar(t, ok){
-  if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(ok, function(){ _catCopiarFb(t, ok); }); }
-  else { _catCopiarFb(t, ok); }
-}
-function _catCopiarFb(t, ok){
-  try{ var ta=document.createElement('textarea'); ta.value=t; ta.style.position='fixed'; ta.style.top='-1000px'; document.body.appendChild(ta); ta.focus(); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); ok&&ok(); }
-  catch(e){ prompt('Copia este link:', t); }
-}
-function compartirCatalogo(ev, el){
-  ev.preventDefault(); ev.stopPropagation();
-  var url=_catAbsUrl(_catCardHref(el)), titulo=_catTitulo(el);
-  if(navigator.share){ navigator.share({ title:titulo, text:titulo+' — OpenCluster Tech', url:url }).catch(function(){}); }
-  else { _catCopiar(url, function(){ alert('Tu navegador no permite compartir directo. Copiamos el link para que lo pegues en WhatsApp, correo o donde quieras.'); }); }
-}
-function copiarLinkCatalogo(ev, el){
-  ev.preventDefault(); ev.stopPropagation();
-  var url=_catAbsUrl(_catCardHref(el));
-  _catCopiar(url, function(){ var lab=el.querySelector('.cat-share-lbl'); if(lab){ var o=el.getAttribute('data-lbl')||lab.textContent; lab.textContent='¡Copiado!'; setTimeout(function(){ lab.textContent=o; },1700); } });
-}
-function _catMkShareRow(){
-  var d=document.createElement('div'); d.className='cat-share-row';
-  d.innerHTML=
-    '<span class="cat-share-btn" role="button" tabindex="0" onclick="compartirCatalogo(event,this)">'+_CAT_SVG_SHARE+'<span class="cat-share-lbl">Compartir</span></span>'+
-    '<span class="cat-share-btn" role="button" tabindex="0" data-lbl="Copiar link" onclick="copiarLinkCatalogo(event,this)">'+_CAT_SVG_LINK+'<span class="cat-share-lbl">Copiar link</span></span>';
-  return d;
-}
-(function(){
-  function run(){
-    document.querySelectorAll('.cat-card').forEach(function(card){
-      if(card.querySelector('.cat-share-row')) return;
-      var row=document.createElement('div'); row.className='cat-card-row';
-      while(card.firstChild){ row.appendChild(card.firstChild); }
-      card.appendChild(row);
-      card.classList.add('cat-card--col');
-      card.appendChild(_catMkShareRow());
-    });
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', run); else run();
-})();
-</script>
 </body>
 </html>

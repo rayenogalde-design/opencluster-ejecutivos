@@ -10951,7 +10951,18 @@ const _SM_PROD_ALIAS = {
   'enabler socket+': 'enabler socket +',
   'kit de bola de espejos mediana': 'kit de bola de espejo',
   'pelota de terapia de diametro 55cm': 'pelota terapeutica 55 cm diametro',
-  'pelota terapeutica 45 cm': 'pelota terapeutica 45 cm diametro'
+  'pelota terapeutica 45 cm': 'pelota terapeutica 45 cm diametro',
+  // El catálogo llama a este SKU "Conjunto de discos táctiles para pies y manos" pero la bodega
+  // lo anotó como "Set de disco táctiles" (BJ-E16807) — sin este alias las cotizaciones (que usan
+  // el nombre largo del catálogo) no cruzaban contra ese stock.
+  'conjunto de discos tactiles para pies y manos': 'set de disco tactiles',
+  'set discos tactiles pies y manos': 'set de disco tactiles',
+  // "Tubo de burbujas Luminea" es el nombre oficial del catálogo para el mismo SKU que en la
+  // factura viene como "Tubo de burbujas pequeño" (BJ-LTUB, ya marcado "supuesto" — pendiente
+  // de confirmar con el proveedor, este alias no cambia esa duda, solo evita que la demanda
+  // quede sin cruzar mientras tanto).
+  'tubo de burbujas luminea': 'tubo de burbujas pequeno',
+  'tubo de burbujas': 'tubo de burbujas pequeno'
 };
 function _smProdNorm(name){
   return String(name||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')
@@ -11240,6 +11251,11 @@ function _smExtraerProductos(prodStr){
     const rawName = m ? m[1].trim() : item;
     const qty = m ? (parseInt(m[2],10)||1) : 1;
     if(!rawName || rawName.length<3) return;
+    // Descarta fragmentos como "6kg" o "3 kg": son la mitad derecha de un peso con coma decimal
+    // chilena (ej. "...grande - 3,6kg") que el split(",") corta por la mitad. La otra mitad ya
+    // queda como su propio ítem y se reconecta con el alias correspondiente — este resto no es
+    // un producto real, sería puro ruido en las listas de demanda.
+    if(/^\d+([.,]\d+)?\s*k?g?s?$/i.test(rawName)) return;
     let key = _smProdNorm(rawName);
     if(_SM_PROD_ALIAS[key]) key = _SM_PROD_ALIAS[key];
     if(vistos.has(key)) return; // una cotización no debería repetir el mismo ítem dos veces

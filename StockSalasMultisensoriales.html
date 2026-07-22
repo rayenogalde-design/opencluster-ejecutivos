@@ -1832,12 +1832,15 @@
       const f = s.claveFicha ? FICHAS[s.claveFicha] : null;
       const thumb = f && f.imagen ? '<img src="' + f.imagen + '" alt="" loading="lazy" />' : '<div class="stock-disp-noimg">Sin foto</div>';
       const fichaAttr = f ? ' data-ficha="' + escapeHtmlSafe(s.claveFicha) + '"' : '';
-      // Pedido de Rayen 2026-07-22: la tarjeta SOLO muestra foto + nombre — nada de precio, stock
-      // ni link acá (eso complicaba la tarjeta y la hacía "chiquitita" con demasiada info). Todo
-      // lo demás vive en la ficha grande al tocar: precio, imágenes, link a Qinera, y acá abajo
-      // el número simple de cuánto queda — sin hablar de bodega/contenedor/en camino, que es lo
-      // que Rayen encontró "enredado".
-      const stockExtra = 'Quedan ' + disponible + ' disponibles después de estas cotizaciones' + (pedido ? ' (de ' + (s.total || 0) + ' en total, ' + pedido + ' ya están pedidas)' : '') + '.';
+      // Pedido de Rayen 2026-07-22: la tarjeta SOLO muestra foto + nombre — precio/stock/link viven
+      // en la ficha grande al tocar. Y ahí el stock son 2 números simples y nada más: cuánto queda
+      // en bodega y cuánto queda en contenedor DESPUÉS de descontar lo pedido por estas
+      // cotizaciones — sin la fórmula "total - pedido = libres" que Rayen encontró "enredada". Se
+      // descuenta primero de bodega (lo disponible ya) y el resto del contenedor.
+      const bodegaLibre = Math.max(0, (s.bodega || 0) - pedido);
+      const residuo = Math.max(0, pedido - (s.bodega || 0));
+      const caminoLibre = Math.max(0, (s.camino || 0) - residuo);
+      const stockExtra = bodegaLibre + ' en bodega · ' + caminoLibre + ' en contenedor';
       const buscable = (s.item + ' ' + (s.sku || '')).toLowerCase();
       return '<div class="stock-disp-card"' + fichaAttr + ' data-stock-extra="' + escapeHtmlSafe(stockExtra) + '" data-buscar="' + escapeHtmlSafe(buscable) + '">' +
         '<div class="stock-disp-thumb">' + thumb + '</div>' +

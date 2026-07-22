@@ -180,6 +180,10 @@
   .stock-disp-cant span { display:block; font-family:'Open Sans',sans-serif; font-size:0.6rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--mist); margin-top:0.25rem; }
   .stock-disp-qinera { display:inline-block; margin-top:0.5rem; font-family:'Montserrat',sans-serif; font-size:0.66rem; font-weight:700; color:var(--sky); text-decoration:none; }
   .stock-disp-qinera:hover { text-decoration:underline; }
+  .stock-disp-sku { font-family:'Courier New',monospace; font-size:0.68rem; color:var(--mist); margin-top:-0.15rem; margin-bottom:0.35rem; }
+  .stock-disp-card.falta { border-color:rgba(220,38,38,0.35); background:rgba(220,38,38,0.03); }
+  .stock-disp-cant.falta { color:#c0392b; }
+  .stock-disp-cant.falta span { color:#c0392b; opacity:0.75; }
   .stock-disp-hover { position:absolute; inset:0; background:rgba(0,26,96,0.93); color:#fff; display:flex; align-items:center; justify-content:center; text-align:center; padding:0.8rem; font-size:0.78rem; font-weight:700; line-height:1.35; opacity:0; transition:opacity 0.18s ease; border-radius:inherit; }
   .stock-disp-card:hover .stock-disp-hover { opacity:1; }
   .ficha-modal-scroll .stock-badge { display:block; width:fit-content; margin:0 0 1rem; font-size:0.78rem; padding:0.35rem 0.8rem; }
@@ -1801,6 +1805,67 @@
       '</div>';
     }).join('') + '</div>';
   }
+  // "Faltantes" (pedido de Rayen 2026-07-21: "quiero abajo un detalle de los faltantes con
+  // imágenes y códigos SKU y la opción de enviar un correo a Mario... para el nuevo pedido") —
+  // mismo criterio que la matriz (pedido > stock), pero como tarjetas con foto+SKU, para copiar
+  // directo a un pedido nuevo. Devuelve también la lista cruda (para el botón de correo).
+  function _faltantesLista(seleccionadas){
+    const demanda = _demandaPorKey(seleccionadas);
+    const items = Object.keys(demanda).map(key => {
+      const s = STOCK_SM[key];
+      const pedido = demanda[key];
+      const stockTotal = s ? (s.total || 0) : 0;
+      const falta = pedido - stockTotal;
+      const nombre = s ? s.item : null;
+      return { key, s, nombre, pedido, stockTotal, falta };
+    }).filter(x => x.falta > 0);
+    items.sort((a, b) => (a.nombre || a.key).localeCompare(b.nombre || b.key, 'es'));
+    return items;
+  }
+  function _faltantesGrid(seleccionadas){
+    const items = _faltantesLista(seleccionadas);
+    if (!items.length) return '<p class="incluidos-vacio">No falta stock para ninguno de los productos pedidos en estas cotizaciones.</p>';
+    return '<div class="stock-disp-grid">' + items.map(({ s, nombre, pedido, stockTotal, falta }) => {
+      const f = (s && s.claveFicha) ? FICHAS[s.claveFicha] : null;
+      const sku = (s && s.sku) ? s.sku : (f ? '—' : 'sin SKU en catálogo');
+      const thumb = f && f.imagen ? '<img src="' + f.imagen + '" alt="" loading="lazy" />' : '<div class="stock-disp-noimg">Sin foto</div>';
+      const fichaAttr = f ? ' data-ficha="' + escapeHtmlSafe(s.claveFicha) + '"' : '';
+      const linkQinera = f && f.url_producto
+        ? '<a class="stock-disp-qinera" href="' + escapeHtmlSafe(f.url_producto) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">Ver en Qinera ↗</a>'
+        : '';
+      return '<div class="stock-disp-card falta"' + fichaAttr + '>' +
+        '<div class="stock-disp-thumb">' + thumb + '</div>' +
+        '<div class="stock-disp-info">' +
+          '<div class="stock-disp-nombre">' + escapeHtmlSafe(nombre || '(sin nombre de stock)') + '</div>' +
+          '<div class="stock-disp-sku">' + escapeHtmlSafe(sku) + '</div>' +
+          '<div class="stock-disp-cant falta">' + falta + '<span>faltan (pide ' + pedido + ', stock ' + stockTotal + ')</span></div>' +
+          linkQinera +
+        '</div>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+  const MARIO_EMAIL = 'mario.ogalde@opencluster-tech.cl';
+  function _fechaHoyCL(){
+    const d = new Date();
+    const dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+    const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    return dias[d.getDay()] + ' ' + d.getDate() + ' de ' + meses[d.getMonth()] + ' de ' + d.getFullYear();
+  }
+  // Abre Gmail con un borrador ya redactado (no manda nada solo, Rayen revisa y envía) — se abre
+  // en una pestaña nueva y Gmail lo autoguarda como borrador apenas se escribe algo.
+  function _abrirBorradorFaltantes(seleccionadas){
+    const items = _faltantesLista(seleccionadas);
+    if (!items.length) { alert('No hay faltantes para estas cotizaciones — no hace falta pedido.'); return; }
+    const numCotiz = seleccionadas.map(c => c.cotizacion).join(', ');
+    const cuerpo = 'Hola Mario,\n\n'
+      + 'Te paso el detalle de lo que falta en stock para las cotizaciones ' + numCotiz + ' (Sala Multisensorial), al ' + _fechaHoyCL() + ', para el próximo pedido:\n\n'
+      + items.map(it => '- ' + (it.nombre || '(sin nombre)') + '  |  SKU: ' + ((it.s && it.s.sku) || 'sin SKU en catálogo') + '  |  faltan ' + it.falta + ' (pide ' + it.pedido + ', stock actual ' + it.stockTotal + ')').join('\n')
+      + '\n\nSaludos,\nRayen';
+    const asunto = 'Pedido nuevo — faltantes Sala Multisensorial (' + items.length + ' productos) — ' + _fechaHoyCL();
+    const url = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(MARIO_EMAIL)
+      + '&su=' + encodeURIComponent(asunto) + '&body=' + encodeURIComponent(cuerpo);
+    window.open(url, '_blank');
+  }
   function renderComparacionCotizaciones(){
     const cont = document.getElementById('cotiz-comparacion');
     if (!cont) return;
@@ -1821,6 +1886,11 @@
       '</div>';
     }).join('');
     const stockDisponibleGrid = _stockDisponibleGrid(seleccionadas);
+    const faltantesLista = _faltantesLista(seleccionadas);
+    const faltantesGrid = _faltantesGrid(seleccionadas);
+    const botonCorreo = faltantesLista.length
+      ? '<button type="button" class="btn-primario" id="btn-correo-faltantes" style="margin:0.8rem 0;">Enviar correo a Mario con este detalle (' + faltantesLista.length + ' productos)</button>'
+      : '';
     cont.innerHTML = '<h3>Cotizaciones lado a lado — ' + seleccionadas.length + ' juntas</h3>' +
       '<p class="nivel-nota">Cada columna es una cotización — cuánto pide cada una del mismo producto, el total sumado, y si el stock alcanza para todas juntas.</p>' +
       tablaMatriz +
@@ -1828,7 +1898,11 @@
       '<div class="cotiz-comp-fila-prioridad" id="cotiz-prioridad-fila">' + tarjetas + '</div>' +
       '<h3 style="margin-top:1.4rem;">Stock disponible después de estas cotizaciones</h3>' +
       '<p class="nivel-nota">Lo que te queda libre en bodega + contenedor si estas ' + seleccionadas.length + ' cotizaciones se concretan. Pasa el cursor sobre una tarjeta para ver el desglose.</p>' +
-      stockDisponibleGrid;
+      stockDisponibleGrid +
+      '<h3 style="margin-top:1.4rem;">Faltantes para el próximo pedido</h3>' +
+      '<p class="nivel-nota">Productos donde estas cotizaciones piden más de lo que hay en stock — con foto y SKU para armar el pedido nuevo.</p>' +
+      botonCorreo +
+      faltantesGrid;
     _wireDragPrioridad();
     // El wiring global de [data-ficha] corre una sola vez al cargar la página — esta tabla se
     // pinta después, dinámicamente, así que hay que conectar sus fichas acá cada vez que se
@@ -1839,6 +1913,8 @@
     cont.querySelectorAll('[data-desglose]').forEach(el => {
       el.addEventListener('click', (ev) => mostrarTooltipStock(ev, el.dataset.desglose));
     });
+    const btnCorreo = document.getElementById('btn-correo-faltantes');
+    if (btnCorreo) btnCorreo.addEventListener('click', () => _abrirBorradorFaltantes(seleccionadas));
   }
   // Reordenar por drag-and-drop: al soltar una tarjeta sobre otra, la tarjeta arrastrada se
   // inserta en la posición de la tarjeta destino (empujando al resto), y se vuelve a pintar todo

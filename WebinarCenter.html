@@ -129,6 +129,15 @@
   .wc-person-quote b{color:var(--navy);font-weight:800;font-size:10px;text-transform:uppercase;display:block;margin-bottom:5px;letter-spacing:.4px;}
   .wc-empty{text-align:center;color:var(--subtle);padding:36px;font-size:13px;}
 
+  /* Conversión por canal (aperturas vs inscripciones) */
+  .wc-conv-card{background:#fff;border:1px solid rgba(0,26,96,.06);border-left:4px solid var(--accent,#06b3fd);
+    border-radius:14px;padding:18px 20px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,26,96,.05);}
+  .wc-conv-title{font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:var(--navy);margin-bottom:12px;}
+  .wc-conv-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .wc-conv-table th{font-family:'Montserrat',sans-serif;font-size:10.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--subtle);text-align:left;padding:6px 10px;border-bottom:2px solid rgba(0,26,96,.1);}
+  .wc-conv-table td{padding:9px 10px;border-bottom:1px solid rgba(0,26,96,.06);color:var(--text);}
+  .wc-conv-table tr:last-child td{border-bottom:none;}
+
   .footer{margin-top:auto;padding:36px 24px 28px;text-align:center;opacity:0;animation:fadeUp .8s 1.3s forwards;}
   .footer-line{width:40px;height:2px;background:linear-gradient(90deg,var(--sky),var(--navy));margin:0 auto 14px;border-radius:2px;}
   .footer-text{font-size:10px;color:var(--subtle);letter-spacing:.8px;font-weight:600;text-transform:uppercase;}
@@ -186,6 +195,15 @@
     <div class="grid" id="wcRegionsGrid"><!-- se llena solo desde WEBINAR_REGIONES --></div>
   </div>
 
+  <!-- ═══════════ Conversión por canal (aperturas de página vs inscripciones reales) ═══════════ -->
+  <div class="section">
+    <div class="section-head">
+      <h2>Conversión por canal</h2>
+      <div class="ln"></div>
+    </div>
+    <div id="wcConversion"><!-- se llena solo, una tarjeta por región --></div>
+  </div>
+
   <!-- ═══════════ Detalle: inscritos de una región (vista en pantalla, ordenada) ═══════════ -->
   <div class="section" id="wcDetail" style="display:none;">
     <div class="wc-detail-head">
@@ -229,7 +247,9 @@ function _webOrigenLabel(key){
   var k=String(key||'').trim();
   if(k==='invita-colega') return 'Invita a un colega';
   if(k==='instagram') return 'Instagram';
-  if(k===''||k==='webinar-pie-maule-2026-inscripcion') return 'Directo / link original';
+  if(k==='whatsapp') return 'WhatsApp';
+  if(k==='email') return 'Email';
+  if(k===''||k==='directo'||k==='webinar-pie-maule-2026-inscripcion') return 'Directo / link original';
   return k;
 }
 
@@ -292,6 +312,40 @@ async function _wcLoadKPIs(){
       }
     }catch(e){console.error('Webinar KPIs error',e); var el2=document.getElementById('chips-'+w); if(el2) el2.textContent='No se pudo cargar.';}
   }
+}
+
+/** Tabla en pantalla: aperturas de página vs inscripciones reales, por canal (Email/WhatsApp/Instagram/Directo). */
+async function _wcLoadConversion(){
+  var cont=document.getElementById('wcConversion');
+  var html='';
+  for(var i=0;i<WEBINAR_REGIONES.length;i++){
+    var r=WEBINAR_REGIONES[i];
+    try{
+      var res=await fetch(WEBINAR_API+'?action=kpis_conversion&webinar='+encodeURIComponent(r.key));
+      var data=await res.json();
+      if(!data.ok) throw new Error(data.error||'error');
+      var filas=Object.entries(data.porOrigen||{}).sort(function(a,b){return b[1].aperturas-a[1].aperturas;});
+      if(!filas.length){
+        html+='<div class="wc-conv-card" style="--accent:'+(r.accent||'#06b3fd')+';">'+
+          '<div class="wc-conv-title">'+_webEsc(r.label)+'</div>'+
+          '<div class="wc-empty">Aún no hay aperturas registradas para esta región.</div>'+
+        '</div>';
+        continue;
+      }
+      var filasHtml=filas.map(function(f){
+        var canal=f[0], d=f[1];
+        return '<tr><td>'+_webEsc(_webOrigenLabel(canal))+'</td><td>'+d.aperturas+'</td><td>'+d.inscripciones+'</td><td><b>'+d.tasaConversion+'%</b></td></tr>';
+      }).join('');
+      html+='<div class="wc-conv-card" style="--accent:'+(r.accent||'#06b3fd')+';">'+
+        '<div class="wc-conv-title">'+_webEsc(r.label)+'</div>'+
+        '<table class="wc-conv-table"><thead><tr><th>Canal</th><th>Aperturas</th><th>Inscripciones</th><th>Conversión</th></tr></thead><tbody>'+filasHtml+'</tbody></table>'+
+      '</div>';
+    }catch(e){
+      console.error('Conversión por canal error',e);
+      html+='<div class="wc-conv-card"><div class="wc-conv-title">'+_webEsc(r.label)+'</div><div class="wc-empty">No se pudo cargar.</div></div>';
+    }
+  }
+  cont.innerHTML=html;
 }
 
 /* ── Ver Inscritos: vista en pantalla, ordenada, de los datos de la planilla (no el PDF) ── */
@@ -622,6 +676,7 @@ async function _webCrmHtmlAPdf(html,nombreArchivo){
 
 _wcBuildRegionCards();
 _wcLoadKPIs();
+_wcLoadConversion();
 </script>
 </body>
 </html>

@@ -1813,7 +1813,12 @@
       const estadoCelda = '<td class="' + (falta ? 'falta' : 'alcanza') + '">' +
         '<span class="cotiz-estado-clickable" data-desglose="' + escapeHtmlSafe(desglose) + '">' + (falta ? 'Falta stock' : 'Disponibles') + '</span>' +
       '</td>';
-      return '<tr>' + nombreCelda + celdas + '<td><strong>' + m.total + '</strong></td><td>' + total + '</td>' + estadoCelda + '</tr>';
+      // Total pedido y Stock también en rojo cuando falta — pedido de Rayen 2026-07-22 ("dame lo
+      // que falta también en rojo para no confundirme"), para verlo de un vistazo sin tener que
+      // mirar la columna Estado (que puede quedar fuera de pantalla en una tabla ancha).
+      const totalPedidoCelda = '<td' + (falta ? ' class="falta"' : '') + '><strong>' + m.total + '</strong></td>';
+      const stockCelda = '<td' + (falta ? ' class="falta"' : '') + '>' + total + '</td>';
+      return '<tr>' + nombreCelda + celdas + totalPedidoCelda + stockCelda + estadoCelda + '</tr>';
     }).join('');
     if (!filas) return '<p class="incluidos-vacio">Sin productos detectados.</p>';
     return '<div class="tablewrap"><table class="cotiz-matriz"><thead>' + cabecera + '</thead><tbody>' + filas + '</tbody></table></div>';

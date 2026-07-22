@@ -2403,9 +2403,11 @@
   let confirmEstado = JSON.parse(localStorage.getItem(CKEY) || '{}');
 
   function actualizarProgresoConfirmar() {
+    const elProgreso = document.getElementById('confirmar-progreso');
+    if (!elProgreso) return; // no existe en la página de Stock
     const total = document.querySelectorAll('#confirmar-grid .pcard').length;
     const marcados = Object.keys(confirmEstado).length;
-    document.getElementById('confirmar-progreso').textContent = marcados + ' de ' + total + ' productos ya revisados y marcados';
+    elProgreso.textContent = marcados + ' de ' + total + ' productos ya revisados y marcados';
   }
 
   function pintarPill(btn) {
@@ -2457,8 +2459,13 @@
       card.style.display = (okQ && okModo) ? '' : 'none';
     });
   }
-  cSearch.addEventListener('input', aplicarFiltroConfirmar);
-  cFiltro.addEventListener('input', aplicarFiltroConfirmar);
+  // "Productos por Confirmar" no existe en la página de Stock — sin esta guarda, cSearch/cFiltro
+  // son null ahí y el .addEventListener tira una excepción que corta TODO el script que viene
+  // después (incluido el wiring del modal de ficha) — este era el bug real detrás de "no se abren
+  // las fichas", confirmado con la consola del navegador: "Cannot read properties of null (reading
+  // 'addEventListener')".
+  if (cSearch) cSearch.addEventListener('input', aplicarFiltroConfirmar);
+  if (cFiltro) cFiltro.addEventListener('input', aplicarFiltroConfirmar);
 
   // ---- Ficha en modal (sobre la pantalla), igual para las tablas de sala/segmento y para
   // Productos por Confirmar. Un solo modal compartido, se llena con los datos de FICHAS[clave].

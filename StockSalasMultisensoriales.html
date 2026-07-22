@@ -1760,23 +1760,30 @@
     const demanda = _demandaPorKey(seleccionadas);
     const items = Object.keys(STOCK_SM).map(key => {
       const s = STOCK_SM[key];
-      const disponible = Math.max(0, (s.total || 0) - (demanda[key] || 0));
-      return { s, disponible };
+      const pedido = demanda[key] || 0;
+      const disponible = Math.max(0, (s.total || 0) - pedido);
+      return { s, disponible, pedido };
     }).filter(x => x.disponible > 0 && x.s.item);
     if (!items.length) return '<p class="incluidos-vacio">No queda stock disponible después de estas cotizaciones.</p>';
     items.sort((a, b) => a.s.item.localeCompare(b.s.item, 'es'));
-    return '<div class="stock-disp-grid">' + items.map(({ s, disponible }) => {
+    return '<div class="stock-disp-grid">' + items.map(({ s, disponible, pedido }) => {
       const f = s.claveFicha ? FICHAS[s.claveFicha] : null;
       const thumb = f && f.imagen ? '<img src="' + f.imagen + '" alt="" loading="lazy" />' : '<div class="stock-disp-noimg">Sin foto</div>';
       const fichaAttr = f ? ' data-ficha="' + escapeHtmlSafe(s.claveFicha) + '"' : '';
-      const desglose = (s.bodega || 0) + ' en bodega + ' + (s.camino || 0) + ' en contenedor';
+      // El hover explica la resta completa (no solo bodega+contenedor) para que "8 en contenedor"
+      // y "3 disponibles" no se lean como una contradicción — pedido de Rayen tras confundirse con
+      // exactamente ese caso (Rincón Luminea: 8 en contenedor, 5 ya pedidas por estas cotizaciones,
+      // 3 libres).
+      const desglose = (s.bodega || 0) + ' en bodega + ' + (s.camino || 0) + ' en contenedor = ' + (s.total || 0) + ' total'
+        + (pedido ? ('\n− ' + pedido + ' ya pedidas en estas cotizaciones') : '')
+        + '\n= ' + disponible + ' libres';
       return '<div class="stock-disp-card"' + fichaAttr + '>' +
         '<div class="stock-disp-thumb">' + thumb + '</div>' +
         '<div class="stock-disp-info">' +
           '<div class="stock-disp-nombre">' + escapeHtmlSafe(s.item) + '</div>' +
           '<div class="stock-disp-cant">' + disponible + '<span>disponibles</span></div>' +
         '</div>' +
-        '<div class="stock-disp-hover">' + escapeHtmlSafe(desglose) + '</div>' +
+        '<div class="stock-disp-hover">' + escapeHtmlSafe(desglose).split('\n').join('<br>') + '</div>' +
       '</div>';
     }).join('') + '</div>';
   }

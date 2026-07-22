@@ -1947,14 +1947,9 @@
       botonCorreo +
       faltantesGrid;
     _wireDragPrioridad();
-    // El wiring global de [data-ficha] corre una sola vez al cargar la página — esta tabla se
-    // pinta después, dinámicamente, así que hay que conectar sus fichas acá cada vez que se
-    // repinta.
-    cont.querySelectorAll('[data-ficha]').forEach(el => {
-      // Si la tarjeta trae data-stock-extra (Stock disponible / Faltantes), la ficha muestra el
-      // desglose YA DESCONTADO de estas cotizaciones en vez del desglose estático de bodega total.
-      el.addEventListener('click', () => abrirFicha(el.dataset.ficha, { stockTexto: el.dataset.stockExtra || null }));
-    });
+    // [data-ficha] ya no se conecta acá — lo cubre la delegación global en document (más abajo en
+    // el script), que lee data-stock-extra igual que antes. Sigue el wiring propio de
+    // [data-desglose], que no está delegado.
     cont.querySelectorAll('[data-desglose]').forEach(el => {
       el.addEventListener('click', (ev) => mostrarTooltipStock(ev, el.dataset.desglose));
     });
@@ -2529,8 +2524,17 @@
     fichaModalContenido.innerHTML = html;
     fichaModal.classList.add('open');
   }
-  document.querySelectorAll('[data-ficha]').forEach(el => {
-    el.addEventListener('click', () => abrirFicha(el.dataset.ficha));
+  // Delegación de eventos en vez de "buscar y conectar cada elemento": UN SOLO listener en
+  // document que revisa qué se tocó y sube por los padres con closest(). Antes cada tabla/tarjeta
+  // se conectaba por separado con querySelectorAll+forEach cada vez que se repintaba (buildTabla,
+  // renderComparacionCotizaciones, etc.) — si algún repintado nuevo se agregaba sin copiar ese
+  // wiring, o corría en un orden inesperado, esos elementos quedaban sin conectar y tocar el
+  // producto no hacía nada. La delegación es inmune a eso: no importa cuándo ni cómo se generó el
+  // HTML, con que tenga data-ficha alcanza.
+  document.addEventListener('click', (ev) => {
+    const el = ev.target.closest('[data-ficha]');
+    if (!el) return;
+    abrirFicha(el.dataset.ficha, { stockTexto: el.dataset.stockExtra || null });
   });
   fichaModalImg.addEventListener('click', () => {
     lightboxImg.src = fichaModalImg.src;

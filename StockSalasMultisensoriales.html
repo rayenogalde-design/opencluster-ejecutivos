@@ -166,6 +166,20 @@
   .cotiz-comp-card-prioridad.arrastrando { opacity:0.35; }
   .cotiz-comp-card-prioridad.drop-sobre { border-color:var(--sky); box-shadow:0 0 0 2px var(--sky); }
   .cotiz-comp-prioridad-badge { position:absolute; top:-0.6rem; left:-0.6rem; background:var(--navy); color:#fff; font-size:0.72rem; font-weight:800; padding:0.2rem 0.55rem; border-radius:999px; box-shadow:0 2px 6px rgba(0,0,0,0.2); }
+  /* ---- Stock disponible después de estas cotizaciones: tarjetas, no lista (pedido de Rayen
+     2026-07-21) — lo que queda libre en bodega+contenedor si estas cotizaciones se concretan. ---- */
+  .stock-disp-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:0.8rem; margin-top:0.8rem; }
+  .stock-disp-card { position:relative; border-radius:14px; overflow:hidden; background:var(--card); border:1px solid var(--line); box-shadow:0 2px 8px rgba(10,20,40,0.05); cursor:pointer; transition:transform 0.15s ease, box-shadow 0.15s ease; }
+  .stock-disp-card:hover { transform:translateY(-2px); box-shadow:0 8px 20px -6px rgba(10,20,40,0.18); }
+  .stock-disp-thumb { width:100%; aspect-ratio:1/1; background:var(--paper); }
+  .stock-disp-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+  .stock-disp-noimg { width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:var(--mist); font-size:0.65rem; text-align:center; padding:0.4rem; }
+  .stock-disp-info { padding:0.55rem 0.65rem 0.7rem; }
+  .stock-disp-nombre { font-size:0.78rem; font-weight:700; color:var(--ink); line-height:1.25; margin-bottom:0.35rem; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .stock-disp-cant { font-family:'Playfair Display',serif; font-size:1.35rem; font-weight:700; color:var(--grp-solid, var(--navy)); line-height:1; }
+  .stock-disp-cant span { display:block; font-family:'Open Sans',sans-serif; font-size:0.6rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--mist); margin-top:0.25rem; }
+  .stock-disp-hover { position:absolute; inset:0; background:rgba(0,26,96,0.93); color:#fff; display:flex; align-items:center; justify-content:center; text-align:center; padding:0.8rem; font-size:0.78rem; font-weight:700; line-height:1.35; opacity:0; transition:opacity 0.18s ease; border-radius:inherit; }
+  .stock-disp-card:hover .stock-disp-hover { opacity:1; }
   .ficha-modal-scroll .stock-badge { display:block; width:fit-content; margin:0 0 1rem; font-size:0.78rem; padding:0.35rem 0.8rem; }
   .price { white-space:nowrap; font-variant-numeric: tabular-nums; }
   .iva { display:block; font-size:0.66rem; color:var(--mist); }
@@ -1715,6 +1729,42 @@
     if (!filas) return '<p class="incluidos-vacio">Sin productos detectados.</p>';
     return '<div class="tablewrap"><table class="cotiz-matriz"><thead>' + cabecera + '</thead><tbody>' + filas + '</tbody></table></div>';
   }
+  // Cuánto piden en total las cotizaciones elegidas, por producto (misma clave que STOCK_SM) —
+  // reusado tanto por la matriz como por "Stock disponible después de estas cotizaciones".
+  function _demandaPorKey(seleccionadas){
+    const demanda = {};
+    seleccionadas.forEach(c => {
+      _smExtraerProductos(c.productos).forEach(p => { demanda[p.key] = (demanda[p.key] || 0) + p.qty; });
+    });
+    return demanda;
+  }
+  // "Stock disponible después de estas cotizaciones" (pedido de Rayen 2026-07-21: "quiero ver
+  // abajo lo que queda disponible descontando lo de las salas marcadas") — tarjetas con foto, no
+  // una lista, ordenadas alfabéticamente; al pasar el cursor se ve el desglose bodega/contenedor.
+  function _stockDisponibleGrid(seleccionadas){
+    const demanda = _demandaPorKey(seleccionadas);
+    const items = Object.keys(STOCK_SM).map(key => {
+      const s = STOCK_SM[key];
+      const disponible = Math.max(0, (s.total || 0) - (demanda[key] || 0));
+      return { s, disponible };
+    }).filter(x => x.disponible > 0 && x.s.item);
+    if (!items.length) return '<p class="incluidos-vacio">No queda stock disponible después de estas cotizaciones.</p>';
+    items.sort((a, b) => a.s.item.localeCompare(b.s.item, 'es'));
+    return '<div class="stock-disp-grid">' + items.map(({ s, disponible }) => {
+      const f = s.claveFicha ? FICHAS[s.claveFicha] : null;
+      const thumb = f && f.imagen ? '<img src="' + f.imagen + '" alt="" loading="lazy" />' : '<div class="stock-disp-noimg">Sin foto</div>';
+      const fichaAttr = f ? ' data-ficha="' + escapeHtmlSafe(s.claveFicha) + '"' : '';
+      const desglose = (s.bodega || 0) + ' en bodega + ' + (s.camino || 0) + ' en contenedor';
+      return '<div class="stock-disp-card"' + fichaAttr + '>' +
+        '<div class="stock-disp-thumb">' + thumb + '</div>' +
+        '<div class="stock-disp-info">' +
+          '<div class="stock-disp-nombre">' + escapeHtmlSafe(s.item) + '</div>' +
+          '<div class="stock-disp-cant">' + disponible + '<span>disponibles</span></div>' +
+        '</div>' +
+        '<div class="stock-disp-hover">' + escapeHtmlSafe(desglose) + '</div>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
   function renderComparacionCotizaciones(){
     const cont = document.getElementById('cotiz-comparacion');
     if (!cont) return;
@@ -1734,11 +1784,15 @@
         (filas || '<p class="incluidos-vacio">Sin productos detectados en esta cotización.</p>') +
       '</div>';
     }).join('');
+    const stockDisponibleGrid = _stockDisponibleGrid(seleccionadas);
     cont.innerHTML = '<h3>Cotizaciones lado a lado — ' + seleccionadas.length + ' juntas</h3>' +
       '<p class="nivel-nota">Cada columna es una cotización — cuánto pide cada una del mismo producto, el total sumado, y si el stock alcanza para todas juntas.</p>' +
       tablaMatriz +
       '<h3 style="margin-top:1.4rem;">Por prioridad <span class="filtros-seccion-sub">— arrastra una tarjeta para cambiar el orden</span></h3>' +
-      '<div class="cotiz-comp-fila-prioridad" id="cotiz-prioridad-fila">' + tarjetas + '</div>';
+      '<div class="cotiz-comp-fila-prioridad" id="cotiz-prioridad-fila">' + tarjetas + '</div>' +
+      '<h3 style="margin-top:1.4rem;">Stock disponible después de estas cotizaciones</h3>' +
+      '<p class="nivel-nota">Lo que te queda libre en bodega + contenedor si estas ' + seleccionadas.length + ' cotizaciones se concretan. Pasa el cursor sobre una tarjeta para ver el desglose.</p>' +
+      stockDisponibleGrid;
     _wireDragPrioridad();
     // El wiring global de [data-ficha] corre una sola vez al cargar la página — esta tabla se
     // pinta después, dinámicamente, así que hay que conectar sus fichas acá cada vez que se

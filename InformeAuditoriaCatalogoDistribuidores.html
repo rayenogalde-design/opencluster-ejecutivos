@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Auditoría del catálogo de Distribuidores — OpenCluster Tech</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Open+Sans:wght@400;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box;}
+  :root{
+    --navy:#001a60;--sky:#06b3fd;--ltblue:#d6eeff;--pale:#eaf6ff;
+    --orange:#ff7e00;--gold:#C9A96E;--gold-lt:#E8D5A8;
+    --text:#1a2535;--subtle:#64748b;--bg:#F4F6FB;
+  }
+  body{font-family:'Open Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;line-height:1.55;}
+  ::selection{background:var(--ltblue);color:var(--navy);}
+
+  .back{position:fixed;top:16px;left:16px;z-index:100;display:inline-flex;align-items:center;gap:7px;
+    background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.85);
+    padding:7px 14px;border-radius:9px;font-size:11px;font-weight:600;text-decoration:none;
+    font-family:'Open Sans',sans-serif;transition:.2s;}
+  .back:hover{background:rgba(255,255,255,.28);color:#fff;}
+
+  .hero-bg{position:relative;overflow:hidden;
+    background:linear-gradient(170deg,#0A0F1E 0%,var(--navy) 35%,#0a2e8a 60%,var(--sky) 100%);}
+  .hero-bg::before{content:'';position:absolute;bottom:74px;left:0;right:0;height:1.5px;
+    background:linear-gradient(90deg,transparent 5%,var(--gold) 30%,var(--gold-lt) 50%,var(--gold) 70%,transparent 95%);opacity:.4;}
+  .hero-inner{max-width:840px;margin:0 auto;padding:56px 24px 64px;text-align:center;position:relative;}
+  .logo-line{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:24px;}
+  .logo-bar{width:44px;height:1.5px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);}
+  .logo-diamond{width:7px;height:7px;background:var(--gold);transform:rotate(45deg);flex-shrink:0;}
+  .brand{font-family:'Montserrat',sans-serif;font-size:11px;letter-spacing:4px;color:rgba(255,255,255,.7);text-transform:uppercase;font-weight:700;}
+  .draft-pill{display:inline-block;margin-bottom:18px;font-family:'Montserrat',sans-serif;font-size:10.5px;letter-spacing:1.6px;text-transform:uppercase;
+    color:var(--gold-lt);background:rgba(255,255,255,.08);border:1px solid rgba(233,213,168,.4);
+    padding:5px 14px;border-radius:20px;font-weight:700;}
+  h1{font-family:'Playfair Display',serif;font-size:clamp(32px,5vw,42px);font-weight:700;color:#fff;letter-spacing:-.5px;line-height:1.15;}
+  .title-accent{display:block;font-family:'Playfair Display',serif;font-style:italic;font-weight:400;color:var(--gold-lt);font-size:.72em;margin-top:4px;}
+  .dek{font-size:14.5px;color:rgba(255,255,255,.62);max-width:52ch;margin:20px auto 0;}
+  .divider{width:60px;height:2px;margin:26px auto 0;background:linear-gradient(90deg,rgba(255,255,255,.3),var(--gold),rgba(255,255,255,.3));}
+
+  .stats-wrap{max-width:1060px;margin:0 auto;padding:0 24px;position:relative;margin-top:-40px;}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+  .stat-card{background:#fff;border-radius:16px;padding:20px 18px;position:relative;overflow:hidden;
+    box-shadow:0 10px 24px rgba(0,26,96,.1),0 3px 9px rgba(6,179,253,.06);border:1px solid rgba(0,26,96,.06);}
+  .stat-card .stripe{position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:16px 0 0 16px;background:var(--accent);}
+  .stat-card .n{font-family:'Playfair Display',serif;font-size:27px;font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums;}
+  .stat-card .n small{font-family:'Open Sans',sans-serif;font-size:13px;font-weight:700;color:var(--accent);}
+  .stat-card .l{font-size:11px;color:var(--subtle);margin-top:5px;letter-spacing:.2px;}
+  @media (max-width:680px){.stats{grid-template-columns:repeat(2,1fr);}}
+
+  .wrap{max-width:1060px;margin:0 auto;padding:64px 24px 80px;}
+  .section{margin-bottom:64px;}
+  .section-head{display:flex;align-items:center;gap:12px;margin-bottom:22px;}
+  .section-head h2{font-family:'Montserrat',sans-serif;font-size:11px;font-weight:800;letter-spacing:2.2px;text-transform:uppercase;color:var(--subtle);white-space:nowrap;}
+  .section-head .ln{flex:1;height:1px;background:linear-gradient(90deg,rgba(0,26,96,.14),transparent);}
+  .section-title{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--navy);margin-bottom:8px;}
+  .section-intro{font-size:14.5px;color:var(--subtle);max-width:64ch;margin-bottom:26px;}
+
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}
+  .card{border-radius:16px;background:#fff;box-shadow:0 2px 8px rgba(0,26,96,.05),0 1px 3px rgba(0,0,0,.04);
+    border:1px solid rgba(0,26,96,.06);overflow:hidden;position:relative;padding:22px 22px 22px 26px;}
+  .card .stripe{position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent);}
+  .card-label{font-family:'Montserrat',sans-serif;font-size:9.5px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--accent);margin-bottom:6px;display:block;}
+  .card-title{font-family:'Playfair Display',serif;font-size:16.5px;font-weight:700;color:var(--navy);margin-bottom:6px;line-height:1.3;}
+  .card-desc{font-size:13px;color:var(--subtle);line-height:1.55;}
+  .card-count{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;color:var(--navy);text-align:right;white-space:nowrap;margin-left:12px;}
+  .card-count small{display:block;font-size:9.5px;color:var(--subtle);font-weight:400;text-transform:uppercase;letter-spacing:.5px;font-family:'Montserrat',sans-serif;}
+  .card-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+
+  .bars{display:flex;flex-direction:column;gap:11px;}
+  .bar-row{display:grid;grid-template-columns:180px 1fr 60px;align-items:center;gap:12px;font-size:13px;}
+  .bar-row .label{color:var(--text);font-weight:600;}
+  .bar-track{background:var(--pale);border-radius:3px;height:8px;overflow:hidden;}
+  .bar-fill{height:100%;background:linear-gradient(90deg,var(--navy),var(--sky));border-radius:3px;}
+  .bar-row .val{font-family:'Playfair Display',serif;font-weight:700;text-align:right;color:var(--navy);font-variant-numeric:tabular-nums;}
+
+  .case{border-radius:16px;background:#fff;border:1px solid rgba(0,26,96,.06);border-left:4px solid var(--orange);
+    box-shadow:0 2px 8px rgba(0,26,96,.05);padding:22px 24px;margin-bottom:14px;}
+  .case-tag{font-family:'Montserrat',sans-serif;font-size:9.5px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:#b45a00;
+    background:#fff1e0;padding:3px 10px;border-radius:20px;display:inline-block;margin-bottom:12px;}
+  .case h3{font-family:'Playfair Display',serif;font-size:16.5px;font-weight:700;color:var(--navy);margin-bottom:8px;}
+  .case p{font-size:13.5px;color:var(--subtle);margin-bottom:10px;}
+  .case p:last-child{margin-bottom:0;}
+  .price-swap{display:flex;align-items:center;gap:10px;font-family:'Playfair Display',serif;font-size:16px;margin:12px 0 4px;flex-wrap:wrap;}
+  .price-swap .old{color:#b0b8c4;text-decoration:line-through;text-decoration-color:var(--orange);}
+  .price-swap .arrow{color:var(--subtle);font-family:'Open Sans',sans-serif;}
+  .price-swap .new{color:var(--navy);font-weight:700;background:var(--pale);padding:3px 10px;border-radius:8px;}
+  .price-swap .pct{font-family:'Montserrat',sans-serif;font-size:11.5px;color:#b45a00;background:#fff1e0;padding:3px 9px;border-radius:20px;font-weight:700;}
+
+  .mini-list{display:flex;flex-direction:column;}
+  .mini-item{display:flex;gap:14px;align-items:baseline;padding:14px 0;border-top:1px solid rgba(0,26,96,.08);}
+  .mini-item:first-child{border-top:none;padding-top:0;}
+  .mini-item .num{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--sky);min-width:52px;font-variant-numeric:tabular-nums;}
+  .mini-item .txt b{display:block;font-size:14px;color:var(--navy);margin-bottom:2px;}
+  .mini-item .txt span{font-size:12.5px;color:var(--subtle);}
+
+  .tbl-wrap{overflow-x:auto;border-radius:16px;border:1px solid rgba(0,26,96,.06);box-shadow:0 2px 8px rgba(0,26,96,.05);}
+  table.margins{width:100%;border-collapse:collapse;font-size:13.5px;background:#fff;}
+  table.margins th{text-align:left;font-family:'Montserrat',sans-serif;font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;color:#fff;
+    font-weight:700;padding:13px 18px;background:var(--navy);}
+  table.margins td{padding:13px 18px;border-bottom:1px solid rgba(0,26,96,.06);vertical-align:middle;}
+  table.margins tr:last-child td{border-bottom:none;}
+  table.margins td.pct{text-align:right;font-variant-numeric:tabular-nums;}
+  .pill{display:inline-block;font-family:'Montserrat',sans-serif;font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:20px;background:var(--pale);color:var(--navy);}
+  .pill.was{background:#fff1e0;color:#b45a00;text-decoration:line-through;margin-right:6px;}
+
+  .confirm{border-radius:16px;background:#e2f6ec;border:1px solid #b7e6cc;padding:22px 24px;display:flex;gap:16px;align-items:flex-start;}
+  .confirm .icon{width:38px;height:38px;border-radius:50%;background:#0a6b47;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .confirm .icon svg{width:19px;height:19px;stroke:#fff;}
+  .confirm h3{font-family:'Playfair Display',serif;font-size:16px;color:#0a4a32;margin-bottom:6px;}
+  .confirm p{font-size:13.5px;color:#1e5c42;margin:0;}
+  .confirm code{font-family:'Consolas','Courier New',monospace;font-size:12px;background:#fff;padding:1px 6px;border-radius:4px;}
+
+  .pending{border-radius:16px;background:#fff1e0;border:1px solid #f3cf9c;padding:22px 24px;}
+  .pending h3{font-family:'Playfair Display',serif;font-size:15px;color:#8a4a00;margin-bottom:6px;}
+  .pending p{font-size:13.5px;color:#5c3a10;margin:0;}
+
+  footer{margin-top:60px;padding-top:22px;border-top:1px solid rgba(0,26,96,.08);
+    font-size:11.5px;color:var(--subtle);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+  footer .path{font-family:'Consolas','Courier New',monospace;}
+
+  @media (max-width:640px){.grid{grid-template-columns:1fr;} .stats{grid-template-columns:1fr 1fr;} .back{top:12px;left:12px;}}
+</style>
+</head>
+<body>
+
+<a class="back" href="PreciosProductosCentralHub.html">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+  Volver a Lista de Precios
+</a>
+
+<div class="hero-bg">
+  <div class="hero-inner">
+    <div class="logo-line"><div class="logo-bar"></div><div class="logo-diamond"></div><div class="brand">OpenCluster Tech · Central</div><div class="logo-diamond"></div><div class="logo-bar"></div></div>
+    <div class="draft-pill">Borrador · Informe interno</div>
+    <h1>Auditoría del catálogo<span class="title-accent">de Distribuidores</span></h1>
+    <p class="dek">Cómo llegaron 5.206 productos al catálogo de Roberto, Maximiliano, William y Germán, de dónde sale cada costo, qué errores había y cómo quedaron resueltos.</p>
+    <div class="divider"></div>
+  </div>
+</div>
+
+<div class="stats-wrap">
+  <div class="stats">
+    <div class="stat-card" style="--accent:var(--sky)"><div class="stripe"></div><div class="n">5.206</div><div class="l">productos en el catálogo</div></div>
+    <div class="stat-card" style="--accent:var(--orange)"><div class="stripe"></div><div class="n">3.053 <small>· 59%</small></div><div class="l">con costo real confirmado</div></div>
+    <div class="stat-card" style="--accent:var(--gold)"><div class="stripe"></div><div class="n">97</div><div class="l">duplicados detectados y resueltos</div></div>
+    <div class="stat-card" style="--accent:var(--navy)"><div class="stripe"></div><div class="n">12%</div><div class="l">margen mínimo de Roberto (antes 10%)</div></div>
+  </div>
+</div>
+
+<div class="wrap">
+
+<div class="section">
+  <div class="section-head"><h2>01 · Origen del catálogo</h2><div class="ln"></div></div>
+  <div class="section-title">De dónde salieron los 5.206 productos</div>
+  <p class="section-intro">Doce orígenes distintos — desde el catálogo fotográfico viejo de OpenCluster hasta nueve proveedores nuevos cruzados este año contra el Excel unificado del jefe.</p>
+  <div class="bars">
+    <div class="bar-row"><span class="label">Blunding</span><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><span class="val">1.383</span></div>
+    <div class="bar-row"><span class="label">Dr. Care (Glomax)</span><div class="bar-track"><div class="bar-fill" style="width:66%"></div></div><span class="val">912</span></div>
+    <div class="bar-row"><span class="label">Deltamed</span><div class="bar-track"><div class="bar-fill" style="width:58%"></div></div><span class="val">807</span></div>
+    <div class="bar-row"><span class="label">Medicaltec</span><div class="bar-track"><div class="bar-fill" style="width:50%"></div></div><span class="val">686</span></div>
+    <div class="bar-row"><span class="label">New Leader</span><div class="bar-track"><div class="bar-fill" style="width:26%"></div></div><span class="val">353</span></div>
+    <div class="bar-row"><span class="label">OCT propio / bodega</span><div class="bar-track"><div class="bar-fill" style="width:25%"></div></div><span class="val">341</span></div>
+    <div class="bar-row"><span class="label">Rehacare</span><div class="bar-track"><div class="bar-fill" style="width:15%"></div></div><span class="val">210</span></div>
+    <div class="bar-row"><span class="label">Todo en Salud</span><div class="bar-track"><div class="bar-fill" style="width:15%"></div></div><span class="val">206</span></div>
+    <div class="bar-row"><span class="label">Braille Chile</span><div class="bar-track"><div class="bar-fill" style="width:11%"></div></div><span class="val">156</span></div>
+    <div class="bar-row"><span class="label">Backbone / Nextep / Theramart</span><div class="bar-track"><div class="bar-fill" style="width:10%"></div></div><span class="val">143</span></div>
+    <div class="bar-row"><span class="label">CIC (Medihome)</span><div class="bar-track"><div class="bar-fill" style="width:1%"></div></div><span class="val">7</span></div>
+    <div class="bar-row"><span class="label">Catálogo OCT (viejo)</span><div class="bar-track"><div class="bar-fill" style="width:1%"></div></div><span class="val">2</span></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-head"><h2>02 · Fuentes de costo</h2><div class="ln"></div></div>
+  <div class="section-title">Las cuatro fuentes que sí dicen la verdad</div>
+  <p class="section-intro">De los 3.053 productos con costo confirmado, cada uno quedó etiquetado con de dónde salió exactamente su precio. Cuando dos fuentes se contradicen, manda la de más arriba.</p>
+  <div class="grid">
+    <div class="card" style="--accent:var(--navy)"><div class="stripe"></div>
+      <div class="card-row"><div><span class="card-label">Fuente I</span><div class="card-title">Excel unificado de Mario</div><p class="card-desc">El jefe lo arma a mano, Rayen lo baja de Drive. Si el mismo producto aparece por dos canales, gana el costo más bajo entre las dos filas.</p></div><div class="card-count">2.948<small>productos</small></div></div>
+    </div>
+    <div class="card" style="--accent:var(--sky)"><div class="stripe"></div>
+      <div class="card-row"><div><span class="card-label">Fuente II</span><div class="card-title">Costos Lucas</div><p class="card-desc">Cubre lo que Mario no tiene: bodega/OCT propio. Se cruza por <b>nombre</b>, nunca por SKU — el código se reutiliza entre combos.</p></div><div class="card-count">47<small>productos</small></div></div>
+    </div>
+    <div class="card" style="--accent:var(--gold)"><div class="stripe"></div>
+      <div class="card-row"><div><span class="card-label">Fuente III</span><div class="card-title">Listado Glomax — Dr. Care</div><p class="card-desc">Resolvió al 100% los 58 productos Dr. Care que ya no estaban en el Excel de Mario.</p></div><div class="card-count">58<small>productos</small></div></div>
+    </div>
+    <div class="card" style="--accent:var(--orange)"><div class="stripe"></div>
+      <div class="card-row"><div><span class="card-label">Fuente IV</span><div class="card-title">Lista de Insumos Velardi</div><p class="card-desc">Control cruzado para Backbone/Nextep/Matvoll. Sus 115 SKU ya estaban 100% reflejados — cero sorpresas.</p></div><div class="card-count">100%<small>ya cubierto</small></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-head"><h2>03 · Errores encontrados</h2><div class="ln"></div></div>
+  <div class="section-title">Lo que encontramos revisando producto por producto</div>
+  <p class="section-intro">Revisar 5.206 productos uno por uno tenía que sacar algo a la luz.</p>
+
+  <div class="case">
+    <span class="case-tag">Caso más caro</span>
+    <h3>El catre que arrastraba el precio de todo el combo</h3>
+    <p>El "Catre Clínico Manual 3 Posiciones Sin Colchón" (OCTECH 239) tenía cargado por error el costo del combo completo (catre + colchón), no el del catre solo.</p>
+    <div class="price-swap"><span class="old">$737.183</span><span class="arrow">→</span><span class="new">$279.453</span><span class="pct">−62%</span></div>
+    <p>Corregido cruzando por nombre exacto contra Costos Lucas.</p>
+  </div>
+
+  <div class="case">
+    <span class="case-tag">Mismo patrón, otro producto</span>
+    <h3>El colchón que en realidad era el colchón + el catre</h3>
+    <p>El "Colchón Clínico CIC Med One Visco" (OCP084) tenía el costo de Mario asignado por SKU — pero ese SKU en Shopify también se usa para el combo catre+colchón.</p>
+    <div class="price-swap"><span class="old">costo $350.360</span><span class="arrow">→</span><span class="new">costo $60.000</span></div>
+    <p>Precio de venta corregido a su valor real: $84.000 con IVA.</p>
+  </div>
+
+  <div class="grid">
+    <div class="card" style="--accent:var(--sky)"><div class="stripe"></div>
+      <div class="mini-list">
+        <div class="mini-item"><span class="num">97</span><div class="txt"><b>Duplicados resueltos</b><span>Mismo producto por dos proveedores — se dejó siempre el canal más barato.</span></div></div>
+        <div class="mini-item"><span class="num">58</span><div class="txt"><b>Dr. Care sin costo, resueltos</b><span>El listado Glomax los confirmó a todos, uno por uno.</span></div></div>
+        <div class="mini-item"><span class="num">23</span><div class="txt"><b>Canal más barato sin usar</b><span>Theramart directo vs. Insumos Velardi, no aprovechado.</span></div></div>
+      </div>
+    </div>
+    <div class="card" style="--accent:var(--orange)"><div class="stripe"></div>
+      <div class="mini-list">
+        <div class="mini-item"><span class="num">15</span><div class="txt"><b>"Costo incierto" resueltos</b><span>Costo real encontrado cruzando por nombre en Costos Lucas.</span></div></div>
+        <div class="mini-item"><span class="num">2</span><div class="txt"><b>Fotos cruzadas entre colchones</b><span>Shopify reutiliza SKU — dos colchones con foto de otro producto.</span></div></div>
+        <div class="mini-item"><span class="num">2</span><div class="txt"><b>Nombres mal escritos</b><span>Typos que rompían el buscador aunque el producto existiera.</span></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-head"><h2>04 · Margen</h2><div class="ln"></div></div>
+  <div class="section-title">La decisión: nadie se queda al 10%</div>
+  <p class="section-intro">Instrucción de Rayen: en el catálogo de Roberto ningún producto puede tener menos de 12% de margen. Los dos orígenes que estaban al 10% subieron ese mismo día — <b>1.055 productos recalculados</b> de una vez.</p>
+  <div class="tbl-wrap">
+    <table class="margins">
+      <tr><th>Origen</th><th>Productos</th><th style="text-align:right">Margen</th></tr>
+      <tr><td>Backbone / Nextep / Theramart / Matvoll</td><td>143</td><td class="pct"><span class="pill was">10%</span><span class="pill">12%</span></td></tr>
+      <tr><td>Dr. Care (Glomax)</td><td>912</td><td class="pct"><span class="pill was">10%</span><span class="pill">12%</span></td></tr>
+      <tr><td>OCT propio / bodega</td><td>341</td><td class="pct"><span class="pill">15%</span></td></tr>
+      <tr><td>Blunding · Deltamed · Medicaltec · New Leader · Rehacare · Todo en Salud · Braille Chile · CIC</td><td>3.462</td><td class="pct"><span class="pill">12%</span></td></tr>
+    </table>
+  </div>
+  <p class="section-intro" style="margin-top:16px;">Ejemplo real — Balón de Ejercicios 55cm (B001), costo neto $7.492: <b style="color:var(--navy)">$9.906 → $10.131</b> con IVA incluido.</p>
+</div>
+
+<div class="section">
+  <div class="section-head"><h2>05 · Cotizador</h2><div class="ln"></div></div>
+  <div class="section-title">Cada ejecutivo recibe las suyas, con copia oculta a Rayen</div>
+  <p class="section-intro">Antes, toda cotización —viniera de Roberto, Maxi, William o Germán— le llegaba siempre a Roberto. Se corrigió y se probó de punta a punta.</p>
+  <div class="confirm">
+    <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+    <div>
+      <h3>Prueba en producción: aprobada</h3>
+      <p>Se mandó una cotización de prueba real. Llegó a <code>maximiliano.astudillo@</code> (no a Roberto), y la copia oculta llegó a la bandeja de Rayen sin que Maximiliano se enterara. El Apps Script quedó desplegado y confirmado funcionando.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-head"><h2>06 · Fotos</h2><div class="ln"></div></div>
+  <div class="section-title">Barrido completo de las 5.206 fichas</div>
+  <p class="section-intro">Se calculó la huella digital (hash) de cada foto para encontrar imágenes idénticas usadas por productos distintos — el mismo mecanismo que ya había causado errores antes. De 581 grupos de fotos compartidas, 518 eran normales (mismo producto, distinta talla o color); los otros 63 se revisaron uno por uno a mano.</p>
+  <div class="grid">
+    <div class="card" style="--accent:var(--orange)"><div class="stripe"></div>
+      <span class="card-label">Corregido · sí lo veían clientes</span>
+      <div class="card-title">2 colchones con foto de una cama eléctrica completa</div>
+      <p class="card-desc">"Colchón Antiescaras Therabase TM440" (OCP082) y "Colchón Med One Visco" (OCP084) mostraban la foto de una cama completa, no del colchón. Se sacó la foto — mejor sin imagen que con una engañosa. Falta conseguir la foto correcta.</p>
+    </div>
+    <div class="card" style="--accent:var(--gold)"><div class="stripe"></div>
+      <span class="card-label">Corregido · impacto bajo</span>
+      <div class="card-title">15 productos con logo o ícono en vez de foto</div>
+      <p class="card-desc">Bastones, chata, babero dental y otros de Deltamed/Todo en Salud mostraban el logo de Deltamed o un ícono de "✓" genérico. Ya estaban ocultos del catálogo público (sin costo confirmado) — se les sacó igual la imagen falsa.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-head"><h2>07 · Pendiente</h2><div class="ln"></div></div>
+  <div class="pending">
+    <h3>Conseguir la foto correcta de 2 colchones</h3>
+    <p>"Colchón Antiescaras Therabase TM440" (OCP082) y "Colchón Med One Visco" (OCP084) quedaron sin foto — mejor eso a mostrar la cama eléctrica equivocada. Falta encontrar o pedir la imagen real del colchón solo.</p>
+  </div>
+</div>
+
+<footer>
+  <span>Generado a partir de <span class="path">unificado.json</span> y <span class="path">Auditoria_Costos_Margenes_Completa.xlsx</span></span>
+  <span>Borrador — no compartido</span>
+</footer>
+
+</div>
+</body>
+</html>

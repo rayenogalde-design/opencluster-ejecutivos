@@ -177,19 +177,8 @@
   .stock-disp-thumb { width:100%; aspect-ratio:1/1; background:var(--paper); }
   .stock-disp-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
   .stock-disp-noimg { width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:var(--mist); font-size:0.65rem; text-align:center; padding:0.4rem; }
-  .stock-disp-info { padding:0.55rem 0.65rem 0.7rem; }
-  .stock-disp-nombre { font-size:0.78rem; font-weight:700; color:var(--ink); line-height:1.25; margin-bottom:0.35rem; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-  .stock-disp-cant { font-family:'Playfair Display',serif; font-size:1.35rem; font-weight:700; color:var(--grp-solid, var(--navy)); line-height:1; }
-  .stock-disp-cant span { display:block; font-family:'Open Sans',sans-serif; font-size:0.6rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--mist); margin-top:0.25rem; }
-  .stock-disp-qinera { display:inline-block; margin-top:0.5rem; font-family:'Montserrat',sans-serif; font-size:0.66rem; font-weight:700; color:var(--sky); text-decoration:none; }
-  .stock-disp-qinera:hover { text-decoration:underline; }
-  .stock-disp-sku { font-family:'Courier New',monospace; font-size:0.68rem; color:var(--mist); margin-top:-0.15rem; margin-bottom:0.35rem; }
-  .stock-disp-precio { font-size:0.68rem; color:var(--ink); font-weight:600; margin-top:0.35rem; line-height:1.35; }
+  .stock-disp-nombre { padding:0.55rem 0.65rem 0.7rem; font-size:0.78rem; font-weight:700; color:var(--ink); line-height:1.25; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
   .stock-disp-card.falta { border-color:rgba(220,38,38,0.35); background:rgba(220,38,38,0.03); }
-  .stock-disp-cant.falta { color:#c0392b; }
-  .stock-disp-cant.falta span { color:#c0392b; opacity:0.75; }
-  .stock-disp-hover { position:absolute; inset:0; background:rgba(0,26,96,0.93); color:#fff; display:flex; align-items:center; justify-content:center; text-align:center; padding:0.8rem; font-size:0.78rem; font-weight:700; line-height:1.35; opacity:0; transition:opacity 0.18s ease; border-radius:inherit; }
-  .stock-disp-card:hover .stock-disp-hover { opacity:1; }
   .ficha-modal-scroll .stock-badge { display:block; width:fit-content; margin:0 0 1rem; font-size:0.78rem; padding:0.35rem 0.8rem; }
   .price { white-space:nowrap; font-variant-numeric: tabular-nums; }
   .iva { display:block; font-size:0.66rem; color:var(--mist); }
@@ -371,7 +360,6 @@
     .quien-eres { flex-wrap:wrap; }
     .stock-disp-grid { grid-template-columns:repeat(auto-fill,minmax(105px,1fr)); gap:0.55rem; }
     .stock-disp-nombre { font-size:0.72rem; }
-    .stock-disp-cant { font-size:1.1rem; }
     #btn-correo-faltantes { width:100%; text-align:center; }
     .cotiz-filtro-prob { gap:0.4rem; }
     .cotiz-filtro-prob #cotiz-marcar-todas { margin-left:0; }
@@ -1844,37 +1832,16 @@
       const f = s.claveFicha ? FICHAS[s.claveFicha] : null;
       const thumb = f && f.imagen ? '<img src="' + f.imagen + '" alt="" loading="lazy" />' : '<div class="stock-disp-noimg">Sin foto</div>';
       const fichaAttr = f ? ' data-ficha="' + escapeHtmlSafe(s.claveFicha) + '"' : '';
-      // "Lo que queda" en cada ubicación tras descontar lo pedido — se consume bodega primero (es
-      // lo disponible YA, lo que se usaría primero para cumplir un compromiso) y el resto del
-      // contenedor si alcanza a cubrirlo. Mismo número que "disponible" arriba, solo repartido
-      // entre las 2 ubicaciones para que la ficha diga dónde está cada unidad libre.
-      const bodegaLibre = Math.max(0, (s.bodega || 0) - pedido);
-      const residuo = Math.max(0, pedido - (s.bodega || 0));
-      const caminoLibre = Math.max(0, (s.camino || 0) - residuo);
-      const stockExtra = bodegaLibre + ' en bodega (libre) + ' + caminoLibre + ' en contenedor (libre) — tras descontar ' + pedido + ' ya pedidas en estas cotizaciones';
-      // El hover explica la resta completa (no solo bodega+contenedor) para que "8 en contenedor"
-      // y "3 disponibles" no se lean como una contradicción — pedido de Rayen tras confundirse con
-      // exactamente ese caso (Rincón Luminea: 8 en contenedor, 5 ya pedidas por estas cotizaciones,
-      // 3 libres).
-      const desglose = (s.bodega || 0) + ' en bodega + ' + (s.camino || 0) + ' en contenedor = ' + (s.total || 0) + ' total'
-        + (pedido ? ('\n− ' + pedido + ' ya pedidas en estas cotizaciones') : '')
-        + '\n= ' + disponible + ' libres';
-      // Link directo a la ficha real en Qinera (pedido de Rayen 2026-07-21) — stopPropagation para
-      // que no abra TAMBIÉN la ficha modal al tocarlo (son 2 acciones distintas en la misma tarjeta).
-      const linkQinera = f && f.url_producto
-        ? '<a class="stock-disp-qinera" href="' + escapeHtmlSafe(f.url_producto) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">Ver en Qinera ↗</a>'
-        : '';
-      const precioLinea = f && f.precio ? '<div class="stock-disp-precio">' + escapeHtmlSafe(f.precio) + '</div>' : '';
+      // Pedido de Rayen 2026-07-22: la tarjeta SOLO muestra foto + nombre — nada de precio, stock
+      // ni link acá (eso complicaba la tarjeta y la hacía "chiquitita" con demasiada info). Todo
+      // lo demás vive en la ficha grande al tocar: precio, imágenes, link a Qinera, y acá abajo
+      // el número simple de cuánto queda — sin hablar de bodega/contenedor/en camino, que es lo
+      // que Rayen encontró "enredado".
+      const stockExtra = 'Quedan ' + disponible + ' disponibles después de estas cotizaciones' + (pedido ? ' (de ' + (s.total || 0) + ' en total, ' + pedido + ' ya están pedidas)' : '') + '.';
       const buscable = (s.item + ' ' + (s.sku || '')).toLowerCase();
       return '<div class="stock-disp-card"' + fichaAttr + ' data-stock-extra="' + escapeHtmlSafe(stockExtra) + '" data-buscar="' + escapeHtmlSafe(buscable) + '">' +
         '<div class="stock-disp-thumb">' + thumb + '</div>' +
-        '<div class="stock-disp-info">' +
-          '<div class="stock-disp-nombre">' + escapeHtmlSafe(s.item) + '</div>' +
-          '<div class="stock-disp-cant">' + disponible + '<span>disponibles</span></div>' +
-          precioLinea +
-          linkQinera +
-        '</div>' +
-        '<div class="stock-disp-hover">' + escapeHtmlSafe(desglose).split('\n').join('<br>') + '</div>' +
+        '<div class="stock-disp-nombre">' + escapeHtmlSafe(s.item) + '</div>' +
       '</div>';
     }).join('') + '</div>';
   }
@@ -1900,26 +1867,14 @@
     if (!items.length) return '<p class="incluidos-vacio">No falta stock para ninguno de los productos pedidos en estas cotizaciones.</p>';
     return '<div class="stock-disp-grid" id="stock-disp-grid-faltantes">' + items.map(({ s, nombre, pedido, stockTotal, falta }) => {
       const f = (s && s.claveFicha) ? FICHAS[s.claveFicha] : null;
-      const sku = (s && s.sku) ? s.sku : (f ? '—' : 'sin SKU en catálogo');
       const thumb = f && f.imagen ? '<img src="' + f.imagen + '" alt="" loading="lazy" />' : '<div class="stock-disp-noimg">Sin foto</div>';
       const fichaAttr = f ? ' data-ficha="' + escapeHtmlSafe(s.claveFicha) + '"' : '';
-      // Acá "lo que queda" en bodega/contenedor es siempre 0 en ambos (por definición falta stock),
-      // pero se explicita igual para que la ficha sea consistente con la de "Stock disponible".
-      const stockExtra = '0 en bodega (libre) + 0 en contenedor (libre) — piden ' + pedido + ' y el stock total es ' + stockTotal + ', faltan ' + falta;
-      const linkQinera = f && f.url_producto
-        ? '<a class="stock-disp-qinera" href="' + escapeHtmlSafe(f.url_producto) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">Ver en Qinera ↗</a>'
-        : '';
-      const precioLinea = f && f.precio ? '<div class="stock-disp-precio">' + escapeHtmlSafe(f.precio) + '</div>' : '';
+      // Tarjeta solo foto + nombre (igual que "Stock disponible") — el resto vive en la ficha.
+      const stockExtra = 'Faltan ' + falta + ' — piden ' + pedido + ' y el stock total es ' + stockTotal + '.';
       const buscable = ((nombre || '') + ' ' + ((s && s.sku) || '')).toLowerCase();
       return '<div class="stock-disp-card falta"' + fichaAttr + ' data-stock-extra="' + escapeHtmlSafe(stockExtra) + '" data-buscar="' + escapeHtmlSafe(buscable) + '">' +
         '<div class="stock-disp-thumb">' + thumb + '</div>' +
-        '<div class="stock-disp-info">' +
-          '<div class="stock-disp-nombre">' + escapeHtmlSafe(nombre || '(sin nombre de stock)') + '</div>' +
-          '<div class="stock-disp-sku">' + escapeHtmlSafe(sku) + '</div>' +
-          '<div class="stock-disp-cant falta">' + falta + '<span>faltan (pide ' + pedido + ', stock ' + stockTotal + ')</span></div>' +
-          precioLinea +
-          linkQinera +
-        '</div>' +
+        '<div class="stock-disp-nombre">' + escapeHtmlSafe(nombre || '(sin nombre de stock)') + '</div>' +
       '</div>';
     }).join('') + '</div>';
   }

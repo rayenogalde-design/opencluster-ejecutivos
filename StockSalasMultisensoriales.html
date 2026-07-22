@@ -150,6 +150,9 @@
   .cotiz-detalle-label { flex:0 0 130px; color:var(--mist); font-weight:600; }
   .cotiz-detalle-valor { flex:1 1 auto; color:var(--ink); font-weight:600; }
   .cotiz-detalle-prod-fila { display:flex; justify-content:space-between; padding:0.3rem 0; border-bottom:1px solid var(--line); font-size:0.85rem; }
+  .cotiz-detalle-seg { padding:0.5rem 0.6rem; margin-bottom:0.4rem; background:var(--paper); border-radius:8px; font-size:0.82rem; }
+  .cotiz-detalle-seg-meta { font-size:0.7rem; font-weight:700; color:var(--mist); text-transform:uppercase; letter-spacing:0.03em; margin-bottom:0.2rem; }
+  .cotiz-detalle-seg-texto { color:var(--ink); white-space:pre-wrap; }
   #cotiz-detalle-modal { position:fixed; inset:0; z-index:998; display:none; align-items:center; justify-content:center; padding:2rem; background:rgba(4,15,45,0.62); backdrop-filter:blur(4px); }
   #cotiz-detalle-modal.open { display:flex; }
   .cotiz-detalle-panel { position:relative; background:var(--card); border-radius:18px; width:min(520px,94vw); max-height:86vh; overflow-y:auto; padding:1.6rem; box-shadow:0 40px 100px -30px rgba(0,0,0,0.6); }
@@ -1677,6 +1680,19 @@
     const estadoTxt = c.ganada ? 'Ganada' : (c.perdida ? 'Descartada' : 'En gestión');
     const prods = _smExtraerProductos(c.productos);
     const filasProd = prods.map(p => '<div class="cotiz-detalle-prod-fila"><span>' + escapeHtmlSafe(p.display) + '</span><span>x' + p.qty + '</span></div>').join('');
+    // Seguimientos (pestaña Seguimientos del CRM) y Mensajes de cotización (pedido de Rayen
+    // 2026-07-21: "los seguimientos, comentarios que haya escrito para saber de qué es") — para
+    // entender el contexto de la cotización sin tener que entrar al CRM completo.
+    const segs = c.seguimientos || [];
+    const filasSegs = segs.map(s => '<div class="cotiz-detalle-seg">' +
+      '<div class="cotiz-detalle-seg-meta">' + [s.fecha, s.medio, s.estado].filter(Boolean).map(escapeHtmlSafe).join(' · ') + '</div>' +
+      (s.comentario ? '<div class="cotiz-detalle-seg-texto">' + escapeHtmlSafe(s.comentario) + '</div>' : '') +
+    '</div>').join('');
+    const msgs = c.mensajes || [];
+    const filasMsgs = msgs.map(m => '<div class="cotiz-detalle-seg">' +
+      '<div class="cotiz-detalle-seg-meta">' + [m.fecha, m.ejecutivo].filter(Boolean).map(escapeHtmlSafe).join(' · ') + '</div>' +
+      '<div class="cotiz-detalle-seg-texto">' + escapeHtmlSafe(m.mensaje) + '</div>' +
+    '</div>').join('');
     cuerpo.innerHTML =
       '<div class="cotiz-detalle-campo"><span class="cotiz-detalle-label">N° Cotización</span><span class="cotiz-detalle-valor">' + escapeHtmlSafe(c.cotizacion) + '</span></div>' +
       '<div class="cotiz-detalle-campo"><span class="cotiz-detalle-label">Institución</span><span class="cotiz-detalle-valor">' + escapeHtmlSafe(c.institucion) + '</span></div>' +
@@ -1684,7 +1700,11 @@
       '<div class="cotiz-detalle-campo"><span class="cotiz-detalle-label">Estado</span><span class="cotiz-detalle-valor">' + estadoTxt + '</span></div>' +
       '<div class="cotiz-detalle-campo"><span class="cotiz-detalle-label">Probabilidad</span><span class="cotiz-detalle-valor">' + (c.probabilidad || 0) + '%</span></div>' +
       '<h4 style="margin:1rem 0 0.5rem;">Productos (' + prods.length + ')</h4>' +
-      (filasProd || '<p class="incluidos-vacio">Sin productos detectados.</p>');
+      (filasProd || '<p class="incluidos-vacio">Sin productos detectados.</p>') +
+      '<h4 style="margin:1rem 0 0.5rem;">Seguimientos (' + segs.length + ')</h4>' +
+      (filasSegs || '<p class="incluidos-vacio">Sin seguimientos registrados todavía.</p>') +
+      '<h4 style="margin:1rem 0 0.5rem;">Mensajes de cotización (' + msgs.length + ')</h4>' +
+      (filasMsgs || '<p class="incluidos-vacio">Sin mensajes escritos todavía.</p>');
     modal.classList.add('open');
   }
   function _cotizFilaComparacion(display, qty, key){

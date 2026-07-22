@@ -314,6 +314,15 @@ async function _wcLoadKPIs(){
   }
 }
 
+/* Variantes históricas que en realidad son todas "tráfico directo, sin tag" (el valor por
+   defecto del campo Origen cambió de texto un par de veces antes de hoy). Se fusionan acá
+   para que la tasa de conversión no salga fragmentada — no se toca el dato crudo del Sheet. */
+var _WC_ORIGEN_DIRECTO=['','directo','webinar-pie-maule-2026-inscripcion','webinar-pie-maule-2026'];
+function _wcCanonOrigen(key){
+  var k=String(key||'').trim();
+  return _WC_ORIGEN_DIRECTO.indexOf(k)!==-1 ? 'directo' : k;
+}
+
 /** Tabla en pantalla: aperturas de página vs inscripciones reales, por canal (Email/WhatsApp/Instagram/Directo). */
 async function _wcLoadConversion(){
   var cont=document.getElementById('wcConversion');
@@ -324,7 +333,18 @@ async function _wcLoadConversion(){
       var res=await fetch(WEBINAR_API+'?action=kpis_conversion&webinar='+encodeURIComponent(r.key));
       var data=await res.json();
       if(!data.ok) throw new Error(data.error||'error');
-      var filas=Object.entries(data.porOrigen||{}).sort(function(a,b){return b[1].aperturas-a[1].aperturas;});
+      var merged={};
+      Object.entries(data.porOrigen||{}).forEach(function(entry){
+        var canon=_wcCanonOrigen(entry[0]);
+        if(!merged[canon]) merged[canon]={aperturas:0,inscripciones:0};
+        merged[canon].aperturas+=entry[1].aperturas;
+        merged[canon].inscripciones+=entry[1].inscripciones;
+      });
+      Object.keys(merged).forEach(function(k){
+        var m=merged[k];
+        m.tasaConversion=m.aperturas?Math.round(m.inscripciones/m.aperturas*1000)/10:0;
+      });
+      var filas=Object.entries(merged).sort(function(a,b){return b[1].aperturas-a[1].aperturas;});
       if(!filas.length){
         html+='<div class="wc-conv-card" style="--accent:'+(r.accent||'#06b3fd')+';">'+
           '<div class="wc-conv-title">'+_webEsc(r.label)+'</div>'+

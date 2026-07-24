@@ -573,6 +573,7 @@ async function _webGenerarInforme(webinarKey,regionLabel,btnEl){
     var tTemas=_webTopN(kpis.temas,6);
     var tDia=_webTopN(kpis.dia,6);
     var tFranja=_webTopN(kpis.franja,5);
+    var tMotivos=_webTopN(kpis.motivosNoAsiste||{},6);
     var tOrigen=visitasOk?_webTopN(visitas.porOrigen,6):[];
     var textosAbiertos=(resp.respuestas||[]).flatMap(function(r){return [r.pregunta,r.comentarios];});
     var tPalabras=_webPalabrasFrecuentes(textosAbiertos,15);
@@ -587,6 +588,7 @@ async function _webGenerarInforme(webinarKey,regionLabel,btnEl){
     var imgFranja=_webInfBarV(tFranja.map(function(p){return p[0];}),tFranja.map(function(p){return p[1];}),'#0891B2');
     var imgOrigen=visitasOk&&tOrigen.length?_webInfDoughnut(tOrigen.map(function(p){return _webOrigenLabel(p[0]);}),tOrigen.map(function(p){return p[1];}),paletaCat):'';
     var imgPalabras=_webInfBarH(tPalabras.map(function(p){return p[0];}),tPalabras.map(function(p){return p[1];}),'#DC2626');
+    var imgMotivos=tMotivos.length?_webInfBarH(tMotivos.map(function(p){return p[0];}),tMotivos.map(function(p){return p[1];}),'#DC2626'):'';
 
     var graficosHtml='<div style="margin-top:12px;">'+
       _webInfChartCard('Dependencia administrativa',imgDep)+
@@ -598,11 +600,13 @@ async function _webGenerarInforme(webinarKey,regionLabel,btnEl){
       _webInfChartCard('Día preferido',imgDia)+
       _webInfChartCard('Horario preferido',imgFranja)+
       _webInfChartCard('Palabras más repetidas en preguntas y comentarios',imgPalabras)+
+      (tMotivos.length?_webInfChartCard('Motivos de quienes no asistirán',imgMotivos):'')+
     '</div>';
 
     var depTop=tDep[0], tipoTop=tTipo[0], temaTop=tTemas[0];
     var parrafoHtml='<div style="font-size:13.5px;color:#1a2440;line-height:1.7;background:#F7F3EE;border-left:4px solid #001A60;border-radius:8px;padding:14px 18px;margin:18px 0;">'+
       'De las <b>'+kpis.total+'</b> personas inscritas en el webinar de '+_webEsc(regionLabel)+', <b>'+confirmados+'</b> ya confirmaron su asistencia ('+tasaConf+'%). '+
+      (((kpis.noAsistiran||0)>0)?('<b>'+kpis.noAsistiran+'</b> indicaron que no asistirán'+((tMotivos&&tMotivos.length)?(' (principal motivo: <b>'+_webEsc(tMotivos[0][0])+'</b>)'):'')+'. '):'')+
       (depTop?('La mayoría pertenece a establecimientos de dependencia <b>'+_webEsc(depTop[0])+'</b> ('+depTop[1]+' de '+kpis.total+'), '):'')+
       (tipoTop?('principalmente <b>'+_webEsc(tipoTop[0])+'</b>. '):'')+
       (temaTop?('El tema de mayor interés fue <b>'+_webEsc(temaTop[0])+'</b>, mencionado por '+temaTop[1]+' personas. '):'')+

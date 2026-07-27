@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenCluster Tech — Licitaciones Relevantes</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Open+Sans:wght@400;600;700&family=Playfair+Display:wght@400;600;700&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box;}
+  :root{
+    --navy:#001a60;--sky:#06b3fd;--ltblue:#d6eeff;--pale:#eaf6ff;
+    --orange:#ff7e00;--gold:#C9A96E;--gold-lt:#E8D5A8;
+    --text:#1a2535;--subtle:#64748b;--bg:#F4F6FB;
+    --green:#2A7A5A;--green-lt:#E8F6EF;
+    --red:#B4453C;--red-lt:#FDEDEC;
+  }
+  body{font-family:'Open Sans',sans-serif;background:var(--bg);min-height:100vh;overflow-x:hidden;color:var(--text);}
+
+  .hero-bg{position:absolute;top:0;left:0;right:0;height:330px;
+    background:linear-gradient(170deg,#0A0F1E 0%,var(--navy) 35%,#0a2e8a 60%,var(--sky) 100%);z-index:0;}
+  .hero-bg::before{content:'';position:absolute;bottom:80px;left:0;right:0;height:1.5px;
+    background:linear-gradient(90deg,transparent 5%,var(--gold) 30%,var(--gold-lt) 50%,var(--gold) 70%,transparent 95%);opacity:.4;}
+  .hero-bg::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:100px;
+    background:linear-gradient(to bottom,transparent,var(--bg));}
+  .page{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;min-height:100vh;}
+
+  .header{width:100%;padding:44px 24px 0;text-align:center;}
+  .logo-line{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:22px;}
+  .logo-bar{width:50px;height:1.5px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);}
+  .logo-diamond{width:7px;height:7px;background:var(--gold);transform:rotate(45deg);flex-shrink:0;}
+  .brand{font-family:'Montserrat',sans-serif;font-size:11px;letter-spacing:4px;color:rgba(255,255,255,.7);text-transform:uppercase;font-weight:700;}
+  .header h1{font-family:'Playfair Display',serif;font-size:38px;font-weight:700;color:#fff;letter-spacing:-.5px;line-height:1.15;}
+  .title-accent{display:block;font-family:'Playfair Display',serif;font-style:italic;font-weight:400;color:var(--gold-lt);font-size:27px;margin-top:2px;}
+  .subtitle{font-size:13px;color:rgba(255,255,255,.55);margin-top:14px;}
+  .back{position:fixed;top:16px;left:16px;z-index:100;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.22);
+    color:rgba(255,255,255,.85);padding:7px 15px;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;font-family:'Open Sans',sans-serif;}
+  .back:hover{background:rgba(255,255,255,.28);color:#fff;}
+
+  .wrap{max-width:1080px;width:100%;padding:28px 22px 50px;}
+
+  /* Resumen */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+  .stat{background:#fff;border:1px solid rgba(0,26,96,.07);border-radius:14px;padding:16px 18px;
+    box-shadow:0 2px 8px rgba(0,26,96,.05);position:relative;overflow:hidden;}
+  .stat::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,var(--sky),var(--navy));}
+  .stat.s-gold::before{background:linear-gradient(180deg,var(--gold-lt),var(--gold));}
+  .stat.s-green::before{background:linear-gradient(180deg,#34D399,var(--green));}
+  .stat.s-red::before{background:linear-gradient(180deg,#E8877E,var(--red));}
+  .stat-num{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;color:var(--navy);line-height:1;}
+  .stat-lbl{font-family:'Montserrat',sans-serif;font-size:8.5px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--subtle);margin-top:6px;}
+
+  /* Controles */
+  .controls{background:#fff;border:1px solid rgba(0,26,96,.07);border-radius:14px;padding:14px 16px;margin-bottom:16px;
+    box-shadow:0 2px 8px rgba(0,26,96,.05);display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
+  .search{flex:1;min-width:220px;position:relative;}
+  .search input{width:100%;padding:10px 12px 10px 36px;border:2px solid #dde5f0;border-radius:10px;
+    font-family:'Open Sans',sans-serif;font-size:13.5px;color:var(--text);outline:none;}
+  .search input:focus{border-color:var(--sky);}
+  .search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#9aa8bd;}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;}
+  .chip{padding:8px 14px;border-radius:20px;border:1px solid rgba(0,26,96,.12);background:#fff;color:var(--subtle);
+    font-family:'Montserrat',sans-serif;font-size:11.5px;font-weight:700;cursor:pointer;transition:.18s;user-select:none;white-space:nowrap;}
+  .chip:hover{background:var(--pale);border-color:rgba(6,179,253,.3);}
+  .chip.on{background:linear-gradient(135deg,var(--navy),#0a2e8a);color:#fff;border-color:transparent;}
+
+  /* Tarjeta licitación */
+  .list{display:flex;flex-direction:column;gap:11px;}
+  .lic{background:#fff;border:1px solid rgba(0,26,96,.07);border-radius:14px;overflow:hidden;position:relative;
+    box-shadow:0 2px 8px rgba(0,26,96,.05);transition:.25s;display:flex;}
+  .lic:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,26,96,.1);border-color:rgba(6,179,253,.22);}
+  .lic-stripe{width:4px;flex-shrink:0;background:linear-gradient(180deg,var(--sky),var(--navy));}
+  .lic.tipo-agil .lic-stripe{background:linear-gradient(180deg,var(--gold-lt),var(--gold));}
+  .lic.vencida{opacity:.5;}
+  .lic.vencida .lic-stripe{background:#c8d0dd;}
+  .lic-body{flex:1;padding:15px 18px;min-width:0;}
+
+  .lic-top{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:7px;}
+  .tag{font-family:'Montserrat',sans-serif;font-size:8.5px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;
+    padding:4px 9px;border-radius:5px;}
+  .tag-agil{background:#FFF4E0;color:#8A6520;}
+  .tag-lic{background:var(--pale);color:var(--navy);}
+  .tag-sensorial{background:#EDE9FB;color:#4C3A8F;}
+  .tag-ayuda{background:var(--green-lt);color:var(--green);}
+  .tag-dias{background:var(--green-lt);color:var(--green);}
+  .tag-dias.urgente{background:#FFF0E0;color:#9C4A00;}
+  .tag-dias.hoy{background:#FFE9E6;color:var(--red);}
+  .tag-dias.vencida{background:#EEF1F6;color:#8494a8;}
+
+  .lic-nombre{font-family:'Playfair Display',serif;font-size:16.5px;font-weight:700;color:var(--navy);line-height:1.3;margin-bottom:8px;}
+  .lic-inst{font-size:12.5px;color:var(--subtle);margin-bottom:11px;display:flex;align-items:center;gap:6px;}
+  .lic-inst svg{flex-shrink:0;color:#9aa8bd;}
+
+  .lic-datos{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:12px;}
+  .dato{background:#F7F9FD;border:1px solid rgba(0,26,96,.06);border-radius:9px;padding:7px 12px;min-width:0;}
+  .dato-lbl{font-family:'Montserrat',sans-serif;font-size:8px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#9aa8bd;margin-bottom:2px;}
+  .dato-val{font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;}
+  .dato.monto .dato-val{color:var(--green);}
+  .dato.id .dato-val{font-family:'Montserrat',sans-serif;font-size:12.5px;letter-spacing:.3px;color:var(--navy);}
+
+  .lic-acciones{display:flex;gap:8px;flex-wrap:wrap;}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 15px;border-radius:9px;
+    font-family:'Montserrat',sans-serif;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;
+    border:1px solid transparent;transition:.18s;user-select:none;}
+  .btn svg{width:14px;height:14px;flex-shrink:0;}
+  .btn-primary{background:linear-gradient(135deg,var(--navy),#0a2e8a);color:#fff;}
+  .btn-primary:hover{background:linear-gradient(135deg,#0a2e8a,var(--sky));}
+  .btn-gold{background:linear-gradient(135deg,#B98C3E,var(--gold));color:#fff;}
+  .btn-gold:hover{filter:brightness(1.08);}
+  .btn-ghost{background:#fff;color:var(--navy);border-color:rgba(0,26,96,.15);}
+  .btn-ghost:hover{background:var(--pale);border-color:rgba(6,179,253,.3);}
+  .btn.copiado{background:var(--green)!important;color:#fff!important;border-color:transparent!important;}
+
+  .ayuda-agil{background:#FFFBF2;border:1px solid rgba(201,169,110,.3);border-radius:9px;padding:9px 12px;margin-top:10px;
+    font-size:11.5px;color:#7A5A22;line-height:1.5;}
+  .ayuda-agil strong{font-weight:700;}
+
+  .vacio{text-align:center;padding:50px 20px;color:var(--subtle);font-size:14px;}
+
+  /* Nota de datos */
+  .nota{background:#fff;border:1px solid rgba(0,26,96,.07);border-left:4px solid var(--sky);border-radius:12px;
+    padding:14px 18px;margin-bottom:18px;font-size:12.5px;color:var(--subtle);line-height:1.65;}
+  .nota strong{color:var(--navy);font-weight:700;}
+
+  .footer{padding:26px 24px 30px;text-align:center;}
+  .footer-line{width:40px;height:2px;background:linear-gradient(90deg,var(--sky),var(--navy));margin:0 auto 12px;border-radius:2px;}
+  .footer-text{font-size:10px;color:var(--subtle);letter-spacing:.8px;font-weight:600;text-transform:uppercase;}
+
+  .toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--navy);color:#fff;
+    padding:12px 22px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.25);
+    transition:transform .3s;z-index:999;}
+  .toast.on{transform:translateX(-50%) translateY(0);}
+
+  @media(max-width:760px){
+    .stats{grid-template-columns:repeat(2,1fr);}
+    .header h1{font-size:30px;}
+    .title-accent{font-size:22px;}
+    .lic-datos{gap:7px;}
+  }
+</style>
+</head>
+<body>
+<div class="hero-bg"></div>
+<a class="back" href="index.html">&#8592; Volver a la Central</a>
+
+<div class="page">
+  <div class="header">
+    <div class="logo-line">
+      <div class="logo-bar"></div><div class="logo-diamond"></div>
+      <div class="brand">OpenCluster Tech</div>
+      <div class="logo-diamond"></div><div class="logo-bar"></div>
+    </div>
+    <h1>Licitaciones<span class="title-accent">y Compras Ágiles relevantes</span></h1>
+    <div class="subtitle">Detectadas por el Robot de Mercado Público — solo las que calzan con nuestros productos</div>
+  </div>
+
+  <div class="wrap">
+    <div class="stats">
+      <div class="stat s-green"><div class="stat-num" id="stVigentes">—</div><div class="stat-lbl">Vigentes</div></div>
+      <div class="stat s-gold"><div class="stat-num" id="stAgil">—</div><div class="stat-lbl">Compras Ágiles vigentes</div></div>
+      <div class="stat"><div class="stat-num" id="stLic">—</div><div class="stat-lbl">Licitaciones vigentes</div></div>
+      <div class="stat s-red"><div class="stat-num" id="stMonto">—</div><div class="stat-lbl">Monto en juego (vigente)</div></div>
+    </div>
+
+    <div class="nota" id="notaDatos"></div>
+
+    <div class="controls">
+      <div class="search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" id="buscar" placeholder="Buscar por institución, producto o número...">
+      </div>
+      <div class="chips" id="chipsTipo">
+        <div class="chip on" data-tipo="todos">Todas</div>
+        <div class="chip" data-tipo="agil">Compra Ágil</div>
+        <div class="chip" data-tipo="licitacion">Licitación</div>
+      </div>
+      <div class="chips" id="chipsEstado">
+        <div class="chip on" data-estado="vigentes">Solo vigentes</div>
+        <div class="chip" data-estado="todas">Incluir cerradas</div>
+      </div>
+    </div>
+
+    <div class="list" id="lista"></div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-line"></div>
+    <div class="footer-text">OpenCluster Tech &middot; Central de Ejecutivos</div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Copiado</div>
+
+<script>
+// ────────────────────────────────────────────────────────────────
+//  DATOS — vienen del Robot Licitaciones (Apps Script) que escribe
+//  G:\Mi unidad\ALERTA_Licitaciones_Relevantes.txt
+//  Última carga a esta página: 27/07/2026 17:17
+// ────────────────────────────────────────────────────────────────
+var FECHA_DATOS = '27 de julio de 2026, 17:17';
+var URL_AGIL = 'https://buscador.mercadopublico.cl/compra-agil';
+
+var DATOS = [
+ {id:'2279-471-COT26',  tipo:'agil', tema:'Sensorial',    nombre:'SP 587 Implementos estimulación', monto:1080000, cierre:'2026-07-27', inst:'ILUSTRE MUNICIPALIDAD DE PUDAHUEL'},
+ {id:'2404-453-COT26',  tipo:'agil', tema:'Sensorial',    nombre:'ADQ MATERIAL SENSORIAL — DIDECO Programa Desarrollo Inclusivo Territorial', monto:850000, cierre:'2026-07-27', inst:'I MUNICIPALIDAD DE IQUIQUE'},
+ {id:'898-884-COT26',   tipo:'agil', tema:'Sensorial',    nombre:'IMPLEMENTOS PSICOLOGÍA LEY TEA', monto:550000, cierre:'2026-07-27', inst:'HOSPITAL CLAUDIO VICUÑA'},
+ {id:'3916-312-COT26',  tipo:'agil', tema:'Sensorial',    nombre:'IMPLEMENTOS DE ESTIMULACIÓN ADULTOS', monto:4000000, cierre:'2026-07-27', inst:'I MUNICIPALIDAD DE TALTAL'},
+ {id:'3335-836-COT26',  tipo:'agil', tema:'Sensorial',    nombre:'ADQUISICIÓN DE RECURSOS SENSORIALES Y DE REGULACIÓN PARA ESTUDIANTES CON TEA — ORD N°242 Escuela N°2 La Unión, Ley SEP', monto:1600000, cierre:'2026-07-27', inst:'I MUNICIPALIDAD DE LA UNIÓN'},
+ {id:'2502-68-COT26',   tipo:'agil', tema:'Sensorial',    nombre:'Implementos de estimulación, material didáctico y educativos PRLAC', monto:950000, cierre:'2026-07-28', inst:'I MUNICIPALIDAD DE RÍO CLARO'},
+ {id:'3833-440-COT26',  tipo:'agil', tema:'Sensorial',    nombre:'MATERIAL DE ESTIMULACIÓN Y DIDÁCTICO — PRLAC', monto:2500000, cierre:'2026-07-28', inst:'I MUNICIPALIDAD DE RÍO BUENO'},
+ {id:'3594-683-COT26',  tipo:'agil', tema:'Sensorial',    nombre:'ARTÍCULOS DE ESTIMULACIÓN', monto:480000, cierre:'2026-07-28', inst:'I MUNICIPALIDAD DE PORTEZUELO'},
+ {id:'2294-1476-COT26', tipo:'agil', tema:'Sensorial',    nombre:'MATERIALES SENSORIALES ESCUELA ANTUPEHUÉN — PIE', monto:3000000, cierre:'2026-07-28', inst:'I MUNICIPALIDAD DE TALCA'},
+ {id:'1658-1108-COT26', tipo:'agil', tema:'Sensorial',    nombre:'S558-26/DIDECO — ADQUISICIÓN DE MESAS SENSORIALES PARA SALA INCLUSIVA MUNICIPAL DE LA NIÑEZ', monto:500000, cierre:'2026-07-28', inst:'I MUNICIPALIDAD DE TEMUCO'},
+ {id:'2591-1557-COT26', tipo:'agil', tema:'Sensorial',    nombre:'ADQUISICIÓN DE MATERIALES Y JUEGOS DE ESTIMULACIÓN COGNITIVA, SENSORIAL Y MOTRIZ — Programa Red Local de Apoyos y Cuidados (PRLAC)', monto:2000000, cierre:'2026-07-28', inst:'ILUSTRE MUNICIPALIDAD DE POZO ALMONTE'},
+ {id:'2708-464-COT26',  tipo:'agil', tema:'Sensorial',    nombre:'BANDAS ELÁSTICAS Y CUBO RUBIK — material talleres y estimulación cognitiva', monto:84690, cierre:'2026-07-28', inst:'MUNICIPALIDAD DE OVALLE'},
+ {id:'1099086-25-COT26',tipo:'agil', tema:'Sensorial',    nombre:'ADQUISICIÓN DE MATERIAL SENSORIAL Y DIDÁCTICO PARA EL JARDÍN Y SALA CUNA — Fondos de terceros, Hospital de Parral 2026', monto:670000, cierre:'2026-07-28', inst:'SERVICIO DE SALUD DEL MAULE — HOSPITAL DE PARRAL'},
+ {id:'1627-384-COT26',  tipo:'agil', tema:'Sensorial',    nombre:'JUEGOS DIDÁCTICOS LEY TEA', monto:600000, cierre:'2026-07-29', inst:'SERVICIO DE SALUD — HOSPITAL DE SAN FERNANDO'},
+ {id:'4337-247-COT26',  tipo:'agil', tema:'Sensorial',    nombre:'Convenio CHCC — Juguetes de psicomotricidad', monto:800000, cierre:'2026-07-29', inst:'I MUNICIPALIDAD DE RENAICO'},
+ {id:'1398-386-COT26',  tipo:'agil', tema:'Sensorial',    nombre:'MATERIALES DE ESTIMULACIÓN NIÑOS(AS) DE PEDIATRÍA — Chile Crece Contigo', monto:2000000, cierre:'2026-07-29', inst:'SERVICIO DE SALUD LIBERTADOR BDO. O\'HIGGINS'},
+ {id:'4562-334-COT26',  tipo:'agil', tema:'Sensorial',    nombre:'IMPLEMENTOS DE ESTIMULACIÓN', monto:1300000, cierre:'2026-07-29', inst:'I MUNICIPALIDAD DE GRANEROS'},
+ {id:'2676-524-COT26',  tipo:'agil', tema:'Sensorial',    nombre:'IMPLEMENTOS PARA ESTIMULACIÓN — PRLAC 10, Memo 982', monto:910000, cierre:'2026-07-24', inst:'I MUNICIPALIDAD DE INDEPENDENCIA'},
+ {id:'3808-101-COT26',  tipo:'agil', tema:'Sensorial',    nombre:'ADQUISICIÓN DE PISCINA DE ESTIMULACIÓN PARA ESC. CAUPOLICÁN', monto:1000000, cierre:'2026-07-24', inst:'I MUNICIPALIDAD DE PURÉN'},
+ {id:'2378-133-COT26',  tipo:'agil', tema:'Sensorial',    nombre:'IMPLEMENTOS DE ESTIMULACIÓN, MATERIAL DIDÁCTICO Y/O EDUCATIVO — Programa RLAC convocatoria 2025', monto:4830000, cierre:'2026-07-25', inst:'I MUNICIPALIDAD DE LA FLORIDA'},
+ {id:'434-443-COT26',   tipo:'agil', tema:'Sensorial',    nombre:'IMPLEMENTOS DE ESTIMULACIÓN — Formulario N°59 DIDECO', monto:70000, cierre:'2026-07-25', inst:'I MUNICIPALIDAD DE CAUQUENES'},
+
+ {id:'1057552-16-LE26', tipo:'licitacion', tema:'Ayuda Técnica', nombre:'Confección de Prótesis Dentales', monto:null, cierre:'2026-08-03', inst:'SERVICIO DE SALUD VALDIVIA — HOSPITAL DE R.'},
+ {id:'3507-13-LE26',    tipo:'licitacion', tema:'Ayuda Técnica', nombre:'Prótesis dentales', monto:null, cierre:'2026-08-03', inst:'I MUNICIPALIDAD DE CALBUCO'},
+ {id:'4044-47-CO26',    tipo:'licitacion', tema:'Ayuda Técnica', nombre:'LP PRIVADA — Adquisición de prótesis transfemoral', monto:null, cierre:'2026-08-03', inst:'I MUNICIPALIDAD DE ISLA DE PASCUA'},
+ {id:'1110404-128-L126',tipo:'licitacion', tema:'Sensorial',     nombre:'ADQUISICIÓN DE EQUIPAMIENTO SENSORIAL Y PSICOMOTOR PARA LA HABILITACIÓN DE SALA DE INTEGRACIÓN SENSORIAL — Escuela Subteniente Luis Cruz Martínez, SLEP Chinchorro', monto:3509072, cierre:'2026-08-04', inst:'SERVICIO LOCAL DE EDUCACIÓN DE CHINCHORRO'},
+ {id:'4642-86-LE26',    tipo:'licitacion', tema:'Sensorial',     nombre:'ADQUISICIÓN DE MATERIALES PARA INSTALACIÓN DE CABLEADO ESTRUCTURADO — habilitación de nuevas salas de estimulación temprana en centros médicos y dentales de La Serena, Rancagua, Viña del Mar y Ñuble', monto:12946000, cierre:'2026-08-04', inst:'DIRECCIÓN DE LOGÍSTICA DE CARABINEROS'},
+ {id:'1057490-49-LP26', tipo:'licitacion', tema:'Sensorial',     nombre:'ADQUIRIR ESTIMULACIÓN CEREBRAL PROFUNDA (ECP)', monto:null, cierre:'2026-08-12', inst:'INSTITUTO DE NEUROCIRUGÍA'},
+ {id:'2136-15-LP26',    tipo:'licitacion', tema:'Ayuda Técnica', nombre:'Servicio laboratorio dental — prótesis con equipo en comodato', monto:null, cierre:'2026-08-13', inst:'SERVICIO SALUD DEL RELONCAVÍ'},
+ {id:'937232-74-LP26',  tipo:'licitacion', tema:'Ayuda Técnica', nombre:'Servicio Laboratorio de Confección de Prótesis Dental', monto:null, cierre:'2026-08-13', inst:'CENTRO DE REFERENCIA DE SALUD — HOSPITAL PROVINCIA CORDILLERA'},
+ {id:'5537-2-LE26',     tipo:'licitacion', tema:'Sensorial',     nombre:'Servicio instalación de cableado y fibra óptica', monto:null, cierre:'2026-08-20', inst:'UNIVERSIDAD DE CHILE'}
+];
+
+// ── Utilidades ──
+function hoy0(){var d=new Date();d.setHours(0,0,0,0);return d;}
+function fechaObj(iso){var p=iso.split('-');return new Date(+p[0],+p[1]-1,+p[2]);}
+function diasRestantes(iso){return Math.round((fechaObj(iso)-hoy0())/86400000);}
+var MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+function fechaLinda(iso){var d=fechaObj(iso);return d.getDate()+' '+MESES[d.getMonth()].substring(0,3)+'. '+d.getFullYear();}
+function plata(n){if(n===null||n===undefined)return 'Sin monto publicado';return '$'+n.toLocaleString('es-CL');}
+function urlLic(id){return 'https://www.mercadopublico.cl/Procurement/Modules/RFB/DetailsAcquisition.aspx?idLicitacion='+encodeURIComponent(id);}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ── Estado de filtros ──
+var fTipo='todos', fEstado='vigentes', fTexto='';
+
+function badgeDias(d){
+  if(d<0)  return {cls:'vencida', txt:'Cerrada'};
+  if(d===0)return {cls:'hoy',     txt:'Cierra HOY'};
+  if(d===1)return {cls:'urgente', txt:'Cierra mañana'};
+  if(d<=3) return {cls:'urgente', txt:'Cierra en '+d+' días'};
+  return {cls:'', txt:'Cierra en '+d+' días'};
+}
+
+function render(){
+  var lista=document.getElementById('lista');
+  var items=DATOS.slice();
+
+  // Orden: vigentes primero (por cierre más próximo), luego cerradas (más reciente primero)
+  items.sort(function(a,b){
+    var da=diasRestantes(a.cierre), db=diasRestantes(b.cierre);
+    var va=da>=0, vb=db>=0;
+    if(va!==vb) return va?-1:1;
+    return va ? (da-db) : (db-da);
+  });
+
+  var vis=items.filter(function(x){
+    var d=diasRestantes(x.cierre);
+    if(fEstado==='vigentes' && d<0) return false;
+    if(fTipo!=='todos' && x.tipo!==fTipo) return false;
+    if(fTexto){
+      var blob=(x.id+' '+x.nombre+' '+x.inst+' '+x.tema).toLowerCase();
+      if(blob.indexOf(fTexto)<0) return false;
+    }
+    return true;
+  });
+
+  // Estadísticas (siempre sobre el total vigente, no sobre el filtro)
+  var vigentes=DATOS.filter(function(x){return diasRestantes(x.cierre)>=0;});
+  document.getElementById('stVigentes').textContent=vigentes.length;
+  document.getElementById('stAgil').textContent=vigentes.filter(function(x){return x.tipo==='agil';}).length;
+  document.getElementById('stLic').textContent=vigentes.filter(function(x){return x.tipo==='licitacion';}).length;
+  var suma=vigentes.reduce(function(a,x){return a+(x.monto||0);},0);
+  document.getElementById('stMonto').textContent='$'+(suma/1000000).toFixed(1).replace('.',',')+'M';
+
+  if(!vis.length){
+    lista.innerHTML='<div class="vacio">No hay licitaciones que calcen con ese filtro.<br>Prueba con «Incluir cerradas» o borra la búsqueda.</div>';
+    return;
+  }
+
+  lista.innerHTML=vis.map(function(x){
+    var d=diasRestantes(x.cierre), b=badgeDias(d);
+    var esAgil=x.tipo==='agil';
+    var link=esAgil?URL_AGIL:urlLic(x.id);
+    return ''+
+    '<div class="lic tipo-'+x.tipo+(d<0?' vencida':'')+'">'+
+      '<div class="lic-stripe"></div>'+
+      '<div class="lic-body">'+
+        '<div class="lic-top">'+
+          '<span class="tag '+(esAgil?'tag-agil':'tag-lic')+'">'+(esAgil?'Compra Ágil':'Licitación')+'</span>'+
+          '<span class="tag '+(x.tema==='Sensorial'?'tag-sensorial':'tag-ayuda')+'">'+esc(x.tema)+'</span>'+
+          '<span class="tag tag-dias '+b.cls+'">'+b.txt+'</span>'+
+        '</div>'+
+        '<div class="lic-nombre">'+esc(x.nombre)+'</div>'+
+        '<div class="lic-inst">'+
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg>'+
+          esc(x.inst)+
+        '</div>'+
+        '<div class="lic-datos">'+
+          '<div class="dato id"><div class="dato-lbl">N° de adquisición</div><div class="dato-val">'+esc(x.id)+'</div></div>'+
+          '<div class="dato monto"><div class="dato-lbl">Monto</div><div class="dato-val">'+plata(x.monto)+'</div></div>'+
+          '<div class="dato"><div class="dato-lbl">Cierra</div><div class="dato-val">'+fechaLinda(x.cierre)+'</div></div>'+
+        '</div>'+
+        '<div class="lic-acciones">'+
+          '<a class="btn '+(esAgil?'btn-gold':'btn-primary')+'" href="'+link+'" target="_blank" rel="noopener">'+
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>'+
+            (esAgil?'Ir al buscador de Compra Ágil':'Abrir la licitación')+
+          '</a>'+
+          '<div class="btn btn-ghost" onclick="copiar(this,\''+x.id+'\')">'+
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>'+
+            'Copiar N°'+
+          '</div>'+
+        '</div>'+
+        (esAgil?'<div class="ayuda-agil">Las Compras Ágiles no tienen link propio. Aprieta <strong>Copiar N°</strong>, luego <strong>Ir al buscador</strong> y pega el número <strong>'+esc(x.id)+'</strong> en el buscador de Mercado Público.</div>':'')+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+function copiar(el,txt){
+  var listo=function(){
+    var orig=el.innerHTML;
+    el.classList.add('copiado');
+    el.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>¡Copiado!';
+    toast('N° '+txt+' copiado');
+    setTimeout(function(){el.classList.remove('copiado');el.innerHTML=orig;},1800);
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(listo, function(){fallback(txt);listo();});
+  }else{fallback(txt);listo();}
+}
+function fallback(txt){
+  var ta=document.createElement('textarea');ta.value=txt;ta.style.position='fixed';ta.style.opacity='0';
+  document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}document.body.removeChild(ta);
+}
+var toastT;
+function toast(msg){
+  var t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');
+  clearTimeout(toastT);toastT=setTimeout(function(){t.classList.remove('on');},2000);
+}
+
+// ── Eventos ──
+document.getElementById('chipsTipo').addEventListener('click',function(e){
+  var c=e.target.closest('.chip');if(!c)return;
+  this.querySelectorAll('.chip').forEach(function(x){x.classList.remove('on');});
+  c.classList.add('on');fTipo=c.dataset.tipo;render();
+});
+document.getElementById('chipsEstado').addEventListener('click',function(e){
+  var c=e.target.closest('.chip');if(!c)return;
+  this.querySelectorAll('.chip').forEach(function(x){x.classList.remove('on');});
+  c.classList.add('on');fEstado=c.dataset.estado;render();
+});
+document.getElementById('buscar').addEventListener('input',function(){
+  fTexto=this.value.trim().toLowerCase();render();
+});
+
+document.getElementById('notaDatos').innerHTML=
+  '<strong>Datos cargados el '+FECHA_DATOS+'.</strong> Esta página no se actualiza sola todavía: '+
+  'los avisos nuevos siguen llegando por la notificación del escritorio y quedan guardados en '+
+  '<strong>ALERTA_Licitaciones_Relevantes.txt</strong> en tu Drive. '+
+  'Los días que faltan para el cierre sí se recalculan cada vez que abres la página.';
+
+render();
+</script>
+</body>
+</html>

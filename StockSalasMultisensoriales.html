@@ -144,6 +144,14 @@
   .cotiz-matriz .alcanza { color:#1a7a3c; font-weight:700; }
   .cotiz-matriz .falta { color:#c0392b; font-weight:700; }
   .cotiz-estado-clickable { cursor:pointer; text-decoration:underline dotted; }
+  /* Columnas fijas: "Producto" (izquierda) y "Stock" (derecha) quedan SIEMPRE visibles,
+     aunque haya muchas cotizaciones y la tabla se haga muy ancha. */
+  .cotiz-matriz td.cm-prod, .cotiz-matriz th.cm-prod { position:sticky; left:0; background:var(--card); z-index:2; }
+  .cotiz-matriz thead th.cm-prod { z-index:3; }
+  .cotiz-matriz td.cm-stock, .cotiz-matriz th.cm-stock { position:sticky; right:0; background:var(--card); z-index:2; box-shadow:-7px 0 8px -7px rgba(0,0,0,0.18); }
+  .cotiz-matriz thead th.cm-stock { z-index:3; }
+  .cotiz-matriz td.cm-stock.falta { color:#c0392b; }
+  .cotiz-matriz .cm-stock-num { cursor:pointer; text-decoration:underline dotted; font-weight:700; }
   .cotiz-stock-tooltip { position:fixed; z-index:1200; display:none; background:var(--navy); color:#fff; font-size:0.76rem; font-weight:600; padding:0.45rem 0.7rem; border-radius:6px; box-shadow:0 8px 24px -6px rgba(0,0,0,0.45); white-space:nowrap; pointer-events:none; }
   .cotiz-stock-tooltip.open { display:block; }
   .cotiz-detalle-campo { display:flex; gap:0.5rem; padding:0.3rem 0; border-bottom:1px solid var(--line); font-size:0.85rem; }
@@ -1791,9 +1799,9 @@
         matriz[p.key].total += p.qty;
       });
     });
-    const cabecera = '<tr><th>Producto</th>' +
+    const cabecera = '<tr><th class="cm-prod">Producto</th>' +
       seleccionadas.map(c => '<th>' + escapeHtmlSafe(c.cotizacion) + '</th>').join('') +
-      '<th>Total pedido</th><th>Stock</th><th>Estado</th></tr>';
+      '<th>Total pedido</th><th>Estado</th><th class="cm-stock">Stock</th></tr>';
     // Orden alfabético siempre (pedido de Rayen 2026-07-21: "así veo si estoy pasando algo por
     // alto") — antes quedaban en el orden en que se iban encontrando al recorrer cada cotización,
     // dificultando notar duplicados/variantes del mismo producto con nombre distinto.
@@ -1804,7 +1812,7 @@
       const falta = m.total > total;
       const celdas = seleccionadas.map(c => '<td>' + (m.porCotiz[c.cotizacion] || '—') + '</td>').join('');
       // Nombre del producto: toca para ver su ficha (mismo modal que el resto de la herramienta).
-      const nombreClase = 'name' + (falta ? ' falta' : '');
+      const nombreClase = 'name cm-prod' + (falta ? ' falta' : '');
       const nombreCelda = (stock && stock.sku)
         ? '<td class="' + nombreClase + '" data-ficha="' + escapeHtmlSafe(stock.sku) + '">' + escapeHtmlSafe(m.display) + '</td>'
         : '<td class="' + nombreClase + '">' + escapeHtmlSafe(m.display) + '</td>';
@@ -1818,8 +1826,11 @@
       // que falta también en rojo para no confundirme"), para verlo de un vistazo sin tener que
       // mirar la columna Estado (que puede quedar fuera de pantalla en una tabla ancha).
       const totalPedidoCelda = '<td' + (falta ? ' class="falta"' : '') + '><strong>' + m.total + '</strong></td>';
-      const stockCelda = '<td' + (falta ? ' class="falta"' : '') + '>' + total + '</td>';
-      return '<tr>' + nombreCelda + celdas + totalPedidoCelda + stockCelda + estadoCelda + '</tr>';
+      // Stock: columna FIJA a la derecha (siempre visible) y con el número clickeable para ver
+      // el desglose bodega/contenedor — pedido de Rayen 2026-07-27.
+      const stockCelda = '<td class="cm-stock' + (falta ? ' falta' : '') + '">' +
+        '<span class="cm-stock-num" data-desglose="' + escapeHtmlSafe(desglose) + '">' + total + '</span></td>';
+      return '<tr>' + nombreCelda + celdas + totalPedidoCelda + estadoCelda + stockCelda + '</tr>';
     }).join('');
     if (!filas) return '<p class="incluidos-vacio">Sin productos detectados.</p>';
     return '<div class="tablewrap"><table class="cotiz-matriz"><thead>' + cabecera + '</thead><tbody>' + filas + '</tbody></table></div>';

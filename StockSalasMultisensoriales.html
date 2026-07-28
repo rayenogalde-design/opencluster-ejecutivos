@@ -2772,5 +2772,69 @@
     }).join('');
   }
 </script>
+
+<!-- ══ Seleccionar desde el Stock → Cotización ══ (agregado: modalidad Salas → Cotizador) -->
+<button id="salaEnviarCotiz" type="button" title="Crear una cotización con los productos marcados"
+  style="position:fixed;right:18px;bottom:18px;z-index:99999;background:#0b2a4a;color:#fff;border:none;border-radius:30px;padding:13px 20px;font-size:14px;font-weight:700;font-family:'Open Sans',Arial,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.28);cursor:pointer;display:flex;align-items:center;gap:8px;">
+  🧾 Enviar a cotización
+  <span id="salaEnviarCount" style="background:#e8b84b;color:#0b2a4a;border-radius:12px;padding:1px 8px;font-size:12px;min-width:20px;text-align:center;">0</span>
+</button>
+<script src="SalasACotizacion.js"></script>
+<script>
+(function(){
+  "use strict";
+  var tb = document.getElementById("tbody-stock-bodega");
+  if(!tb){ var b0=document.getElementById("salaEnviarCotiz"); if(b0) b0.style.display="none"; return; }
+
+  // 1) Agregar una casilla al inicio de cada fila de la tabla de bodega.
+  var thead = tb.closest("table") ? tb.closest("table").querySelector("thead tr") : null;
+  if(thead){ var th=document.createElement("th"); th.style.width="26px"; thead.insertBefore(th, thead.firstChild); }
+  Array.prototype.forEach.call(tb.querySelectorAll("tr"), function(tr){
+    if(tr.querySelector("td.sala-pick-cell")) return;
+    var nameCell = tr.querySelector(".name");
+    var sku = nameCell ? (nameCell.getAttribute("data-ficha")||"") : "";
+    var td = document.createElement("td");
+    td.className = "sala-pick-cell";
+    td.style.textAlign = "center";
+    var cb = document.createElement("input");
+    cb.type = "checkbox"; cb.className = "sala-pick"; cb.setAttribute("data-sku", sku);
+    td.appendChild(cb);
+    tr.insertBefore(td, tr.firstChild);
+  });
+
+  // 2) Juntar lo marcado: precio desde el catálogo (planilla); nombre y foto desde la fila.
+  function gather(){
+    var out = [];
+    tb.querySelectorAll("input.sala-pick:checked").forEach(function(cb){
+      var tr = cb.closest("tr"); if(!tr) return;
+      var sku = cb.getAttribute("data-sku") || "";
+      var nameCell = tr.querySelector(".name");
+      var nombre = "";
+      if(nameCell){ nombre = (nameCell.childNodes[0] && nameCell.childNodes[0].textContent) ? nameCell.childNodes[0].textContent.trim() : nameCell.textContent.trim(); }
+      var imgEl = tr.querySelector(".thumb img");
+      var img = imgEl ? (imgEl.getAttribute("src")||"") : "";
+      var c = (window.SALAS_CATALOGO && window.SALAS_CATALOGO[sku]) || {};
+      out.push({ sku:sku, nombre: nombre || c.n || sku, cant:1, precio: (c.p||0), img: img || c.img || "" });
+    });
+    return out;
+  }
+  function updCount(){ var b=document.getElementById("salaEnviarCount"); if(b) b.textContent = String(gather().length); }
+  tb.addEventListener("change", function(e){ if(e.target && e.target.classList && e.target.classList.contains("sala-pick")) updCount(); });
+
+  var btn = document.getElementById("salaEnviarCotiz");
+  if(btn) btn.addEventListener("click", function(){
+    var items = gather();
+    if(!items.length){ alert("Marca al menos un producto (casilla ✓) antes de enviar a cotización."); return; }
+    var sinPrecio = items.filter(function(p){ return !p.precio; }).map(function(p){ return p.nombre; });
+    if(sinPrecio.length){
+      if(!confirm("Estos productos no tienen precio en la planilla y saldrán en $0 (podrás ajustarlos en el cotizador):\n\n• " + sinPrecio.join("\n• ") + "\n\n¿Continuar igual?")) return;
+    }
+    window.SALAS_enviarACotizacion(items);
+  });
+
+  if(window.SALAS_refrescarPrecios){ window.SALAS_refrescarPrecios().then(updCount); }
+  updCount();
+})();
+</script>
 </body>
 </html>

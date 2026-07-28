@@ -4822,6 +4822,49 @@ window.addEventListener("DOMContentLoaded", () => {
   document.getElementById("eFecha").value = fechaHoy();
   initData.forEach(r=>addProd(...r));
   upd();
+
+  // ── Cargar productos de Sala enviados desde el Armador/Stock ──────
+  // Si el usuario apretó "Enviar a cotización" en el Armador o el Stock,
+  // los productos vienen guardados en localStorage. Los cargamos acá.
+  // Bloque aditivo y a prueba de fallos: si no hay nada pendiente, no hace nada.
+  try {
+    const _salaPend = localStorage.getItem("oc_sala_pendiente");
+    if (_salaPend) {
+      localStorage.removeItem("oc_sala_pendiente"); // consumir una sola vez
+      const _d = JSON.parse(_salaPend);
+      if (_d && Array.isArray(_d.productos) && _d.productos.length) {
+        // Limpiar stores antes de cargar (igual que cargarCotizacion) para no
+        // arrastrar datos de los productos por defecto a los nuevos IDs.
+        Object.keys(imgStore).forEach(k => delete imgStore[k]);
+        Object.keys(descStore).forEach(k => delete descStore[k]);
+        Object.keys(modoStore).forEach(k => delete modoStore[k]);
+        Object.keys(zoomStore).forEach(k => delete zoomStore[k]);
+        document.getElementById("prodList").innerHTML = "";
+        pid = 0;
+        _d.productos.forEach(p => {
+          addProd(p.nombre, p.desc || "", p.cant, p.precio);
+          const nid = pid - 1;
+          if (p.modo && p.modo !== "neto") setPriceModo(nid, p.modo);
+          if (p.img) {
+            imgStore[nid] = p.img;
+            const ie = document.getElementById("imgp"+nid);
+            const ph = document.getElementById("imgph"+nid);
+            const zc = document.getElementById("zctrl"+nid);
+            if (ie) { ie.src = p.img; ie.style.display = "block"; }
+            if (ph) ph.style.display = "none";
+            if (zc) zc.style.display = "flex";
+          }
+        });
+        if (_d.cliente) {
+          const c = _d.cliente, sv = (id,v)=>{ const el=document.getElementById(id); if(el&&v) el.value=v; };
+          sv("eCNombre",c.nombre); sv("eCInstitucion",c.institucion); sv("eCRut",c.rut);
+          sv("eCCiudad",c.ciudad); sv("eCDireccion",c.direccion); sv("eCTel",c.tel); sv("eCEmail",c.email);
+        }
+        upd();
+      }
+    }
+  } catch(_e) { console.warn("No se pudo cargar la sala pendiente:", _e); }
+
   fetchPrecioDiesel(); // carga precio diésel desde CNE al arrancar
   fetchNumCotizacion(); // limpia el campo y muestra placeholder provisional
 

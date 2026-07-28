@@ -218,7 +218,12 @@
 //  G:\Mi unidad\ALERTA_Licitaciones_Relevantes.txt
 //  Última carga a esta página: 27/07/2026 17:17
 // ────────────────────────────────────────────────────────────────
+//  La lista de abajo es solo el RESPALDO. Al abrir la página se intenta
+//  leer 'licitaciones_datos.json', que el PC de Rayen regenera y sube
+//  automáticamente cada 20 minutos desde el archivo de alertas del Drive.
 var FECHA_DATOS = '27 de julio de 2026, 17:17';
+var URL_DATOS = 'licitaciones_datos.json';
+var EN_VIVO = false;
 var URL_AGIL = 'https://buscador.mercadopublico.cl/compra-agil';
 
 var DATOS = [
@@ -438,16 +443,36 @@ document.getElementById('buscar').addEventListener('input',function(){
   fTexto=this.value.trim().toLowerCase();render();
 });
 
-document.getElementById('notaDatos').innerHTML=
-  '<strong>Datos cargados el '+FECHA_DATOS+'.</strong> Esta página todavía no se llena sola: '+
-  'los avisos nuevos siguen llegando por la notificación del escritorio y quedan guardados en '+
-  '<strong>ALERTA_Licitaciones_Relevantes.txt</strong> en tu Drive. '+
-  'Los días que faltan para el cierre sí se recalculan cada vez que abres la página.<br>'+
-  'Cuando termines de mirar una, aprieta <strong>«Ya la revisé»</strong> y desaparece de la lista. '+
-  'Nunca se borra de verdad: queda en la pestaña <strong>«Revisadas»</strong> y puedes devolverla cuando quieras. '+
-  '<em>Estas marcas se guardan en este navegador y en este computador.</em>';
+function pintarNota(){
+  var uso = EN_VIVO
+    ? '<strong>Al día automáticamente.</strong> Última actualización: <strong>'+esc(FECHA_DATOS)+'</strong>. '+
+      'Tu computador revisa el archivo de alertas del Drive cada 20 minutos y sube los avisos nuevos solo. '+
+      'Si tu PC está apagada, la lista se queda en la última actualización.'
+    : '<strong>Mostrando la lista de respaldo (27/07/2026 17:17).</strong> No se pudo leer el archivo de datos actualizado. '+
+      'Si esto pasa siempre, avísame para revisar el publicador automático.';
+  document.getElementById('notaDatos').innerHTML = uso + '<br>'+
+    'Cuando termines de mirar una, aprieta <strong>«Ya la revisé»</strong> y desaparece de la lista. '+
+    'Nunca se borra de verdad: queda en la pestaña <strong>«Revisadas»</strong> y puedes devolverla cuando quieras. '+
+    '<em>Estas marcas se guardan en este navegador y en este computador.</em>';
+}
 
-render();
+function arrancar(){
+  var terminar=function(){ pintarNota(); render(); };
+  if(!window.fetch){ terminar(); return; }
+  fetch(URL_DATOS+'?t='+(new Date()).getTime(),{cache:'no-store'})
+    .then(function(r){ if(!r.ok) throw new Error('http'); return r.json(); })
+    .then(function(j){
+      if(j && j.items && j.items.length){
+        DATOS=j.items;
+        if(j.generado) FECHA_DATOS=j.generado;
+        EN_VIVO=true;
+      }
+      terminar();
+    })
+    .catch(function(){ terminar(); });
+}
+
+arrancar();
 </script>
 </body>
 </html>

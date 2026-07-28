@@ -2000,17 +2000,28 @@
   function _clp(n){ return '$' + Math.round(Number(n)||0).toLocaleString('es-CL'); }
   // SKU de un producto faltante: usa el del stock; si el producto no tiene stock, lo toma del mapa
   // de SKU conseguidos en Qinera (2026-07-27). Coincidencia por substring del nombre normalizado.
+  // Productos que NO están en la lista de precios (comunicadores/software de terceros) — SKU de Qinera.
   const _SKU_OVERRIDE = [
     { m:'columpio cuddle', sku:'BJ-EV120030' },
     { m:'look to learn', sku:'BJ-785-1' },
     { m:'sensory guru', sku:'BJ-1000145' },
     { m:'soporte de pie rehadapt', sku:'BJ-610' },
-    { m:'tabla scooter', sku:'BJ-61061500' },
     { m:'tobii', sku:'BJ-I16' }
   ];
+  // Mapa nombre→SKU desde la LISTA DE PRECIOS (SalasSku.js) — fuente oficial. Se arma al primer uso
+  // (por si SalasSku.js carga después de este script).
+  let _SKU_PLANILLA = null;
+  function _buildSkuPlanilla(){
+    _SKU_PLANILLA = {};
+    if(window.SALAS_SKU_LISTA){ window.SALAS_SKU_LISTA.forEach(function(par){ const k = _smProdNorm(par[0]); if(k && !_SKU_PLANILLA[k]) _SKU_PLANILLA[k] = par[1]; }); }
+  }
   function _skuFaltante(nombre, s){
     if(s && s.sku) return s.sku;
+    if(!_SKU_PLANILLA) _buildSkuPlanilla();
     const n = _smProdNorm(nombre || '');
+    if(_SKU_PLANILLA[n]) return _SKU_PLANILLA[n];
+    const na = _SM_PROD_ALIAS[n] || n;
+    if(_SKU_PLANILLA[na]) return _SKU_PLANILLA[na];
     for(let i=0;i<_SKU_OVERRIDE.length;i++){ if(n.indexOf(_SKU_OVERRIDE[i].m) !== -1) return _SKU_OVERRIDE[i].sku; }
     return '';
   }
@@ -2964,6 +2975,7 @@
   🧾 Enviar a cotización
   <span id="salaEnviarCount" style="background:#e8b84b;color:#0b2a4a;border-radius:12px;padding:1px 8px;font-size:12px;min-width:20px;text-align:center;">0</span>
 </button>
+<script src="SalasSku.js"></script>
 <script src="SalasFichas.js"></script>
 <script src="SalasACotizacion.js"></script>
 <script>

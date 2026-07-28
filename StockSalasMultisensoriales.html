@@ -182,6 +182,8 @@
   .stock-disp-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:0.8rem; margin-top:0.8rem; }
   .stock-disp-card { position:relative; border-radius:14px; overflow:hidden; background:var(--card); border:1px solid var(--line); box-shadow:0 2px 8px rgba(10,20,40,0.05); cursor:pointer; transition:transform 0.15s ease, box-shadow 0.15s ease; }
   .stock-disp-card:hover { transform:translateY(-2px); box-shadow:0 8px 20px -6px rgba(10,20,40,0.18); }
+  .sala-pick-card { position:absolute; top:8px; left:8px; z-index:3; width:26px; height:26px; border-radius:7px; background:rgba(255,255,255,0.94); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 2px 6px rgba(10,20,40,0.14); }
+  .sala-pick-card input { width:16px; height:16px; cursor:pointer; margin:0; }
   .stock-disp-thumb { width:100%; aspect-ratio:1/1; background:var(--paper); }
   .stock-disp-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
   .stock-disp-noimg { width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:var(--mist); font-size:0.65rem; text-align:center; padding:0.4rem; }
@@ -591,9 +593,9 @@
             <td>BJ-EV150030</td>
             <td><strong>1</strong></td>
             <td>Dañado, por reparar. SÍ es Qinera (precio_eur catálogo: €771) — falta confirmar precio de venta CLP.</td>
-          </tr><tr data-buscar="saco de danza m saco de danza m bj-ev2208">
+          </tr><tr data-buscar="saco de danza m saco propioceptivo bj-ev2208">
             <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/saco-de-danza-m.jpg" alt="" loading="lazy" /></td>
-            <td class="name" data-ficha="BJ-EV2208">Saco de danza M</td>
+            <td class="name" data-ficha="BJ-EV2208">Saco de danza M <span class="sku">= Saco propioceptivo</span></td>
             <td>BJ-EV2208</td>
             <td><strong>3</strong></td>
             <td></td>
@@ -1352,9 +1354,9 @@
             <td>1</td>
             <td>—</td>
             <td><strong>1</strong></td>
-          </tr><tr data-buscar="saco de danza m saco de danza m bj-ev2208">
+          </tr><tr data-buscar="saco de danza m saco propioceptivo bj-ev2208">
             <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/saco-de-danza-m.jpg" alt="" loading="lazy" /></td>
-            <td class="name" data-ficha="BJ-EV2208">Saco de danza M</td>
+            <td class="name" data-ficha="BJ-EV2208">Saco de danza M <span class="sku">= Saco propioceptivo</span></td>
             <td>BJ-EV2208</td>
             <td>3</td>
             <td>—</td>
@@ -1891,7 +1893,11 @@
       const notaBodega = (f && f.nombre && f.nombre.toLowerCase() !== s.item.toLowerCase()) ? (' (bodega: ' + s.item + ')') : '';
       const stockExtra = bodegaLibre + ' en bodega · ' + caminoLibre + ' en contenedor' + notaBodega;
       const buscable = (s.item + ' ' + nombreMostrado + ' ' + (s.sku || '')).toLowerCase();
+      var skuPick = escapeHtmlSafe(s.sku || s.claveFicha || '');
+      // Casilla en la esquina para marcar el producto y enviarlo a una cotización. Tocar la foto
+      // sigue abriendo la ficha; tocar la casilla NO (se frena la propagación al conectar).
       return '<div class="stock-disp-card"' + fichaAttr + ' data-stock-extra="' + escapeHtmlSafe(stockExtra) + '" data-buscar="' + escapeHtmlSafe(buscable) + '">' +
+        (skuPick ? '<label class="sala-pick-card" title="Marcar para cotización"><input type="checkbox" class="sala-pick" data-sku="' + skuPick + '"></label>' : '') +
         '<div class="stock-disp-thumb">' + thumb + '</div>' +
         '<div class="stock-disp-nombre">' + escapeHtmlSafe(nombreMostrado) + '</div>' +
       '</div>';
@@ -2000,6 +2006,12 @@
     cont.querySelectorAll('[data-desglose]').forEach(el => {
       el.addEventListener('click', (ev) => mostrarTooltipStock(ev, el.dataset.desglose));
     });
+    // Casillas para marcar productos en las tarjetas: frenamos el clic para que NO abra la ficha,
+    // y refrescamos el contador del botón "Enviar a cotización" (agregado 2026-07-27).
+    cont.querySelectorAll('.sala-pick').forEach(cb => {
+      cb.addEventListener('click', (ev) => ev.stopPropagation());
+    });
+    if (window.SALAS_actualizarContador) window.SALAS_actualizarContador();
     // Buscador de las tarjetas "Stock disponible" / "Faltantes" (pedido de Rayen 2026-07-22).
     _wireBuscarGrid('stock-disp-buscar', 'stock-disp-grid-disponibles');
     _wireBuscarGrid('faltantes-buscar', 'stock-disp-grid-faltantes');
@@ -2813,24 +2825,34 @@
     tr.insertBefore(td, tr.firstChild);
   });
 
-  // 2) Juntar lo marcado: precio desde el catálogo (planilla); nombre y foto desde la fila.
+  // 2) Juntar TODO lo marcado en la página — filas de Bodega Y tarjetas. Dedup por SKU.
+  //    Precio desde el catálogo (planilla); nombre y foto desde la fila/tarjeta.
   function gather(){
-    var out = [];
-    tb.querySelectorAll("input.sala-pick:checked").forEach(function(cb){
-      var tr = cb.closest("tr"); if(!tr) return;
+    var vistos = {};
+    document.querySelectorAll("input.sala-pick:checked").forEach(function(cb){
       var sku = cb.getAttribute("data-sku") || "";
-      var nameCell = tr.querySelector(".name");
-      var nombre = "";
-      if(nameCell){ nombre = (nameCell.childNodes[0] && nameCell.childNodes[0].textContent) ? nameCell.childNodes[0].textContent.trim() : nameCell.textContent.trim(); }
-      var imgEl = tr.querySelector(".thumb img");
-      var img = imgEl ? (imgEl.getAttribute("src")||"") : "";
+      if(!sku) return;
+      if(vistos[sku]){ vistos[sku].cant += 1; return; }
+      var nombre = "", img = "";
+      var card = cb.closest(".stock-disp-card");
+      var row = cb.closest("tr");
+      if(card){
+        var nEl = card.querySelector(".stock-disp-nombre"); if(nEl) nombre = nEl.textContent.trim();
+        var iEl = card.querySelector(".stock-disp-thumb img"); if(iEl) img = iEl.getAttribute("src")||"";
+      } else if(row){
+        var nc = row.querySelector(".name");
+        if(nc) nombre = (nc.childNodes[0] && nc.childNodes[0].textContent) ? nc.childNodes[0].textContent.trim() : nc.textContent.trim();
+        var ri = row.querySelector(".thumb img"); if(ri) img = ri.getAttribute("src")||"";
+      }
       var c = (window.SALAS_CATALOGO && window.SALAS_CATALOGO[sku]) || {};
-      out.push({ sku:sku, nombre: nombre || c.n || sku, cant:1, precio: (c.p||0), img: img || c.img || "" });
+      vistos[sku] = { sku:sku, nombre: nombre || c.n || sku, cant:1, precio:(c.p||0), img: img || c.img || "" };
     });
-    return out;
+    return Object.keys(vistos).map(function(k){ return vistos[k]; });
   }
   function updCount(){ var b=document.getElementById("salaEnviarCount"); if(b) b.textContent = String(gather().length); }
-  tb.addEventListener("change", function(e){ if(e.target && e.target.classList && e.target.classList.contains("sala-pick")) updCount(); });
+  window.SALAS_actualizarContador = updCount; // lo llaman las tarjetas al repintarse
+  // Marcar/desmarcar cualquier casilla (fila o tarjeta) actualiza el contador. 'change' burbujea.
+  document.addEventListener("change", function(e){ if(e.target && e.target.classList && e.target.classList.contains("sala-pick")) updCount(); });
 
   var btn = document.getElementById("salaEnviarCotiz");
   if(btn) btn.addEventListener("click", function(){

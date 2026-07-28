@@ -1998,6 +1998,22 @@
   // Abre Gmail con un borrador ya redactado (no manda nada solo, Rayen revisa y envía) — se abre
   // en una pestaña nueva y Gmail lo autoguarda como borrador apenas se escribe algo.
   function _clp(n){ return '$' + Math.round(Number(n)||0).toLocaleString('es-CL'); }
+  // SKU de un producto faltante: usa el del stock; si el producto no tiene stock, lo toma del mapa
+  // de SKU conseguidos en Qinera (2026-07-27). Coincidencia por substring del nombre normalizado.
+  const _SKU_OVERRIDE = [
+    { m:'columpio cuddle', sku:'BJ-EV120030' },
+    { m:'look to learn', sku:'BJ-785-1' },
+    { m:'sensory guru', sku:'BJ-1000145' },
+    { m:'soporte de pie rehadapt', sku:'BJ-610' },
+    { m:'tabla scooter', sku:'BJ-61061500' },
+    { m:'tobii', sku:'BJ-I16' }
+  ];
+  function _skuFaltante(nombre, s){
+    if(s && s.sku) return s.sku;
+    const n = _smProdNorm(nombre || '');
+    for(let i=0;i<_SKU_OVERRIDE.length;i++){ if(n.indexOf(_SKU_OVERRIDE[i].m) !== -1) return _SKU_OVERRIDE[i].sku; }
+    return '';
+  }
   // Monto estimado de una cotización, según la lista de precios (venta con IVA) — aproximado.
   function _montoEstCotiz(c){
     let total = 0;
@@ -2025,7 +2041,7 @@
         + '<td class="cp">' + prodTxt + '</td></tr>';
     }).join('');
     const filasFalt = items.map(it => '<tr><td>' + escapeHtmlSafe(it.nombre || '(sin nombre)') + '</td>'
-      + '<td>' + escapeHtmlSafe((it.s && it.s.sku) || '—') + '</td>'
+      + '<td>' + escapeHtmlSafe(_skuFaltante(it.nombre, it.s) || '—') + '</td>'
       + '<td class="ct cf">' + it.falta + '</td></tr>').join('');
     const html = '<div class="inf-masthead"><div class="inf-eyebrow">OpenCluster Tech · Departamento Comercial</div>'
       + '<div class="inf-title">Informe de faltantes — Salas Multisensoriales</div>'
@@ -2048,7 +2064,7 @@
       + 'COTIZACIONES CONSIDERADAS (' + seleccionadas.length + '):\n'
       + seleccionadas.map(c => '- ' + c.cotizacion + ' | ' + (c.institucion||'') + ' | ' + (c.probabilidad||0) + '% | monto est. ' + _clp(_montoEstCotiz(c))).join('\n')
       + '\n\nFALTANTES (' + items.length + '):\n'
-      + items.map(it => '- ' + (it.nombre||'(sin nombre)') + ' | SKU: ' + ((it.s && it.s.sku)||'—') + ' | faltan ' + it.falta + ' (pide ' + it.pedido + ', stock ' + it.stockTotal + ')').join('\n')
+      + items.map(it => '- ' + (it.nombre||'(sin nombre)') + ' | SKU: ' + (_skuFaltante(it.nombre, it.s)||'—') + ' | faltan ' + it.falta + ' (pide ' + it.pedido + ', stock ' + it.stockTotal + ')').join('\n')
       + '\n\nSaludos,\nRayen';
     const asunto = 'Pedido nuevo — faltantes Sala Multisensorial (' + items.length + ' productos) — ' + _fechaHoyCL();
     _mostrarInforme(html, asunto, texto, MARIO_EMAIL);

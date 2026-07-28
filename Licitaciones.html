@@ -114,6 +114,20 @@
     font-size:11.5px;color:#7A5A22;line-height:1.5;}
   .ayuda-agil strong{font-weight:700;}
 
+  /* Revisadas */
+  .btn-check{background:var(--green-lt);color:var(--green);border-color:rgba(42,122,90,.25);}
+  .btn-check:hover{background:#D6F0E4;}
+  .btn-undo{background:#fff;color:var(--subtle);border-color:rgba(0,26,96,.15);}
+  .btn-undo:hover{background:var(--pale);color:var(--navy);}
+  .lic.revisada{background:#FBFCFE;}
+  .lic.revisada .lic-stripe{background:linear-gradient(180deg,#9FD8BE,#7FBFA3);}
+  .lic.revisada .lic-nombre{color:#5b6b84;text-decoration:line-through;text-decoration-color:rgba(91,107,132,.35);}
+  .tag-revisada{background:var(--green-lt);color:var(--green);}
+  .chip .cnt{display:inline-block;margin-left:6px;background:rgba(0,26,96,.1);border-radius:9px;padding:1px 7px;font-size:10.5px;}
+  .chip.on .cnt{background:rgba(255,255,255,.25);}
+  .chip-danger{border-color:rgba(180,69,60,.25);color:var(--red);}
+  .chip-danger:hover{background:var(--red-lt);border-color:rgba(180,69,60,.4);}
+
   .vacio{text-align:center;padding:50px 20px;color:var(--subtle);font-size:14px;}
 
   /* Nota de datos */
@@ -155,10 +169,10 @@
 
   <div class="wrap">
     <div class="stats">
-      <div class="stat s-green"><div class="stat-num" id="stVigentes">—</div><div class="stat-lbl">Vigentes</div></div>
-      <div class="stat s-gold"><div class="stat-num" id="stAgil">—</div><div class="stat-lbl">Compras Ágiles vigentes</div></div>
-      <div class="stat"><div class="stat-num" id="stLic">—</div><div class="stat-lbl">Licitaciones vigentes</div></div>
-      <div class="stat s-red"><div class="stat-num" id="stMonto">—</div><div class="stat-lbl">Monto en juego (vigente)</div></div>
+      <div class="stat s-green"><div class="stat-num" id="stVigentes">—</div><div class="stat-lbl">Por revisar</div></div>
+      <div class="stat s-gold"><div class="stat-num" id="stAgil">—</div><div class="stat-lbl">Compras Ágiles por revisar</div></div>
+      <div class="stat"><div class="stat-num" id="stLic">—</div><div class="stat-lbl">Licitaciones por revisar</div></div>
+      <div class="stat s-red"><div class="stat-num" id="stMonto">—</div><div class="stat-lbl">Monto en juego</div></div>
     </div>
 
     <div class="nota" id="notaDatos"></div>
@@ -176,6 +190,14 @@
       <div class="chips" id="chipsEstado">
         <div class="chip on" data-estado="vigentes">Solo vigentes</div>
         <div class="chip" data-estado="todas">Incluir cerradas</div>
+      </div>
+      <div class="chips" id="chipsRevision">
+        <div class="chip on" data-rev="pendientes">Por revisar<span class="cnt" id="cntPend">0</span></div>
+        <div class="chip" data-rev="revisadas">Revisadas<span class="cnt" id="cntRev">0</span></div>
+        <div class="chip" data-rev="todas">Ver todas</div>
+      </div>
+      <div class="chips">
+        <div class="chip chip-danger" id="btnResetRev" title="Devuelve todas las revisadas a la lista de por revisar">Desmarcar todas</div>
       </div>
     </div>
 
@@ -244,7 +266,24 @@ function urlLic(id){return 'https://www.mercadopublico.cl/Procurement/Modules/RF
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
 // ── Estado de filtros ──
-var fTipo='todos', fEstado='vigentes', fTexto='';
+var fTipo='todos', fEstado='vigentes', fRev='pendientes', fTexto='';
+
+// ── Revisadas (se guardan en este navegador) ──
+var LS_KEY='oct_lic_revisadas';
+var REVISADAS={};
+try{ REVISADAS=JSON.parse(localStorage.getItem(LS_KEY)||'{}')||{}; }catch(e){ REVISADAS={}; }
+function guardarRev(){ try{ localStorage.setItem(LS_KEY,JSON.stringify(REVISADAS)); }catch(e){} }
+function estaRevisada(id){ return !!REVISADAS[id]; }
+function marcarRevisada(id){
+  REVISADAS[id]=new Date().toISOString().substring(0,10); guardarRev();
+  toast('Marcada como revisada — la encuentras en «Revisadas»'); render();
+}
+function desmarcarRevisada(id){ delete REVISADAS[id]; guardarRev(); toast('Devuelta a «Por revisar»'); render(); }
+function fechaRev(id){
+  var v=REVISADAS[id]; if(!v||v.length<10) return '';
+  var p=v.substring(0,10).split('-');
+  return p[2]+'-'+p[1]+'-'+p[0];
+}
 
 function badgeDias(d){
   if(d<0)  return {cls:'vencida', txt:'Cerrada'};
@@ -270,6 +309,8 @@ function render(){
     var d=diasRestantes(x.cierre);
     if(fEstado==='vigentes' && d<0) return false;
     if(fTipo!=='todos' && x.tipo!==fTipo) return false;
+    if(fRev==='pendientes' && estaRevisada(x.id)) return false;
+    if(fRev==='revisadas'  && !estaRevisada(x.id)) return false;
     if(fTexto){
       var blob=(x.id+' '+x.nombre+' '+x.inst+' '+x.tema).toLowerCase();
       if(blob.indexOf(fTexto)<0) return false;
@@ -277,31 +318,41 @@ function render(){
     return true;
   });
 
-  // Estadísticas (siempre sobre el total vigente, no sobre el filtro)
-  var vigentes=DATOS.filter(function(x){return diasRestantes(x.cierre)>=0;});
-  document.getElementById('stVigentes').textContent=vigentes.length;
-  document.getElementById('stAgil').textContent=vigentes.filter(function(x){return x.tipo==='agil';}).length;
-  document.getElementById('stLic').textContent=vigentes.filter(function(x){return x.tipo==='licitacion';}).length;
-  var suma=vigentes.reduce(function(a,x){return a+(x.monto||0);},0);
+  // Estadísticas: vigentes que aún no has revisado
+  var pend=DATOS.filter(function(x){return diasRestantes(x.cierre)>=0 && !estaRevisada(x.id);});
+  document.getElementById('stVigentes').textContent=pend.length;
+  document.getElementById('stAgil').textContent=pend.filter(function(x){return x.tipo==='agil';}).length;
+  document.getElementById('stLic').textContent=pend.filter(function(x){return x.tipo==='licitacion';}).length;
+  var suma=pend.reduce(function(a,x){return a+(x.monto||0);},0);
   document.getElementById('stMonto').textContent='$'+(suma/1000000).toFixed(1).replace('.',',')+'M';
 
+  // Contadores de los chips (sobre las vigentes)
+  var vig=DATOS.filter(function(x){return diasRestantes(x.cierre)>=0;});
+  document.getElementById('cntPend').textContent=vig.filter(function(x){return !estaRevisada(x.id);}).length;
+  document.getElementById('cntRev').textContent=DATOS.filter(function(x){return estaRevisada(x.id);}).length;
+
   if(!vis.length){
-    lista.innerHTML='<div class="vacio">No hay licitaciones que calcen con ese filtro.<br>Prueba con «Incluir cerradas» o borra la búsqueda.</div>';
+    var msg = fRev==='pendientes'
+      ? '¡Al día! No te queda ninguna por revisar con estos filtros.<br>Mira las que ya revisaste en «Revisadas».'
+      : 'No hay licitaciones que calcen con ese filtro.<br>Prueba con «Incluir cerradas» o borra la búsqueda.';
+    lista.innerHTML='<div class="vacio">'+msg+'</div>';
     return;
   }
 
   lista.innerHTML=vis.map(function(x){
     var d=diasRestantes(x.cierre), b=badgeDias(d);
     var esAgil=x.tipo==='agil';
+    var rev=estaRevisada(x.id);
     var link=esAgil?URL_AGIL:urlLic(x.id);
     return ''+
-    '<div class="lic tipo-'+x.tipo+(d<0?' vencida':'')+'">'+
+    '<div class="lic tipo-'+x.tipo+(d<0?' vencida':'')+(rev?' revisada':'')+'">'+
       '<div class="lic-stripe"></div>'+
       '<div class="lic-body">'+
         '<div class="lic-top">'+
           '<span class="tag '+(esAgil?'tag-agil':'tag-lic')+'">'+(esAgil?'Compra Ágil':'Licitación')+'</span>'+
           '<span class="tag '+(x.tema==='Sensorial'?'tag-sensorial':'tag-ayuda')+'">'+esc(x.tema)+'</span>'+
           '<span class="tag tag-dias '+b.cls+'">'+b.txt+'</span>'+
+          (rev?'<span class="tag tag-revisada">&#10003; Revisada '+fechaRev(x.id)+'</span>':'')+
         '</div>'+
         '<div class="lic-nombre">'+esc(x.nombre)+'</div>'+
         '<div class="lic-inst">'+
@@ -322,6 +373,15 @@ function render(){
             '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>'+
             'Copiar N°'+
           '</div>'+
+          (rev
+            ? '<div class="btn btn-undo" onclick="desmarcarRevisada(\''+x.id+'\')">'+
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M3.51 13a9 9 0 1 0 2.13-9.36L3 7"/></svg>'+
+                'Devolver a «Por revisar»'+
+              '</div>'
+            : '<div class="btn btn-check" onclick="marcarRevisada(\''+x.id+'\')">'+
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'+
+                'Ya la revisé'+
+              '</div>')+
         '</div>'+
         (esAgil?'<div class="ayuda-agil">Las Compras Ágiles no tienen link propio. Aprieta <strong>Copiar N°</strong>, luego <strong>Ir al buscador</strong> y pega el número <strong>'+esc(x.id)+'</strong> en el buscador de Mercado Público.</div>':'')+
       '</div>'+
@@ -362,15 +422,30 @@ document.getElementById('chipsEstado').addEventListener('click',function(e){
   this.querySelectorAll('.chip').forEach(function(x){x.classList.remove('on');});
   c.classList.add('on');fEstado=c.dataset.estado;render();
 });
+document.getElementById('chipsRevision').addEventListener('click',function(e){
+  var c=e.target.closest('.chip');if(!c)return;
+  this.querySelectorAll('.chip').forEach(function(x){x.classList.remove('on');});
+  c.classList.add('on');fRev=c.dataset.rev;render();
+});
+document.getElementById('btnResetRev').addEventListener('click',function(){
+  var n=Object.keys(REVISADAS).length;
+  if(!n){toast('No tienes ninguna marcada como revisada');return;}
+  if(confirm('¿Devolver las '+n+' licitaciones revisadas a la lista de «Por revisar»?')){
+    REVISADAS={};guardarRev();toast('Listo, todas vuelven a «Por revisar»');render();
+  }
+});
 document.getElementById('buscar').addEventListener('input',function(){
   fTexto=this.value.trim().toLowerCase();render();
 });
 
 document.getElementById('notaDatos').innerHTML=
-  '<strong>Datos cargados el '+FECHA_DATOS+'.</strong> Esta página no se actualiza sola todavía: '+
+  '<strong>Datos cargados el '+FECHA_DATOS+'.</strong> Esta página todavía no se llena sola: '+
   'los avisos nuevos siguen llegando por la notificación del escritorio y quedan guardados en '+
   '<strong>ALERTA_Licitaciones_Relevantes.txt</strong> en tu Drive. '+
-  'Los días que faltan para el cierre sí se recalculan cada vez que abres la página.';
+  'Los días que faltan para el cierre sí se recalculan cada vez que abres la página.<br>'+
+  'Cuando termines de mirar una, aprieta <strong>«Ya la revisé»</strong> y desaparece de la lista. '+
+  'Nunca se borra de verdad: queda en la pestaña <strong>«Revisadas»</strong> y puedes devolverla cuando quieras. '+
+  '<em>Estas marcas se guardan en este navegador y en este computador.</em>';
 
 render();
 </script>

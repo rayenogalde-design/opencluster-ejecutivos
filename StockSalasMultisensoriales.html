@@ -1440,7 +1440,7 @@
     <div class="panelhead">
       <div>
         <h2>Stock — Comparar cotizaciones</h2>
-        <p class="sug">Elige hasta 10 cotizaciones de Sala Multisensorial (-SM) para ver sus productos cruzados contra el stock — cada una por separado y también sumadas entre sí. Se traen en vivo desde el CRM.</p>
+        <p class="sug">Elige hasta 30 cotizaciones de Sala Multisensorial (-SM) para ver sus productos cruzados contra el stock — cada una por separado y también sumadas entre sí. Se traen en vivo desde el CRM.</p>
       </div>
     </div>
     <div class="controls">
@@ -1670,7 +1670,7 @@
     }
     cont.innerHTML = filtradas.map(c => {
       const marcada = cotizOrdenPrioridad.includes(c.cotizacion);
-      const bloqueada = !marcada && cotizOrdenPrioridad.length >= 10;
+      const bloqueada = !marcada && cotizOrdenPrioridad.length >= 30;
       const probBadge = c.probabilidad ? '<span class="tag">' + c.probabilidad + '%</span>' : '';
       const estadoBadge = c.ganada ? '<span class="tag" style="background:#16A34A22;color:#16A34A;">Ganada</span>'
         : (c.perdida ? '<span class="tag" style="background:#DC262622;color:#DC2626;">Descartada</span>' : '');
@@ -1693,7 +1693,7 @@
       chk.addEventListener('change', () => {
         const num = chk.dataset.num;
         if(chk.checked){
-          if(cotizOrdenPrioridad.length >= 10){ chk.checked = false; alert('Máximo 10 cotizaciones a la vez.'); return; }
+          if(cotizOrdenPrioridad.length >= 30){ chk.checked = false; alert('Máximo 30 cotizaciones a la vez.'); return; }
           cotizOrdenPrioridad.push(num); // se agrega al final = menor prioridad; se reordena arrastrando
         } else {
           const i = cotizOrdenPrioridad.indexOf(num);
@@ -1875,8 +1875,12 @@
     items.sort((a, b) => a.s.item.localeCompare(b.s.item, 'es'));
     return '<div class="stock-disp-grid" id="stock-disp-grid-disponibles">' + items.map(({ s, disponible, pedido }) => {
       const f = s.claveFicha ? FICHAS[s.claveFicha] : null;
-      const thumb = f && f.imagen ? '<img src="' + f.imagen + '" alt="" loading="lazy" />' : '<div class="stock-disp-noimg">Sin foto</div>';
-      const fichaAttr = f ? ' data-ficha="' + escapeHtmlSafe(s.claveFicha) + '"' : '';
+      // Respaldo de foto: si FICHAS no tiene imagen, usar la del catálogo (SalasACotizacion.js)
+      // — reutiliza el trabajo ya hecho y muestra las fotos que ya están en el repo. 2026-07-27.
+      const _imgCat = ((window.SALAS_CATALOGO && (SALAS_CATALOGO[s.sku] || SALAS_CATALOGO[s.claveFicha])) || {}).img || '';
+      const _img = (f && f.imagen) || _imgCat;
+      const thumb = _img ? '<img src="' + _img + '" alt="" loading="lazy" />' : '<div class="stock-disp-noimg">Sin foto</div>';
+      const fichaAttr = (s.claveFicha || s.sku) ? ' data-ficha="' + escapeHtmlSafe(s.claveFicha || s.sku) + '"' : '';
       // Pedido de Rayen 2026-07-22: la tarjeta SOLO muestra foto + nombre — precio/stock/link viven
       // en la ficha grande al tocar. Y ahí el stock son 2 números simples y nada más: cuánto queda
       // en bodega y cuánto queda en contenedor DESPUÉS de descontar lo pedido por estas
@@ -1909,12 +1913,16 @@
   // directo a un pedido nuevo. Devuelve también la lista cruda (para el botón de correo).
   function _faltantesLista(seleccionadas){
     const demanda = _demandaPorKey(seleccionadas);
+    // Nombre que viene en la cotización, por si el producto no calza con el stock (así no queda
+    // "(sin nombre de stock)") — 2026-07-27.
+    const displayPorKey = {};
+    seleccionadas.forEach(c => _smExtraerProductos(c.productos).forEach(p => { if(!displayPorKey[p.key]) displayPorKey[p.key] = p.display; }));
     const items = Object.keys(demanda).map(key => {
       const s = STOCK_SM[key];
       const pedido = demanda[key];
       const stockTotal = s ? (s.total || 0) : 0;
       const falta = pedido - stockTotal;
-      const nombre = s ? s.item : null;
+      const nombre = (s && s.item) || displayPorKey[key] || null;
       return { key, s, nombre, pedido, stockTotal, falta };
     }).filter(x => x.falta > 0);
     items.sort((a, b) => (a.nombre || a.key).localeCompare(b.nombre || b.key, 'es'));
@@ -1925,8 +1933,10 @@
     if (!items.length) return '<p class="incluidos-vacio">No falta stock para ninguno de los productos pedidos en estas cotizaciones.</p>';
     return '<div class="stock-disp-grid" id="stock-disp-grid-faltantes">' + items.map(({ s, nombre, pedido, stockTotal, falta }) => {
       const f = (s && s.claveFicha) ? FICHAS[s.claveFicha] : null;
-      const thumb = f && f.imagen ? '<img src="' + f.imagen + '" alt="" loading="lazy" />' : '<div class="stock-disp-noimg">Sin foto</div>';
-      const fichaAttr = f ? ' data-ficha="' + escapeHtmlSafe(s.claveFicha) + '"' : '';
+      const _imgCat = ((window.SALAS_CATALOGO && (SALAS_CATALOGO[(s && s.sku)] || SALAS_CATALOGO[(s && s.claveFicha)])) || {}).img || '';
+      const _img = (f && f.imagen) || _imgCat;
+      const thumb = _img ? '<img src="' + _img + '" alt="" loading="lazy" />' : '<div class="stock-disp-noimg">Sin foto</div>';
+      const fichaAttr = (s && (s.claveFicha || s.sku)) ? ' data-ficha="' + escapeHtmlSafe(s.claveFicha || s.sku) + '"' : '';
       // Tarjeta solo foto + nombre (igual que "Stock disponible") — el resto vive en la ficha.
       const nombreMostrado = (f && f.nombre) || nombre || '(sin nombre de stock)';
       const notaBodega = (f && f.nombre && nombre && f.nombre.toLowerCase() !== nombre.toLowerCase()) ? (' (bodega: ' + nombre + ')') : '';
@@ -2066,8 +2076,8 @@
   if (btnMarcarTodas) btnMarcarTodas.addEventListener('click', () => {
     const qActual = (document.getElementById('cotiz-buscar') || {}).value || '';
     const filtradas = cotizFiltradasActuales(qActual);
-    if (filtradas.length > 10) alert('Hay ' + filtradas.length + ' cotizaciones con ese filtro — se marcaron las primeras 10 (el máximo del comparador). Achica la búsqueda o el filtro de probabilidad para elegir otras.');
-    cotizOrdenPrioridad = filtradas.slice(0, 10).map(c => c.cotizacion);
+    if (filtradas.length > 30) alert('Hay ' + filtradas.length + ' cotizaciones con ese filtro — se marcaron las primeras 30 (el máximo del comparador). Achica la búsqueda o el filtro de probabilidad para elegir otras.');
+    cotizOrdenPrioridad = filtradas.slice(0, 30).map(c => c.cotizacion);
     renderListaCotizaciones(qActual);
     renderComparacionCotizaciones();
   });
@@ -2552,11 +2562,17 @@
 
   function abrirFicha(clave, extra) {
     extra = extra || {};
-    const f = FICHAS[clave];
+    let f = FICHAS[clave];
+    // Respaldo: si no hay ficha interna, armar una mínima con el catálogo (al menos foto + nombre).
+    if (!f && window.SALAS_CATALOGO && SALAS_CATALOGO[clave]) {
+      const _c = SALAS_CATALOGO[clave];
+      f = { nombre: _c.n || clave, imagen: _c.img || '', precio: '', sinFicha: true };
+    }
     if (!f) return;
     fichaModalNombre.textContent = f.nombre;
     fichaModalPrecio.textContent = f.precio;
-    const imagenes = f.imagenes && f.imagenes.length ? f.imagenes : (f.imagen ? [f.imagen] : []);
+    let imagenes = f.imagenes && f.imagenes.length ? f.imagenes : (f.imagen ? [f.imagen] : []);
+    if (!imagenes.length && window.SALAS_CATALOGO && SALAS_CATALOGO[clave] && SALAS_CATALOGO[clave].img) imagenes = [SALAS_CATALOGO[clave].img];
     if (imagenes.length) {
       mostrarImagenFicha(imagenes[0], f.nombre);
       fichaModalThumbs.innerHTML = imagenes.length > 1

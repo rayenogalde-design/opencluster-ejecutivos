@@ -2563,7 +2563,13 @@
   function abrirFicha(clave, extra) {
     extra = extra || {};
     let f = FICHAS[clave];
-    // Respaldo: si no hay ficha interna, armar una mínima con el catálogo (al menos foto + nombre).
+    // Respaldo 1: ficha completa (descripción, usos, especificaciones) desde SalasFichas.js.
+    if (!f && window.SALAS_FICHAS && SALAS_FICHAS[clave]) {
+      const _sf = SALAS_FICHAS[clave];
+      f = { nombre: _sf.n || clave, imagen: _sf.img || '', precio: '',
+            descripcion: _sf.desc || '', caracteristicas_tecnicas: _sf.caract || '', indicado_para: _sf.usos || '' };
+    }
+    // Respaldo 2: al menos foto + nombre desde el catálogo de precios.
     if (!f && window.SALAS_CATALOGO && SALAS_CATALOGO[clave]) {
       const _c = SALAS_CATALOGO[clave];
       f = { nombre: _c.n || clave, imagen: _c.img || '', precio: '', sinFicha: true };
@@ -2818,6 +2824,7 @@
   🧾 Enviar a cotización
   <span id="salaEnviarCount" style="background:#e8b84b;color:#0b2a4a;border-radius:12px;padding:1px 8px;font-size:12px;min-width:20px;text-align:center;">0</span>
 </button>
+<script src="SalasFichas.js"></script>
 <script src="SalasACotizacion.js"></script>
 <script>
 (function(){

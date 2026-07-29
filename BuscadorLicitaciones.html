@@ -66,6 +66,7 @@
   .item-detalle mark{background:var(--hl);padding:0 2px;border-radius:3px;}
   .item-detalle a.qin{display:inline-block;font-weight:700;color:var(--navy);}
   .pend{color:var(--falta);font-weight:700;font-size:12px;}
+  .vok{color:#2e7d32;font-weight:700;font-size:12px;}
   .vacio{text-align:center;color:var(--mist);padding:24px 10px;font-size:14px;background:var(--card);border:1px dashed var(--line);border-radius:12px;}
   .lst{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-top:16px;}
   .lst-res{font-size:13px;margin-bottom:8px;color:var(--mist);}
@@ -109,7 +110,8 @@
     <div id="salida"></div>
 
     <div class="disc">
-      <b>Importante:</b> esta herramienta <b>sugiere candidatos</b> y muestra en qué criterios coinciden — <b>no decide por ti</b>. "No aparece" significa que ese dato no está en la ficha de Qinera, no que el producto no lo cumpla. Revisa siempre la ficha completa contra el requisito antes de ofertar. Los productos marcados <span class="pend">specs pendientes</span> aún no tienen sus especificaciones cargadas.
+      <b>Importante:</b> esta herramienta <b>sugiere candidatos</b> y muestra en qué criterios coinciden — <b>no decide por ti</b>. "No aparece" significa que ese dato no está en la ficha de Qinera, no que el producto no lo cumpla. Revisa siempre la ficha completa contra el requisito antes de ofertar.
+      <br><br><b>Sellos de confianza</b> (revisión del 29-jul-2026): <span class="vok">✓ ficha comprobada en Qinera</span> = se abrió la ficha de Qinera y el código coincide, es el nivel más alto. <span class="vok">✓ medidas calzan</span> = las medidas y pesos de nuestra ficha coinciden con los de Qinera, pero la ficha no se abrió una por una. <span class="pend">⚠ sin ficha técnica</span> = el producto no existe en Qinera y no tenemos specs verificadas; la coincidencia es solo por el nombre. <span class="pend">⚠ specs de ficha propia</span> = los datos salen de nuestra web, no de Qinera. <span class="pend">⚠ código Qinera por confirmar</span> = el producto es el correcto, pero Qinera no publica su código; pídeselo al proveedor antes de ofertar.
     </div>
   </div>
 
@@ -174,6 +176,15 @@
     return items;
   }
 
+  // Nivel de la coincidencia: 2 alta, 1 media, 0 baja. Una medida suelta que
+  // calza (ej. "150 cm") NO basta para "alta" si el producto no cubre además
+  // buena parte del requisito: si no, un columpio de 150 cm de alto sale como
+  // coincidencia alta de un tubo de burbujas de 150 cm.
+  function rango(x){
+    if(x.cob>=0.55 || (x.medMatch.length>0 && x.cob>=0.35)) return 2;
+    if(x.cob>=0.3  || x.medMatch.length>0) return 1;
+    return 0;
+  }
   function evaluar(req){
     var qtokBase=tokens(req), qtok=expandir(qtokBase), qmed=medidas(req);
     // "criterios" mostrables = tokens base significativos (sin la expansión) + medidas
@@ -193,8 +204,14 @@
       var cob=criterios.length?pres.length/criterios.length:0;
       return {p:p,score:score,matched:matched,medMatch:medMatch,pres:pres,aus:aus,cob:cob};
     }).filter(function(x){return x.score>0;});
-    puntuados.sort(function(a,b){return b.score-a.score;});
-    return {criterios:criterios, resultados:puntuados.slice(0,8)};
+    // Ordenar por CALIDAD de la coincidencia (cuántos criterios del requisito
+    // cubre), no por cantidad bruta de palabras: si no, un producto que repite
+    // una palabra en su nombre le gana a otro que cumple casi todo el requisito.
+    puntuados.sort(function(a,b){ var d=rango(b)-rango(a); if(d)return d; var c=b.cob-a.cob; if(c)return c; return b.score-a.score; });
+    // Si nada llega al umbral, hay que decirlo: mostrar 3 productos que coinciden
+    // en una palabra suelta se lee como "sí tenemos algo" y no es verdad.
+    var flojo=(puntuados.filter(function(x){return rango(x)>0;}).length===0);
+    return {criterios:criterios, resultados:puntuados.slice(0,8), flojo:flojo};
   }
 
   var ULTIMO_TEXTO='';
@@ -210,14 +227,16 @@
       var ev=evaluar(req);
       if(multi){ html+='<div class="reqhead">Requisito '+(ri+1)+'</div><div class="reqsub">'+esc(req.length>160?req.slice(0,160)+'…':req)+'</div>'; textoExport+='REQUISITO '+(ri+1)+': '+req+'\n'; }
       if(ev.resultados.length===0){ html+='<div class="vacio">Ningún producto coincide con este requisito. Prueba otras palabras clave.</div>'; textoExport+='  (sin coincidencias)\n\n'; return; }
+      if(ev.flojo){ html+='<div class="vacio"><b>Ningún producto coincide claramente con este requisito.</b><br>Lo de abajo coincide solo en una o dos palabras sueltas — lo más probable es que no corresponda.</div>'; textoExport+='  (SIN COINCIDENCIAS CLARAS - lo siguiente es dudoso)\n'; }
       html+='<div class="res">';
       ev.resultados.forEach(function(x,idx){
         var p=x.p, id='r'+ri+'_'+idx;
-        var nivel=(x.cob>=0.55||x.medMatch.length>0)?'alta':(x.cob>=0.3?'media':'baja');
+        var r=rango(x); var nivel=(r===2)?'alta':(r===1?'media':'baja');
         var nivelTxt=nivel==='alta'?'Coincidencia alta':(nivel==='media'?'Coincidencia media':'Coincidencia baja');
         var foto=p.foto?'<img class="item-foto" src="'+esc(p.foto)+'" alt="" loading="lazy">':'<div class="item-foto noimg">Sin foto</div>';
         var sku=[p.ref,p.octech].filter(Boolean).join(' · ');
         var pend=p._pend?' <span class="pend">(specs pendientes)</span>':'';
+        var avisos=sellos(p);
         var chipsSi=x.pres.map(function(w){return '<span class="chip si">✓ '+esc(w)+'</span>';}).join('');
         var chipsNo=x.aus.map(function(w){return '<span class="chip no">— '+esc(w)+'</span>';}).join('');
         var link=p.url?('<p><a class="qin" href="'+esc(p.url)+'" target="_blank" rel="noopener">Ver ficha original en Qinera →</a></p>'):'';
@@ -227,7 +246,7 @@
           +(p.usos?('<h4>Usos</h4><p>'+resaltar(p.usos,x.matched)+'</p>'):'')
           +link+'</div>';
         html+='<div class="item '+nivel+'"><div class="item-head">'+foto
-          +'<div class="item-main"><div class="item-nom">'+esc(p.nombre)+pend+'</div><div class="item-sku">'+esc(sku)+'</div><div class="item-precio">'+precioTxt(p)+'</div></div>'
+          +'<div class="item-main"><div class="item-nom">'+esc(p.nombre)+pend+avisos+'</div><div class="item-sku">'+esc(sku)+'</div><div class="item-precio">'+precioTxt(p)+'</div></div>'
           +'<span class="nivel '+nivel+'">'+nivelTxt+'</span></div>'
           +'<div class="crit"><div class="grp"><span class="lab">Cumple en:</span> '+(chipsSi||'—')+'</div>'
           +(chipsNo?('<div class="grp"><span class="lab">No aparece en la ficha:</span> '+chipsNo+'</div>'):'')+'</div>'
@@ -246,13 +265,29 @@
   function resaltar(texto,terms){ var t=esc(texto),u={}; terms.forEach(function(w){if(w.length>=4)u[w]=1;}); Object.keys(u).forEach(function(w){ try{var re=new RegExp('('+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','ig'); t=t.replace(re,'<mark>$1</mark>'); }catch(e){} }); return t; }
 
   function estadoDe(p){ var e=String(p.especificaciones||''); if(e.indexOf(PEND)>=0)return 'pend'; if(e.trim().length<15)return 'sin'; return 'ok'; }
+
+  // Sellos de confianza: de dónde salen las specs y hasta dónde se comprobaron.
+  function sellos(p){
+    var s='';
+    if(p.verificacion==='sin-ficha')      s+=' <span class="pend">⚠ sin ficha técnica</span>';
+    else if(p.verificacion==='ficha-abierta') s+=' <span class="vok">✓ ficha comprobada en Qinera</span>';
+    else if(p.verificacion==='numeros-ok')    s+=' <span class="vok">✓ medidas calzan</span>';
+    if(p.fuente_specs==='opencluster') s+=' <span class="pend">⚠ specs de ficha propia, no de Qinera</span>';
+    if(p.fuente_specs==='mixta')       s+=' <span class="pend">specs Qinera + ficha propia</span>';
+    if(p.ref_estado==='por-confirmar') s+=' <span class="pend">⚠ código Qinera por confirmar</span>';
+    return s;
+  }
   function renderListado(){
     var cont=document.getElementById('listado'), btn=document.getElementById('verTodos');
     if(cont.getAttribute('data-open')==='1'){ cont.innerHTML=''; cont.setAttribute('data-open','0'); btn.textContent='📋 Todos los productos ('+PRODUCTOS.length+')'; return; }
-    var ok=0,pend=0,sin=0;
+    var ok=0,num=0,pend=0,sin=0;
     var filas=PRODUCTOS.slice().sort(function(a,b){return String(a.nombre||'').localeCompare(String(b.nombre||''),'es');}).map(function(p,idx){
-      var st=estadoDe(p); if(st==='ok')ok++; else if(st==='pend')pend++; else sin++;
-      var badge=st==='ok'?'<span class="st st-ok">✓ con specs</span>':(st==='pend'?'<span class="st st-pend">⚠ pendiente</span>':'<span class="st st-sin">✗ sin specs</span>');
+      var v=p.verificacion||'';
+      if(v==='sin-ficha')sin++; else if(v==='ficha-abierta')ok++; else if(v==='numeros-ok')num++; else pend++;
+      var badge=(v==='ficha-abierta')?'<span class="st st-ok">✓ comprobada en Qinera</span>'
+               :(v==='numeros-ok')?'<span class="st st-ok">✓ medidas calzan</span>'
+               :(v==='sin-ficha')?'<span class="st st-sin">✗ sin ficha</span>'
+               :'<span class="st st-pend">⚠ sin verificar</span>';
       var sku=[p.ref,p.octech].filter(Boolean).join(' · ');
       var foto=p.foto?'<img class="lst-foto" src="'+esc(p.foto)+'" loading="lazy" alt="">':'<span class="lst-foto"></span>';
       var id='lstd'+idx;
@@ -260,7 +295,7 @@
       var det='<div class="item-detalle" id="'+id+'"><h4>Especificaciones técnicas (Qinera)</h4><p>'+esc(p.especificaciones||'—')+'</p><h4>Descripción</h4><p>'+esc(p.descripcion||'—')+'</p>'+(p.usos?('<h4>Usos</h4><p>'+esc(p.usos)+'</p>'):'')+link+'</div>';
       return '<div class="lst-item"><div class="lst-row">'+foto+'<div class="lst-main"><div class="lst-nom">'+esc(p.nombre)+'</div><div class="lst-sku">'+esc(sku)+'</div><div class="lst-precio">'+precioTxt(p)+'</div></div>'+badge+'</div><span class="toggle lsttoggle" data-det="'+id+'">Ver ficha ▾</span>'+det+'</div>';
     }).join('');
-    var res='<div class="lst-res"><b>'+PRODUCTOS.length+' productos cargados</b> — <span class="st-ok">'+ok+' con specs</span> · <span class="st-pend">'+pend+' pendientes</span> · <span class="st-sin">'+sin+' sin specs</span></div>';
+    var res='<div class="lst-res"><b>'+PRODUCTOS.length+' productos cargados</b> — <span class="st-ok">'+ok+' con ficha comprobada en Qinera</span> · <span class="st-ok">'+num+' con medidas que calzan</span> · <span class="st-pend">'+pend+' sin verificar</span> · <span class="st-sin">'+sin+' sin ficha técnica</span></div>';
     cont.innerHTML='<div class="lst">'+res+filas+'</div>';
     cont.setAttribute('data-open','1'); btn.textContent='✕ Ocultar listado';
     Array.prototype.forEach.call(cont.querySelectorAll('.lsttoggle'),function(t){ t.addEventListener('click',function(){var d=document.getElementById(t.getAttribute('data-det')); if(d){d.classList.toggle('open'); t.textContent=d.classList.contains('open')?'Ocultar ficha ▴':'Ver ficha ▾';}}); });

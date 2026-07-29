@@ -1,8 +1,7 @@
 // Equivalencias entre como se escribe un producto en las COTIZACIONES
-// y el SKU real de la bodega. Confirmadas una por una por Rayen (29-jul-2026)
-// con la pagina UnificarNombres.html.
+// y el SKU real de la bodega. Confirmadas con Rayen (29-jul-2026) usando
+// la pagina UnificarNombres.html, mas las que se pudieron confirmar POR CODIGO.
 // La clave es el nombre normalizado: minusculas, sin tildes ni espacios.
-// Para agregar una nueva, genera de nuevo UnificarNombres.html y responde ahi.
 window.STOCK_ALIAS_SKU = {
   "linealedlumineaparatecho": "BJ-LLLT",
   "linealedlumineaparatecho5metros": "BJ-LLLT",
@@ -18,17 +17,43 @@ window.STOCK_ALIAS_SKU = {
   "conjuntodediscostactilesparapiesymanos": "BJ-E16807",
   "pelotadeterapiadediametro55cm": "BJ-51091000",
   "kitdeestimulacionsensorial": "BJ-KMAS",
-  "sacopropioceptivo": "BJ-EV2208"
+  "sacopropioceptivo": "BJ-EV2208",
+  "kitdematerialuv": "BJ-KUV",
+  "pelotacacahuete": "BJ-43700100",
+  "tubodeburbujasluminea": "BJ-LTUB",
+  "amplificadorvibracustico": "BJ-EMAVIBX"
 };
 
-// Nombres que aparecen en cotizaciones y que Rayen confirmo que NO tienen
-// equivalente en la bodega. Se listan aparte para distinguir "ya se reviso y no
-// esta" de "todavia no se ha revisado": al descontar una venta, estas lineas
-// deben avisar que no se pueden descontar, en vez de pasar en silencio.
+// Confirmados por CODIGO, sin criterio manual (mismo SKU, distinto nombre):
+//   "Kit de Material UV" -> BJ-KUV — en bodega figura como "Bolsa material Ultravioleta", mismo SKU
+//   "Pelota cacahuete" -> BJ-43700100 — es el nombre de Qinera del Mani terapeutico, mismo SKU
+//   "Tubo de Burbujas Luminea" -> BJ-LTUB — en bodega figura como "Tubo de burbujas pequeno", mismo SKU
+//   "Amplificador Vibracustico" -> BJ-EMAVIBX — error de tipeo de "vibroacustico"
+//   "Amplificador Vibracústico" -> BJ-EMAVIBX — error de tipeo de "vibroacustico"
+
+// Nombres que aparecen en cotizaciones y que NO tienen equivalente en bodega.
+// Se listan aparte para distinguir "ya se reviso y no esta" de "sin revisar":
+// al descontar una venta, estas lineas deben AVISAR, no pasar en silencio.
 window.STOCK_SIN_BODEGA = [
-  // La cortina de fibra optica es BJ-LCFIB en Qinera: producto completo, con
-  // soporte de techo, fibras y fuente de luz. En bodega solo hay BJ-LFIB3
-  // ("Fibra optica Luminea 3 mt"), que son las fibras sueltas: otro producto.
-  // Confirmado por Rayen el 29-jul-2026.
-  "cortinadefibraoptica"
+  "acolchadopared",
+  "alfombraluminea",
+  "allinonehpproone440238i71270016gbddr41tbssd",
+  "cortinadefibraoptica",
+  "fireballshx",
+  "liquidoparapompasdejabon1l",
+  "looktolearn1licenciaelectronica",
+  "munequerasytobilleras1kg",
+  "notebookchuwiaubookpro14i51250p16gbramddr51tbssd",
+  "pesoparahombroslolalaoruga1",
+  "planetaluminea",
+  "serviciointegraldeimplementacionyhabilitaciontecnica",
+  "softwaresensorygurueyefx2licenciadigital",
+  "soportedepierehadapt",
+  "tablascooter",
+  "tobiidynovoxi16"
 ];
+
+// Corresponden a: la cortina de fibra optica (BJ-LCFIB, distinta de la fibra
+// suelta BJ-LFIB3 — confirmado por Rayen), equipos de informatica, licencias de
+// software, productos de la linea de control con la mirada, servicios,
+// consumibles y variantes de otro tamano. Ninguno esta entre los 64 de bodega.

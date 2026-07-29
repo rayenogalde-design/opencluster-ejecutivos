@@ -183,6 +183,8 @@
   .inf-prob.p90 { background:rgba(47,125,85,0.16); color:#2f7d55; }
   .inf-prob.p50 { background:rgba(168,121,31,0.18); color:#a8791f; }
   .inf-prob.p0 { background:var(--paper); color:var(--mist); }
+  /* Cabecera de grupo en la tabla de cotizaciones: separa el 90% del 50%. */
+  .inf-grupo td { background:var(--navy); color:#fff; font-size:0.76rem; font-weight:800; letter-spacing:0.04em; text-transform:uppercase; padding:0.4rem 0.6rem; }
   .cotiz-stock-tooltip { position:fixed; z-index:1200; display:none; background:var(--navy); color:#fff; font-size:0.76rem; font-weight:600; padding:0.45rem 0.7rem; border-radius:6px; box-shadow:0 8px 24px -6px rgba(0,0,0,0.45); white-space:nowrap; pointer-events:none; }
   .cotiz-stock-tooltip.open { display:block; }
   .cotiz-detalle-campo { display:flex; gap:0.5rem; padding:0.3rem 0; border-bottom:1px solid var(--line); font-size:0.85rem; }
@@ -2112,13 +2114,27 @@
   function _abrirBorradorFaltantes(seleccionadas){
     const items = _faltantesLista(seleccionadas);
     if (!items.length) { alert('No hay faltantes para estas cotizaciones — no hace falta pedido.'); return; }
+    // Orden del informe (pedido de Rayen 2026-07-29): lo que importa no es el número
+    // de cotización sino la probabilidad de cierre. Primero las de 90%, después las de
+    // 50%, y dentro de cada grupo sí por número de cotización.
+    const ordenadas = seleccionadas.slice().sort((a, b) => {
+      const pa = a.probabilidad || 0, pb = b.probabilidad || 0;
+      if (pb !== pa) return pb - pa;
+      return String(a.cotizacion).localeCompare(String(b.cotizacion), 'es', { numeric: true });
+    });
     // Informe visual
-    const filasCot = seleccionadas.map(c => {
+    let _probGrupo = null;
+    const filasCot = ordenadas.map(c => {
       const prods = _smExtraerProductos(c.productos);
       const prodTxt = prods.map(p => escapeHtmlSafe(p.display) + ' x' + p.qty).join(', ');
       const _pr = c.probabilidad || 0;
       const _pill = '<span class="inf-prob ' + (_pr >= 90 ? 'p90' : (_pr >= 50 ? 'p50' : 'p0')) + '">' + _pr + '%</span>';
-      return '<tr><td><b>' + escapeHtmlSafe(c.cotizacion) + '</b></td>'
+      let _sep = '';
+      if (_pr !== _probGrupo) {
+        _probGrupo = _pr;
+        _sep = '<tr class="inf-grupo"><td colspan="5">' + (_pr ? _pr + '% de probabilidad de cierre' : 'Sin probabilidad asignada') + '</td></tr>';
+      }
+      return _sep + '<tr><td><b>' + escapeHtmlSafe(c.cotizacion) + '</b></td>'
         + '<td>' + escapeHtmlSafe(c.institucion || '') + '</td>'
         + '<td class="ct">' + _pill + '</td>'
         + '<td class="cr">' + _clp(_montoEstCotiz(c)) + '</td>'
@@ -2146,7 +2162,16 @@
       + 'Hola Mario,\n\n'
       + 'Detalle de faltantes para el próximo pedido (Salas Multisensoriales), al ' + _fechaHoyCL() + '.\n\n'
       + 'COTIZACIONES CONSIDERADAS (' + seleccionadas.length + '):\n'
-      + seleccionadas.map(c => '- ' + c.cotizacion + ' | ' + (c.institucion||'') + ' | ' + (c.probabilidad||0) + '% | monto est. ' + _clp(_montoEstCotiz(c))).join('\n')
+      + (function(){
+          // Mismo orden y mismos grupos que el informe visual, para que el correo calce.
+          let g = null, primero = true;
+          return ordenadas.map(c => {
+            const pr = c.probabilidad || 0;
+            let enc = '';
+            if (pr !== g) { g = pr; enc = (primero ? '' : '\n') + '  [' + (pr ? pr + '% DE PROBABILIDAD DE CIERRE' : 'SIN PROBABILIDAD ASIGNADA') + ']\n'; primero = false; }
+            return enc + '- ' + c.cotizacion + ' | ' + (c.institucion||'') + ' | ' + pr + '% | monto est. ' + _clp(_montoEstCotiz(c));
+          }).join('\n');
+        })()
       + '\n\nFALTANTES (' + items.length + '):\n'
       + items.map(it => '- ' + (it.nombre||'(sin nombre)') + ' | SKU: ' + (_skuFaltante(it.nombre, it.s)||'—') + ' | faltan ' + it.falta + ' (pide ' + it.pedido + ', stock ' + it.stockTotal + ')').join('\n')
       + '\n\nSaludos,\nRayen';

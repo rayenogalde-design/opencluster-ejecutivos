@@ -2111,6 +2111,67 @@
     return { total, sinPrecio };
   }
   function _montoEstCotiz(c){ return _montoEstCotizDetalle(c).total; }
+  // Version del informe pensada para PEGAR EN EL CORREO. Gmail borra los <style> y
+  // las clases CSS, asi que aca TODO el estilo va escrito dentro de cada etiqueta.
+  // Si se usaran las clases del sitio, en Gmail llegaria sin formato.
+  function _informeParaCorreo(ordenadas, items){
+    const S = {
+      th:    'background:#16324F;color:#ffffff;font-size:11px;font-weight:700;text-align:left;padding:7px 9px;letter-spacing:0.03em;',
+      td:    'border-bottom:1px solid #E3E7EC;padding:7px 9px;font-size:12px;color:#1B2430;vertical-align:top;',
+      grupo: 'background:#EAF0F6;color:#16324F;font-size:11px;font-weight:800;letter-spacing:0.06em;padding:6px 9px;border-bottom:2px solid #16324F;',
+      prods: 'border-bottom:1px solid #E3E7EC;padding:0 9px 7px;font-size:11px;color:#7C8794;',
+      secc:  'font-size:15px;font-weight:800;color:#16324F;margin:22px 0 7px;',
+      falta: 'border-bottom:1px solid #E3E7EC;padding:7px 9px;font-size:13px;font-weight:800;color:#B3261E;text-align:center;'
+    };
+    let g = null;
+    const filas = ordenadas.map(c => {
+      const pr = c.probabilidad || 0;
+      let sep = '';
+      if (pr !== g) {
+        g = pr;
+        sep = '<tr><td colspan="3" style="' + S.grupo + '">'
+            + (pr ? pr + '% DE PROBABILIDAD DE CIERRE' : 'SIN PROBABILIDAD ASIGNADA')
+            + '</td></tr>';
+      }
+      const prods = _smExtraerProductos(c.productos).map(p => escapeHtmlSafe(p.display) + ' x' + p.qty).join(' · ');
+      return sep
+        + '<tr><td style="' + S.td + 'white-space:nowrap;font-weight:700;">' + escapeHtmlSafe(c.cotizacion) + '</td>'
+        + '<td style="' + S.td + '">' + escapeHtmlSafe(c.institucion || '') + '</td>'
+        + '<td style="' + S.td + 'text-align:right;white-space:nowrap;">' + _clp(_montoEstCotiz(c)) + '</td></tr>'
+        + (prods ? '<tr><td></td><td colspan="2" style="' + S.prods + '">' + prods + '</td></tr>' : '');
+    }).join('');
+    const filasF = items.map(it =>
+      '<tr><td style="' + S.td + '">' + escapeHtmlSafe(it.nombre || '(sin nombre)') + '</td>'
+      + '<td style="' + S.td + 'white-space:nowrap;color:#7C8794;">' + escapeHtmlSafe(_skuFaltante(it.nombre, it.s) || '—') + '</td>'
+      + '<td style="' + S.falta + '">' + it.falta + '</td>'
+      + '<td style="' + S.td + 'text-align:center;color:#7C8794;">' + it.pedido + '</td>'
+      + '<td style="' + S.td + 'text-align:center;color:#7C8794;">' + it.stockTotal + '</td></tr>').join('');
+    return ''
+      + '<div style="font-family:Arial,Helvetica,sans-serif;color:#1B2430;font-size:13px;line-height:1.55;max-width:780px;">'
+      + '<div style="border-bottom:3px solid #16324F;padding-bottom:11px;">'
+      +   '<div style="font-size:10.5px;letter-spacing:0.09em;text-transform:uppercase;color:#7C8794;font-weight:700;">OpenCluster Tech · Departamento Comercial</div>'
+      +   '<div style="font-size:19px;font-weight:800;color:#16324F;margin-top:4px;">Informe de faltantes — Salas Multisensoriales</div>'
+      +   '<div style="font-size:12px;color:#7C8794;margin-top:5px;">' + _fechaHoyCL()
+      +     ' &nbsp;·&nbsp; ' + ordenadas.length + ' cotizaciones consideradas &nbsp;·&nbsp; <b style="color:#B3261E;">' + items.length + ' productos faltantes</b></div>'
+      + '</div>'
+      + '<p style="margin:16px 0 0;">Hola Mario,</p>'
+      + '<p style="margin:8px 0 0;">Te envío el detalle de faltantes para el próximo pedido de Salas Multisensoriales. Las cotizaciones van ordenadas por probabilidad de cierre: primero las de 90%, después las de 50%.</p>'
+      + '<div style="' + S.secc + '">Cotizaciones consideradas (' + ordenadas.length + ')</div>'
+      + '<table cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;">'
+      +   '<tr><th style="' + S.th + '">N° Cotización</th><th style="' + S.th + '">Institución</th>'
+      +   '<th style="' + S.th + 'text-align:right;">Monto est.</th></tr>' + filas
+      + '</table>'
+      + '<p style="font-size:11px;color:#7C8794;margin:7px 0 0;">El monto es estimado según la lista de precios (venta con IVA).</p>'
+      + '<div style="' + S.secc + '">Faltantes para el próximo pedido (' + items.length + ')</div>'
+      + '<table cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;">'
+      +   '<tr><th style="' + S.th + '">Producto</th><th style="' + S.th + '">SKU</th>'
+      +   '<th style="' + S.th + 'text-align:center;">Faltan</th><th style="' + S.th + 'text-align:center;">Se piden</th>'
+      +   '<th style="' + S.th + 'text-align:center;">En stock</th></tr>' + filasF
+      + '</table>'
+      + '<p style="margin:20px 0 0;">Saludos,<br>Rayen</p>'
+      + '</div>';
+  }
+
   function _abrirBorradorFaltantes(seleccionadas){
     const items = _faltantesLista(seleccionadas);
     if (!items.length) { alert('No hay faltantes para estas cotizaciones — no hace falta pedido.'); return; }
@@ -2156,36 +2217,44 @@
       + '<p class="inf-nota">El monto es estimado según la lista de precios (venta con IVA) — verifícalo.</p>'
       + '<div class="inf-seccion">Faltantes para el próximo pedido</div>'
       + '<div class="inf-scroll"><table class="inf-tabla"><thead><tr><th>Producto</th><th>SKU</th><th>Faltan</th></tr></thead><tbody>' + filasFalt + '</tbody></table></div>';
-    // Versión texto para el correo
+    // Versión texto: es el respaldo por si se manda sin formato. Va en BLOQUES y no
+    // en columnas separadas por "|", porque Gmail usa una tipografía de ancho variable
+    // y las columnas nunca quedan alineadas — se lee como una muralla de texto.
+    const _regla = '───────────────────────────────────────────';
     const texto = 'INFORME DE FALTANTES — SALAS MULTISENSORIALES\n'
-      + '(' + _fechaHoyCL() + ')\n\n'
+      + _fechaHoyCL() + '\n'
+      + seleccionadas.length + ' cotizaciones consideradas · ' + items.length + ' productos faltantes\n\n'
       + 'Hola Mario,\n\n'
-      + 'Detalle de faltantes para el próximo pedido (Salas Multisensoriales), al ' + _fechaHoyCL() + '.\n\n'
-      + 'COTIZACIONES CONSIDERADAS (' + seleccionadas.length + '):\n'
+      + 'Te envío el detalle de faltantes para el próximo pedido de Salas Multisensoriales.\n'
+      + 'Las cotizaciones van ordenadas por probabilidad de cierre: primero las de 90%, después las de 50%.\n\n'
+      + _regla + '\nCOTIZACIONES CONSIDERADAS (' + seleccionadas.length + ')\n' + _regla + '\n'
       + (function(){
-          // Mismo orden y mismos grupos que el informe visual, para que el correo calce.
-          let g = null, primero = true;
+          let g = null;
           return ordenadas.map(c => {
             const pr = c.probabilidad || 0;
             let enc = '';
-            if (pr !== g) { g = pr; enc = (primero ? '' : '\n') + '  [' + (pr ? pr + '% DE PROBABILIDAD DE CIERRE' : 'SIN PROBABILIDAD ASIGNADA') + ']\n'; primero = false; }
-            return enc + '- ' + c.cotizacion + ' | ' + (c.institucion||'') + ' | ' + pr + '% | monto est. ' + _clp(_montoEstCotiz(c));
-          }).join('\n');
+            if (pr !== g) { g = pr; enc = '\n▸ ' + (pr ? pr + '% DE PROBABILIDAD DE CIERRE' : 'SIN PROBABILIDAD ASIGNADA') + '\n'; }
+            return enc + '\n   ' + c.cotizacion + '  —  ' + _clp(_montoEstCotiz(c)) + '\n   ' + (c.institucion || '(sin institución)');
+          }).join('');
         })()
-      + '\n\nFALTANTES (' + items.length + '):\n'
-      + items.map(it => '- ' + (it.nombre||'(sin nombre)') + ' | SKU: ' + (_skuFaltante(it.nombre, it.s)||'—') + ' | faltan ' + it.falta + ' (pide ' + it.pedido + ', stock ' + it.stockTotal + ')').join('\n')
+      + '\n\n   El monto es estimado según la lista de precios (venta con IVA).\n\n'
+      + _regla + '\nFALTANTES PARA EL PRÓXIMO PEDIDO (' + items.length + ')\n' + _regla + '\n'
+      + items.map(it => '\n   ' + (it.nombre || '(sin nombre)') + '   (' + (_skuFaltante(it.nombre, it.s) || 'sin SKU') + ')'
+          + '\n   Faltan ' + it.falta + '  —  se piden ' + it.pedido + ', en stock ' + it.stockTotal).join('')
       + '\n\nSaludos,\nRayen';
     const asunto = 'Pedido nuevo — faltantes Sala Multisensorial (' + items.length + ' productos) — ' + _fechaHoyCL();
-    _mostrarInforme(html, asunto, texto, MARIO_EMAIL);
+    _mostrarInforme(html, asunto, texto, MARIO_EMAIL, _informeParaCorreo(ordenadas, items));
   }
   // Muestra el informe (vista previa linda) con opción de imprimir/PDF y abrir en Gmail.
-  function _mostrarInforme(html, asunto, texto, para){
+  function _mostrarInforme(html, asunto, texto, para, htmlMail){
     let ov = document.getElementById('correo-preview');
     if(!ov){ ov = document.createElement('div'); ov.id = 'correo-preview'; document.body.appendChild(ov); }
     ov.innerHTML = '<div class="cp-bg"></div><div class="cp-panel cp-panel-ancho"><div class="inf-doc">' + html + '</div>'
+      + (htmlMail ? '<div id="cp-mailsrc" style="position:absolute;left:-9999px;top:0;width:780px;"></div>' : '')
       + '<div class="cp-btns"><button type="button" class="btn-secundario" id="cp-cerrar">Cerrar</button>'
       + '<button type="button" class="btn-secundario" id="cp-imprimir">Imprimir / Guardar PDF</button>'
-      + '<button type="button" class="btn-primario" id="cp-enviar">Abrir en Gmail para enviar</button></div></div>';
+      + (htmlMail ? '<button type="button" class="btn-primario" id="cp-copiar">Copiar informe con formato</button>' : '')
+      + '<button type="button" class="btn-secundario" id="cp-enviar">Abrir en Gmail (texto simple)</button></div></div>';
     ov.style.display = 'flex';
     const cerrar = function(){ ov.style.display = 'none'; };
     document.getElementById('cp-cerrar').onclick = cerrar;
@@ -2194,6 +2263,40 @@
       const url = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(para)
         + '&su=' + encodeURIComponent(asunto) + '&body=' + encodeURIComponent(texto);
       window.open(url, '_blank'); cerrar();
+    };
+    // Copiar CON FORMATO y abrir el correo listo para pegar. Es la unica forma de que
+    // a Mario le llegue como informe y no como texto corrido: el link de Gmail solo
+    // acepta texto plano en el cuerpo, no HTML. Al copiar una seleccion, el navegador
+    // se lleva el HTML con los estilos y Gmail lo respeta al pegar.
+    const btnCopiar = document.getElementById('cp-copiar');
+    if (btnCopiar) btnCopiar.onclick = function(){
+      const src = document.getElementById('cp-mailsrc');
+      src.innerHTML = htmlMail;
+      let copiado = false;
+      try {
+        const sel = window.getSelection(); const rango = document.createRange();
+        rango.selectNodeContents(src); sel.removeAllRanges(); sel.addRange(rango);
+        copiado = document.execCommand('copy');
+        sel.removeAllRanges();
+      } catch(e) { copiado = false; }
+      if (copiado) {
+        btnCopiar.textContent = '✓ Copiado — pégalo con Ctrl+V';
+        // Se abre el borrador SIN cuerpo, para que ella pegue el informe con formato.
+        const url = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(para)
+          + '&su=' + encodeURIComponent(asunto);
+        window.open(url, '_blank');
+        setTimeout(function(){ btnCopiar.textContent = 'Copiar informe con formato'; }, 6000);
+      } else if (navigator.clipboard && window.ClipboardItem) {
+        navigator.clipboard.write([new ClipboardItem({
+          'text/html': new Blob([htmlMail], {type:'text/html'}),
+          'text/plain': new Blob([texto], {type:'text/plain'})
+        })]).then(function(){
+          btnCopiar.textContent = '✓ Copiado — abre Gmail y pega con Ctrl+V';
+          setTimeout(function(){ btnCopiar.textContent = 'Copiar informe con formato'; }, 6000);
+        }).catch(function(){ alert('No pude copiar automáticamente. Selecciona el informe de arriba con el mouse y cópialo con Ctrl+C.'); });
+      } else {
+        alert('No pude copiar automáticamente. Selecciona el informe de arriba con el mouse y cópialo con Ctrl+C.');
+      }
     };
     document.getElementById('cp-imprimir').onclick = function(){
       const w = window.open('', '_blank');

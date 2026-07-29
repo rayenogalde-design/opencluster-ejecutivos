@@ -2730,6 +2730,12 @@
       f = { nombre: _c.n || clave, imagen: _c.img || '', precio: '', sinFicha: true };
     }
     if (!f) return;
+    // Ficha sin texto: se completa con la descripción del producto en la tienda de OpenCluster
+    // (los 21 productos "solo web" no están en las fichas de Qinera). Rayen, 2026-07-28.
+    if (!f.descripcion && window.SALAS_FICHAS_WEB && SALAS_FICHAS_WEB[clave]) {
+      const _fw = SALAS_FICHAS_WEB[clave];
+      f = Object.assign({}, f, { nombre: f.nombre || _fw.n, descripcion: _fw.desc || '', url_producto: _fw.url || '', sinFicha: !_fw.desc });
+    }
     fichaModalNombre.textContent = f.nombre;
     // Precio: SIEMPRE el de la lista de precios de OCT (venta con IVA en pesos chilenos),
     // nunca el de Qinera (€). Sale del catálogo por SKU. Si no hay, no se muestra. 2026-07-27.
@@ -2993,6 +2999,7 @@
 </button>
 <script src="SalasSku.js"></script>
 <script src="SalasFichas.js"></script>
+<script src="SalasFichasWeb.js"></script>
 <script src="SalasFotosExtra.js"></script>
 <script src="SalasACotizacion.js"></script>
 <script>

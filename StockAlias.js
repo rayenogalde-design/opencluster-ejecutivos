@@ -34,6 +34,22 @@ window.STOCK_ALIAS_SKU = {
 // Nombres que aparecen en cotizaciones y que NO tienen equivalente en bodega.
 // Se listan aparte para distinguir "ya se reviso y no esta" de "sin revisar":
 // al descontar una venta, estas lineas deben AVISAR, no pasar en silencio.
+// Textos que aparecen en el campo "productos" de una cotizacion pero que NO son
+// productos: servicios, instalaciones, fletes. Se ignoran al leer la cotizacion, asi
+// que no cuentan como faltantes ni salen como producto en el informe a Mario.
+// Decision de Rayen (2026-07-29): el servicio de implementacion no tiene nada que
+// hacer en el stock.
+window.STOCK_NO_PRODUCTO = [
+  "serviciointegraldeimplementacionyhabilitaciontecnica",
+  "servicionintegraldeimplementacionyhabilitaciontecnica",
+  "serviciodeimplementacion",
+  "serviciodeinstalacion",
+  "instalacion",
+  "flete",
+  "transporte",
+  "despacho"
+];
+
 window.STOCK_SIN_BODEGA = [
   "acolchadopared",
   "alfombraluminea",
@@ -49,7 +65,6 @@ window.STOCK_SIN_BODEGA = [
   "planetaluminea",
   "sensorygoluminea",
   "sensorygolumineaplus",
-  "serviciointegraldeimplementacionyhabilitaciontecnica",
   "softwaresensorygurueyefx2licenciadigital",
   "soportedepierehadapt",
   "tablascooter",

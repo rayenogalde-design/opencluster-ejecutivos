@@ -21,9 +21,14 @@ window.STOCK_ALIAS_SKU = {
   "sacopropioceptivo": "BJ-EV2208"
 };
 
-// PENDIENTE DE CONFIRMAR — no se aplica todavia:
-//   "Cortina De Fibra Óptica" -> BJ-LFIB3 (Fibra óptica Luminea 3 mt)
-//   Motivo: la cortina de fibra optica es BJ-LCFIB en Qinera (un producto
-//   completo: soporte de techo + fibras + fuente de luz). BJ-LFIB3 es
-//   "Fibra optica Luminea 3 mt", que son las fibras sueltas. Si se cruzan,
-//   vender una cortina descontaria un producto distinto y mas barato.
+// Nombres que aparecen en cotizaciones y que Rayen confirmo que NO tienen
+// equivalente en la bodega. Se listan aparte para distinguir "ya se reviso y no
+// esta" de "todavia no se ha revisado": al descontar una venta, estas lineas
+// deben avisar que no se pueden descontar, en vez de pasar en silencio.
+window.STOCK_SIN_BODEGA = [
+  // La cortina de fibra optica es BJ-LCFIB en Qinera: producto completo, con
+  // soporte de techo, fibras y fuente de luz. En bodega solo hay BJ-LFIB3
+  // ("Fibra optica Luminea 3 mt"), que son las fibras sueltas: otro producto.
+  // Confirmado por Rayen el 29-jul-2026.
+  "cortinadefibraoptica"
+];

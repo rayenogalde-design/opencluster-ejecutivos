@@ -218,7 +218,10 @@
     // Si nada llega al umbral, hay que decirlo: mostrar 3 productos que coinciden
     // en una palabra suelta se lee como "sí tenemos algo" y no es verdad.
     var flojo=(puntuados.filter(function(x){return rango(x)>0;}).length===0);
-    return {criterios:criterios, resultados:puntuados.slice(0,8), flojo:flojo};
+    // `todos` = la lista completa. Hace falta para cruzar "cumple TODOS los
+    // requisitos": si solo mirara los 8 que se muestran, un producto que cumple
+    // pero queda 12º en un requisito generico se perderia del cruce.
+    return {criterios:criterios, resultados:puntuados.slice(0,8), todos:puntuados, flojo:flojo};
   }
 
   var ULTIMO_TEXTO='';
@@ -228,10 +231,52 @@
     document.getElementById('exportar').style.display='none';
     if(!q){ salida.innerHTML=''; return; }
     var reqs=partirRequisitos(q);
+    var evs=reqs.map(function(r){ return evaluar(r); });
     var html='', textoExport='INFORME DE COINCIDENCIAS — Buscador para Licitaciones\n\n';
     var multi=reqs.length>1;
+
+    // Un producto sirve de verdad solo si cumple TODOS los requisitos. Cuando hay
+    // varios, esto va primero: los que aparecen en todos, no los que salvan uno suelto.
+    if(multi){
+      var mapa={};
+      evs.forEach(function(ev,i){
+        ev.todos.forEach(function(x){
+          if(rango(x)<1) return;                 // las coincidencias bajas no cuentan
+          var k=x.p.nombre;
+          if(!mapa[k]) mapa[k]={p:x.p,enReq:{},cobTotal:0};
+          mapa[k].enReq[i]=true; mapa[k].cobTotal+=x.cob;
+        });
+      });
+      var todos=Object.keys(mapa).map(function(k){return mapa[k];})
+        .filter(function(m){ return Object.keys(m.enReq).length===reqs.length; })
+        .sort(function(a,b){ return b.cobTotal-a.cobTotal; });
+      html+='<div class="reqhead">Cumplen TODOS los requisitos ('+todos.length+')</div>';
+      if(!todos.length){
+        html+='<div class="vacio"><b>Ningún producto cumple los '+reqs.length+' requisitos a la vez.</b><br>Si pegaste una lista de productos distintos, esto es lo normal — mira el detalle de más abajo. Si los '+reqs.length+' son requisitos de UN mismo producto, entonces no tenemos ninguno que los cumpla todos.</div>';
+        textoExport+='NINGUN PRODUCTO CUMPLE LOS '+reqs.length+' REQUISITOS A LA VEZ\n\n';
+      } else {
+        // Ordenados por cuánto cubren en total; se muestran los mejores.
+        // Un requisito genérico ("indicado para TEA") lo cumple casi todo el
+        // catálogo, así que listarlos todos sería ruido.
+        var muestra=todos.slice(0,8);
+        if(todos.length>muestra.length){ html+='<div class="reqsub">Se muestran los '+muestra.length+' que mejor calzan, de '+todos.length+' que cumplen los '+reqs.length+' requisitos.</div>'; }
+        html+='<div class="res">';
+        muestra.forEach(function(m){
+          html+='<div class="item alta"><div class="item-head">'
+            +(m.p.foto?'<img class="item-foto" src="'+esc(m.p.foto)+'" alt="" loading="lazy">':'<div class="item-foto noimg">Sin foto</div>')
+            +'<div class="item-main"><div class="item-nom">'+esc(m.p.nombre)+sellos(m.p)+'</div>'
+            +'<div class="item-sku">'+esc([m.p.ref,m.p.octech].filter(Boolean).join(' · '))+'</div>'
+            +'<div class="item-precio">'+precioTxt(m.p)+'</div><div class="item-precio">'+stockTxt(m.p)+'</div></div>'
+            +'<span class="nivel alta">Cumple los '+reqs.length+'</span></div></div>';
+        });
+        html+='</div>';
+        textoExport+='CUMPLEN TODOS LOS REQUISITOS ('+todos.length+'):\n'+muestra.map(function(m){return '  • '+m.p.nombre+' ('+(m.p.ref||'')+')';}).join('\n')+'\n\n';
+      }
+      html+='<div class="reqhead">Detalle requisito por requisito</div>';
+    }
+
     reqs.forEach(function(req,ri){
-      var ev=evaluar(req);
+      var ev=evs[ri];
       if(multi){ html+='<div class="reqhead">Requisito '+(ri+1)+'</div><div class="reqsub">'+esc(req.length>160?req.slice(0,160)+'…':req)+'</div>'; textoExport+='REQUISITO '+(ri+1)+': '+req+'\n'; }
       if(ev.resultados.length===0){ html+='<div class="vacio">Ningún producto coincide con este requisito. Prueba otras palabras clave.</div>'; textoExport+='  (sin coincidencias)\n\n'; return; }
       if(ev.flojo){ html+='<div class="vacio"><b>Ningún producto coincide claramente con este requisito.</b><br>Lo de abajo coincide solo en una o dos palabras sueltas — lo más probable es que no corresponda.</div>'; textoExport+='  (SIN COINCIDENCIAS CLARAS - lo siguiente es dudoso)\n'; }

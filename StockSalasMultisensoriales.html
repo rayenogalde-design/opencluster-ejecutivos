@@ -218,7 +218,10 @@
   .stock-disp-thumb { width:100%; aspect-ratio:1/1; background:var(--paper); }
   .stock-disp-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
   .stock-disp-noimg { width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:var(--mist); font-size:0.65rem; text-align:center; padding:0.4rem; }
-  .stock-disp-nombre { padding:0.55rem 0.65rem 0.7rem; font-size:0.78rem; font-weight:700; color:var(--ink); line-height:1.25; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .stock-disp-nombre { padding:0.55rem 0.65rem 0.25rem; font-size:0.78rem; font-weight:700; color:var(--ink); line-height:1.25; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .stock-disp-precio { padding:0 0.65rem 0.6rem; font-size:0.82rem; font-weight:800; color:var(--navy, #001a60); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .stock-disp-precio span { font-size:0.66rem; font-weight:600; color:var(--mist); }
+  .stock-disp-precio.sinprecio { font-size:0.7rem; font-weight:600; color:var(--mist); }
   .stock-disp-card.falta { border-color:rgba(220,38,38,0.35); background:rgba(220,38,38,0.03); }
   .ficha-modal-scroll .stock-badge { display:block; width:fit-content; margin:0 0 1.2rem; font-size:1.05rem; font-weight:800; padding:0.6rem 1.1rem; border-radius:12px; }
   .price { white-space:nowrap; font-variant-numeric: tabular-nums; }
@@ -1936,12 +1939,19 @@
       const stockExtra = bodegaLibre + ' en bodega · ' + caminoLibre + ' en contenedor' + notaBodega;
       const buscable = (s.item + ' ' + nombreMostrado + ' ' + (s.sku || '')).toLowerCase();
       var skuPick = escapeHtmlSafe(s.sku || s.claveFicha || '');
+      // Precio de venta con IVA, siempre a la vista (pedido de Rayen 2026-07-28: "necesito ver el
+      // precio con IVA del producto siempre"). Sale de la lista de precios, nunca de Qinera (€).
+      var _pIva = (window.SALAS_CATALOGO && SALAS_CATALOGO[s.sku] && Number(SALAS_CATALOGO[s.sku].p)) || 0;
+      var precioCard = _pIva > 0
+        ? '<div class="stock-disp-precio">$' + _pIva.toLocaleString('es-CL') + ' <span>IVA inc.</span></div>'
+        : '<div class="stock-disp-precio sinprecio">Sin precio en la lista</div>';
       // Casilla en la esquina para marcar el producto y enviarlo a una cotización. Tocar la foto
       // sigue abriendo la ficha; tocar la casilla NO (se frena la propagación al conectar).
       return '<div class="stock-disp-card"' + fichaAttr + ' data-stock-extra="' + escapeHtmlSafe(stockExtra) + '" data-buscar="' + escapeHtmlSafe(buscable) + '">' +
         (skuPick ? '<label class="sala-pick-card" title="Marcar para cotización"><input type="checkbox" class="sala-pick" data-sku="' + skuPick + '"></label>' : '') +
         '<div class="stock-disp-thumb">' + thumb + '</div>' +
         '<div class="stock-disp-nombre">' + escapeHtmlSafe(nombreMostrado) + '</div>' +
+        precioCard +
         '<div class="stock-disp-ok-badge">' + disponible + (disponible == 1 ? ' disponible' : ' disponibles') + '</div>' +
       '</div>';
     }).join('') + '</div>';
@@ -3003,6 +3013,47 @@
     td.appendChild(cb);
     tr.insertBefore(td, tr.firstChild);
   });
+
+  // Precio de venta con IVA visible SIEMPRE, en todas las tablas (pedido de Rayen 2026-07-28:
+  // "necesito ver el precio con IVA del producto siempre"). Sale de la lista de precios por SKU;
+  // si el producto todavía no está en la planilla, se dice claramente en vez de dejarlo en blanco.
+  function _precioIvaDe(sku){
+    var c = (window.SALAS_CATALOGO && window.SALAS_CATALOGO[sku]) || null;
+    return c ? (Number(c.p) || 0) : 0;
+  }
+  function _celdaPrecio(sku){
+    var p = _precioIvaDe(sku);
+    var td = document.createElement("td");
+    td.className = "price";
+    if(p > 0){ td.innerHTML = '<strong>$' + p.toLocaleString("es-CL") + '</strong><span class="iva" style="display:block;font-size:0.66rem;font-weight:600;color:var(--mist);">IVA inc.</span>'; }
+    else { td.innerHTML = '<span style="font-size:0.7rem;color:var(--mist);">Sin precio en la lista</span>'; }
+    return td;
+  }
+  // Agrega la columna "Precio c/IVA" a una tabla de stock. posDesdeElFinal = cuántas columnas
+  // quedan a la derecha del precio (ej. 1 = queda antes de la última, que es "Nota").
+  function _agregarColumnaPrecio(tbodyId, titulo, posDesdeElFinal){
+    var tbody = document.getElementById(tbodyId);
+    if(!tbody) return;
+    var tabla = tbody.closest("table");
+    var filaCab = tabla ? tabla.querySelector("thead tr") : null;
+    if(filaCab){
+      var th = document.createElement("th");
+      th.textContent = titulo;
+      var ths = filaCab.querySelectorAll("th");
+      var ref = posDesdeElFinal > 0 ? ths[ths.length - posDesdeElFinal] : null;
+      if(ref) filaCab.insertBefore(th, ref); else filaCab.appendChild(th);
+    }
+    Array.prototype.forEach.call(tbody.querySelectorAll("tr"), function(tr){
+      var nc = tr.querySelector(".name");
+      var sku = nc ? (nc.getAttribute("data-ficha") || "") : "";
+      var td = _celdaPrecio(sku);
+      var tds = tr.querySelectorAll("td");
+      var ref2 = posDesdeElFinal > 0 ? tds[tds.length - posDesdeElFinal] : null;
+      if(ref2) tr.insertBefore(td, ref2); else tr.appendChild(td);
+    });
+  }
+  _agregarColumnaPrecio("tbody-stock-bodega", "Precio c/IVA", 1);   // queda antes de "Nota"
+  _agregarColumnaPrecio("tbody-stock-combinado", "Precio c/IVA", 0); // al final
 
   // Contenedor (en camino): mostrar venta neto y con IVA en PESOS, no euros (pedido Rayen 2026-07-27).
   var tbCam = document.getElementById("tbody-stock-camino");

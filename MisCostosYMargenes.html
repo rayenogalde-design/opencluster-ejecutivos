@@ -59,19 +59,13 @@ h1 { font-size:16.5px; margin:0; color:#fff; letter-spacing:-.01em; }
 .c-prov { font-size:9.5px; color:var(--ink-dim); padding:0 10px 5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .c-prov b { font-weight:700; }
 .c-prov .sk { font-family:ui-monospace,monospace; color:var(--ink-faint); }
-.costos { display:flex; background:var(--soft); border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
-.costos div { flex:1; padding:3px 10px 4px; }
-.costos div + div { border-left:1px solid var(--border); }
-.k { font-size:8px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-faint); display:block; }
-.v { font-family:ui-monospace,monospace; font-variant-numeric:tabular-nums; font-weight:700; font-size:11.5px; display:block; }
-table.listas { width:100%; border-collapse:collapse; }
-table.listas th { font-size:8px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-faint); text-align:right; padding:3px 10px 0; }
-table.listas th:first-child { text-align:left; }
-table.listas td { padding:1px 10px; text-align:right; font-family:ui-monospace,monospace; font-variant-numeric:tabular-nums; font-size:10.5px; }
-table.listas tr + tr td { border-top:1px solid var(--border); }
-table.listas td:first-child { text-align:left; font-family:inherit; font-weight:700; font-size:10px; color:var(--ink-dim); }
-table.listas td.venta { font-weight:700; font-size:11.5px; }
-table.listas tr:last-child td { padding-bottom:7px; }
+.mini { display:grid; grid-template-columns:repeat(4, 1fr); border-top:1px solid var(--border); }
+.mini > div { padding:4px 5px 5px; text-align:center; border-left:1px solid var(--border); min-width:0; }
+.mini > div:first-child { border-left:none; background:var(--soft); }
+.mini .h { font-size:7.5px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:var(--ink-faint); line-height:1.35; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mini .big { font-family:ui-monospace,monospace; font-variant-numeric:tabular-nums; font-weight:700; font-size:11px; line-height:1.3; }
+.mini .sm { font-family:ui-monospace,monospace; font-variant-numeric:tabular-nums; font-size:9px; color:var(--ink-faint); line-height:1.3; }
+.mini .mg { font-family:ui-monospace,monospace; font-size:9.5px; font-weight:700; line-height:1.3; }
 .mg-ok { color:var(--green); font-weight:700; }
 .mg-bajo { color:var(--red); font-weight:700; }
 .provs { display:flex; gap:4px; flex-wrap:wrap; padding:4px 10px 7px; border-top:1px dashed var(--border); }
@@ -162,18 +156,17 @@ function pintaCard(o, i){
      + (prov ? 'Pedir a <b>' + esc(prov) + '</b>' : '')
      + (sku ? ' <span class="sk">· ' + esc(sku) + '</span>' : '') + '</div>';
 
-  h += '<div class="costos"><div><span class="k">Costo neto</span><span class="v">' + (clp(d.costoNeto) || '—') + '</span></div>'
-     + '<div><span class="k">Costo c/IVA</span><span class="v">' + (clp(d.costoIva) || '—') + '</span></div></div>';
-
-  h += '<table class="listas"><tr><th>Lista</th><th>Venta c/IVA</th><th>Margen</th><th>Gano</th></tr>';
+  h += '<div class="mini">';
+  h += '<div><div class="h">Costo neto</div><div class="big">' + (clp(d.costoNeto) || '—') + '</div>'
+     + '<div class="h">c/IVA</div><div class="sm">' + (clp(d.costoIva) || '—') + '</div></div>';
   LISTAS.forEach(function(L){
     const x = d[L[0]] || {};
     const bajo = (x.mp != null && x.mp < 0.15);
-    h += '<tr><td>' + esc(L[1]) + '</td><td class="venta">' + (clp(x.v) || '—') + '</td>'
-       + '<td class="' + (bajo ? 'mg-bajo' : 'mg-ok') + '">' + (pct(x.mp) || '—') + '</td>'
-       + '<td>' + (clp(x.mm) || '—') + '</td></tr>';
+    h += '<div><div class="h">' + esc(L[1]) + '</div><div class="big">' + (clp(x.v) || '—') + '</div>'
+       + '<div class="mg ' + (bajo ? 'mg-bajo' : 'mg-ok') + '">' + (pct(x.mp) || '—') + '</div>'
+       + '<div class="sm">' + (clp(x.mm) || '—') + '</div></div>';
   });
-  h += '</table>';
+  h += '</div>';
 
   if (opciones.length > 1) {
     h += '<div class="provs">';

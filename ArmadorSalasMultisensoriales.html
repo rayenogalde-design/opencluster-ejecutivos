@@ -187,6 +187,9 @@
   tr.marked { background: rgba(255,126,0,0.07); }
   tr.hidden { display:none; }
   input.inc { width:16px; height:16px; cursor:pointer; }
+  input.cotpick { width:17px; height:17px; cursor:pointer; accent-color:#0b2a4a; }
+  .incluidos-box th.chk { font-size:0.62rem; letter-spacing:0.06em; text-transform:uppercase; color:var(--mist); width:62px; }
+  .incluidos-box td.chk { width:62px; text-align:center; }
   td.thumb { width:52px; cursor:pointer; }
   td.thumb img { width:46px; height:46px; object-fit:cover; border-radius:4px; display:block; }
   .noimg { width:46px; height:46px; border-radius:4px; background:var(--paper); border:1px dashed var(--line); font-size:0.55rem; color:var(--mist); display:flex; align-items:center; justify-content:center; text-align:center; }
@@ -419,7 +422,7 @@
       <h3>Productos de esta sala</h3>
       <div class="tablewrap">
         <table>
-          <thead><tr><th></th><th>Producto</th><th>Cant.</th><th>Precio</th><th></th></tr></thead>
+          <thead><tr><th class="chk">Cotizar</th><th></th><th>Producto</th><th>Cant.</th><th>Precio</th><th></th></tr></thead>
           <tbody id="tbody-incluidos-elemental"></tbody>
         </table>
       </div>
@@ -1810,7 +1813,7 @@
       <h3>Productos de esta sala</h3>
       <div class="tablewrap">
         <table>
-          <thead><tr><th></th><th>Producto</th><th>Cant.</th><th>Precio</th><th></th></tr></thead>
+          <thead><tr><th class="chk">Cotizar</th><th></th><th>Producto</th><th>Cant.</th><th>Precio</th><th></th></tr></thead>
           <tbody id="tbody-incluidos-simple"></tbody>
         </table>
       </div>
@@ -3201,7 +3204,7 @@
       <h3>Productos de esta sala</h3>
       <div class="tablewrap">
         <table>
-          <thead><tr><th></th><th>Producto</th><th>Cant.</th><th>Precio</th><th></th></tr></thead>
+          <thead><tr><th class="chk">Cotizar</th><th></th><th>Producto</th><th>Cant.</th><th>Precio</th><th></th></tr></thead>
           <tbody id="tbody-incluidos-shx-basic"></tbody>
         </table>
       </div>
@@ -4592,7 +4595,7 @@
       <h3>Productos de esta sala</h3>
       <div class="tablewrap">
         <table>
-          <thead><tr><th></th><th>Producto</th><th>Cant.</th><th>Precio</th><th></th></tr></thead>
+          <thead><tr><th class="chk">Cotizar</th><th></th><th>Producto</th><th>Cant.</th><th>Precio</th><th></th></tr></thead>
           <tbody id="tbody-incluidos-shx-full-adulto"></tbody>
         </table>
       </div>
@@ -5983,7 +5986,7 @@
       <h3>Productos de esta sala</h3>
       <div class="tablewrap">
         <table>
-          <thead><tr><th></th><th>Producto</th><th>Cant.</th><th>Precio</th><th></th></tr></thead>
+          <thead><tr><th class="chk">Cotizar</th><th></th><th>Producto</th><th>Cant.</th><th>Precio</th><th></th></tr></thead>
           <tbody id="tbody-incluidos-tea-is"></tbody>
         </table>
       </div>
@@ -7374,7 +7377,7 @@
       <h3>Productos de esta sala</h3>
       <div class="tablewrap">
         <table>
-          <thead><tr><th></th><th>Producto</th><th>Cant.</th><th>Precio</th><th></th></tr></thead>
+          <thead><tr><th class="chk">Cotizar</th><th></th><th>Producto</th><th>Cant.</th><th>Precio</th><th></th></tr></thead>
           <tbody id="tbody-incluidos-tea-shx"></tbody>
         </table>
       </div>
@@ -8765,7 +8768,7 @@
       <h3>Productos de esta sala</h3>
       <div class="tablewrap">
         <table>
-          <thead><tr><th></th><th>Producto</th><th>Cant.</th><th>Precio</th><th></th></tr></thead>
+          <thead><tr><th class="chk">Cotizar</th><th></th><th>Producto</th><th>Cant.</th><th>Precio</th><th></th></tr></thead>
           <tbody id="tbody-incluidos-calma"></tbody>
         </table>
       </div>
@@ -10156,7 +10159,7 @@
       <h3>Productos de esta sala</h3>
       <div class="tablewrap">
         <table>
-          <thead><tr><th></th><th>Producto</th><th>Cant.</th><th>Precio</th><th></th></tr></thead>
+          <thead><tr><th class="chk">Cotizar</th><th></th><th>Producto</th><th>Cant.</th><th>Precio</th><th></th></tr></thead>
           <tbody id="tbody-incluidos-shx-full-infantil"></tbody>
         </table>
       </div>
@@ -64320,6 +64323,20 @@
 
   // Tabla de "ya incluidos" arriba (solo existe en las pestañas "Por sala") — se repinta cada
   // vez que algo cambia, para no tener que buscar dos o tres productos perdidos en todo el listado.
+  // Casilla "Cotizar" de la tabla de arriba (pedido de Rayen 2026-07-28): antes no se podía elegir
+  // qué productos de la sala iban a la cotización — el botón flotante mandaba TODO lo marcado en
+  // TODAS las pestañas. Ahora cada producto incluido trae su casilla (marcada por defecto) y el
+  // botón manda solo los de la sala que se está viendo. Lo desmarcado se recuerda en el navegador.
+  const KEY_COTPICK = 'oc_sala_cotizar_off';
+  let cotOff = {};
+  try { cotOff = JSON.parse(localStorage.getItem(KEY_COTPICK) || '{}'); } catch (e) { cotOff = {}; }
+  function cotExcluido(sala, sku) { return !!cotOff[claveEstado(sala, sku)]; }
+  function setCotExcluido(sala, sku, off) {
+    const k = claveEstado(sala, sku);
+    if (off) cotOff[k] = 1; else delete cotOff[k];
+    localStorage.setItem(KEY_COTPICK, JSON.stringify(cotOff));
+  }
+
   function renderIncluidos(sala) {
     const tbody = document.getElementById('tbody-incluidos-' + sala);
     if (!tbody) return;
@@ -64329,15 +64346,22 @@
       const sku = chk.dataset.sku;
       const f = FICHAS[sku];
       const qty = Number(qtyInputDe(chk).value) || 1;
-      filas.push('<tr><td class="thumb">' + (f && f.imagen ? '<img src="' + f.imagen + '" alt="" />' : '') + '</td><td class="name">' + (f ? f.nombre : sku) + '</td><td>' + qty + '</td><td class="price">' + (f ? f.precio : '') + '</td><td><button class="btn-quitar" data-sku="' + sku + '">Quitar</button></td></tr>');
+      filas.push('<tr><td class="chk"><input type="checkbox" class="cotpick" data-sala="' + sala + '" data-sku="' + sku + '"' + (cotExcluido(sala, sku) ? '' : ' checked') + ' title="Incluir este producto en la cotización" /></td><td class="thumb">' + (f && f.imagen ? '<img src="' + f.imagen + '" alt="" />' : '') + '</td><td class="name">' + (f ? f.nombre : sku) + '</td><td>' + qty + '</td><td class="price">' + (f ? f.precio : '') + '</td><td><button class="btn-quitar" data-sku="' + sku + '">Quitar</button></td></tr>');
     });
-    tbody.innerHTML = filas.length ? filas.join('') : '<tr><td colspan="5" class="incluidos-vacio">Todavía no hay productos agregados a esta sala.</td></tr>';
+    tbody.innerHTML = filas.length ? filas.join('') : '<tr><td colspan="6" class="incluidos-vacio">Todavía no hay productos agregados a esta sala.</td></tr>';
+    tbody.querySelectorAll('.cotpick').forEach(pick => {
+      pick.addEventListener('change', () => {
+        setCotExcluido(sala, pick.dataset.sku, !pick.checked);
+        if (typeof window.SM_actualizarContadorCotizacion === 'function') window.SM_actualizarContadorCotizacion();
+      });
+    });
     tbody.querySelectorAll('.btn-quitar').forEach(btn => {
       btn.addEventListener('click', () => {
         const chk = document.querySelector('input.inc[data-sala="' + sala + '"][data-sku="' + btn.dataset.sku + '"]');
         if (chk) { chk.checked = false; chk.dispatchEvent(new Event('change')); }
       });
     });
+    if (typeof window.SM_actualizarContadorCotizacion === 'function') window.SM_actualizarContadorCotizacion();
   }
   recalcular('elemental');
   recalcular('simple');
@@ -64902,20 +64926,35 @@
 </script>
 
 <!-- ══ Enviar selección a una cotización ══ (agregado: modalidad Salas → Cotizador) -->
-<button id="salaEnviarCotiz" type="button" title="Crear una cotización con los productos marcados"
+<button id="salaEnviarCotiz" type="button" title="Crear una cotización con los productos marcados de la sala que estás viendo"
   style="position:fixed;right:18px;bottom:18px;z-index:99999;background:#0b2a4a;color:#fff;border:none;border-radius:30px;padding:13px 20px;font-size:14px;font-weight:700;font-family:'Open Sans',Arial,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.28);cursor:pointer;display:flex;align-items:center;gap:8px;">
-  🧾 Enviar a cotización
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h4"/></svg>
+  Enviar a cotización
   <span id="salaEnviarCount" style="background:#e8b84b;color:#0b2a4a;border-radius:12px;padding:1px 8px;font-size:12px;min-width:20px;text-align:center;">0</span>
 </button>
 <script src="SalasACotizacion.js"></script>
 <script>
 (function(){
   "use strict";
-  // Junta los productos marcados (✓) en cualquier pestaña. Deduplica por SKU sumando cantidades.
+  // Qué sala se está viendo ahora mismo: la pestaña abierta y, si es una pestaña por segmento,
+  // el nivel abierto dentro de ella (Presupuesto Bajo / Alto / Proyección).
+  function salaActiva(){
+    var panel = document.querySelector("main .panel.active") || document.querySelector(".panel.active");
+    if(!panel || !panel.id) return null;
+    var nivel = panel.querySelector(".nivel-panel.active");
+    if(nivel && nivel.id) return String(nivel.id).replace(/^nivelpanel-/, "");
+    return String(panel.id).replace(/^panel-/, "");
+  }
+  // Junta los productos de ESA sala: los marcados en su listado y, de la tabla "Productos de esta
+  // sala", solo los que tienen la casilla "Cotizar" activada. Deduplica por SKU sumando cantidades.
   function gather(){
+    var sala = salaActiva(); if(!sala) return [];
     var vistos = {};
-    document.querySelectorAll("input.inc:checked").forEach(function(chk){
+    document.querySelectorAll('input.inc[data-sala="' + sala + '"]').forEach(function(chk){
+      if(!chk.checked) return;
       var sku = chk.getAttribute("data-sku"); if(!sku) return;
+      var pick = document.querySelector('input.cotpick[data-sala="' + sala + '"][data-sku="' + sku + '"]');
+      if(pick && !pick.checked) return;
       var qty = 1;
       try {
         var q = (typeof qtyInputDe === "function") ? qtyInputDe(chk) : (chk.closest("tr") ? chk.closest("tr").querySelector("input.qty") : null);
@@ -64928,13 +64967,25 @@
     return Object.keys(vistos).map(function(k){ return vistos[k]; });
   }
   function updCount(){ var b=document.getElementById("salaEnviarCount"); if(b) b.textContent = String(gather().length); }
+  window.SM_actualizarContadorCotizacion = updCount;
   document.addEventListener("change", function(e){
-    if(e.target && e.target.classList && e.target.classList.contains("inc")) updCount();
+    if(!e.target || !e.target.classList) return;
+    if(e.target.classList.contains("inc") || e.target.classList.contains("cotpick") || e.target.classList.contains("qty")) updCount();
+  });
+  // Al cambiar de pestaña / de nivel / al quitar un producto, el contador se recalcula para la sala
+  // que quedó a la vista (el setTimeout deja que primero se pinte el cambio de pestaña).
+  document.addEventListener("click", function(e){
+    if(e.target && e.target.closest && e.target.closest(".tabbtn, .nivelbtn, .btn-quitar, .grouphead")) setTimeout(updCount, 0);
   });
   var btn = document.getElementById("salaEnviarCotiz");
   if(btn) btn.addEventListener("click", function(){
     var items = gather();
-    if(!items.length){ alert("Marca al menos un producto (casilla ✓) antes de enviar a cotización."); return; }
+    if(!items.length){
+      alert(salaActiva()
+        ? "Esta sala no tiene productos para cotizar. Marca la casilla ✓ de los productos que quieres incluir."
+        : "Abre una pestaña de sala y marca los productos que quieres cotizar.");
+      return;
+    }
     window.SALAS_enviarACotizacion(items);
   });
   // Refresca precios en vivo (si hay endpoint configurado) y actualiza el contador.

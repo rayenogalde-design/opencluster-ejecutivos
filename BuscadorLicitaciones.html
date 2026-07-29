@@ -65,6 +65,16 @@
   .item-detalle a.qin{display:inline-block;font-weight:700;color:var(--navy);}
   .pend{color:var(--falta);font-weight:700;font-size:12px;}
   .vacio{text-align:center;color:var(--mist);padding:24px 10px;font-size:14px;background:var(--card);border:1px dashed var(--line);border-radius:12px;}
+  .lst{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-top:16px;}
+  .lst-res{font-size:13px;margin-bottom:8px;color:var(--mist);}
+  .lst-res .st-ok{color:var(--ok);font-weight:800;} .lst-res .st-pend{color:var(--med);font-weight:800;} .lst-res .st-sin{color:var(--falta);font-weight:800;}
+  .lst-row{display:flex;align-items:center;gap:12px;padding:7px 0;border-top:1px solid var(--line);}
+  .lst-foto{width:36px;height:36px;border-radius:6px;object-fit:cover;border:1px solid var(--line);flex-shrink:0;background:var(--rowalt);}
+  .lst-main{flex:1;min-width:0;}
+  .lst-nom{font-size:13.5px;font-weight:700;color:var(--navy);}
+  .lst-sku{font-size:11.5px;color:var(--mist);font-family:ui-monospace,Consolas,monospace;}
+  .st{font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;white-space:nowrap;}
+  .st-ok{background:var(--okbg);color:var(--ok);} .st-pend{background:var(--medbg);color:var(--med);} .st-sin{background:var(--faltabg);color:var(--falta);}
   .disc{margin-top:20px;font-size:11.5px;color:var(--mist);background:#fff;border:1px dashed var(--line);border-radius:10px;padding:11px 13px;}
   .disc b{color:var(--navy);}
   @media(max-width:560px){ .item-foto{width:52px;height:52px;} }
@@ -85,10 +95,12 @@
         <button class="b-main" id="buscar">Buscar productos que cumplan</button>
         <button class="b-sec" id="limpiar">Limpiar</button>
         <button class="b-sec" id="exportar" style="display:none;">📋 Copiar resultado</button>
+        <button class="b-sec" id="verTodos" style="margin-left:auto;">📋 Todos los productos</button>
       </div>
       <div class="hint">Consejo: mientras más específico el requisito (medidas, materiales, función, certificaciones), mejor la coincidencia. Ctrl+Enter para buscar.</div>
     </div>
 
+    <div id="listado" data-open="0"></div>
     <div id="salida"></div>
 
     <div class="disc">
@@ -227,6 +239,24 @@
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function resaltar(texto,terms){ var t=esc(texto),u={}; terms.forEach(function(w){if(w.length>=4)u[w]=1;}); Object.keys(u).forEach(function(w){ try{var re=new RegExp('('+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','ig'); t=t.replace(re,'<mark>$1</mark>'); }catch(e){} }); return t; }
 
+  function estadoDe(p){ var e=String(p.especificaciones||''); if(e.indexOf(PEND)>=0)return 'pend'; if(e.trim().length<15)return 'sin'; return 'ok'; }
+  function renderListado(){
+    var cont=document.getElementById('listado'), btn=document.getElementById('verTodos');
+    if(cont.getAttribute('data-open')==='1'){ cont.innerHTML=''; cont.setAttribute('data-open','0'); btn.textContent='📋 Todos los productos ('+PRODUCTOS.length+')'; return; }
+    var ok=0,pend=0,sin=0;
+    var filas=PRODUCTOS.slice().sort(function(a,b){return String(a.nombre||'').localeCompare(String(b.nombre||''),'es');}).map(function(p){
+      var st=estadoDe(p); if(st==='ok')ok++; else if(st==='pend')pend++; else sin++;
+      var badge=st==='ok'?'<span class="st st-ok">✓ con specs</span>':(st==='pend'?'<span class="st st-pend">⚠ pendiente</span>':'<span class="st st-sin">✗ sin specs</span>');
+      var sku=[p.ref,p.octech].filter(Boolean).join(' · ');
+      var foto=p.foto?'<img class="lst-foto" src="'+esc(p.foto)+'" loading="lazy" alt="">':'<span class="lst-foto"></span>';
+      return '<div class="lst-row">'+foto+'<div class="lst-main"><div class="lst-nom">'+esc(p.nombre)+'</div><div class="lst-sku">'+esc(sku)+'</div></div>'+badge+'</div>';
+    }).join('');
+    var res='<div class="lst-res"><b>'+PRODUCTOS.length+' productos cargados</b> — <span class="st-ok">'+ok+' con specs</span> · <span class="st-pend">'+pend+' pendientes</span> · <span class="st-sin">'+sin+' sin specs</span></div>';
+    cont.innerHTML='<div class="lst">'+res+filas+'</div>';
+    cont.setAttribute('data-open','1'); btn.textContent='✕ Ocultar listado';
+  }
+  document.getElementById('verTodos').addEventListener('click',renderListado);
+  document.getElementById('verTodos').textContent='📋 Todos los productos ('+PRODUCTOS.length+')';
   document.getElementById('buscar').addEventListener('click',buscar);
   document.getElementById('limpiar').addEventListener('click',function(){ document.getElementById('q').value=''; document.getElementById('salida').innerHTML=''; document.getElementById('exportar').style.display='none'; document.getElementById('q').focus(); });
   document.getElementById('q').addEventListener('keydown',function(e){ if((e.ctrlKey||e.metaKey)&&e.key==='Enter')buscar(); });

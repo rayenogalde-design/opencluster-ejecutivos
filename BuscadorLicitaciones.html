@@ -67,6 +67,11 @@
   .item-detalle a.qin{display:inline-block;font-weight:700;color:var(--navy);}
   .pend{color:var(--falta);font-weight:700;font-size:12px;}
   .vok{color:#2e7d32;font-weight:700;font-size:12px;}
+  .stk{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:1px 8px;margin-right:5px;}
+  .stk-ok{color:#1a7a3c;background:rgba(46,158,91,0.14);}
+  .stk-cam{color:#8a5a00;background:rgba(217,150,0,0.14);}
+  .stk-no{color:#b3261e;background:rgba(179,38,30,0.10);}
+  .stk-nd{color:var(--mist);background:rgba(0,0,0,0.05);font-weight:600;}
   .vacio{text-align:center;color:var(--mist);padding:24px 10px;font-size:14px;background:var(--card);border:1px dashed var(--line);border-radius:12px;}
   .lst{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-top:16px;}
   .lst-res{font-size:13px;margin-bottom:8px;color:var(--mist);}
@@ -116,6 +121,7 @@
     </div>
   </div>
 
+<script src="StockSalas.js"></script>
 <script src="LicitacionesData.js"></script>
 <script>
 (function(){
@@ -247,7 +253,7 @@
           +(p.usos?('<h4>Usos</h4><p>'+resaltar(p.usos,x.matched)+'</p>'):'')
           +link+'</div>';
         html+='<div class="item '+nivel+'"><div class="item-head">'+foto
-          +'<div class="item-main"><div class="item-nom">'+esc(p.nombre)+pend+avisos+'</div><div class="item-sku">'+esc(sku)+'</div><div class="item-precio">'+precioTxt(p)+'</div></div>'
+          +'<div class="item-main"><div class="item-nom">'+esc(p.nombre)+pend+avisos+'</div><div class="item-sku">'+esc(sku)+'</div><div class="item-precio">'+precioTxt(p)+'</div><div class="item-precio">'+stockTxt(p)+'</div></div>'
           +'<span class="nivel '+nivel+'">'+nivelTxt+'</span></div>'
           +'<div class="crit"><div class="grp"><span class="lab">Cumple en:</span> '+(chipsSi||'—')+'</div>'
           +(chipsNo?('<div class="grp"><span class="lab">No aparece en la ficha:</span> '+chipsNo+'</div>'):'')+'</div>'
@@ -266,6 +272,19 @@
   function resaltar(texto,terms){ var t=esc(texto),u={}; terms.forEach(function(w){if(w.length>=4)u[w]=1;}); Object.keys(u).forEach(function(w){ try{var re=new RegExp('('+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','ig'); t=t.replace(re,'<mark>$1</mark>'); }catch(e){} }); return t; }
 
   function estadoDe(p){ var e=String(p.especificaciones||''); if(e.indexOf(PEND)>=0)return 'pend'; if(e.trim().length<15)return 'sin'; return 'ok'; }
+
+  // Stock: se lee de StockSalas.js, el MISMO archivo que usa la tarjeta de Stock.
+  // Se cruza por el código BJ-. Si el producto no está en esa lista NO decimos
+  // "sin stock" (sería mentira), decimos que no tenemos el dato.
+  var STOCK = window.STOCK_SALAS || {};
+  function stockTxt(p){
+    var s = p.ref ? STOCK[p.ref] : null;
+    if(!s) return '<span class="stk stk-nd">sin dato de stock</span>';
+    var b=Number(s.bodega)||0, c=Number(s.camino)||0;
+    if(b>0) return '<span class="stk stk-ok">'+b+' en bodega</span>'+(c>0?('<span class="stk stk-cam">+'+c+' en camino</span>'):'');
+    if(c>0) return '<span class="stk stk-cam">0 en bodega · '+c+' en camino</span>';
+    return '<span class="stk stk-no">sin stock</span>';
+  }
 
   // Sellos de confianza: de dónde salen las specs y hasta dónde se comprobaron.
   function sellos(p){
@@ -294,7 +313,7 @@
       var id='lstd'+idx;
       var link=p.url?('<p><a class="qin" href="'+esc(p.url)+'" target="_blank" rel="noopener">Ver ficha original en Qinera →</a></p>'):'';
       var det='<div class="item-detalle" id="'+id+'"><h4>Especificaciones técnicas (Qinera)</h4><p>'+esc(p.especificaciones||'—')+'</p><h4>Descripción</h4><p>'+esc(p.descripcion||'—')+'</p>'+(p.usos?('<h4>Usos</h4><p>'+esc(p.usos)+'</p>'):'')+link+'</div>';
-      return '<div class="lst-item"><div class="lst-row">'+foto+'<div class="lst-main"><div class="lst-nom">'+esc(p.nombre)+'</div><div class="lst-sku">'+esc(sku)+'</div><div class="lst-precio">'+precioTxt(p)+'</div></div>'+badge+'</div><span class="toggle lsttoggle" data-det="'+id+'">Ver ficha ▾</span>'+det+'</div>';
+      return '<div class="lst-item"><div class="lst-row">'+foto+'<div class="lst-main"><div class="lst-nom">'+esc(p.nombre)+'</div><div class="lst-sku">'+esc(sku)+'</div><div class="lst-precio">'+precioTxt(p)+'</div><div class="lst-precio">'+stockTxt(p)+'</div></div>'+badge+'</div><span class="toggle lsttoggle" data-det="'+id+'">Ver ficha ▾</span>'+det+'</div>';
     }).join('');
     var res='<div class="lst-res"><b>'+PRODUCTOS.length+' productos cargados</b> — <span class="st-ok">'+ok+' con ficha comprobada en Qinera</span> · <span class="st-ok">'+num+' con medidas que calzan</span> · <span class="st-pend">'+pend+' sin verificar</span> · <span class="st-sin">'+sin+' sin ficha técnica</span></div>';
     cont.innerHTML='<div class="lst">'+res+filas+'</div>';

@@ -225,17 +225,42 @@
 // ════════════════════════════════════════════
 // WEBINAR CENTER — regiones + informe PDF
 // ════════════════════════════════════════════
+// Sistema (Apps Script) de cada región. Desde julio 2026 cada ejecutivo monta el SUYO: sus
+// inscritos viven en su planilla y sus correos salen de su casilla. Por eso la dirección ya
+// no es única — va una por región, en WEBINAR_REGIONES. Esta es la de Rayen (Maule y RM).
 const WEBINAR_API='https://script.google.com/macros/s/AKfycbws21oUtUYoOck3ScLpIFYybeLMz6QpfD-Tk2FtI-Iv69gTuEqzIRgmSLzuiarsiiK2MA/exec';
 // Reutiliza el conversor HTML→PDF que ya usa el CRM (accion "crm_html_a_pdf"). Es un endpoint
 // genérico del Apps Script del CRM — no le importa qué HTML le mandes, así que no hace falta
 // tocar el Apps Script del Webinar para generar el informe.
 const WEBINAR_INFORME_API='https://script.google.com/macros/s/AKfycbz3Vscxz-OlTHehsnEqqTD1qfql4xzstgWM81RG79P5IiLTkRvaYTU2sNoWV_QpceeowA/exec';
 
-// Agregar una región nueva (Biobío/Ñuble, Araucanía, RM…) cuando tenga su propio webinar en
-// vivo es solo sumar una línea acá — la tarjeta y el informe de esa región se arman solos.
+// Agregar una región nueva (Araucanía, Los Ríos, RM…) es sumar una línea acá — la tarjeta y
+// el informe de esa región se arman solos.
+//
+// CADA REGIÓN TRAE SU PROPIO SISTEMA en el campo "api":
+//   - Las de Rayen usan WEBINAR_API.
+//   - Las de otro ejecutivo usan la dirección /exec de SU Apps Script (él la entrega).
+//   - api:'' significa "todavía no conectada": la tarjeta aparece igual, marcada como
+//     pendiente, y no se le pide nada al servidor. Al pegar la dirección empieza a mostrar
+//     datos sola, sin tocar nada más.
+//
+// "key" tiene que ser el nombre EXACTO de la pestaña de la planilla de esa región, porque es
+// lo que se le manda al sistema para buscar los datos.
 const WEBINAR_REGIONES=[
-  { key:'PIE_Maule_2026', label:'Región del Maule', accent:'#06b3fd' }
+  { key:'PIE_Maule_2026', label:'Región del Maule', accent:'#06b3fd', api:WEBINAR_API },
+
+  // Biobío y Ñuble (William) — PENDIENTE: falta que entregue la dirección /exec de su Apps
+  // Script y el nombre exacto de su pestaña. Pegar la dirección en "api" y corregir "key".
+  { key:'PIE_Biobio_Nuble_2026', label:'Biobío y Ñuble', accent:'#ff7e00', api:'' }
 ];
+
+/** Devuelve la dirección del sistema que atiende esa región ('' si aún no está conectada). */
+function _wcApiDe(webinarKey){
+  for(var i=0;i<WEBINAR_REGIONES.length;i++){
+    if(WEBINAR_REGIONES[i].key===webinarKey) return WEBINAR_REGIONES[i].api||'';
+  }
+  return '';
+}
 
 // Quién está usando la Central ahora (para el campo "solicitante" del informe). Si no viene
 // por parámetro de la URL (?u=Nombre), queda genérico — no bloquea la generación del PDF.
@@ -300,8 +325,14 @@ function _wcBuildRegionCards(){
 async function _wcLoadKPIs(){
   for(var i=0;i<WEBINAR_REGIONES.length;i++){
     var w=WEBINAR_REGIONES[i].key;
+    var api=WEBINAR_REGIONES[i].api||'';
+    if(!api){
+      var elP=document.getElementById('chips-'+w);
+      if(elP) elP.innerHTML='<span style="color:#b45309;">Pendiente de conectar</span> · falta la dirección del sistema de esta región';
+      continue;
+    }
     try{
-      var res=await fetch(WEBINAR_API+'?action=kpis&webinar='+encodeURIComponent(w));
+      var res=await fetch(api+'?action=kpis&webinar='+encodeURIComponent(w));
       var data=await res.json();
       var el=document.getElementById('chips-'+w);
       if(el&&data.ok){
@@ -330,8 +361,9 @@ async function _wcLoadConversion(){
   var html='';
   for(var i=0;i<WEBINAR_REGIONES.length;i++){
     var r=WEBINAR_REGIONES[i];
+    if(!r.api) continue; // región aún no conectada: no se le pide nada
     try{
-      var res=await fetch(WEBINAR_API+'?action=kpis_conversion&webinar='+encodeURIComponent(r.key));
+      var res=await fetch(r.api+'?action=kpis_conversion&webinar='+encodeURIComponent(r.key));
       var data=await res.json();
       if(!data.ok) throw new Error(data.error||'error');
       var merged={};
@@ -441,7 +473,9 @@ async function _wcVerInscritos(webinarKey,regionLabel,accent){
   document.getElementById('wcDetailList').innerHTML='<div class="wc-empty">Cargando…</div>';
   try{
     if(!_WC_DATOS_CACHE[webinarKey]){
-      var res=await fetch(WEBINAR_API+'?action=respuestas&webinar='+encodeURIComponent(webinarKey));
+      var apiR=_wcApiDe(webinarKey);
+      if(!apiR) throw new Error('Esta región todavía no está conectada: falta la dirección del sistema de su ejecutivo.');
+      var res=await fetch(apiR+'?action=respuestas&webinar='+encodeURIComponent(webinarKey));
       var data=await res.json();
       if(!data.ok) throw new Error(data.error||'No se pudo leer la planilla.');
       _WC_DATOS_CACHE[webinarKey]=data.respuestas||[];
@@ -544,10 +578,12 @@ async function _webGenerarInforme(webinarKey,regionLabel,btnEl){
   var prevTxt=lbl?lbl.textContent:'';
   if(btnEl){btnEl.disabled=true;} if(lbl){lbl.textContent='Generando…';}
   try{
+    var apiI=_wcApiDe(webinarKey);
+    if(!apiI){ alert('La región '+regionLabel+' todavía no está conectada: falta la dirección del sistema de su ejecutivo.'); return; }
     var results=await Promise.all([
-      fetch(WEBINAR_API+'?action=kpis&webinar='+encodeURIComponent(webinarKey)).then(function(r){return r.json();}),
-      fetch(WEBINAR_API+'?action=respuestas&webinar='+encodeURIComponent(webinarKey)).then(function(r){return r.json();}),
-      fetch(WEBINAR_API+'?action=kpis_visitas&webinar='+encodeURIComponent(webinarKey)).then(function(r){return r.json();}).catch(function(){return {ok:false};})
+      fetch(apiI+'?action=kpis&webinar='+encodeURIComponent(webinarKey)).then(function(r){return r.json();}),
+      fetch(apiI+'?action=respuestas&webinar='+encodeURIComponent(webinarKey)).then(function(r){return r.json();}),
+      fetch(apiI+'?action=kpis_visitas&webinar='+encodeURIComponent(webinarKey)).then(function(r){return r.json();}).catch(function(){return {ok:false};})
     ]);
     var kpis=results[0], resp=results[1], visitas=results[2];
     if(!kpis.ok||!resp.ok) throw new Error('No se pudo leer la planilla del webinar.');

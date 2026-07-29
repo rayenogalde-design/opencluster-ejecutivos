@@ -70,7 +70,10 @@
   .lst{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-top:16px;}
   .lst-res{font-size:13px;margin-bottom:8px;color:var(--mist);}
   .lst-res .st-ok{color:var(--ok);font-weight:800;} .lst-res .st-pend{color:var(--med);font-weight:800;} .lst-res .st-sin{color:var(--falta);font-weight:800;}
-  .lst-row{display:flex;align-items:center;gap:12px;padding:7px 0;border-top:1px solid var(--line);}
+  .lst-item{border-top:1px solid var(--line);padding-bottom:2px;}
+  .lst-row{display:flex;align-items:center;gap:12px;padding:8px 0 2px;}
+  .lst-item .toggle{margin:0 0 6px;font-size:12px;}
+  .lst-item .item-detalle{border-radius:8px;border:1px solid var(--line);margin:0 0 8px;}
   .lst-foto{width:36px;height:36px;border-radius:6px;object-fit:cover;border:1px solid var(--line);flex-shrink:0;background:var(--rowalt);}
   .lst-main{flex:1;min-width:0;}
   .lst-nom{font-size:13.5px;font-weight:700;color:var(--navy);}
@@ -247,16 +250,20 @@
     var cont=document.getElementById('listado'), btn=document.getElementById('verTodos');
     if(cont.getAttribute('data-open')==='1'){ cont.innerHTML=''; cont.setAttribute('data-open','0'); btn.textContent='📋 Todos los productos ('+PRODUCTOS.length+')'; return; }
     var ok=0,pend=0,sin=0;
-    var filas=PRODUCTOS.slice().sort(function(a,b){return String(a.nombre||'').localeCompare(String(b.nombre||''),'es');}).map(function(p){
+    var filas=PRODUCTOS.slice().sort(function(a,b){return String(a.nombre||'').localeCompare(String(b.nombre||''),'es');}).map(function(p,idx){
       var st=estadoDe(p); if(st==='ok')ok++; else if(st==='pend')pend++; else sin++;
       var badge=st==='ok'?'<span class="st st-ok">✓ con specs</span>':(st==='pend'?'<span class="st st-pend">⚠ pendiente</span>':'<span class="st st-sin">✗ sin specs</span>');
       var sku=[p.ref,p.octech].filter(Boolean).join(' · ');
       var foto=p.foto?'<img class="lst-foto" src="'+esc(p.foto)+'" loading="lazy" alt="">':'<span class="lst-foto"></span>';
-      return '<div class="lst-row">'+foto+'<div class="lst-main"><div class="lst-nom">'+esc(p.nombre)+'</div><div class="lst-sku">'+esc(sku)+'</div><div class="lst-precio">'+precioTxt(p)+'</div></div>'+badge+'</div>';
+      var id='lstd'+idx;
+      var link=p.url?('<p><a class="qin" href="'+esc(p.url)+'" target="_blank" rel="noopener">Ver ficha original en Qinera →</a></p>'):'';
+      var det='<div class="item-detalle" id="'+id+'"><h4>Especificaciones técnicas (Qinera)</h4><p>'+esc(p.especificaciones||'—')+'</p><h4>Descripción</h4><p>'+esc(p.descripcion||'—')+'</p>'+(p.usos?('<h4>Usos</h4><p>'+esc(p.usos)+'</p>'):'')+link+'</div>';
+      return '<div class="lst-item"><div class="lst-row">'+foto+'<div class="lst-main"><div class="lst-nom">'+esc(p.nombre)+'</div><div class="lst-sku">'+esc(sku)+'</div><div class="lst-precio">'+precioTxt(p)+'</div></div>'+badge+'</div><span class="toggle lsttoggle" data-det="'+id+'">Ver ficha ▾</span>'+det+'</div>';
     }).join('');
     var res='<div class="lst-res"><b>'+PRODUCTOS.length+' productos cargados</b> — <span class="st-ok">'+ok+' con specs</span> · <span class="st-pend">'+pend+' pendientes</span> · <span class="st-sin">'+sin+' sin specs</span></div>';
     cont.innerHTML='<div class="lst">'+res+filas+'</div>';
     cont.setAttribute('data-open','1'); btn.textContent='✕ Ocultar listado';
+    Array.prototype.forEach.call(cont.querySelectorAll('.lsttoggle'),function(t){ t.addEventListener('click',function(){var d=document.getElementById(t.getAttribute('data-det')); if(d){d.classList.toggle('open'); t.textContent=d.classList.contains('open')?'Ocultar ficha ▴':'Ver ficha ▾';}}); });
   }
   document.getElementById('verTodos').addEventListener('click',renderListado);
   document.getElementById('verTodos').textContent='📋 Todos los productos ('+PRODUCTOS.length+')';

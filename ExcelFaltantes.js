@@ -80,7 +80,8 @@
 
   window.OCT_excelFaltantes = function (filas, info) {
     info = info || {};
-    var COLS = ['SKU', 'Producto', 'Faltan', 'Se piden', 'En stock'];
+    // Mario quiere ver SOLO lo que falta: nada de "se piden" ni "en stock".
+    var COLS = ['SKU', 'Producto', 'Faltan'];
     var f = 0, xml = '';
 
     // Bloque de encabezado
@@ -102,8 +103,6 @@
         + celdaTexto('A' + f, 4, r.sku || '—')
         + celdaTexto('B' + f, 4, r.nombre || '(sin nombre)')
         + celdaNumero('C' + f, 6, r.falta)
-        + celdaNumero('D' + f, 5, r.pedido)
-        + celdaNumero('E' + f, 5, r.stock)
         + '</row>';
     });
     var ultima = filas.length ? (filas.length + 4) : 4;
@@ -116,14 +115,12 @@
       + '</sheetView></sheetViews>'
       + '<sheetFormatPr defaultRowHeight="15"/>'
       + '<cols>'
-      +   '<col min="1" max="1" width="16" customWidth="1"/>'
-      +   '<col min="2" max="2" width="52" customWidth="1"/>'
-      +   '<col min="3" max="3" width="10" customWidth="1"/>'
-      +   '<col min="4" max="4" width="11" customWidth="1"/>'
-      +   '<col min="5" max="5" width="11" customWidth="1"/>'
+      +   '<col min="1" max="1" width="18" customWidth="1"/>'
+      +   '<col min="2" max="2" width="58" customWidth="1"/>'
+      +   '<col min="3" max="3" width="12" customWidth="1"/>'
       + '</cols>'
       + '<sheetData>' + xml + '</sheetData>'
-      + '<autoFilter ref="A4:E' + ultima + '"/>'
+      + '<autoFilter ref="A4:C' + ultima + '"/>'
       + '<pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/>'
       + '</worksheet>';
 

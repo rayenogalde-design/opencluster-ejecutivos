@@ -72,6 +72,16 @@
   .stk-cam{color:#8a5a00;background:rgba(217,150,0,0.14);}
   .stk-no{color:#b3261e;background:rgba(179,38,30,0.10);}
   .stk-nd{color:var(--mist);background:rgba(0,0,0,0.05);font-weight:600;}
+  .vered{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--navy);border-radius:12px;padding:14px 16px;margin-bottom:14px;}
+  .vered h3{margin:0 0 4px;font-size:16px;color:var(--navy);}
+  .vered .cifras{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 6px;}
+  .vered .cif{border-radius:9px;padding:7px 12px;font-size:13px;font-weight:700;}
+  .cif-ok{background:rgba(46,158,91,0.12);color:#1a7a3c;}
+  .cif-med{background:rgba(217,150,0,0.14);color:#8a5a00;}
+  .cif-no{background:rgba(179,38,30,0.10);color:#b3261e;}
+  .vered ul{margin:6px 0 0;padding-left:18px;font-size:13.5px;}
+  .vered li{margin-bottom:3px;}
+  .vered .nota{font-size:12.5px;color:var(--mist);margin-top:9px;}
   .vacio{text-align:center;color:var(--mist);padding:24px 10px;font-size:14px;background:var(--card);border:1px dashed var(--line);border-radius:12px;}
   .lst{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-top:16px;}
   .lst-res{font-size:13px;margin-bottom:8px;color:var(--mist);}
@@ -234,6 +244,36 @@
     var evs=reqs.map(function(r){ return evaluar(r); });
     var html='', textoExport='INFORME DE COINCIDENCIAS — Buscador para Licitaciones\n\n';
     var multi=reqs.length>1;
+
+    // BARRIDO RÁPIDO: la pregunta real al leer una licitación es "¿podemos postular?".
+    // Eso no se contesta producto por producto sino por COBERTURA: de los ítems que
+    // pide, a cuántos les tenemos algo. Los que no cubrimos son los que matan la oferta.
+    if(multi){
+      var cAlto=0, cMedio=0, sinCubrir=[];
+      evs.forEach(function(ev,i){
+        var mejor = 0;
+        ev.todos.forEach(function(x){ var r=rango(x); if(r>mejor) mejor=r; });
+        if(mejor===2) cAlto++;
+        else if(mejor===1) cMedio++;
+        else sinCubrir.push({n:i+1, txt:reqs[i]});
+      });
+      var cubiertos=cAlto+cMedio;
+      html+='<div class="vered"><h3>Barrido rápido: '+reqs.length+' ítems detectados</h3>'
+        +'<div class="cifras"><span class="cif cif-ok">'+cAlto+' con candidato claro</span>'
+        +'<span class="cif cif-med">'+cMedio+' con candidato dudoso</span>'
+        +'<span class="cif cif-no">'+sinCubrir.length+' sin nada</span></div>';
+      if(!sinCubrir.length){
+        html+='<div><b>Le tenemos algo a los '+reqs.length+' ítems.</b> Revisa abajo cuáles son dudosos antes de decidir.</div>';
+      } else {
+        html+='<div><b>No le tenemos nada a '+sinCubrir.length+' de los '+reqs.length+' ítems.</b> Si la licitación exige ofertar todo, estos son los que la bloquean:</div><ul>';
+        sinCubrir.slice(0,12).forEach(function(s){ html+='<li>Ítem '+s.n+': '+esc(s.txt.length>110?s.txt.slice(0,110)+'…':s.txt)+'</li>'; });
+        if(sinCubrir.length>12) html+='<li>… y '+(sinCubrir.length-12)+' más</li>';
+        html+='</ul>';
+      }
+      html+='<div class="nota">Esto es un filtro para decidir rápido, no un veredicto. Revisa que la división en ítems de más abajo sea la correcta: si el texto de la licitación no venía numerado ni con viñetas, puede haber partido mal.</div></div>';
+      textoExport+='BARRIDO RAPIDO: '+reqs.length+' items · '+cAlto+' con candidato claro · '+cMedio+' dudoso · '+sinCubrir.length+' sin nada\n'
+        + (sinCubrir.length?('SIN COBERTURA:\n'+sinCubrir.map(function(s){return '  - Item '+s.n+': '+s.txt;}).join('\n')+'\n\n'):'\n');
+    }
 
     // Un producto sirve de verdad solo si cumple TODOS los requisitos. Cuando hay
     // varios, esto va primero: los que aparecen en todos, no los que salvan uno suelto.

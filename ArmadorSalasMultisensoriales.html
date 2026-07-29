@@ -64327,6 +64327,37 @@
   // qué productos de la sala iban a la cotización — el botón flotante mandaba TODO lo marcado en
   // TODAS las pestañas. Ahora cada producto incluido trae su casilla (marcada por defecto) y el
   // botón manda solo los de la sala que se está viendo. Lo desmarcado se recuerda en el navegador.
+  // Foto de un producto buscándola en las tres fuentes: la ficha interna, el archivo de fichas
+  // (SalasFichas.js) y la lista de precios (SalasACotizacion.js). Pedido de Rayen 2026-07-28:
+  // "veo muchos productos sin imágenes abajo, necesito ver todas las imágenes".
+  function _fotoDe(sku) {
+    const fi = FICHAS[sku];
+    if (fi && fi.imagen) return fi.imagen;
+    if (window.SALAS_FICHAS && SALAS_FICHAS[sku] && SALAS_FICHAS[sku].img) return SALAS_FICHAS[sku].img;
+    if (window.SALAS_CATALOGO && SALAS_CATALOGO[sku] && SALAS_CATALOGO[sku].img) return SALAS_CATALOGO[sku].img;
+    return '';
+  }
+  // Rellena las fotos que faltan en los listados de todas las salas y deja la foto clickeable
+  // (abre la ficha), una sola vez al cargar.
+  function completarFotosFaltantes() {
+    let puestas = 0;
+    document.querySelectorAll('#main td.thumb, main td.thumb').forEach(td => {
+      const tr = td.closest('tr');
+      const chk = tr ? tr.querySelector('input.inc') : null;
+      if (!chk) return;
+      const sku = chk.dataset.sku;
+      if (!td.hasAttribute('data-ficha')) td.setAttribute('data-ficha', sku);
+      const noimg = td.querySelector('.noimg');
+      if (!noimg) return;
+      const src = _fotoDe(sku);
+      if (!src) return;
+      noimg.outerHTML = '<img src="' + src + '" alt="" loading="lazy" />';
+      puestas++;
+    });
+    return puestas;
+  }
+  window.SM_completarFotos = completarFotosFaltantes;
+
   const KEY_COTPICK = 'oc_sala_cotizar_off';
   let cotOff = {};
   try { cotOff = JSON.parse(localStorage.getItem(KEY_COTPICK) || '{}'); } catch (e) { cotOff = {}; }
@@ -64346,7 +64377,11 @@
       const sku = chk.dataset.sku;
       const f = FICHAS[sku];
       const qty = Number(qtyInputDe(chk).value) || 1;
-      filas.push('<tr><td class="chk"><input type="checkbox" class="cotpick" data-sala="' + sala + '" data-sku="' + sku + '"' + (cotExcluido(sala, sku) ? '' : ' checked') + ' title="Incluir este producto en la cotización" /></td><td class="thumb">' + (f && f.imagen ? '<img src="' + f.imagen + '" alt="" />' : '') + '</td><td class="name">' + (f ? f.nombre : sku) + '</td><td>' + qty + '</td><td class="price">' + (f ? f.precio : '') + '</td><td><button class="btn-quitar" data-sku="' + sku + '">Quitar</button></td></tr>');
+      // Foto: la de la ficha y, si no hay, la del archivo de fichas o la de la lista de precios.
+      const imgSrc = (f && f.imagen) || _fotoDe(sku);
+      // data-ficha en el nombre y en la foto: tocarlos abre la ficha, igual que en el listado de
+      // abajo (pedido de Rayen 2026-07-28: "toco estos elementos para ver su ficha y no veo nada").
+      filas.push('<tr><td class="chk"><input type="checkbox" class="cotpick" data-sala="' + sala + '" data-sku="' + sku + '"' + (cotExcluido(sala, sku) ? '' : ' checked') + ' title="Incluir este producto en la cotización" /></td><td class="thumb" data-ficha="' + sku + '">' + (imgSrc ? '<img src="' + imgSrc + '" alt="" />' : '<div class="noimg">Sin foto</div>') + '</td><td class="name" data-ficha="' + sku + '">' + (f ? f.nombre : sku) + '</td><td>' + qty + '</td><td class="price">' + (f ? f.precio : '') + '</td><td><button class="btn-quitar" data-sku="' + sku + '">Quitar</button></td></tr>');
     });
     tbody.innerHTML = filas.length ? filas.join('') : '<tr><td colspan="6" class="incluidos-vacio">Todavía no hay productos agregados a esta sala.</td></tr>';
     tbody.querySelectorAll('.cotpick').forEach(pick => {
@@ -64426,24 +64461,38 @@
     if (!filtrosEstado[sala]) filtrosEstado[sala] = { familias: new Set(), audiencias: new Set() };
     return filtrosEstado[sala];
   }
+  // Texto comparable: minúsculas, sin tildes y sin signos, para que "discos manos" encuentre
+  // "Conjunto de discos táctiles para pies y manos".
+  function _normBuscar(s) {
+    return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+
   function aplicarFiltro(sala) {
     // Misma guarda que recalcular(): si esta página no tiene esta sala, no hace nada.
     const elSearch = document.querySelector('.search[data-sala="' + sala + '"]');
     const elVista = document.querySelector('.filtroVista[data-sala="' + sala + '"]');
     if (!elSearch || !elVista) return;
-    const q = (elSearch.value || '').trim().toLowerCase();
+    // Buscador por palabras sueltas (pedido de Rayen 2026-07-28: escribió "discos manos" y no
+    // encontró "Conjunto de discos táctiles para pies y manos"). Antes exigía que el texto
+    // apareciera igualito y en el mismo orden. Ahora: cada palabra puede estar en cualquier parte
+    // del nombre, del SKU o de la familia, sin importar tildes ni mayúsculas.
+    const palabras = _normBuscar(elSearch.value).split(/\s+/).filter(Boolean);
     const f = getFiltroSala(sala);
     const vista = elVista.value;
     document.querySelectorAll('#tbody-' + sala + ' tr').forEach(tr => {
       if (tr.classList.contains('detailrow')) return;
-      const okQ = !q || tr.dataset.nombre.includes(q);
+      const _chkB = tr.querySelector('input.inc');
+      const textoBuscable = _normBuscar((tr.dataset.nombre || '') + ' ' + (_chkB ? _chkB.dataset.sku : '') + ' ' + (tr.dataset.familia || '') + ' ' + (tr.dataset.salas || ''));
+      const okQ = !palabras.length || palabras.every(p => textoBuscable.indexOf(p) > -1);
       const okFam = !f.familias.size || f.familias.has(tr.dataset.familia);
       const audiencias = (tr.dataset.audiencias || 'Todos').split('|');
       const okAud = !f.audiencias.size || audiencias.includes('Todos') || audiencias.some(a => f.audiencias.has(a));
       const chk = tr.querySelector('input.inc');
       let okVista = true;
       if (vista === 'incluidos') okVista = chk.checked;
-      if (vista === 'sugeridos') {
+      // Si está buscando algo, la búsqueda manda sobre "Solo sugeridos para esta sala": si no,
+      // escribir el nombre de un producto que existe pero no es sugerido no devolvía nada.
+      if (vista === 'sugeridos' && !palabras.length) {
         const tagsSala = {"elemental":["Elemental/Simple","Infraestructura/Control","Infraestructura/Accesorio"],"simple":["Elemental/Simple","Infraestructura/Control","Infraestructura/Accesorio"],"shx-basic":["Infraestructura/Control","Estimulación General"],"shx-full-adulto":["Estimulación General","Calma","Infraestructura/Control"],"tea-is":["Integración Sensorial","Psicomotricidad","Atención Temprana"],"tea-shx":["Estimulación General","Integración Sensorial","Infraestructura/Control"],"calma":["Calma"],"shx-full-infantil":["Estimulación General","Atención Temprana","Infraestructura/Control"],"seg-colegios-calma-bajo":["Calma"],"seg-colegios-calma-alto":["Calma"],"seg-colegios-calma-proyeccion":["Calma"],"seg-colegios-estim-bajo":["Estimulación General"],"seg-colegios-estim-alto":["Estimulación General"],"seg-colegios-estim-proyeccion":["Estimulación General"],"seg-colegios-psico-bajo":["Psicomotricidad"],"seg-colegios-psico-alto":["Psicomotricidad"],"seg-colegios-psico-proyeccion":["Psicomotricidad"],"seg-colegios-temprana-bajo":["Atención Temprana"],"seg-colegios-temprana-alto":["Atención Temprana"],"seg-colegios-temprana-proyeccion":["Atención Temprana"],"seg-universidades-calma-bajo":["Calma"],"seg-universidades-calma-alto":["Calma"],"seg-universidades-calma-proyeccion":["Calma"],"seg-universidades-elemental-bajo":["Elemental/Simple"],"seg-universidades-elemental-alto":["Elemental/Simple"],"seg-universidades-elemental-proyeccion":["Elemental/Simple"],"seg-hospclin-calma-bajo":["Calma"],"seg-hospclin-calma-alto":["Calma"],"seg-hospclin-calma-proyeccion":["Calma"],"seg-hospclin-estim-bajo":["Estimulación General"],"seg-hospclin-estim-alto":["Estimulación General"],"seg-hospclin-estim-proyeccion":["Estimulación General"],"seg-hospclin-integracion-bajo":["Integración Sensorial"],"seg-hospclin-integracion-alto":["Integración Sensorial"],"seg-hospclin-integracion-proyeccion":["Integración Sensorial"],"seg-hospclin-psico-bajo":["Psicomotricidad"],"seg-hospclin-psico-alto":["Psicomotricidad"],"seg-hospclin-psico-proyeccion":["Psicomotricidad"],"seg-rehab-estim-bajo":["Estimulación General","Calma"],"seg-rehab-estim-alto":["Estimulación General","Calma"],"seg-rehab-estim-proyeccion":["Estimulación General","Calma"],"seg-rehab-integracion-bajo":["Integración Sensorial"],"seg-rehab-integracion-alto":["Integración Sensorial"],"seg-rehab-integracion-proyeccion":["Integración Sensorial"],"seg-adultomayor-calma-bajo":["Calma"],"seg-adultomayor-calma-alto":["Calma"],"seg-adultomayor-calma-proyeccion":["Calma"],"seg-adultomayor-memoria-bajo":["Estimulación General","Calma"],"seg-adultomayor-memoria-alto":["Estimulación General","Calma"],"seg-adultomayor-memoria-proyeccion":["Estimulación General","Calma"]}[sala] || [];
         okVista = tr.dataset.salas.split('|').some(t => tagsSala.includes(t));
       }
@@ -65012,6 +65061,9 @@
     }
     window.SALAS_enviarACotizacion(items);
   });
+  // Ya cargados el archivo de fichas y la lista de precios, se completan las fotos que faltaban
+  // en los listados (los "Sin foto" que tenían imagen en alguna de esas dos fuentes).
+  if(window.SM_completarFotos){ try { window.SM_completarFotos(); } catch(e){} }
   // Refresca precios en vivo (si hay endpoint configurado) y actualiza el contador.
   if(window.SALAS_refrescarPrecios){ window.SALAS_refrescarPrecios().then(updCount); }
   updCount();

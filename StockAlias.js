@@ -40,12 +40,15 @@ window.STOCK_SIN_BODEGA = [
   "allinonehpproone440238i71270016gbddr41tbssd",
   "cortinadefibraoptica",
   "fireballshx",
+  "focodeluzshx",
   "liquidoparapompasdejabon1l",
   "looktolearn1licenciaelectronica",
   "munequerasytobilleras1kg",
   "notebookchuwiaubookpro14i51250p16gbramddr51tbssd",
   "pesoparahombroslolalaoruga1",
   "planetaluminea",
+  "sensorygoluminea",
+  "sensorygolumineaplus",
   "serviciointegraldeimplementacionyhabilitaciontecnica",
   "softwaresensorygurueyefx2licenciadigital",
   "soportedepierehadapt",
@@ -57,3 +60,17 @@ window.STOCK_SIN_BODEGA = [
 // suelta BJ-LFIB3 — confirmado por Rayen), equipos de informatica, licencias de
 // software, productos de la linea de control con la mirada, servicios,
 // consumibles y variantes de otro tamano. Ninguno esta entre los 64 de bodega.
+//
+// Confirmados por Rayen el 29-jul-2026:
+//   - Sensory Go: son TRES productos distintos (Luminea, Luminea Plus y SHX).
+//     En bodega solo esta el SHX (BJ-SGSX), asi que Luminea y Luminea Plus
+//     no se pueden descontar de bodega.
+//   - "Foco de luz SHX" NO es el "Foco de luz UV LED" (BJ-EIFUVL): son productos
+//     distintos y con precios distintos.
+//
+// PENDIENTES de respuesta (siguen sin cruzar, no asumir nada):
+//   - "Rincon Luminea" (32 lineas): Rayen cree que todos los que venden son el
+//     "con tablet" (BJ-LRIN23), pero lo va a confirmar al 100% antes de aplicarlo.
+//   - "Kit de bola de espejos mediana": Rayen va a preguntar si el de bodega
+//     (BJ-EKBE300) es el mediano.
+//   - "Columpio cuddle" y "Base cuadrada para tubo de burbujas": sin definir.

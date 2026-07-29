@@ -1748,6 +1748,33 @@
       el.addEventListener('click', () => abrirDetalleCotizacion(el.dataset.vercotiz));
     });
   }
+  // Montos del detalle de una cotización: neto, transporte y total con IVA (pedido de Rayen
+  // 2026-07-28). Los reales vienen del CRM (campos neto / transporte / total_iva). Si esa
+  // cotización no los trae, se muestra el estimado que se arma con la lista de precios, dicho
+  // con todas sus letras para no confundir un cálculo con el valor cotizado de verdad.
+  function _montosDetalleCotiz(c){
+    const fila = (etiqueta, valor, destacado) => '<div class="cotiz-detalle-campo">'
+      + '<span class="cotiz-detalle-label">' + etiqueta + '</span>'
+      + '<span class="cotiz-detalle-valor"' + (destacado ? ' style="font-weight:800;"' : '') + '>' + valor + '</span></div>';
+    const neto = Number(c.neto) || 0;
+    const transporte = Number(c.transporte) || 0;
+    const totalIva = Number(c.total_iva) || 0;
+    if (neto > 0 || totalIva > 0) {
+      return fila('Neto productos', _clp(neto))
+        + fila('Transporte', transporte > 0 ? _clp(transporte) : 'No incluido')
+        + fila('Total con IVA', _clp(totalIva), true);
+    }
+    const est = _montoEstCotizDetalle(c);
+    if (!est.total) return fila('Monto', 'Sin datos de monto para esta cotización');
+    const nota = est.sinPrecio.length
+      ? '<div class="cotiz-detalle-campo"><span class="cotiz-detalle-label"></span><span class="cotiz-detalle-valor" style="font-size:0.78rem;color:var(--mist);">No incluye ' + est.sinPrecio.length + ' producto' + (est.sinPrecio.length === 1 ? '' : 's') + ' sin precio en la lista.</span></div>'
+      : '';
+    return fila('Neto productos (estimado)', _clp(Math.round(est.total / 1.19)))
+      + fila('Transporte', 'No informado')
+      + fila('Total con IVA (estimado)', _clp(est.total), true)
+      + nota;
+  }
+
   // Modal de detalle: todos los datos de la cotización + su listado de productos parseado
   // (nombre y cantidad de cada uno, no el texto crudo).
   function abrirDetalleCotizacion(num){
@@ -1777,6 +1804,7 @@
       '<div class="cotiz-detalle-campo"><span class="cotiz-detalle-label">Ejecutivo</span><span class="cotiz-detalle-valor">' + escapeHtmlSafe(c.ejecutivo) + '</span></div>' +
       '<div class="cotiz-detalle-campo"><span class="cotiz-detalle-label">Estado</span><span class="cotiz-detalle-valor">' + estadoTxt + '</span></div>' +
       '<div class="cotiz-detalle-campo"><span class="cotiz-detalle-label">Probabilidad</span><span class="cotiz-detalle-valor">' + (c.probabilidad || 0) + '%</span></div>' +
+      _montosDetalleCotiz(c) +
       '<h4 style="margin:1rem 0 0.5rem;">Productos (' + prods.length + ')</h4>' +
       (filasProd || '<p class="incluidos-vacio">Sin productos detectados.</p>') +
       '<h4 style="margin:1rem 0 0.5rem;">Seguimientos (' + segs.length + ')</h4>' +
@@ -2039,17 +2067,47 @@
     for(let i=0;i<_SKU_OVERRIDE.length;i++){ if(n.indexOf(_SKU_OVERRIDE[i].m) !== -1) return _SKU_OVERRIDE[i].sku; }
     return '';
   }
-  // Monto estimado de una cotización, según la lista de precios (venta con IVA) — aproximado.
-  function _montoEstCotiz(c){
-    let total = 0;
+  // Monto de una cotización según la lista de precios (venta con IVA). Es un estimado: se arma
+  // sumando el precio de cada producto de la cotización, no viene del CRM.
+  // El SKU se busca en tres pasos: stock -> lista de precios por nombre -> lista de SKU por nombre,
+  // así se valoriza también lo que nunca pasó por bodega. Devuelve además los que quedaron sin
+  // precio, para poder decir en pantalla que el monto no los incluye.
+  let _idxPrecioPorNombre = null;
+  function _precioPorNombre(nombre){
+    if(!_idxPrecioPorNombre){
+      _idxPrecioPorNombre = {};
+      if(window.SALAS_CATALOGO){
+        Object.keys(SALAS_CATALOGO).forEach(sku => {
+          const c = SALAS_CATALOGO[sku];
+          if(c && c.n && c.p) _idxPrecioPorNombre[_normTightJS(c.n)] = Number(c.p);
+        });
+      }
+      if(Array.isArray(window.SALAS_SKU_LISTA) && window.SALAS_CATALOGO){
+        SALAS_SKU_LISTA.forEach(par => {
+          const nom = par && par[0], sku = par && par[1];
+          if(!nom || !sku) return;
+          const c = SALAS_CATALOGO[sku];
+          const k = _normTightJS(nom);
+          if(c && c.p && !_idxPrecioPorNombre[k]) _idxPrecioPorNombre[k] = Number(c.p);
+        });
+      }
+    }
+    return _idxPrecioPorNombre[_normTightJS(nombre)] || 0;
+  }
+  function _montoEstCotizDetalle(c){
+    let total = 0; const sinPrecio = [];
     _smExtraerProductos(c.productos).forEach(p => {
       const s = STOCK_SM[p.key];
       const sku = s && s.sku;
       const cat = (sku && window.SALAS_CATALOGO) ? window.SALAS_CATALOGO[sku] : null;
-      if(cat && cat.p) total += Number(cat.p) * p.qty;
+      let precio = (cat && cat.p) ? Number(cat.p) : 0;
+      if(!precio) precio = _precioPorNombre(p.display);
+      if(precio) total += precio * p.qty;
+      else sinPrecio.push(p.display);
     });
-    return total;
+    return { total, sinPrecio };
   }
+  function _montoEstCotiz(c){ return _montoEstCotizDetalle(c).total; }
   function _abrirBorradorFaltantes(seleccionadas){
     const items = _faltantesLista(seleccionadas);
     if (!items.length) { alert('No hay faltantes para estas cotizaciones — no hace falta pedido.'); return; }

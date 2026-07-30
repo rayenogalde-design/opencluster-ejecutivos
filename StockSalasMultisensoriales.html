@@ -118,6 +118,9 @@
   .stock-resumen { margin:0.9rem 0; }
   .stock-resumen-caja { border-radius:8px; padding:0.7rem 0.9rem; font-size:0.85rem; line-height:1.5; }
   .stock-resumen-caja.ok { background:rgba(46,158,91,0.1); border:1px solid rgba(46,158,91,0.3); color:var(--ink); }
+  .stock-resumen-caja.espera { background:rgba(234,179,8,0.10); border:1px solid rgba(234,179,8,0.42); color:var(--ink); }
+  .stock-resumen-pill.espera { background:#B45309; color:#fff; }
+  .cotiz-comp-fila .encamino, .cm-tabla .encamino { color:#B45309; font-weight:700; }
   .stock-resumen-caja.falta { background:rgba(220,38,38,0.08); border:1px solid rgba(220,38,38,0.3); color:var(--ink); }
   .stock-resumen-pill { display:inline-block; font-size:0.7rem; font-weight:800; padding:0.15rem 0.55rem; border-radius:999px; margin-right:0.4rem; vertical-align:middle; }
   .stock-resumen-pill.ok { background:#16A34A; color:#fff; }
@@ -199,7 +202,7 @@
   .cotiz-detalle-panel { position:relative; background:var(--card); border-radius:18px; width:min(520px,94vw); max-height:86vh; overflow-y:auto; padding:1.6rem; box-shadow:0 40px 100px -30px rgba(0,0,0,0.6); }
   .cotiz-comp-card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:0.8rem 1rem; margin:0.6rem 0; }
   .cotiz-comp-card h4 { margin:0 0 0.5rem; font-size:0.92rem; color:var(--navy); }
-  .cotiz-comp-fila { display:grid; grid-template-columns:2.4rem 1fr 4rem 4rem 6rem; gap:0.6rem; align-items:center; font-size:0.82rem; padding:0.3rem 0; border-bottom:1px solid var(--line); }
+  .cotiz-comp-fila { display:grid; grid-template-columns:2.4rem 1fr 3.4rem 7.2rem; gap:0.6rem; align-items:center; font-size:0.82rem; padding:0.3rem 0; border-bottom:1px solid var(--line); }
   .cotiz-comp-fila .thumb img, .cotiz-comp-fila .thumb .noimg { width:2.4rem; height:2.4rem; object-fit:cover; border-radius:4px; font-size:0.5rem; }
   .cotiz-comp-fila:last-child { border-bottom:none; }
   .cotiz-comp-fila .alcanza { color:#1a7a3c; font-weight:700; }
@@ -436,6 +439,23 @@
   .venta-no { background:var(--card,#fff); color:var(--ink,#0d1b2a); border:1px solid var(--line,#E3E7EC) !important; }
   .venta-msg { margin-top:0.6rem; font-size:0.8rem; font-weight:700; }
   .venta-msg.err { color:#DC2626; }
+
+  /* Desglose bodega / en camino — el verde solo significa "lo tengo acá ahora" */
+  .stk { display:flex; flex-wrap:wrap; gap:0.05rem 0.45rem; align-items:baseline; font-size:0.73rem; line-height:1.35; font-variant-numeric:tabular-nums; }
+  .stk-dot { width:0.45rem; height:0.45rem; border-radius:50%; display:inline-block; flex:none; margin-right:0.28rem; }
+  .stk-dot.bod { background:#2f7d55; }
+  .stk-dot.cam { background:transparent; border:1.5px solid #2f7d55; }
+  .stk-b, .stk-c { white-space:nowrap; font-weight:700; }
+  .stk-b { flex:1 1 100%; color:#2f7d55; }
+  .stk-b.cero { color:var(--mist,#7C8794); }
+  .stk-b.cero .stk-dot.bod { background:var(--mist,#7C8794); }
+  .stk-c { flex:1 1 100%; color:var(--mist,#7C8794); }
+  .stk-aviso { flex:1 1 100%; font-weight:800; font-size:0.71rem; margin-top:0.1rem; }
+  .stk-aviso.cam { color:#B45309; }
+  .stk-aviso.falta { color:#c0392b; }
+  .stk-aviso.ok { color:#2f7d55; }
+  .stk-nodato { font-size:0.71rem; color:var(--mist,#7C8794); font-style:italic; }
+  .stock-disp-stk { padding:0 0.55rem 0.6rem; }
 </style>
 </head>
 <body>
@@ -2008,6 +2028,34 @@
     _pintarBloqueVenta(c);
     modal.classList.add('open');
   }
+
+  // ── Bodega vs. en camino ──────────────────────────────────────────────────
+  // Rayen (2026-07-30): "cuando dice disponible me confundo y digo, ah, lo tengo
+  // todo aquí, pero en realidad necesito ver lo que viene en contenedor". Así que
+  // el VERDE ahora significa una sola cosa: alcanza con lo que está físicamente en
+  // bodega. Si hay que esperar el contenedor, se dice, en ámbar.
+  function _stockPartido(qty, stock){
+    if (!stock) return { sinDato:true };
+    const bod = Number(stock.bodega) || 0, cam = Number(stock.camino) || 0;
+    const n = Number(qty) || 0;
+    let clase, aviso;
+    if (bod >= n) { clase = 'ok'; aviso = ''; }
+    else if (bod + cam >= n) { clase = 'cam'; aviso = 'hay que esperar el contenedor'; }
+    else { clase = 'falta'; aviso = 'faltan ' + (n - bod - cam); }
+    return { sinDato:false, bod:bod, cam:cam, total:bod + cam, clase:clase, aviso:aviso };
+  }
+  // Celda compacta: dos renglones chicos (punto lleno = acá, punto hueco = en camino)
+  // y, solo si hay problema, un tercer renglón con el aviso.
+  function _stockCelda(qty, stock){
+    const d = _stockPartido(qty, stock);
+    if (d.sinDato) return '<span class="stk-nodato">sin dato de stock</span>';
+    return '<span class="stk">' +
+      '<span class="stk-b' + (d.bod ? '' : ' cero') + '"><i class="stk-dot bod"></i>' + d.bod + ' en bodega</span>' +
+      '<span class="stk-c"><i class="stk-dot cam"></i>' + d.cam + ' en camino</span>' +
+      (d.aviso ? '<span class="stk-aviso ' + d.clase + '">' + d.aviso + '</span>' : '') +
+    '</span>';
+  }
+
   function _cotizFilaComparacion(display, qty, key){
     const stock = STOCK_SM[key];
     const total = stock ? stock.total : 0;
@@ -2023,7 +2071,7 @@
     }
     const thumb = f && f.imagen ? '<img class="zoomimg" src="' + f.imagen + '" alt="" loading="lazy" />' : '<div class="noimg">Sin foto</div>';
     const nombreAttrs = f ? ' data-ficha="' + escapeHtmlSafe(fichaKey) + '" style="cursor:pointer;text-decoration:underline dotted;"' : '';
-    return '<div class="cotiz-comp-fila"><span class="thumb">' + thumb + '</span><span' + nombreAttrs + '>' + escapeHtmlSafe(display) + '</span><span>Pide ' + qty + '</span><span>Stock ' + total + '</span><span class="' + (falta ? 'falta' : 'alcanza') + '">' + (falta ? 'Falta stock' : 'Disponibles') + '</span></div>';
+    return '<div class="cotiz-comp-fila"><span class="thumb">' + thumb + '</span><span' + nombreAttrs + '>' + escapeHtmlSafe(display) + '</span><span>Pide ' + qty + '</span>' + _stockCelda(qty, stock) + '</div>';
   }
   // Tooltip flotante compartido (una sola instancia, se reposiciona) para el desglose
   // bodega/contenedor — aparece ENCIMA del contenido, no empuja nada de layout.
@@ -2067,7 +2115,7 @@
     });
     const cabecera = '<tr><th class="cm-prod">Producto</th>' +
       seleccionadas.map(c => '<th>' + escapeHtmlSafe(c.cotizacion) + '</th>').join('') +
-      '<th>Total pedido</th><th>Estado</th><th class="cm-stock">Stock</th></tr>';
+      '<th>Total pedido</th><th>Estado</th><th class="cm-stock">Bodega + camino</th></tr>';
     // Orden alfabético siempre (pedido de Rayen 2026-07-21: "así veo si estoy pasando algo por
     // alto") — antes quedaban en el orden en que se iban encontrando al recorrer cada cotización,
     // dificultando notar duplicados/variantes del mismo producto con nombre distinto.
@@ -2085,8 +2133,13 @@
       // Estado: toca "Alcanza"/"Falta stock" para ver el desglose bodega/contenedor en una
       // ventanita flotante encima (no texto que empuje la fila) — pedido de Rayen 2026-07-21.
       const desglose = stock ? ((stock.bodega || 0) + ' en bodega + ' + (stock.camino || 0) + ' en contenedor') : 'sin datos de stock';
-      const estadoCelda = '<td class="' + (falta ? 'falta' : 'alcanza') + '">' +
-        '<span class="cotiz-estado-clickable" data-desglose="' + escapeHtmlSafe(desglose) + '">' + (falta ? 'Falta stock' : 'Disponibles') + '</span>' +
+      // El verde ya no puede significar "alcanza sumando el contenedor": eso confundía
+      // (Rayen 2026-07-30). Verde = está en bodega hoy; ámbar = llega en el contenedor.
+      const _dm = _stockPartido(m.total, stock);
+      const _clsEstado = _dm.sinDato ? 'falta' : (_dm.clase === 'ok' ? 'alcanza' : (_dm.clase === 'cam' ? 'encamino' : 'falta'));
+      const _txtEstado = _dm.sinDato ? 'Sin dato' : (_dm.clase === 'ok' ? 'En bodega' : (_dm.clase === 'cam' ? 'En camino' : 'Falta stock'));
+      const estadoCelda = '<td class="' + _clsEstado + '">' +
+        '<span class="cotiz-estado-clickable" data-desglose="' + escapeHtmlSafe(desglose) + '">' + _txtEstado + '</span>' +
       '</td>';
       // Total pedido y Stock también en rojo cuando falta — pedido de Rayen 2026-07-22 ("dame lo
       // que falta también en rojo para no confundirme"), para verlo de un vistazo sin tener que
@@ -2095,7 +2148,7 @@
       // Stock: columna FIJA a la derecha (siempre visible) y con el número clickeable para ver
       // el desglose bodega/contenedor — pedido de Rayen 2026-07-27.
       const stockCelda = '<td class="cm-stock' + (falta ? ' falta' : '') + '">' +
-        '<span class="cm-stock-num" data-desglose="' + escapeHtmlSafe(desglose) + '">' + total + '</span></td>';
+        '<span class="cm-stock-num" data-desglose="' + escapeHtmlSafe(desglose) + '">' + (stock ? ((stock.bodega || 0) + ' + ' + (stock.camino || 0)) : '—') + '</span></td>';
       return '<tr>' + nombreCelda + celdas + totalPedidoCelda + estadoCelda + stockCelda + '</tr>';
     }).join('');
     if (!filas) return '<p class="incluidos-vacio">Sin productos detectados.</p>';
@@ -2175,7 +2228,10 @@
         '<div class="stock-disp-thumb">' + thumb + '</div>' +
         '<div class="stock-disp-nombre">' + escapeHtmlSafe(nombreMostrado) + '</div>' +
         precioCard +
-        '<div class="stock-disp-ok-badge">' + disponible + (disponible == 1 ? ' disponible' : ' disponibles') + '</div>' +
+        '<div class="stock-disp-stk"><span class="stk">' +
+          '<span class="stk-b' + (bodegaLibre ? '' : ' cero') + '"><i class="stk-dot bod"></i>' + bodegaLibre + ' en bodega</span>' +
+          '<span class="stk-c"><i class="stk-dot cam"></i>' + caminoLibre + ' en camino</span>' +
+        '</span></div>' +
       '</div>';
     }).join('') + '</div>';
   }
@@ -2784,17 +2840,24 @@
     if (!cont) return;
     let nTotal = 0;
     const faltantes = [];
+    // "esperan" = alcanza, pero solo contando el contenedor que todavía no llega.
+    const esperan = [];
     document.querySelectorAll('input.inc[data-sala="' + sala + '"]').forEach(chk => {
       if (!chk.checked) return;
       nTotal++;
       const qty = Number(qtyInputDe(chk).value) || 1;
       const f = FICHAS[chk.dataset.sku];
       const stockTotal = f ? (f.stock || 0) : 0;
+      const enBodega = f ? (f.stockBodega || 0) : 0;
       if (stockTotal < qty) faltantes.push({ nombre: f ? f.nombre : chk.dataset.sku, qty, stockTotal });
+      else if (enBodega < qty) esperan.push({ nombre: f ? f.nombre : chk.dataset.sku, qty, enBodega, enCamino: f ? (f.stockCamino || 0) : 0 });
     });
     if (!nTotal) { cont.innerHTML = ''; return; }
     if (!faltantes.length) {
-      cont.innerHTML = '<div class="stock-resumen-caja ok"><span class="stock-resumen-pill ok">Disponibles</span> Con el stock actual (bodega + en camino) te alcanza para los ' + nTotal + ' productos de esta sala.</div>';
+      cont.innerHTML = esperan.length
+        ? '<div class="stock-resumen-caja espera"><span class="stock-resumen-pill espera">Llega en el contenedor</span> Alcanza para los ' + nTotal + ' productos, pero ' + esperan.length + ' de ellos NO están en bodega todavía: dependen del contenedor que viene en camino.' +
+            '<ul>' + esperan.map(x => '<li>' + escapeHtmlSafe(x.nombre) + ' — pides ' + x.qty + ', en bodega hay ' + x.enBodega + ' y vienen ' + x.enCamino + '</li>').join('') + '</ul></div>'
+        : '<div class="stock-resumen-caja ok"><span class="stock-resumen-pill ok">En bodega ahora</span> Los ' + nTotal + ' productos de esta sala están físicamente en bodega. No dependes del contenedor.</div>';
     } else {
       cont.innerHTML = '<div class="stock-resumen-caja falta"><span class="stock-resumen-pill falta">Falta stock</span> ' + faltantes.length + ' de ' + nTotal + ' producto' + (nTotal===1?'':'s') + ' no alcanza' + (faltantes.length===1?'':'n') + ' con el stock actual:' +
         '<ul>' + faltantes.map(x => '<li>' + escapeHtmlSafe(x.nombre) + ' — pides ' + x.qty + ', hay ' + x.stockTotal + '</li>').join('') + '</ul>' +

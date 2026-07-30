@@ -90,7 +90,10 @@ footer.credits { text-align:center; padding:20px 0; color:var(--ink-faint); font
 .row-thumb { cursor: zoom-in; }
 .lightbox {
   position: fixed; inset: 0; background: rgba(9,13,18,0.86); display: none;
-  align-items: center; justify-content: center; z-index: 100; padding: 32px;
+  /* z-index 200: tiene que quedar ENCIMA de la ventana de la ficha (140) y del
+     panel de cotizacion (131). Antes estaba en 100 y por eso al tocar la foto
+     dentro de la ficha el zoom se abria por DEBAJO y no se veia. (29-jul-2026) */
+  align-items: center; justify-content: center; z-index: 200; padding: 32px;
 }
 .lightbox.open { display: flex; }
 .lightbox img { max-width: min(92vw, 640px); max-height: 86vh; border-radius: 14px; background: #fff; box-shadow: 0 20px 60px -20px rgba(0,0,0,0.6); }
@@ -199,7 +202,10 @@ footer.credits { text-align:center; padding:20px 0; color:var(--ink-faint); font
 .ficha-close { position:absolute; top:14px; right:14px; z-index:4; width:34px; height:34px; border-radius:50%; border:none; background:rgba(255,255,255,.92); color:var(--navy-2); font-size:20px; line-height:1; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.18); }
 .ficha-close:hover { background:#fff; }
 .ficha-media { position:relative; flex:0 0 auto; background:linear-gradient(160deg,#f6f9fd,#eef3f9); display:flex; align-items:center; justify-content:center; padding:22px; min-height:170px; }
-.ficha-media img { max-width:100%; max-height:190px; object-fit:contain; }
+.ficha-media img { max-width:100%; max-height:190px; object-fit:contain; cursor:zoom-in; }
+/* Pista de que la foto de la ficha se puede agrandar tocandola (29-jul-2026) */
+.ficha-zoom-tip { position:absolute; right:12px; bottom:10px; display:inline-flex; align-items:center; gap:5px; padding:5px 11px 5px 9px; border-radius:999px; background:rgba(10,46,138,.82); color:#fff; font-size:10.5px; font-weight:800; letter-spacing:.02em; pointer-events:none; }
+.ficha-zoom-tip svg { width:12px; height:12px; }
 .ficha-media-ph { font-size:40px; }
 .ficha-fam { position:absolute; left:14px; top:14px; color:#fff; font-size:10.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; padding:5px 12px; border-radius:999px; }
 .ficha-scroll { flex:1 1 auto; overflow-y:auto; padding:20px 20px 4px; min-height:0; }
@@ -639,6 +645,7 @@ function openFicha(p){
   let html = '<button class="ficha-close" id="fichaCloseBtn2">&times;</button>';
   html += '<div class="ficha-media">' +
     (p.img ? '<img ' + attrFotoChica(p.img) + ' alt="'+esc(p.nombre)+'">' : '<span class="ficha-media-ph">'+fam.emoji+'</span>') +
+    (p.img ? '<span class="ficha-zoom-tip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/><line x1="11" y1="8.5" x2="11" y2="13.5"/><line x1="8.5" y1="11" x2="13.5" y2="11"/></svg>Toca la foto para agrandarla</span>' : '') +
     '<span class="ficha-fam" style="background:'+fam.color+'">'+esc(fam.label.toUpperCase())+'</span>' +
   '</div>';
   html += '<div class="ficha-scroll">';
@@ -673,6 +680,17 @@ function openFicha(p){
 }
 function closeFicha(){ fichaOverlay.classList.remove('open'); }
 fichaOverlay.addEventListener('click', function(e){ if(e.target===fichaOverlay) closeFicha(); });
+/* Tocar la foto DENTRO de la ficha la agranda (29-jul-2026, pedido de Rayen).
+   Hace falta este listener aparte porque el visor de zoom vive fuera de la ficha
+   y el listener que ya existia solo escuchaba dentro de la grilla de resultados.
+   Se abre con la foto ORIGINAL (data-full), no con la miniatura de la tarjeta. */
+fichaOverlay.addEventListener('click', function(e){
+  if(!e.target || !e.target.closest) return;
+  var img = e.target.closest('.ficha-media img');
+  if(!img) return;
+  e.stopPropagation();
+  openLightbox(img.getAttribute('data-full') || img.src, img.alt);
+});
 document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ closeFicha(); quoteClose(); } });
 let filtroExtra = null;
 if(new URLSearchParams(location.search).get('filtro')==='sinprecio'){
@@ -705,7 +723,35 @@ function renderMore(){
   else { sentinel.style.display=''; }
 }
 
+/* ===== ORDEN DE LOS PRODUCTOS (29-jul-2026) =====
+   Antes salian en el orden que traia el maestro, que es por el codigo OC-#### que
+   generamos nosotros. Por eso "Todas" empezaba siempre con las mismas medias/panty
+   (OC-0001 y siguientes son JOBST), que no es lo que Rayen quiere mostrar primero.
+   Ahora se ordenan por CATEGORIA, en el mismo orden en que estan los botones de
+   arriba, y dentro de cada categoria por nombre.
+   El orden se LEE de los botones, no esta escrito dos veces: si se cambia el orden
+   de los botones, el orden de los productos cambia solo. */
+var ORDEN_FAM = (function(){
+  var o = {}, i = 0, btns = document.querySelectorAll('#chips [data-fam]');
+  for(var k = 0; k < btns.length; k++){
+    var f = btns[k].getAttribute('data-fam');
+    if(f && o[f] === undefined) o[f] = i++;
+  }
+  return o;
+})();
+function ordenaLista(list){
+  return list.slice().sort(function(a, b){
+    var fa = ORDEN_FAM[a.familiaKey], fb = ORDEN_FAM[b.familiaKey];
+    if(fa === undefined) fa = 999;   // una familia que no tenga boton se va al final
+    if(fb === undefined) fb = 999;
+    if(fa !== fb) return fa - fb;
+    // numeric para que "Silla 2" vaya antes que "Silla 10", y sin distinguir tildes
+    return String(a.nombre||'').localeCompare(String(b.nombre||''), 'es', { numeric:true, sensitivity:'base' });
+  });
+}
+
 function render(list){
+  list = ordenaLista(list);
   loadMoreObserver.unobserve(sentinel);
   resultsEl.innerHTML='';
   currentList = list;

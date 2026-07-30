@@ -189,17 +189,31 @@
   window.OCT_excelCotizacion = function (info, filas) {
     info = info || {}; filas = filas || [];
     var COLS = ['SKU', 'Producto', 'Pide', 'En bodega', 'En camino', 'Estado'];
+    // El estado se DEDUCE de los numeros de cada fila, no de una etiqueta que manda
+    // quien llama. Antes venia como texto ('cam' vs 'camino') y un desajuste dejaba la
+    // columna en blanco sin avisar (paso el 2026-07-30). Asi no puede volver a pasar.
     var TXT = { ok: 'En bodega', camino: 'En camino', falta: 'FALTA', sindato: 'Sin dato' };
     var EST = { ok: 8, camino: 9, falta: 7, sindato: 6 };   // estilo por estado
-    var nOk = 0, nCam = 0, nFalta = 0;
+    function estadoDe(r) {
+      if (r.sinDato || r.estado === 'sindato') return 'sindato';
+      var pide = Number(r.pide) || 0, bod = Number(r.bodega) || 0, cam = Number(r.camino) || 0;
+      if (bod >= pide) return 'ok';
+      if (bod + cam >= pide) return 'camino';
+      return 'falta';
+    }
+    var nOk = 0, nCam = 0, nFalta = 0, nSin = 0;
     filas.forEach(function (r) {
-      if (r.estado === 'ok') nOk++; else if (r.estado === 'camino') nCam++; else if (r.estado === 'falta') nFalta++;
+      r._estado = estadoDe(r);
+      if (r._estado === 'ok') nOk++;
+      else if (r._estado === 'camino') nCam++;
+      else if (r._estado === 'falta') nFalta++;
+      else nSin++;
     });
     var xml = '';
     xml += '<row r="1" ht="24" customHeight="1">' + celdaTexto('A1', 1, 'Cotización ' + (info.num || '') + (info.institucion ? ' — ' + info.institucion : '')) + '</row>';
     xml += '<row r="2" ht="16" customHeight="1">' + celdaTexto('A2', 2,
       (info.ejecutivo ? 'Ejecutivo: ' + info.ejecutivo + '   ·   ' : '') + (info.fecha || '') +
-      '   ·   ' + filas.length + ' productos   ·   ' + nOk + ' en bodega, ' + nCam + ' esperan el contenedor, ' + nFalta + ' faltan') + '</row>';
+      '   ·   ' + filas.length + ' productos   ·   ' + nOk + ' en bodega, ' + nCam + ' esperan el contenedor, ' + nFalta + ' faltan' + (nSin ? ', ' + nSin + ' sin dato' : '')) + '</row>';
     xml += '<row r="3"></row>';
     xml += '<row r="4" ht="20" customHeight="1">';
     COLS.forEach(function (c, i) { xml += celdaTexto(col(i) + '4', 3, c); });
@@ -210,9 +224,9 @@
         + celdaTexto('A' + f, 4, r.sku || '—')
         + celdaTexto('B' + f, 4, r.nombre || '(sin nombre)')
         + celdaNumero('C' + f, 5, r.pide)
-        + (r.estado === 'sindato' ? celdaTexto('D' + f, 5, '—') : celdaNumero('D' + f, 5, r.bodega))
-        + (r.estado === 'sindato' ? celdaTexto('E' + f, 5, '—') : celdaNumero('E' + f, 5, r.camino))
-        + celdaTexto('F' + f, EST[r.estado] || 5, TXT[r.estado] || '')
+        + (r._estado === 'sindato' ? celdaTexto('D' + f, 5, '—') : celdaNumero('D' + f, 5, r.bodega))
+        + (r._estado === 'sindato' ? celdaTexto('E' + f, 5, '—') : celdaNumero('E' + f, 5, r.camino))
+        + celdaTexto('F' + f, EST[r._estado] || 5, TXT[r._estado] || 'Sin dato')
         + '</row>';
     });
     var ultima = filas.length ? (filas.length + 4) : 4;

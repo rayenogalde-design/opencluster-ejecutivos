@@ -411,6 +411,31 @@
     .cotiz-filtro-prob #cotiz-marcar-todas { margin-left:0; }
     #cotiz-marcar-todas, #cotiz-limpiar-seleccion { flex:1 1 auto; }
   }
+
+  /* Marcar como vendida (dentro del detalle de una cotización) */
+  .venta-caja { margin:0 0 1.1rem; }
+  .venta-btn { display:block; width:100%; padding:0.85rem 1rem; border:0; border-radius:12px; background:#16A34A; color:#fff; font-size:0.95rem; font-weight:800; cursor:pointer; box-shadow:0 2px 10px rgba(22,163,74,0.28); }
+  .venta-btn:hover { background:#12833C; }
+  .venta-btn[disabled] { opacity:0.55; cursor:default; box-shadow:none; }
+  .venta-hecha { display:flex; flex-wrap:wrap; align-items:center; gap:0.5rem 0.9rem; background:rgba(22,163,74,0.10); border:1px solid rgba(22,163,74,0.35); border-radius:12px; padding:0.8rem 1rem; }
+  .venta-hecha-tit { flex:1 1 100%; font-size:0.95rem; font-weight:800; color:#12833C; }
+  .venta-hecha-sub { flex:1 1 auto; font-size:0.78rem; color:var(--mist,#7C8794); }
+  .venta-deshacer { flex:none; background:none; border:1px solid rgba(220,38,38,0.4); color:#DC2626; font-size:0.76rem; font-weight:700; padding:0.32rem 0.8rem; border-radius:999px; cursor:pointer; }
+  .venta-deshacer:hover { background:rgba(220,38,38,0.08); }
+  .venta-confirm { margin-top:0.7rem; border:1px solid var(--line,#E3E7EC); border-radius:12px; padding:0.9rem 1rem; background:var(--paper,#F7F9FB); }
+  .venta-confirm h5 { margin:0 0 0.6rem; font-size:0.85rem; font-weight:800; color:var(--ink,#0d1b2a); }
+  .venta-linea { display:flex; align-items:baseline; gap:0.5rem; font-size:0.82rem; padding:0.3rem 0; border-bottom:1px dashed rgba(0,0,0,0.07); }
+  .venta-linea-nom { flex:1 1 auto; min-width:0; }
+  .venta-linea-mov { flex:none; font-weight:700; color:#12833C; font-variant-numeric:tabular-nums; }
+  .venta-linea-mov.falta { color:#DC2626; }
+  .venta-linea-queda { flex:none; font-size:0.74rem; color:var(--mist,#7C8794); font-variant-numeric:tabular-nums; }
+  .venta-aviso { margin-top:0.65rem; font-size:0.78rem; line-height:1.45; background:rgba(234,179,8,0.12); border:1px solid rgba(234,179,8,0.4); border-radius:9px; padding:0.55rem 0.7rem; color:var(--ink,#0d1b2a); }
+  .venta-acciones { display:flex; gap:0.6rem; margin-top:0.85rem; flex-wrap:wrap; }
+  .venta-acciones button { flex:1 1 140px; padding:0.65rem 0.9rem; border-radius:10px; font-size:0.85rem; font-weight:800; cursor:pointer; border:0; }
+  .venta-si { background:#16A34A; color:#fff; }
+  .venta-no { background:var(--card,#fff); color:var(--ink,#0d1b2a); border:1px solid var(--line,#E3E7EC) !important; }
+  .venta-msg { margin-top:0.6rem; font-size:0.8rem; font-weight:700; }
+  .venta-msg.err { color:#DC2626; }
 </style>
 </head>
 <body>
@@ -1788,6 +1813,164 @@
 
   // Modal de detalle: todos los datos de la cotización + su listado de productos parseado
   // (nombre y cantidad de cada uno, no el texto crudo).
+
+  // ── Stock EN VIVO + marcar cotización como vendida ────────────────────────
+  // El stock que viene en StockSalas.js es el inventario INICIAL. El real de hoy
+  // vive en el CRM (inicial menos las salidas registradas), así que al abrir la
+  // página se pide y se pisan los números de todas las vistas. Si el CRM no
+  // contesta se sigue viendo el inicial (mejor eso que una pantalla vacía).
+  let VENDIDAS_SM = {};
+  async function sincronizarStockVivo(){
+    try {
+      const r = await fetch(CRM_API_URL + '?accion=crm_stock_salas&t=' + Date.now());
+      const j = await r.json();
+      if (!j || !j.ok || !j.stock) return false;
+      VENDIDAS_SM = j.vendidas || {};
+      Object.keys(j.stock).forEach(sku => {
+        const v = j.stock[sku];
+        const bod = Number(v.bodega) || 0, cam = Number(v.camino) || 0;
+        let k = _smProdNorm(v.item);
+        if (_SM_PROD_ALIAS[k]) k = _SM_PROD_ALIAS[k];
+        const s = STOCK_SM[k];
+        if (s) { s.bodega = bod; s.camino = cam; s.total = bod + cam; }
+        const f = FICHAS[sku];
+        if (f) { f.stockBodega = bod; f.stockCamino = cam; f.stock = bod + cam; }
+      });
+      return true;
+    } catch (e) { return false; }
+  }
+  // Qué se descontaría si esta cotización se marca vendida. Saca primero de bodega
+  // y después de lo que viene en camino; deja aparte lo que no está en bodega
+  // (productos que nunca compramos, servicios) para avisarlo en pantalla.
+  function _planDescuento(c){
+    const lineas = [], sinBodega = [];
+    _smExtraerProductos(c.productos).forEach(p => {
+      const s = STOCK_SM[p.key];
+      if (!s || !s.sku) { sinBodega.push(p.display); return; }
+      const bod = Number(s.bodega) || 0, cam = Number(s.camino) || 0;
+      const deBodega = Math.min(bod, p.qty);
+      const deCamino = Math.min(cam, p.qty - deBodega);
+      lineas.push({
+        sku: s.sku, producto: s.item, display: p.display, cantidad: p.qty,
+        deBodega: deBodega, deCamino: deCamino,
+        falta: p.qty - deBodega - deCamino,
+        quedan: (bod + cam) - deBodega - deCamino,
+        desde: deCamino > 0 ? (deBodega > 0 ? 'bodega+camino' : 'camino') : 'bodega'
+      });
+    });
+    return { lineas: lineas, sinBodega: sinBodega };
+  }
+  async function _postCRM(cuerpo){
+    const r = await fetch(CRM_API_URL, { method:'POST', headers:{ 'Content-Type':'text/plain' }, body: JSON.stringify(cuerpo) });
+    return await r.json();
+  }
+  function _quienSoy(){ return localStorage.getItem('salas_quien_eres') || 'Rayen'; }
+  // Vuelve a pintar todo lo que muestra números de stock, sin recargar la página
+  // (recargar borraría las cotizaciones que tenga marcadas para comparar).
+  function _refrescarVistasStock(){
+    try { renderComparacionCotizaciones(); } catch(e){}
+    try { ['bajo','alto'].forEach(s => { actualizarResumenStock(s); renderIncluidos(s); }); } catch(e){}
+  }
+  // Bloque de venta arriba del detalle de la cotización.
+  function _pintarBloqueVenta(c){
+    const cuerpo = document.getElementById('cotiz-detalle-cuerpo');
+    if (!cuerpo) return;
+    const num = c.cotizacion;
+    const ya = VENDIDAS_SM[num];
+    const caja = document.createElement('div');
+    caja.className = 'venta-caja';
+    if (ya) {
+      caja.innerHTML =
+        '<div class="venta-hecha">' +
+          '<div class="venta-hecha-tit">Vendida — el stock ya está descontado</div>' +
+          '<div class="venta-hecha-sub">Marcada' + (ya.fecha ? ' el ' + escapeHtmlSafe(ya.fecha) : '') +
+            (ya.quien ? ' por ' + escapeHtmlSafe(ya.quien) : '') +
+            ' · ' + (ya.lineas || 0) + ' producto' + ((ya.lineas || 0) === 1 ? '' : 's') + '</div>' +
+          '<button type="button" class="venta-deshacer">Deshacer</button>' +
+        '</div>' +
+        '<div class="venta-msg"></div>';
+    } else {
+      caja.innerHTML =
+        '<button type="button" class="venta-btn">Marcar como vendida y descontar del stock</button>' +
+        '<div class="venta-panel"></div>';
+    }
+    cuerpo.insertAdjacentElement('afterbegin', caja);
+
+    const msgDe = () => caja.querySelector('.venta-msg');
+    const btnDeshacer = caja.querySelector('.venta-deshacer');
+    if (btnDeshacer) {
+      btnDeshacer.addEventListener('click', async () => {
+        if (!confirm('¿Devolver al stock los productos de la cotización ' + num + '?')) return;
+        btnDeshacer.disabled = true; btnDeshacer.textContent = 'Deshaciendo…';
+        const j = await _postCRM({ accion:'crm_stock_anular', cotizacion: num }).catch(() => null);
+        if (!j || !j.ok) {
+          btnDeshacer.disabled = false; btnDeshacer.textContent = 'Deshacer';
+          const m = msgDe(); if (m) { m.className = 'venta-msg err'; m.textContent = (j && j.error) ? j.error : 'No se pudo deshacer. Revisa la conexión e intenta de nuevo.'; }
+          return;
+        }
+        await sincronizarStockVivo();
+        _refrescarVistasStock();
+        abrirDetalleCotizacion(num);
+      });
+    }
+
+    const btnMarcar = caja.querySelector('.venta-btn');
+    if (btnMarcar) {
+      btnMarcar.addEventListener('click', () => {
+        const panel = caja.querySelector('.venta-panel');
+        if (panel.innerHTML) { panel.innerHTML = ''; return; }   // segundo clic = cerrar
+        const plan = _planDescuento(c);
+        if (!plan.lineas.length) {
+          panel.innerHTML = '<div class="venta-confirm"><div class="venta-aviso">Ninguno de los productos de esta cotización está en el inventario de bodega, así que no hay nada que descontar.</div></div>';
+          return;
+        }
+        const filas = plan.lineas.map(l => {
+          const partes = [];
+          if (l.deBodega) partes.push(l.deBodega + ' de bodega');
+          if (l.deCamino) partes.push(l.deCamino + ' de lo que viene en camino');
+          if (l.falta) partes.push(l.falta + ' sin stock');
+          return '<div class="venta-linea">' +
+            '<span class="venta-linea-nom">' + escapeHtmlSafe(l.display) + ' <b>x' + l.cantidad + '</b></span>' +
+            '<span class="venta-linea-mov' + (l.falta ? ' falta' : '') + '">' + partes.join(' + ') + '</span>' +
+            '<span class="venta-linea-queda">quedan ' + l.quedan + '</span>' +
+          '</div>';
+        }).join('');
+        const avisoSin = plan.sinBodega.length
+          ? '<div class="venta-aviso">Estos no están en el inventario de bodega, así que <b>no se descuentan</b>: ' + plan.sinBodega.map(escapeHtmlSafe).join(' · ') + '</div>' : '';
+        const conFalta = plan.lineas.filter(l => l.falta);
+        const avisoFalta = conFalta.length
+          ? '<div class="venta-aviso">Ojo: no alcanza el stock de ' + conFalta.length + ' producto' + (conFalta.length === 1 ? '' : 's') + '. Igual se puede marcar (queda en cero y sabes que hay que reponer).</div>' : '';
+        panel.innerHTML =
+          '<div class="venta-confirm">' +
+            '<h5>Esto es lo que se va a descontar del stock:</h5>' + filas + avisoSin + avisoFalta +
+            '<div class="venta-acciones">' +
+              '<button type="button" class="venta-si">Sí, descontar del stock</button>' +
+              '<button type="button" class="venta-no">Cancelar</button>' +
+            '</div>' +
+            '<div class="venta-msg"></div>' +
+          '</div>';
+        panel.querySelector('.venta-no').addEventListener('click', () => { panel.innerHTML = ''; });
+        panel.querySelector('.venta-si').addEventListener('click', async (ev) => {
+          const b = ev.currentTarget;
+          b.disabled = true; b.textContent = 'Descontando…';
+          const j = await _postCRM({
+            accion: 'crm_stock_registrar', cotizacion: num, quien: _quienSoy(),
+            lineas: plan.lineas.map(l => ({ sku: l.sku, producto: l.producto, cantidad: l.cantidad, desde: l.desde }))
+          }).catch(() => null);
+          if (!j || !j.ok) {
+            b.disabled = false; b.textContent = 'Sí, descontar del stock';
+            const m = panel.querySelector('.venta-msg');
+            if (m) { m.className = 'venta-msg err'; m.textContent = (j && j.error) ? j.error : 'No se pudo guardar. Revisa la conexión e intenta de nuevo.'; }
+            return;
+          }
+          await sincronizarStockVivo();
+          _refrescarVistasStock();
+          abrirDetalleCotizacion(num);
+        });
+      });
+    }
+  }
+
   function abrirDetalleCotizacion(num){
     const c = COTIZ_SM_TODAS.find(x => x.cotizacion === num);
     const modal = document.getElementById('cotiz-detalle-modal');
@@ -1822,6 +2005,7 @@
       (filasSegs || '<p class="incluidos-vacio">Sin seguimientos registrados todavía.</p>') +
       '<h4 style="margin:1rem 0 0.5rem;">Mensajes de cotización (' + msgs.length + ')</h4>' +
       (filasMsgs || '<p class="incluidos-vacio">Sin mensajes escritos todavía.</p>');
+    _pintarBloqueVenta(c);
     modal.classList.add('open');
   }
   function _cotizFilaComparacion(display, qty, key){
@@ -2480,6 +2664,8 @@
     renderListaCotizaciones((document.getElementById('cotiz-buscar') || {}).value || '');
     renderComparacionCotizaciones();
   });
+  // Primero el stock real del CRM (inicial menos lo ya vendido), después las cotizaciones.
+  sincronizarStockVivo().then(() => { _refrescarVistasStock(); }).catch(() => {});
   cargarCotizacionesSM();
 
   document.querySelectorAll('.tabbtn').forEach(btn => {

@@ -437,6 +437,12 @@
   .venta-acciones button { flex:1 1 140px; padding:0.65rem 0.9rem; border-radius:10px; font-size:0.85rem; font-weight:800; cursor:pointer; border:0; }
   .venta-si { background:#16A34A; color:#fff; }
   .venta-no { background:var(--card,#fff); color:var(--ink,#0d1b2a); border:1px solid var(--line,#E3E7EC) !important; }
+  .cotiz-card-acciones { display:flex; gap:0.4rem; margin:0.1rem 0 0.6rem; flex-wrap:wrap; }
+  .cotiz-card-acciones button { flex:1 1 auto; padding:0.4rem 0.6rem; font-size:0.75rem; font-weight:700; border-radius:8px; cursor:pointer; border:1px solid var(--line,#E3E7EC); background:var(--card,#fff); color:var(--ink,#0d1b2a); white-space:nowrap; }
+  .cotiz-card-acciones button:hover { background:var(--paper,#F7F9FB); }
+  .cotiz-card-acciones .cca-vender { background:#16A34A; border-color:#16A34A; color:#fff; }
+  .cotiz-card-acciones .cca-vender:hover { background:#12833C; }
+  .cotiz-card-acciones .cca-vendida { background:rgba(22,163,74,0.12); border-color:rgba(22,163,74,0.4); color:#12833C; }
   .venta-excel { display:block; width:100%; margin-top:0.5rem; padding:0.6rem 1rem; border:1px solid var(--line,#E3E7EC); border-radius:10px; background:var(--card,#fff); color:var(--ink,#0d1b2a); font-size:0.83rem; font-weight:700; cursor:pointer; }
   .venta-excel:hover { background:var(--paper,#F7F9FB); }
   .venta-msg { margin-top:0.6rem; font-size:0.8rem; font-weight:700; }
@@ -2659,6 +2665,15 @@
       return '<div class="cotiz-comp-card cotiz-comp-card-prioridad" draggable="true" data-num="' + escapeHtmlSafe(c.cotizacion) + '">' +
         '<div class="cotiz-comp-prioridad-badge">N°' + (idx + 1) + '</div>' +
         '<h4>' + escapeHtmlSafe(c.cotizacion) + ' <span class="sku">' + escapeHtmlSafe(c.institucion) + '</span></h4>' +
+        // Los mismos dos botones que hay dentro del detalle, acá arriba: Rayen trabaja
+        // mirando estas tarjetas y no los encontraba (2026-07-30). El de vender ABRE el
+        // detalle a propósito — la confirmación de qué se descuenta vive ahí, una sola vez.
+        '<div class="cotiz-card-acciones">' +
+          (VENDIDAS_SM[c.cotizacion]
+            ? '<button type="button" class="cca-vendida" data-abrircotiz="' + escapeHtmlSafe(c.cotizacion) + '">Vendida — ver o deshacer</button>'
+            : '<button type="button" class="cca-vender" data-abrircotiz="' + escapeHtmlSafe(c.cotizacion) + '">Marcar como vendida</button>') +
+          '<button type="button" class="cca-excel" data-excelcotiz="' + escapeHtmlSafe(c.cotizacion) + '">Excel</button>' +
+        '</div>' +
         (filas || '<p class="incluidos-vacio">Sin productos detectados en esta cotización.</p>') +
       '</div>';
     }).join('');
@@ -2698,6 +2713,18 @@
     // Buscador de las tarjetas "Stock disponible" / "Faltantes" (pedido de Rayen 2026-07-22).
     _wireBuscarGrid('stock-disp-buscar', 'stock-disp-grid-disponibles');
     _wireBuscarGrid('faltantes-buscar', 'stock-disp-grid-faltantes');
+    // Botones de la cabecera de cada tarjeta. stopPropagation: la tarjeta es arrastrable
+    // y sin esto el clic se iba al drag y no al botón.
+    cont.querySelectorAll('[data-abrircotiz]').forEach(b => {
+      b.addEventListener('click', (ev) => { ev.stopPropagation(); abrirDetalleCotizacion(b.dataset.abrircotiz); });
+    });
+    cont.querySelectorAll('[data-excelcotiz]').forEach(b => {
+      b.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        const cc = COTIZ_SM_TODAS.find(x => x.cotizacion === b.dataset.excelcotiz);
+        if (cc) _descargarExcelCotizacion(cc);
+      });
+    });
     const btnCorreo = document.getElementById('btn-correo-faltantes');
     if (btnCorreo) btnCorreo.addEventListener('click', () => _abrirBorradorFaltantes(seleccionadas));
   }

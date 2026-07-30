@@ -644,24 +644,42 @@ countEl.textContent = DATA.length + ' productos en total';
 
 
 
-/* --- subcategorias de Sillas de ruedas (segunda fila) --- */
+/*__SUBCATS_INI__*/
+/* Sillas de ruedas: al elegirla, la fila de familias se recoge y su lugar lo toman las
+   subcategorias, con un boton para volver. La fila de marcas se oculta: Rayen decidio que
+   con categoria y subcategoria basta, la marca no le sirve para elegir. */
 (function(){
-  if(document.getElementById('subWrap')) return;
   var SUBS = [["estandar","Estándar"],["activas","Activas"],["electricas","Eléctricas"],["neurologicas","Neurológicas"],["pediatricas","Pediátricas"],["bipedestadoras","Bipedestadoras"],["bariatricas","Bariátricas"],["handbikes","Handbikes"],["rampas","Rampas"]];
   var activeSub = '';
   var baseFiltro = (typeof filtroExtra !== 'undefined') ? filtroExtra : null;
-  var wrap = document.createElement('div'); wrap.className='chips-scroll'; wrap.id='subWrap'; wrap.style.display='none';
-  var cont = document.createElement('div'); cont.className='chips'; cont.id='chipsSub'; wrap.appendChild(cont);
-  var filas = document.querySelectorAll('.chips-scroll');
-  if(!filas.length) return;
-  var ultima = filas[filas.length-1];
-  ultima.parentNode.insertBefore(wrap, ultima.nextSibling);
-  function cuenta(){ var h={}; DATA.forEach(function(p){ if(p.familiaKey==='silla_ruedas' && p.tipoSilla) h[p.tipoSilla]=(h[p.tipoSilla]||0)+1; }); return h; }
-  function pinta(){
-    var h = cuenta();
-    var html = '<button class="chip'+(activeSub?'':' active')+'" data-sub="">Todas</button>';
+  var contFam = document.getElementById('chips');
+  var filaFam = contFam ? contFam.parentNode : null;
+  if(!filaFam) return;
+  // fuera la fila de marcas
+  var contMarca = document.getElementById('chipsMarca');
+  if(contMarca && contMarca.parentNode){ contMarca.parentNode.style.display='none'; if(typeof activeMarca!=='undefined') activeMarca=''; }
+  var wrap = document.getElementById('subWrap');
+  if(!wrap){
+    wrap = document.createElement('div'); wrap.className='chips-scroll'; wrap.id='subWrap';
+    var cont0 = document.createElement('div'); cont0.className='chips'; cont0.id='chipsSub'; wrap.appendChild(cont0);
+    filaFam.parentNode.insertBefore(wrap, filaFam.nextSibling);
+  }
+  wrap.style.display='none';
+  var cont = document.getElementById('chipsSub');
+  function esSillas(){ return activeFam === 'silla_ruedas'; }
+  function cuentaSub(){ var h={}; DATA.forEach(function(p){ if(p.familiaKey==='silla_ruedas' && p.tipoSilla) h[p.tipoSilla]=(h[p.tipoSilla]||0)+1; }); return h; }
+  function pintaSub(){
+    var h = cuentaSub();
+    var html = '<button class="chip" id="volverFam" title="Volver a todas las categorías">&lsaquo; Sillas de ruedas</button>';
+    html += '<button class="chip'+(activeSub?'':' active')+'" data-sub="">Todas</button>';
     SUBS.forEach(function(s){ if(!h[s[0]]) return; html += '<button class="chip'+(activeSub===s[0]?' active':'')+'" data-sub="'+s[0]+'">'+s[1]+' <span style="opacity:.55;font-weight:700">'+h[s[0]]+'</span></button>'; });
     cont.innerHTML = html;
+  }
+  function pinta(){
+    var ver = esSillas();
+    filaFam.style.display = ver ? 'none' : '';
+    wrap.style.display = ver ? '' : 'none';
+    if(ver) pintaSub(); else activeSub='';
   }
   filtroExtra = function(p){
     if(baseFiltro && !baseFiltro(p)) return false;
@@ -670,14 +688,17 @@ countEl.textContent = DATA.length + ' productos en total';
   };
   function refresca(){ if(typeof applyFilters==='function') applyFilters(); else if(typeof aplicar==='function') aplicar(); }
   document.addEventListener('click', function(e){
-    var fam = e.target.closest ? e.target.closest('[data-fam]') : null;
-    if(fam){ var esSilla = (fam.getAttribute('data-fam')==='silla_ruedas');
-      wrap.style.display = esSilla ? '' : 'none';
-      if(!esSilla) activeSub='';
-      pinta(); setTimeout(refresca, 0); return; }
-    var sub = e.target.closest ? e.target.closest('#chipsSub [data-sub]') : null;
-    if(sub){ activeSub = sub.getAttribute('data-sub'); pinta(); refresca(); }
+    if(!e.target.closest) return;
+    if(e.target.closest('#volverFam')){
+      activeFam=''; activeSub='';
+      if(contFam){ [].forEach.call(contFam.children, function(c){ c.classList.remove('active'); }); var t=contFam.querySelector('[data-fam=""]'); if(t) t.classList.add('active'); }
+      pinta(); refresca(); return;
+    }
+    var sub = e.target.closest('#chipsSub [data-sub]');
+    if(sub){ activeSub = sub.getAttribute('data-sub'); pintaSub(); refresca(); return; }
+    var fam = e.target.closest('#chips [data-fam]');
+    if(fam){ setTimeout(function(){ pinta(); refresca(); }, 0); return; }
   });
   pinta();
 })();
-</script>
+/*__SUBCATS_FIN__*/</script>

@@ -661,14 +661,14 @@ countEl.textContent = DATA.length + ' productos en total';
   function cuentaSub(){ var h={}; DATA.forEach(function(p){ if(p.familiaKey==='silla_ruedas' && p.tipoSilla) h[p.tipoSilla]=(h[p.tipoSilla]||0)+1; }); return h; }
   function pintaSub(){
     var h = cuentaSub();
-    var html = '<button class="chip" id="volverFam" title="Volver a todas las categorías">&lsaquo; Sillas de ruedas</button>';
-    html += '<button class="chip'+(activeSub?'':' active')+'" data-sub="">Todas</button>';
+    var html = '<button class="chip'+(activeSub?'':' active')+'" data-sub="">Todas</button>';
     SUBS.forEach(function(s){ if(!h[s[0]]) return; html += '<button class="chip'+(activeSub===s[0]?' active':'')+'" data-sub="'+s[0]+'">'+s[1]+' <span style="opacity:.55;font-weight:700">'+h[s[0]]+'</span></button>'; });
     cont.innerHTML = html;
   }
   function pinta(){
+    // La fila de categorias se queda arriba y las subcategorias aparecen ABAJO. Asi lo pidio
+    // Rayen: antes se recogia la de arriba y se perdia la referencia de donde estabas.
     var ver = esSillas();
-    filaFam.style.display = ver ? 'none' : '';
     wrap.style.display = ver ? '' : 'none';
     if(ver) pintaSub(); else activeSub='';
   }
@@ -680,11 +680,6 @@ countEl.textContent = DATA.length + ' productos en total';
   function refresca(){ if(typeof applyFilters==='function') applyFilters(); else if(typeof aplicar==='function') aplicar(); }
   document.addEventListener('click', function(e){
     if(!e.target.closest) return;
-    if(e.target.closest('#volverFam')){
-      activeFam=''; activeSub='';
-      if(contFam){ [].forEach.call(contFam.children, function(c){ c.classList.remove('active'); }); var t=contFam.querySelector('[data-fam=""]'); if(t) t.classList.add('active'); }
-      pinta(); refresca(); return;
-    }
     var sub = e.target.closest('#chipsSub [data-sub]');
     if(sub){ activeSub = sub.getAttribute('data-sub'); pintaSub(); refresca(); return; }
     var fam = e.target.closest('#chips [data-fam]');

@@ -186,6 +186,72 @@
   // Excel de UNA cotización cruzada con el stock (pedido de Rayen 2026-07-30).
   // Uso: OCT_excelCotizacion({num, institucion, ejecutivo, fecha}, [{sku,nombre,pide,bodega,camino,estado}])
   // 'estado' es 'ok' | 'camino' | 'falta' | 'sindato' — decide el color de la celda.
+
+  // Empaqueta una hoja ya armada en un .xlsx, con la paleta de estilos compartida
+  // (0 normal · 1 titulo · 2 subtitulo · 3 cabecera · 4 texto · 5 centrado ·
+  //  6 centrado gris · 7 rojo · 8 verde · 9 ambar).
+  function _octZipExcel(hoja, nombreHoja) {
+    var estilos = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+      + '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+      + '<fonts count="7">'
+      +   '<font><sz val="11"/><name val="Calibri"/></font>'
+      +   '<font><b/><sz val="15"/><color rgb="FF16324F"/><name val="Calibri"/></font>'
+      +   '<font><sz val="10"/><color rgb="FF7C8794"/><name val="Calibri"/></font>'
+      +   '<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>'
+      +   '<font><b/><sz val="11"/><color rgb="FFB3261E"/><name val="Calibri"/></font>'
+      +   '<font><b/><sz val="11"/><color rgb="FF2F7D55"/><name val="Calibri"/></font>'
+      +   '<font><b/><sz val="11"/><color rgb="FFB45309"/><name val="Calibri"/></font>'
+      + '</fonts>'
+      + '<fills count="3">'
+      +   '<fill><patternFill patternType="none"/></fill>'
+      +   '<fill><patternFill patternType="gray125"/></fill>'
+      +   '<fill><patternFill patternType="solid"><fgColor rgb="FF16324F"/><bgColor indexed="64"/></patternFill></fill>'
+      + '</fills>'
+      + '<borders count="2">'
+      +   '<border><left/><right/><top/><bottom/><diagonal/></border>'
+      +   '<border><left/><right/><top/><bottom style="thin"><color rgb="FFE3E7EC"/></bottom><diagonal/></border>'
+      + '</borders>'
+      + '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+      + '<cellXfs count="10">'
+      +   '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
+      +   '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
+      +   '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
+      +   '<xf numFmtId="0" fontId="3" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment vertical="center"/></xf>'
+      +   '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>'
+      +   '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
+      +   '<xf numFmtId="0" fontId="2" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
+      +   '<xf numFmtId="0" fontId="4" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
+      +   '<xf numFmtId="0" fontId="5" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
+      +   '<xf numFmtId="0" fontId="6" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
+      + '</cellXfs>'
+      + '</styleSheet>';
+    return armarZip([
+      { nombre: '[Content_Types].xml', contenido: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+        + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+        + '<Default Extension="xml" ContentType="application/xml"/>'
+        + '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+        + '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+        + '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+        + '</Types>' },
+      { nombre: '_rels/.rels', contenido: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        + '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
+        + '</Relationships>' },
+      { nombre: 'xl/workbook.xml', contenido: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        + '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+        + 'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+        + '<sheets><sheet name="' + (nombreHoja || 'Hoja1') + '" sheetId="1" r:id="rId1"/></sheets></workbook>' },
+      { nombre: 'xl/_rels/workbook.xml.rels', contenido: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        + '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
+        + '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+        + '</Relationships>' },
+      { nombre: 'xl/styles.xml', contenido: estilos },
+      { nombre: 'xl/worksheets/sheet1.xml', contenido: hoja }
+    ]);
+  }
+
   window.OCT_excelCotizacion = function (info, filas) {
     info = info || {}; filas = filas || [];
     var COLS = ['SKU', 'Producto', 'Pide', 'En bodega', 'En camino', 'Estado'];
@@ -250,67 +316,84 @@
       + '<pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/>'
       + '</worksheet>';
 
-    var estilos = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-      + '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-      + '<fonts count="7">'
-      +   '<font><sz val="11"/><name val="Calibri"/></font>'
-      +   '<font><b/><sz val="15"/><color rgb="FF16324F"/><name val="Calibri"/></font>'
-      +   '<font><sz val="10"/><color rgb="FF7C8794"/><name val="Calibri"/></font>'
-      +   '<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>'
-      +   '<font><b/><sz val="11"/><color rgb="FFB3261E"/><name val="Calibri"/></font>'
-      +   '<font><b/><sz val="11"/><color rgb="FF2F7D55"/><name val="Calibri"/></font>'
-      +   '<font><b/><sz val="11"/><color rgb="FFB45309"/><name val="Calibri"/></font>'
-      + '</fonts>'
-      + '<fills count="3">'
-      +   '<fill><patternFill patternType="none"/></fill>'
-      +   '<fill><patternFill patternType="gray125"/></fill>'
-      +   '<fill><patternFill patternType="solid"><fgColor rgb="FF16324F"/><bgColor indexed="64"/></patternFill></fill>'
-      + '</fills>'
-      + '<borders count="2">'
-      +   '<border><left/><right/><top/><bottom/><diagonal/></border>'
-      +   '<border><left/><right/><top/><bottom style="thin"><color rgb="FFE3E7EC"/></bottom><diagonal/></border>'
-      + '</borders>'
-      + '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
-      + '<cellXfs count="10">'
-      +   '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
-      +   '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
-      +   '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
-      +   '<xf numFmtId="0" fontId="3" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment vertical="center"/></xf>'
-      +   '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>'
-      +   '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
-      +   '<xf numFmtId="0" fontId="2" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
-      +   '<xf numFmtId="0" fontId="4" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
-      +   '<xf numFmtId="0" fontId="5" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
-      +   '<xf numFmtId="0" fontId="6" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
-      + '</cellXfs>'
-      + '</styleSheet>';
+    return _octZipExcel(hoja, 'Cotizacion');
+  };
 
-    var archivos = [
-      { nombre: '[Content_Types].xml', contenido: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
-        + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
-        + '<Default Extension="xml" ContentType="application/xml"/>'
-        + '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
-        + '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
-        + '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
-        + '</Types>' },
-      { nombre: '_rels/.rels', contenido: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-        + '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
-        + '</Relationships>' },
-      { nombre: 'xl/workbook.xml', contenido: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        + '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
-        + 'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
-        + '<sheets><sheet name="Cotizacion" sheetId="1" r:id="rId1"/></sheets></workbook>' },
-      { nombre: 'xl/_rels/workbook.xml.rels', contenido: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-        + '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
-        + '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
-        + '</Relationships>' },
-      { nombre: 'xl/styles.xml', contenido: estilos },
-      { nombre: 'xl/worksheets/sheet1.xml', contenido: hoja }
-    ];
-    return armarZip(archivos);
+
+  // Excel de VARIAS cotizaciones juntas (pedido de Rayen 2026-07-30). Es la misma
+  // tabla "lado a lado" de la pantalla: una columna por cotización con lo que pide
+  // cada una del mismo producto, el total sumado y el stock. El estado se deduce
+  // acá de los números, igual que en el Excel de una sola cotización.
+  // Uso: OCT_excelComparacion({fecha}, ['OC26-1-SM', ...], [{sku,nombre,porCotiz,total,bodega,camino,sinDato}])
+  window.OCT_excelComparacion = function (info, nums, filas) {
+    info = info || {}; nums = nums || []; filas = filas || [];
+    var TXT = { ok: 'En bodega', camino: 'En camino', falta: 'FALTA', sindato: 'Sin dato' };
+    var EST = { ok: 8, camino: 9, falta: 7, sindato: 6 };
+    function estadoDe(r) {
+      if (r.sinDato) return 'sindato';
+      var pide = Number(r.total) || 0, bod = Number(r.bodega) || 0, cam = Number(r.camino) || 0;
+      if (bod >= pide) return 'ok';
+      if (bod + cam >= pide) return 'camino';
+      return 'falta';
+    }
+    var nOk = 0, nCam = 0, nFalta = 0, nSin = 0;
+    filas.forEach(function (r) {
+      r._estado = estadoDe(r);
+      if (r._estado === 'ok') nOk++; else if (r._estado === 'camino') nCam++;
+      else if (r._estado === 'falta') nFalta++; else nSin++;
+    });
+
+    var COLS = ['SKU', 'Producto'].concat(nums).concat(['Total pedido', 'En bodega', 'En camino', 'Estado']);
+    var iTot = 2 + nums.length;   // índice de la columna "Total pedido"
+    var xml = '';
+    xml += '<row r="1" ht="24" customHeight="1">' + celdaTexto('A1', 1,
+      'Cotizaciones lado a lado — ' + nums.length + (nums.length === 1 ? ' cotización' : ' cotizaciones')) + '</row>';
+    xml += '<row r="2" ht="16" customHeight="1">' + celdaTexto('A2', 2,
+      (info.fecha || '') + '   ·   ' + filas.length + ' productos distintos   ·   ' +
+      nOk + ' en bodega, ' + nCam + ' esperan el contenedor, ' + nFalta + ' faltan' +
+      (nSin ? ', ' + nSin + ' sin dato' : '')) + '</row>';
+    xml += '<row r="3"></row>';
+    xml += '<row r="4" ht="20" customHeight="1">';
+    COLS.forEach(function (c, i) { xml += celdaTexto(col(i) + '4', 3, c); });
+    xml += '</row>';
+
+    filas.forEach(function (r, i) {
+      var f = i + 5;
+      xml += '<row r="' + f + '">'
+        + celdaTexto('A' + f, 4, r.sku || '—')
+        + celdaTexto('B' + f, 4, r.nombre || '(sin nombre)');
+      nums.forEach(function (n, k) {
+        var q = (r.porCotiz || {})[n];
+        xml += q ? celdaNumero(col(2 + k) + f, 5, q) : celdaTexto(col(2 + k) + f, 6, '—');
+      });
+      xml += celdaNumero(col(iTot) + f, 5, r.total)
+        + (r._estado === 'sindato' ? celdaTexto(col(iTot + 1) + f, 5, '—') : celdaNumero(col(iTot + 1) + f, 5, r.bodega))
+        + (r._estado === 'sindato' ? celdaTexto(col(iTot + 2) + f, 5, '—') : celdaNumero(col(iTot + 2) + f, 5, r.camino))
+        + celdaTexto(col(iTot + 3) + f, EST[r._estado] || 5, TXT[r._estado] || 'Sin dato')
+        + '</row>';
+    });
+    var ultima = filas.length ? (filas.length + 4) : 4;
+    var ultCol = col(COLS.length - 1);
+
+    var anchos = '<col min="1" max="1" width="16" customWidth="1"/><col min="2" max="2" width="46" customWidth="1"/>';
+    if (nums.length) anchos += '<col min="3" max="' + (2 + nums.length) + '" width="16" customWidth="1"/>';
+    anchos += '<col min="' + (3 + nums.length) + '" max="' + (3 + nums.length) + '" width="13" customWidth="1"/>'
+      + '<col min="' + (4 + nums.length) + '" max="' + (5 + nums.length) + '" width="12" customWidth="1"/>'
+      + '<col min="' + (6 + nums.length) + '" max="' + (6 + nums.length) + '" width="14" customWidth="1"/>';
+
+    var hoja = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+      + '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+      + '<sheetViews><sheetView workbookViewId="0" showGridLines="0">'
+      +   '<pane xSplit="2" ySplit="4" topLeftCell="C5" activePane="bottomRight" state="frozen"/>'
+      + '</sheetView></sheetViews>'
+      + '<sheetFormatPr defaultRowHeight="15"/>'
+      + '<cols>' + anchos + '</cols>'
+      + '<sheetData>' + xml + '</sheetData>'
+      + '<autoFilter ref="A4:' + ultCol + ultima + '"/>'
+      + '<pageMargins left="0.4" right="0.4" top="0.6" bottom="0.6" header="0.3" footer="0.3"/>'
+      + '</worksheet>';
+
+    return _octZipExcel(hoja, 'Comparacion');
   };
 
   // Dispara la descarga del Blob con el nombre dado.

@@ -1900,6 +1900,49 @@
     try { ['bajo','alto'].forEach(s => { actualizarResumenStock(s); renderIncluidos(s); }); } catch(e){}
   }
 
+
+  // Excel de TODAS las cotizaciones marcadas juntas — la misma tabla "lado a lado"
+  // que se ve en pantalla (pedido de Rayen 2026-07-30).
+  function _descargarExcelComparacion(seleccionadas){
+    if (!window.OCT_excelComparacion || !window.OCT_descargar) {
+      alert('No se pudo cargar el generador de Excel. Recarga la página con Ctrl+Shift+R.');
+      return;
+    }
+    if (!seleccionadas || !seleccionadas.length) { alert('Marca al menos una cotización.'); return; }
+    // Mismo armado que _tablaMatrizCotizaciones, para que el Excel y la pantalla
+    // no puedan mostrar cosas distintas.
+    const matriz = {};
+    seleccionadas.forEach(c => {
+      _smExtraerProductos(c.productos).forEach(p => {
+        if (!matriz[p.key]) matriz[p.key] = { display: p.display, porCotiz: {}, total: 0 };
+        matriz[p.key].porCotiz[c.cotizacion] = (matriz[p.key].porCotiz[c.cotizacion] || 0) + p.qty;
+        matriz[p.key].total += p.qty;
+      });
+    });
+    const filas = Object.keys(matriz)
+      .sort((a, b) => matriz[a].display.localeCompare(matriz[b].display, 'es'))
+      .map(key => {
+        const m = matriz[key];
+        const s = STOCK_SM[key];
+        const d = _stockPartido(m.total, s);
+        return {
+          sku: (s && s.sku) || '—',
+          nombre: (s && s.item) || m.display,
+          porCotiz: m.porCotiz,
+          total: m.total,
+          bodega: d.sinDato ? 0 : d.bod,
+          camino: d.sinDato ? 0 : d.cam,
+          sinDato: !!d.sinDato
+        };
+      });
+    if (!filas.length) { alert('Las cotizaciones marcadas no tienen productos que listar.'); return; }
+    const hoy = new Date();
+    const fecha = String(hoy.getDate()).padStart(2,'0') + '-' + String(hoy.getMonth()+1).padStart(2,'0') + '-' + hoy.getFullYear();
+    const nums = seleccionadas.map(c => c.cotizacion);
+    const blob = window.OCT_excelComparacion({ fecha: fecha }, nums, filas);
+    window.OCT_descargar(blob, 'Cotizaciones lado a lado (' + nums.length + ') - stock.xlsx');
+  }
+
   // Excel de la cotización que se está mirando: lo que pide cruzado con el stock
   // (pedido de Rayen 2026-07-30, "cómo puedo extraer esto"). Reusa el generador
   // de ExcelFaltantes.js. Los productos que no están en bodega salen como "Sin
@@ -2684,6 +2727,7 @@
       ? '<button type="button" class="btn-primario" id="btn-correo-faltantes" style="margin:0.8rem 0;">Enviar correo a Mario con este detalle (' + faltantesLista.length + ' productos)</button>'
       : '';
     cont.innerHTML = '<h3>Cotizaciones lado a lado — ' + seleccionadas.length + ' juntas</h3>' +
+      '<button type="button" class="btn-secundario" id="btn-excel-comparacion" style="margin:0 0 0.8rem;">Descargar Excel de estas ' + seleccionadas.length + ' cotizaciones</button>' +
       '<p class="nivel-nota">Cada columna es una cotización — cuánto pide cada una del mismo producto, el total sumado, y si el stock alcanza para todas juntas.</p>' +
       tablaMatriz +
       '<h3 style="margin-top:1.4rem;">Por prioridad <span class="filtros-seccion-sub">— arrastra una tarjeta para cambiar el orden</span></h3>' +
@@ -2725,6 +2769,8 @@
         if (cc) _descargarExcelCotizacion(cc);
       });
     });
+    const btnXlsComp = document.getElementById('btn-excel-comparacion');
+    if (btnXlsComp) btnXlsComp.addEventListener('click', () => _descargarExcelComparacion(seleccionadas));
     const btnCorreo = document.getElementById('btn-correo-faltantes');
     if (btnCorreo) btnCorreo.addEventListener('click', () => _abrirBorradorFaltantes(seleccionadas));
   }

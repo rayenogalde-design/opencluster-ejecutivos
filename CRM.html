@@ -17808,28 +17808,43 @@ function _lpDecorarFichas(){
 function cargarListaPrecios(){
   const box = document.getElementById('lpListaContainer');
   if(!box) return;
-  if(!window.__PRECIOS_SEG_LOADED){ box.innerHTML = '<div style="padding:24px;color:var(--subtle);font-size:14px;">Cargando precios…</div>'; return; }
-  let keys = [];
-  if(typeof hayDrillDown === 'function' && hayDrillDown()){
-    keys = _segKeysParaEjec(typeof DRILL_DOWN_EJEC !== 'undefined' ? DRILL_DOWN_EJEC : '');
-  } else {
-    const modoActivo = (typeof getModoVista === 'function') ? getModoVista() : '';
-    const verComoEjec = (typeof ROL === 'undefined') || ROL !== 'admin' || modoActivo === 'ejecutiva';
-    if(!verComoEjec){
-      // Admin: pestañas por canal (Instituciones · ClickMedical · Distribuidor · Surterapia)
-      box.innerHTML = _lpAdminRender();
-      box.querySelectorAll('.lp-card.collapsed').forEach(c => c.classList.remove('collapsed'));
-      _esperarFichas(_lpDecorarFichas);
-      var _q0 = (document.getElementById('lpInput')||{}).value||''; if(_q0) filtrarListaPrecios(_q0);
-      return;
-    }
-    keys = _segKeysParaEjec(typeof USUARIO !== 'undefined' ? USUARIO : '');
-  }
-  box.innerHTML = _lpEjecRender(keys);
-  box.querySelectorAll('.lp-card.collapsed').forEach(c => c.classList.remove('collapsed')); // expandidas en esta vista
-  _esperarFichas(_lpDecorarFichas);
-  const q = (document.getElementById('lpInput') || {}).value || '';
-  if(q) filtrarListaPrecios(q);
+  // La lista completa vive en la tarjeta de cada ejecutivo (miles de productos con
+  // foto y ficha). Meterla dentro del CRM lo dejaba pesado, asi que desde aca solo
+  // se abre la tarjeta que le corresponde a quien esta conectado.
+  const HUB = {
+    'Germán':'PreciosProductosGermanHub.html',
+    'German':'PreciosProductosGermanHub.html',
+    'William':'PreciosProductosWilliamHub.html',
+    'Maximiliano':'PreciosProductosMaxiHub.html',
+    'Roberto':'PreciosProductosHub.html',
+    'Rayen':'PreciosProductosCentralHub.html',
+    'Mario':'PreciosProductosCentralHub.html',
+    'Ximena':'PreciosProductosCentralHub.html'
+  };
+  const quien = (typeof USUARIO !== 'undefined' && USUARIO) ? String(USUARIO) : '';
+  const destino = HUB[quien] || HUB[quien.split(' ')[0]] || 'PreciosProductosCentralHub.html';
+  const nombre = quien ? quien.split(' ')[0] : '';
+  // El buscador de esta pestaña ya no aplica: lo que se busca esta en la tarjeta.
+  const bus = document.querySelector('.pc-buscador-bloque');
+  if(bus) bus.style.display = 'none';
+  box.innerHTML =
+    '<a href="' + destino + '" style="display:flex;align-items:center;gap:16px;text-decoration:none;'
+    + 'background:#fff;border:1px solid var(--line,#E3E7EC);border-left:5px solid #0B5394;border-radius:14px;'
+    + 'padding:22px 24px;max-width:680px;box-shadow:0 2px 10px rgba(10,20,40,.06);">'
+    + '<span style="flex:none;width:52px;height:52px;border-radius:14px;background:#EAF0F6;display:flex;'
+    + 'align-items:center;justify-content:center;">'
+    + '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0B5394" stroke-width="2" '
+    + 'stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>'
+    + '</span>'
+    + '<span style="flex:1;min-width:0;">'
+    + '<span style="display:block;font-size:17px;font-weight:800;color:#0B5394;">Abrir mi lista de precios'
+    + (nombre ? ' — ' + esc(nombre) : '') + '</span>'
+    + '<span style="display:block;font-size:13.5px;color:var(--subtle,#7C8794);margin-top:3px;">'
+    + 'Todos los productos con foto, ficha y precio por cantidad. Desde ahí puedes volver al CRM cuando quieras.</span>'
+    + '</span>'
+    + '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0B5394" stroke-width="2.4" '
+    + 'stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><path d="M9 18l6-6-6-6"/></svg>'
+    + '</a>';
 }
 function filtrarListaPrecios(q){
   const clear = document.getElementById('lpClear'); if(clear) clear.style.display = q ? 'flex' : 'none';
@@ -17865,7 +17880,8 @@ function toggleListaPrecios(segKey){
   if(inline && inline.textContent.trim()){
     try{ window.__PRECIOS_SEG = JSON.parse(inline.textContent); window.__PRECIOS_SEG_LOADED = true; return; }catch(e){}
   }
-  fetch('precios_segmento.json', { cache:'no-store' })
+  // Ya no se descarga precios_segmento.json: la lista vive en la tarjeta del ejecutivo.
+  Promise.reject('no-usado')
     .then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); })
     .then(function(d){ window.__PRECIOS_SEG = d; window.__PRECIOS_SEG_LOADED = true; try{ if(document.getElementById('lpListaContainer')) cargarListaPrecios(); }catch(e){} })
     .catch(function(){});

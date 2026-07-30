@@ -437,6 +437,8 @@
   .venta-acciones button { flex:1 1 140px; padding:0.65rem 0.9rem; border-radius:10px; font-size:0.85rem; font-weight:800; cursor:pointer; border:0; }
   .venta-si { background:#16A34A; color:#fff; }
   .venta-no { background:var(--card,#fff); color:var(--ink,#0d1b2a); border:1px solid var(--line,#E3E7EC) !important; }
+  .venta-excel { display:block; width:100%; margin-top:0.5rem; padding:0.6rem 1rem; border:1px solid var(--line,#E3E7EC); border-radius:10px; background:var(--card,#fff); color:var(--ink,#0d1b2a); font-size:0.83rem; font-weight:700; cursor:pointer; }
+  .venta-excel:hover { background:var(--paper,#F7F9FB); }
   .venta-msg { margin-top:0.6rem; font-size:0.8rem; font-weight:700; }
   .venta-msg.err { color:#DC2626; }
 
@@ -1891,6 +1893,38 @@
     try { renderComparacionCotizaciones(); } catch(e){}
     try { ['bajo','alto'].forEach(s => { actualizarResumenStock(s); renderIncluidos(s); }); } catch(e){}
   }
+
+  // Excel de la cotización que se está mirando: lo que pide cruzado con el stock
+  // (pedido de Rayen 2026-07-30, "cómo puedo extraer esto"). Reusa el generador
+  // de ExcelFaltantes.js. Los productos que no están en bodega salen como "Sin
+  // dato" — nunca como "FALTA", que significaría que los tenemos y se acabaron.
+  function _descargarExcelCotizacion(c){
+    if (!window.OCT_excelCotizacion || !window.OCT_descargar) {
+      alert('No se pudo cargar el generador de Excel. Recarga la página con Ctrl+Shift+R.');
+      return;
+    }
+    const filas = _smExtraerProductos(c.productos).map(p => {
+      const s = STOCK_SM[p.key];
+      const d = _stockPartido(p.qty, s);
+      return {
+        sku: (s && s.sku) || '—',
+        nombre: (s && s.item) || p.display,
+        pide: p.qty,
+        bodega: d.sinDato ? 0 : d.bod,
+        camino: d.sinDato ? 0 : d.cam,
+        estado: d.sinDato ? 'sindato' : d.clase
+      };
+    });
+    if (!filas.length) { alert('Esta cotización no tiene productos que listar.'); return; }
+    const hoy = new Date();
+    const fecha = String(hoy.getDate()).padStart(2,'0') + '-' + String(hoy.getMonth()+1).padStart(2,'0') + '-' + hoy.getFullYear();
+    const blob = window.OCT_excelCotizacion(
+      { num: c.cotizacion, institucion: c.institucion, ejecutivo: c.ejecutivo, fecha: fecha },
+      filas);
+    const limpio = String(c.cotizacion).replace(/[\\/:*?"<>|]/g, '-');
+    window.OCT_descargar(blob, 'Cotizacion ' + limpio + ' - stock.xlsx');
+  }
+
   // Bloque de venta arriba del detalle de la cotización.
   function _pintarBloqueVenta(c){
     const cuerpo = document.getElementById('cotiz-detalle-cuerpo');
@@ -1914,6 +1948,12 @@
         '<button type="button" class="venta-btn">Marcar como vendida y descontar del stock</button>' +
         '<div class="venta-panel"></div>';
     }
+    const btnXls = document.createElement('button');
+    btnXls.type = 'button';
+    btnXls.className = 'venta-excel';
+    btnXls.textContent = 'Descargar Excel de esta cotización';
+    btnXls.addEventListener('click', () => _descargarExcelCotizacion(c));
+    caja.appendChild(btnXls);
     cuerpo.insertAdjacentElement('afterbegin', caja);
 
     const msgDe = () => caja.querySelector('.venta-msg');

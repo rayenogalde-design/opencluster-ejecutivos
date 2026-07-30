@@ -18,6 +18,10 @@ window.STOCK_ALIAS_SKU = {
   "pelotadeterapiadediametro55cm": "BJ-51091000",
   "kitdeestimulacionsensorial": "BJ-KMAS",
   "sacopropioceptivo": "BJ-EV2208",
+  "rinconluminea": "BJ-LRIN23",
+  "kitdebolasdeespejosmediana": "BJ-EKBE300",
+  "kitdebolasdeespejomediana": "BJ-EKBE300",
+  "kitdebolasdeespejos": "BJ-EKBE300",
   "kitdematerialuv": "BJ-KUV",
   "pelotacacahuete": "BJ-43700100",
   "tubodeburbujasluminea": "BJ-LTUB",
@@ -54,6 +58,9 @@ window.STOCK_SIN_BODEGA = [
   "acolchadopared",
   "alfombraluminea",
   "allinonehpproone440238i71270016gbddr41tbssd",
+  "basecuadradaparatubodeburbujas",
+  "basecuadradaparatubodeburbujascentrado",
+  "columpiocuddle",
   "cortinadefibraoptica",
   "fireballshx",
   "focodeluzshx",
@@ -83,9 +90,8 @@ window.STOCK_SIN_BODEGA = [
 //   - "Foco de luz SHX" NO es el "Foco de luz UV LED" (BJ-EIFUVL): son productos
 //     distintos y con precios distintos.
 //
-// PENDIENTES de respuesta (siguen sin cruzar, no asumir nada):
-//   - "Rincon Luminea" (32 lineas): Rayen cree que todos los que venden son el
-//     "con tablet" (BJ-LRIN23), pero lo va a confirmar al 100% antes de aplicarlo.
-//   - "Kit de bola de espejos mediana": Rayen va a preguntar si el de bodega
-//     (BJ-EKBE300) es el mediano.
-//   - "Columpio cuddle" y "Base cuadrada para tubo de burbujas": sin definir.
+// Confirmados por Rayen el 29-jul-2026 (segunda tanda):
+//   - "Rincon Luminea" SIEMPRE es el que lleva tablet -> BJ-LRIN23.
+//   - "Kit de bolas de espejos" es el MEDIANO -> BJ-EKBE300.
+//   - "Columpio cuddle" y "Base cuadrada para tubo de burbujas": no los tienen,
+//     van a la lista de sin bodega.

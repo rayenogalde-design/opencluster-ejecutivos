@@ -3617,20 +3617,45 @@
   var tb = document.getElementById("tbody-stock-bodega");
   if(!tb){ var b0=document.getElementById("salaEnviarCotiz"); if(b0) b0.style.display="none"; return; }
 
-  // 1) Agregar una casilla al inicio de cada fila de la tabla de bodega.
-  var thead = tb.closest("table") ? tb.closest("table").querySelector("thead tr") : null;
-  if(thead){ var th=document.createElement("th"); th.style.width="26px"; thead.insertBefore(th, thead.firstChild); }
-  Array.prototype.forEach.call(tb.querySelectorAll("tr"), function(tr){
-    if(tr.querySelector("td.sala-pick-cell")) return;
-    var nameCell = tr.querySelector(".name");
-    var sku = nameCell ? (nameCell.getAttribute("data-ficha")||"") : "";
-    var td = document.createElement("td");
-    td.className = "sala-pick-cell";
-    td.style.textAlign = "center";
-    var cb = document.createElement("input");
-    cb.type = "checkbox"; cb.className = "sala-pick"; cb.setAttribute("data-sku", sku);
-    td.appendChild(cb);
-    tr.insertBefore(td, tr.firstChild);
+  // 1) Casilla al inicio de cada fila, en LAS TRES tablas de stock. Antes estaba solo
+  //    en Bodega, y Rayen arma la cotización mirando Combinado (2026-08-03).
+  function _agregarCasillas(tbodyId){
+    var tbi = document.getElementById(tbodyId);
+    if(!tbi) return;
+    var tabla = tbi.closest("table");
+    var thead = tabla ? tabla.querySelector("thead tr") : null;
+    // La cabecera de la casilla va sin texto: así ni se puede ordenar por ella ni sale
+    // en el Excel (las dos cosas se saltan las columnas sin título).
+    if(thead && !thead.querySelector("th.sala-pick-th")){
+      var th=document.createElement("th"); th.className="sala-pick-th"; th.style.width="26px";
+      thead.insertBefore(th, thead.firstChild);
+    }
+    Array.prototype.forEach.call(tbi.querySelectorAll("tr"), function(tr){
+      if(tr.querySelector("td.sala-pick-cell")) return;
+      var nameCell = tr.querySelector(".name");
+      var sku = nameCell ? (nameCell.getAttribute("data-ficha")||"") : "";
+      var td = document.createElement("td");
+      td.className = "sala-pick-cell";
+      td.style.textAlign = "center";
+      var cb = document.createElement("input");
+      cb.type = "checkbox"; cb.className = "sala-pick"; cb.setAttribute("data-sku", sku);
+      if(!sku) cb.disabled = true;
+      td.appendChild(cb);
+      tr.insertBefore(td, tr.firstChild);
+    });
+  }
+  ["tbody-stock-bodega", "tbody-stock-combinado", "tbody-stock-camino"].forEach(_agregarCasillas);
+
+  // El MISMO producto aparece en las tres tablas. Si se marca en una, se marca en todas:
+  // si no, marcarlo en Bodega y en Combinado lo mandaba a la cotización con cantidad 2
+  // sin que se note. Marcar = "quiero ese producto", da lo mismo en qué pestaña.
+  document.addEventListener("change", function(e){
+    var cb = e.target;
+    if(!cb || !cb.classList || !cb.classList.contains("sala-pick")) return;
+    var sku = cb.getAttribute("data-sku"); if(!sku) return;
+    document.querySelectorAll('input.sala-pick[data-sku="' + sku.replace(/"/g, '\\"') + '"]').forEach(function(otro){
+      if(otro !== cb && otro.checked !== cb.checked) otro.checked = cb.checked;
+    });
   });
 
   // Precio de venta con IVA visible SIEMPRE, en todas las tablas (pedido de Rayen 2026-07-28:
@@ -3834,7 +3859,9 @@
     document.querySelectorAll("input.sala-pick:checked").forEach(function(cb){
       var sku = cb.getAttribute("data-sku") || "";
       if(!sku) return;
-      if(vistos[sku]){ vistos[sku].cant += 1; return; }
+      // Una sola vez por producto: la misma casilla vive en las 3 tablas (y en las
+      // tarjetas). Antes sumaba +1 por cada marca y salía cantidad 2 sin querer.
+      if(vistos[sku]) return;
       var nombre = "", img = "";
       var card = cb.closest(".stock-disp-card");
       var row = cb.closest("tr");

@@ -464,6 +464,15 @@
   .stk-aviso.ok { color:#2f7d55; }
   .stk-nodato { font-size:0.71rem; color:var(--mist,#7C8794); font-style:italic; }
   .stock-disp-stk { padding:0 0.55rem 0.6rem; }
+  /* Ordenar tocando el título de la columna */
+  th.ord { cursor:pointer; user-select:none; white-space:nowrap; }
+  th.ord:hover { text-decoration:underline; }
+  th.ord::after { content:"\2195"; opacity:.35; margin-left:.3rem; font-size:.85em; }
+  th.ord.asc::after { content:"\2191"; opacity:1; }
+  th.ord.desc::after { content:"\2193"; opacity:1; }
+  .ord-pista { font-size:0.74rem; color:var(--mist); margin:.2rem 0 .5rem; }
+  .btn-exportar-stock { margin:0 0 .6rem; padding:.5rem .9rem; font-size:.82rem; font-weight:700; border:1px solid var(--line); border-radius:9px; background:var(--card); color:var(--ink); cursor:pointer; }
+  .btn-exportar-stock:hover { background:var(--paper); }
 </style>
 </head>
 <body>
@@ -3662,8 +3671,143 @@
       if(ref2) tr.insertBefore(td, ref2); else tr.appendChild(td);
     });
   }
+
+
+  // Baja a Excel la tabla de stock TAL COMO SE VE: con el orden que eligió y sin
+  // las filas que el buscador dejó escondidas (pedido de Rayen 2026-08-03).
+  function _exportarTablaStock(tbodyId, titulo, nombreArchivo){
+    var tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+    if (!window.OCT_excelTabla || !window.OCT_descargar) {
+      alert('No se pudo cargar el generador de Excel. Recarga la página con Ctrl+Shift+R.');
+      return;
+    }
+    var tabla = tbody.closest('table');
+    var ths = Array.prototype.slice.call(tabla.querySelectorAll('thead th'));
+    // Se saltan las columnas sin título (la foto y la casilla de marcar).
+    var idx = [], cols = [];
+    ths.forEach(function(th, i){
+      var tx = String(th.textContent || '').trim();
+      if (tx) { idx.push(i); cols.push(tx); }
+    });
+    var filas = [];
+    Array.prototype.forEach.call(tbody.querySelectorAll('tr'), function(tr){
+      if (tr.offsetParent === null && tr.style.display === 'none') return;   // escondida por el buscador
+      var fila = idx.map(function(i){
+        var td = tr.children[i];
+        var s = td ? String(td.textContent || '').replace(/\s+/g, ' ').trim() : '';
+        if (!s || s === '—' || s === '-') return { v: '' };
+        if (/sin precio|sin dato/i.test(s)) return { v: s };
+        var limpio = s.replace(/iva\s*inc\.?/i, '').trim();
+        if (/^\$\s*[\d.]+$/.test(limpio)) return { v: Number(limpio.replace(/[^\d]/g, '')), moneda: true };
+        if (/^\d[\d.]*$/.test(limpio)) return { v: Number(limpio.replace(/\./g, '')) };
+        return { v: s };
+      });
+      filas.push(fila);
+    });
+    if (!filas.length) { alert('No hay filas que exportar.'); return; }
+    var hoy = new Date();
+    var fecha = String(hoy.getDate()).padStart(2,'0') + '-' + String(hoy.getMonth()+1).padStart(2,'0') + '-' + hoy.getFullYear();
+    var blob = window.OCT_excelTabla({
+      titulo: titulo,
+      subtitulo: fecha + '   ·   ' + filas.length + ' productos   ·   en el mismo orden en que los tenías en pantalla',
+      hoja: 'Stock',
+      anchos: cols.map(function(c){ return /producto/i.test(c) ? 46 : (/sku/i.test(c) ? 16 : 14); })
+    }, cols, filas);
+    window.OCT_descargar(blob, nombreArchivo + ' ' + fecha + '.xlsx');
+  }
+  // Pone el botón arriba de la tabla.
+  function _ponerBotonExportar(tbodyId, titulo, nombreArchivo){
+    var tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+    var wrap = tbody.closest('.tablewrap') || tbody.closest('table');
+    if (!wrap || !wrap.parentNode) return;
+    if (wrap.parentNode.querySelector('[data-exporta="' + tbodyId + '"]')) return;
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn-exportar-stock';
+    b.setAttribute('data-exporta', tbodyId);
+    b.textContent = 'Exportar a Excel';
+    b.addEventListener('click', function(){ _exportarTablaStock(tbodyId, titulo, nombreArchivo); });
+    wrap.parentNode.insertBefore(b, wrap);
+  }
+
+  // ── Ordenar una tabla de stock tocando el título de la columna ────────────
+  // Pedido de Rayen 2026-08-03: "necesito poder ordenar el stock por precio cuando
+  // quiera". Se hace sobre las filas que ya están en la página (no se vuelve a pedir
+  // nada), así que respeta lo que el buscador tenga escondido.
+  function _valorCelda(td){
+    if (!td) return { n: null, txt: '' };
+    var s = String(td.textContent || '').replace(/\s+/g, ' ').trim();
+    if (!s || s === '—' || s === '-') return { n: null, txt: '' };          // vacío: siempre al final
+    if (/sin precio|sin dato/i.test(s)) return { n: null, txt: '' };        // idem
+    // "$139.351 IVA inc." -> 139351 · "1.234" -> 1234 · "7" -> 7
+    var m = s.replace(/iva\s*inc\.?/i, '').match(/-?[\d.]+(,\d+)?/);
+    if (m) {
+      var limpio = m[0].replace(/\./g, '').replace(',', '.');
+      var n = Number(limpio);
+      if (!isNaN(n) && /^[\s$]*-?[\d.,]+\s*$/.test(s.replace(/iva\s*inc\.?/i, ''))) return { n: n, txt: s };
+      if (!isNaN(n) && /^\$/.test(s)) return { n: n, txt: s };
+    }
+    return { n: null, txt: s.toLowerCase() };
+  }
+  function _hacerOrdenable(tbodyId){
+    var tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+    var tabla = tbody.closest('table');
+    var filaCab = tabla ? tabla.querySelector('thead tr') : null;
+    if (!filaCab) return;
+    var ths = Array.prototype.slice.call(filaCab.querySelectorAll('th'));
+    ths.forEach(function(th, idx){
+      var titulo = String(th.textContent || '').trim();
+      if (!titulo) return;                       // la columna de la foto y la de la casilla no se ordenan
+      th.classList.add('ord');
+      th.title = 'Tocar para ordenar por ' + titulo;
+      th.addEventListener('click', function(){
+        // Primer toque en una columna de números: de MAYOR a menor (lo caro primero,
+        // que es para lo que se ordena). En texto: de la A a la Z.
+        var filas = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+        var muestra = filas.map(function(tr){ return _valorCelda(tr.children[idx]); }).filter(function(v){ return v.n !== null; });
+        var esNum = muestra.length >= Math.max(2, Math.floor(filas.length * 0.4));
+        var yaEra = th.classList.contains('desc') ? 'desc' : (th.classList.contains('asc') ? 'asc' : '');
+        var dir = yaEra ? (yaEra === 'desc' ? 'asc' : 'desc') : (esNum ? 'desc' : 'asc');
+        ths.forEach(function(x){ x.classList.remove('asc', 'desc'); });
+        th.classList.add(dir);
+        var signo = dir === 'asc' ? 1 : -1;
+        filas.sort(function(a, b){
+          var va = _valorCelda(a.children[idx]), vb = _valorCelda(b.children[idx]);
+          // Lo que no tiene valor ("—", "Sin precio en la lista") queda SIEMPRE al final,
+          // se ordene como se ordene: si no, al invertir tapaba los productos de verdad.
+          var aVacio = va.n === null && !va.txt, bVacio = vb.n === null && !vb.txt;
+          if (aVacio !== bVacio) return aVacio ? 1 : -1;
+          if (esNum) {
+            var na = va.n === null ? -Infinity : va.n, nb = vb.n === null ? -Infinity : vb.n;
+            if (na !== nb) return (na - nb) * signo;
+          }
+          return String(va.txt).localeCompare(String(vb.txt), 'es', { numeric: true }) * signo;
+        });
+        var frag = document.createDocumentFragment();
+        filas.forEach(function(tr){ frag.appendChild(tr); });
+        tbody.appendChild(frag);
+      });
+    });
+    // Pista, una sola vez por tabla.
+    var wrap = tabla.closest('.tablewrap') || tabla.parentNode;
+    if (wrap && !wrap.previousElementSibling || (wrap.previousElementSibling && !wrap.previousElementSibling.classList.contains('ord-pista'))) {
+      var p = document.createElement('p');
+      p.className = 'ord-pista';
+      p.textContent = 'Toca el título de una columna para ordenar (por precio, por lo que hay en bodega, por nombre…). Tócalo otra vez para invertir.';
+      if (wrap.parentNode) wrap.parentNode.insertBefore(p, wrap);
+    }
+  }
+
   _agregarColumnaPrecio("tbody-stock-bodega", "Precio c/IVA", 1);   // queda antes de "Nota"
   _agregarColumnaPrecio("tbody-stock-combinado", "Precio c/IVA", 0); // al final
+  // Se activa DESPUÉS de agregar la columna de precio: si no, esa columna no sería ordenable.
+  ["tbody-stock-bodega", "tbody-stock-combinado", "tbody-stock-camino"].forEach(_hacerOrdenable);
+  _ponerBotonExportar("tbody-stock-combinado", "Stock de Salas Multisensoriales — bodega y contenedor", "Stock Salas");
+  _ponerBotonExportar("tbody-stock-bodega", "Stock de Salas Multisensoriales — lo que hay en bodega", "Stock bodega");
+  _ponerBotonExportar("tbody-stock-camino", "Stock de Salas Multisensoriales — lo que viene en camino", "Stock en camino");
 
   // Contenedor (en camino): mostrar venta neto y con IVA en PESOS, no euros (pedido Rayen 2026-07-27).
   var tbCam = document.getElementById("tbody-stock-camino");

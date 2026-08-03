@@ -193,6 +193,7 @@
   function _octZipExcel(hoja, nombreHoja) {
     var estilos = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
       + '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+      + '<numFmts count="1"><numFmt numFmtId="164" formatCode="&quot;$&quot;#,##0"/></numFmts>'
       + '<fonts count="7">'
       +   '<font><sz val="11"/><name val="Calibri"/></font>'
       +   '<font><b/><sz val="15"/><color rgb="FF16324F"/><name val="Calibri"/></font>'
@@ -212,7 +213,7 @@
       +   '<border><left/><right/><top/><bottom style="thin"><color rgb="FFE3E7EC"/></bottom><diagonal/></border>'
       + '</borders>'
       + '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
-      + '<cellXfs count="10">'
+      + '<cellXfs count="12">'
       +   '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
       +   '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
       +   '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
@@ -223,6 +224,8 @@
       +   '<xf numFmtId="0" fontId="4" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
       +   '<xf numFmtId="0" fontId="5" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
       +   '<xf numFmtId="0" fontId="6" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
+      +   '<xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/>'
+      +   '<xf numFmtId="164" fontId="1" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1"/>'
       + '</cellXfs>'
       + '</styleSheet>';
     return armarZip([
@@ -394,6 +397,50 @@
       + '</worksheet>';
 
     return _octZipExcel(hoja, 'Comparacion');
+  };
+
+
+  // Excel de una tabla cualquiera. 'filas' son arreglos de celdas: un número, o
+  // {v, moneda:true}, o texto. Sirve para bajar el stock tal como se ve en pantalla.
+  window.OCT_excelTabla = function (info, cols, filas) {
+    info = info || {}; cols = cols || []; filas = filas || [];
+    var xml = '';
+    xml += '<row r="1" ht="24" customHeight="1">' + celdaTexto('A1', 1, info.titulo || 'Listado') + '</row>';
+    xml += '<row r="2" ht="16" customHeight="1">' + celdaTexto('A2', 2, info.subtitulo || '') + '</row>';
+    xml += '<row r="3"></row>';
+    xml += '<row r="4" ht="20" customHeight="1">';
+    cols.forEach(function (c, i) { xml += celdaTexto(col(i) + '4', 3, c); });
+    xml += '</row>';
+    filas.forEach(function (r, i) {
+      var f = i + 5;
+      xml += '<row r="' + f + '">';
+      r.forEach(function (celda, k) {
+        var ref = col(k) + f;
+        if (celda && typeof celda === 'object') {
+          if (celda.v == null || celda.v === '') xml += celdaTexto(ref, 6, '—');
+          else if (celda.moneda) xml += celdaNumero(ref, 10, celda.v);
+          else if (typeof celda.v === 'number') xml += celdaNumero(ref, 5, celda.v);
+          else xml += celdaTexto(ref, 4, celda.v);
+        } else if (typeof celda === 'number') xml += celdaNumero(ref, 5, celda);
+        else if (celda == null || celda === '') xml += celdaTexto(ref, 6, '—');
+        else xml += celdaTexto(ref, 4, celda);
+      });
+      xml += '</row>';
+    });
+    var ultima = filas.length ? (filas.length + 4) : 4;
+    var anchos = (info.anchos || []).map(function (w, i) {
+      return '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + w + '" customWidth="1"/>';
+    }).join('');
+    var hoja = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+      + '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+      + '<sheetViews><sheetView workbookViewId="0" showGridLines="0"><pane ySplit="4" topLeftCell="A5" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>'
+      + '<sheetFormatPr defaultRowHeight="15"/>'
+      + (anchos ? '<cols>' + anchos + '</cols>' : '')
+      + '<sheetData>' + xml + '</sheetData>'
+      + '<autoFilter ref="A4:' + col(cols.length - 1) + ultima + '"/>'
+      + '<pageMargins left="0.4" right="0.4" top="0.6" bottom="0.6" header="0.3" footer="0.3"/>'
+      + '</worksheet>';
+    return _octZipExcel(hoja, info.hoja || 'Datos');
   };
 
   // Dispara la descarga del Blob con el nombre dado.

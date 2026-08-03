@@ -13684,30 +13684,37 @@ async function guardarNuevoContacto(forzar){
   const btn = document.getElementById('nc-btn-guardar');
   btn.disabled = true; btn.textContent = 'Guardando...';
 
+  // Guardamos lo escrito en el formulario: si aparece un duplicado y ella elige UNIFICAR,
+  // estos son los datos que se vuelcan sobre la ficha que ya existe (ver abrirUnificarConExistente).
+  window.__NC_FORM = data;
+
   const r = await fetchAPI('crm_crear_contacto', null, data);
 
   if(r && r.requiere_revision && r.duplicados && r.duplicados.length){
     // Mostrar duplicados detectados
+    window.__NC_DUPS = r.duplicados.slice(0, 5).map(function(d){ return d.contacto || d; });
     const dw = document.getElementById('nc-dup-warning');
     dw.style.display = 'block';
     dw.innerHTML =
       '<b style="font-size:14px;display:block;margin-bottom:8px;">Ya existe un contacto parecido — revisa si es el mismo antes de crear otro:</b>' +
       '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">' +
-        r.duplicados.slice(0, 5).map(function(d){
-          var dc = d.contacto || d;
+        window.__NC_DUPS.map(function(dc, i){
           var tel = dc.telefono || dc.telefono_institucional || '';
           return '<div style="background:white;border:1px solid var(--smoke);padding:9px 12px;border-radius:7px;font-size:12.5px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;">' +
             '<div style="min-width:0;">' +
               '<b>' + esc(dc.nombre || '(sin nombre)') + '</b>' + (dc.institucion ? ' · ' + esc(dc.institucion) : '') + (dc.cargo ? ' · ' + esc(dc.cargo) : '') +
               '<div style="color:var(--subtle);margin-top:2px;">' + (dc.email ? esc(dc.email) : '(sin email)') + (tel ? ' · ' + esc(tel) : '') + (dc.ejecutivo_asignado ? ' · <span style="color:var(--purple-dk);font-weight:700;">' + esc(dc.ejecutivo_asignado) + '</span>' : '') + '</div>' +
             '</div>' +
-            (dc.id ? '<button class="btn" style="flex-shrink:0;" onclick="abrirFichaModal(\'' + esc(dc.id) + '\')">Ver contacto</button>' : '') +
+            '<div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;">' +
+              (dc.id ? '<button class="btn" onclick="abrirFichaModal(\'' + esc(dc.id) + '\')">Ver contacto</button>' : '') +
+              (dc.id ? '<button class="btn primary" onclick="abrirUnificarConExistente(' + i + ')">Es el mismo · unificar datos</button>' : '') +
+            '</div>' +
           '</div>';
         }).join('') +
       '</div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
-        '<button class="btn" onclick="cerrarModalNuevoContacto()">Cancelar (es el mismo)</button>' +
-        '<button class="btn primary" onclick="guardarNuevoContacto(true)">Crear igualmente (es otro)</button>' +
+        '<button class="btn" onclick="cerrarModalNuevoContacto()">Cancelar (no guardar nada)</button>' +
+        '<button class="btn" onclick="guardarNuevoContacto(true)">Crear igualmente (es otro)</button>' +
       '</div>';
     btn.disabled = false; btn.textContent = 'Guardar contacto';
     return;
@@ -13760,6 +13767,205 @@ async function guardarNuevoContacto(forzar){
   }
   // Abrir la ficha del nuevo contacto si tenemos su id
   if (r.id && view) abrirFicha(r.id, view.id);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// UNIFICAR DATOS AL CREAR UN CONTACTO (cuando el CRM avisa "ya existe uno parecido")
+// Antes solo había dos salidas: cancelar (y perder todo lo escrito) o crear un
+// duplicado. Esta tercera opción vuelca lo del formulario SOBRE la ficha que ya
+// existe: los campos que la ficha tiene vacíos se rellenan, y si un dato choca ella
+// elige cuál queda. NO se crea un contacto nuevo — la ficha vieja conserva su id, su
+// actividad, sus cotizaciones y sus seguimientos, así que no hay nada que fusionar
+// después. El contacto de hoy queda registrado como interacción en su timeline.
+// El pipeline va aparte (crm_editar_contacto no lo escribe; eso lo hace crm_set_pipeline).
+// ════════════════════════════════════════════════════════════════════════════
+const NC_UNIF_CAMPOS = [
+  ['nombre','Nombre', true], ['institucion','Institución', true], ['cargo','Cargo', true],
+  ['email','Email', false], ['telefono','Teléfono personal', false],
+  ['telefono_institucional','Teléfono institucional', false],
+  ['ciudad','Ciudad', false], ['region','Región', false], ['direccion','Dirección', false],
+  ['rut','RUT', false], ['tipo_categoria','Categoría', false], ['sub_categoria','Subcategoría', false],
+  ['pipeline_estado','Estado del pipeline', false], ['notas_publicas','Notas', true]
+];
+function _ncUnifTxt(v){ return String(v == null ? '' : v).trim(); }
+// Comparación tolerante: "Punta Arenas" = "punta arenas", y "+56 9 1234 5678" = "+56912345678".
+function _ncUnifIgual(campo, a, b){
+  if(campo.indexOf('telefono') === 0) return a.replace(/\D/g,'') === b.replace(/\D/g,'');
+  return a.toLowerCase().replace(/\s+/g,' ') === b.toLowerCase().replace(/\s+/g,' ');
+}
+function _ncUnifEstado(campo, actual, nuevo){
+  actual = _ncUnifTxt(actual); nuevo = _ncUnifTxt(nuevo);
+  let tipo;
+  if(!nuevo)                              tipo = 'sin_nuevo';   // no escribió nada → queda lo de la ficha
+  else if(!actual)                        tipo = 'agrega';      // la ficha lo tiene vacío → se completa
+  else if(_ncUnifIgual(campo,actual,nuevo)) tipo = 'igual';
+  else                                    tipo = 'conflicto';
+  return { campo, actual, nuevo, tipo };
+}
+function _ncUnifJuntar(campo, a, b){ return campo === 'notas_publicas' ? (a + '\n' + b) : (a + ' · ' + b); }
+function _ncUnifFila(campo, label, combinable, est){
+  if(est.tipo === 'sin_nuevo' && !est.actual) return '';
+  const chip = (txt,col,bg) => '<span style="font-size:10px;font-weight:800;color:'+col+';background:'+bg+';padding:2px 7px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;">'+txt+'</span>';
+  let derecha;
+  if(est.tipo === 'igual'){
+    derecha = '<div style="font-size:13px;color:var(--text-2,#475569);padding-top:3px;">' + esc(est.actual) + ' ' + chip('ya lo tenía igual','#0f766e','#ecfdf5') + '</div>';
+  } else if(est.tipo === 'sin_nuevo'){
+    derecha = '<div style="font-size:13px;color:var(--text-2,#475569);padding-top:3px;">' + esc(est.actual) + ' ' + chip('se mantiene','#64748b','#f1f5f9') + '</div>';
+  } else if(est.tipo === 'agrega'){
+    derecha = '<label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer;font-size:13px;color:var(--text-1);">' +
+      '<input type="checkbox" id="unif-add-' + campo + '" checked style="margin-top:3px;">' +
+      '<span>' + esc(est.nuevo) + ' ' + chip('estaba vacío · se agrega','#166534','#dcfce7') + '</span></label>';
+  } else {
+    // Conflicto: los dos tienen dato y son distintos → ella elige.
+    // Default: en Notas se juntan las dos (nunca se pisa lo que ya estaba escrito);
+    // en el resto queda el dato de la ficha, que es el que el equipo ya usó.
+    const juntoDefault = (campo === 'notas_publicas');
+    const opt = (val, lbl, texto, col, bg, marcado) =>
+      '<label style="display:flex;gap:7px;align-items:flex-start;cursor:pointer;padding:7px 10px;border:1px solid var(--border-subtle,#e2e8f0);border-radius:8px;flex:1;min-width:170px;background:' + bg + ';">' +
+      '<input type="radio" name="unif-' + campo + '" value="' + val + '"' + (marcado ? ' checked' : '') + ' style="margin-top:2px;">' +
+      '<span><span style="font-size:10px;font-weight:800;color:' + col + ';text-transform:uppercase;letter-spacing:.3px;">' + lbl + '</span><br>' +
+      '<span style="font-size:13px;color:var(--text-1);">' + esc(texto) + '</span></span></label>';
+    derecha = '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+      opt('actual','queda lo de la ficha', est.actual, '#3a4d75', '#fff', !juntoDefault) +
+      opt('nuevo','poner lo que escribiste', est.nuevo, '#5b21b6', '#fff', false) +
+      (combinable ? opt('juntar','juntar las dos', _ncUnifJuntar(campo, est.actual, est.nuevo), '#0f766e', '#f0fdfa', juntoDefault) : '') +
+      '</div>';
+  }
+  return '<div style="display:grid;grid-template-columns:132px 1fr;gap:12px;align-items:start;padding:10px 0;border-top:1px solid var(--border-soft,#eef0f5);">' +
+    '<div style="font-size:11.5px;font-weight:700;color:var(--text-3,#5a6478);text-transform:uppercase;letter-spacing:.3px;padding-top:5px;">' + esc(label) +
+      (est.tipo === 'conflicto' ? ' <span style="color:#d97706;" title="Hay dos datos distintos — elige cuál queda">●</span>' : '') + '</div>' +
+    derecha + '</div>';
+}
+// ¿Puede este usuario editar la ficha existente? El backend solo deja al admin, al
+// creador o al ejecutivo asignado. Lo avisamos ANTES para que no se pierda el trabajo.
+function _ncUnifPuedeEditar(ex){
+  if(ROL === 'admin') return true;
+  const yo = String(USUARIO || '').toLowerCase().trim();
+  const yo1 = yo.split(' ')[0];
+  return [ex.ejecutivo_creador, ex.ejecutivo_asignado].some(function(v){
+    const x = String(v || '').toLowerCase().trim();
+    if(!x) return false;
+    return x === yo || x === yo1 || x.split(' ')[0] === yo1;
+  });
+}
+function abrirUnificarConExistente(idx){
+  const ex = (window.__NC_DUPS || [])[idx];
+  const nu = window.__NC_FORM;
+  if(!ex || !nu){ alert('No tengo los datos para unificar. Cierra el formulario y vuelve a intentarlo.'); return; }
+  window.__NC_UNIF = { existente: ex, nuevo: nu };
+  const estados = NC_UNIF_CAMPOS.map(([f,l,c]) => [f, l, c, _ncUnifEstado(f, ex[f], nu[f])]);
+  const nAgrega = estados.filter(e => e[3].tipo === 'agrega').length;
+  const nConf   = estados.filter(e => e[3].tipo === 'conflicto').length;
+  const filas   = estados.map(([f,l,c,est]) => _ncUnifFila(f,l,c,est)).join('');
+  const puede   = _ncUnifPuedeEditar(ex);
+  const quien   = esc(ex.ejecutivo_asignado || ex.ejecutivo_creador || 'otro ejecutivo');
+  let ov = document.getElementById('ncUnifOverlay');
+  if(ov) ov.remove();
+  ov = document.createElement('div');
+  ov.id = 'ncUnifOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.62);z-index:10050;display:flex;align-items:center;justify-content:center;padding:20px;';
+  ov.innerHTML = '<div style="background:#fff;border-radius:14px;max-width:700px;width:100%;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(15,23,42,.32);">' +
+      '<div style="padding:16px 22px;border-bottom:1px solid #e6e8ef;display:flex;justify-content:space-between;align-items:center;">' +
+        '<div><h2 style="margin:0;font-size:18px;font-weight:800;color:var(--navy,#001a60);">Unificar con el contacto que ya existe</h2>' +
+        '<div style="font-size:12.5px;color:var(--subtle,#64748b);margin-top:3px;">' + esc(ex.nombre || ex.institucion || '(sin nombre)') + (ex.institucion && ex.nombre ? ' · ' + esc(ex.institucion) : '') + '</div></div>' +
+        '<button onclick="cerrarUnificar()" style="border:none;background:none;font-size:22px;cursor:pointer;color:#94a3b8;line-height:1;">×</button>' +
+      '</div>' +
+      '<div style="padding:14px 22px;overflow-y:auto;">' +
+        '<div style="font-size:12.5px;color:var(--text-2,#475569);background:#f0f9ff;border:1px solid #bae6fd;border-radius:9px;padding:10px 13px;margin-bottom:4px;line-height:1.5;">' +
+          'No se crea un contacto nuevo: los datos se suman a esta ficha, que <b>conserva su historial, cotizaciones y seguimientos</b>. ' +
+          (nAgrega ? '<b style="color:#166534;">' + nAgrega + ' dato' + (nAgrega>1?'s':'') + ' que le faltaba' + (nAgrega>1?'n':'') + '</b>' : 'No hay datos nuevos que agregar') +
+          (nConf ? ' · <b style="color:#d97706;">' + nConf + ' en conflicto ●</b> (elige cuál queda)' : ' · sin conflictos') + '.' +
+        '</div>' +
+        (!puede ? '<div style="font-size:12.5px;background:#fffbeb;border:1px solid #fcd34d;color:#92400e;border-radius:9px;padding:10px 13px;margin-top:8px;line-height:1.5;">' +
+          'Ojo: esta ficha la gestiona <b>' + quien + '</b>. El sistema solo deja unificar al ejecutivo dueño del contacto o a Rayen — si te da error, pídeselo a ' + quien + ' o a Rayen.</div>' : '') +
+        filas +
+        (_ncUnifTxt(nu.medio_primer_contacto) ? '<div style="display:grid;grid-template-columns:132px 1fr;gap:12px;padding:10px 0;border-top:1px solid var(--border-soft,#eef0f5);">' +
+          '<div style="font-size:11.5px;font-weight:700;color:var(--text-3,#5a6478);text-transform:uppercase;letter-spacing:.3px;padding-top:3px;">Contacto de hoy</div>' +
+          '<div style="font-size:13px;color:var(--text-1);padding-top:3px;">' + esc(nu.medio_primer_contacto) + ' <span style="font-size:11px;color:#0f766e;font-weight:700;">(se registra en el historial de la ficha)</span></div></div>' : '') +
+      '</div>' +
+      '<div style="padding:14px 22px;border-top:1px solid #e6e8ef;display:flex;justify-content:flex-end;gap:10px;background:#fcfcfd;border-radius:0 0 14px 14px;">' +
+        '<button class="btn" onclick="cerrarUnificar()" style="background:#fff;">Volver</button>' +
+        '<button class="btn primary" id="unif-btn" onclick="confirmarUnificar()">Unificar en esta ficha</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(ov);
+  ov.addEventListener('click', e => { if(e.target === ov) cerrarUnificar(); });
+}
+function cerrarUnificar(){ const ov = document.getElementById('ncUnifOverlay'); if(ov) ov.remove(); }
+async function confirmarUnificar(){
+  const P = window.__NC_UNIF; if(!P) return;
+  const ex = P.existente, nu = P.nuevo;
+  const finales = {};
+  NC_UNIF_CAMPOS.forEach(([f, l, combinable]) => {
+    const est = _ncUnifEstado(f, ex[f], nu[f]);
+    if(est.tipo === 'agrega'){
+      const chk = document.getElementById('unif-add-' + f);
+      if(chk && chk.checked) finales[f] = est.nuevo;
+    } else if(est.tipo === 'conflicto'){
+      const sel = (document.querySelector('input[name="unif-' + f + '"]:checked') || {}).value || 'actual';
+      if(sel === 'nuevo')       finales[f] = est.nuevo;
+      else if(sel === 'juntar') finales[f] = _ncUnifJuntar(f, est.actual, est.nuevo);
+    }
+  });
+  const btn = document.getElementById('unif-btn');
+  if(btn){ btn.disabled = true; btn.textContent = 'Unificando…'; }
+  // El pipeline no lo escribe crm_editar_contacto: sale del payload y va por su propia ruta.
+  const pipelineNuevo = finales.pipeline_estado;
+  delete finales.pipeline_estado;
+  // ejecutivo_asignado va SIEMPRE con el valor actual: si no se manda y cambió la
+  // subcategoría, el backend recalcula el dueño y el contacto puede saltar de ejecutivo.
+  const payload = Object.assign({}, finales, {
+    id: ex.id,
+    ejecutivo_asignado: _ncUnifTxt(ex.ejecutivo_asignado),
+    solicitante: USUARIO
+  });
+  const r = await fetchAPI('crm_editar_contacto', null, payload);
+  if(!r || !r.ok){
+    alert('No se pudo unificar: ' + ((r && r.error) || 'error desconocido') + '\n\nNo se cambió nada. Lo que escribiste sigue en el formulario.');
+    if(btn){ btn.disabled = false; btn.textContent = 'Unificar en esta ficha'; }
+    return;
+  }
+  if(pipelineNuevo){
+    try { await fetchAPI('crm_set_pipeline', null, { id: ex.id, pipeline_estado: pipelineNuevo, solicitante: USUARIO }); } catch(e){}
+  }
+  // El contacto de hoy queda en el timeline de la ficha: si no, se perdería el trabajo hecho
+  // (y no contaría en el desglose de actividad por medio del ejecutivo).
+  if(_ncUnifTxt(nu.medio_primer_contacto)){
+    try {
+      await fetchAPI('crm_agregar_interaccion', null, {
+        contacto_id: ex.id,
+        medio: nu.medio_primer_contacto,
+        resultado: 'Contacto registrado (datos unificados)',
+        notas: (_ncUnifTxt(nu.notas_publicas) ? _ncUnifTxt(nu.notas_publicas) + ' — ' : '') +
+               'Se iba a crear un contacto nuevo y se unificó con esta ficha.',
+        origen: 'unificacion',
+        solicitante: USUARIO
+      });
+    } catch(e){}
+  }
+  // Si venía marcado "Lead urgente", la prioridad se aplica sobre la ficha unificada.
+  try {
+    const chk = document.getElementById('nc-lead-urgente');
+    if(chk && chk.checked){
+      const dlInput = document.getElementById('nc-lead-deadline');
+      let dlVal = dlInput && dlInput.value ? dlInput.value : '';
+      if(!dlVal){ const d=new Date(Date.now()+24*3600*1000); const p=(n)=>String(n).padStart(2,'0'); dlVal=d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes()); }
+      const hora = dlVal.slice(11,16);
+      await fetchAPI('crm_actualizar_proxima', { id: ex.id, fecha: dlVal.slice(0,10), nota: 'LEAD URGENTE' + (hora?(' — límite '+hora+'h'):''), solicitante: USUARIO });
+      await fetchAPI('crm_actualizar_etiquetas', { id: ex.id, etiquetas: ['Lead urgente'], solicitante: USUARIO });
+    }
+  } catch(e){}
+  cerrarUnificar();
+  cerrarModalNuevoContacto();
+  // Limpiar caches para que la ficha y las tarjetas muestren los datos unificados.
+  CACHE.vMis = null; CACHE.vTodos = null; CACHE.vSinCat = null;
+  try { localStorage.removeItem('crm_cache_contactos_v2_' + USUARIO); } catch(e){}
+  try { localStorage.removeItem('crm_perfil_' + ex.id + '_' + MODO_VISTA); } catch(e){}
+  const nCambios = Object.keys(finales).length + (pipelineNuevo ? 1 : 0);
+  if(typeof toastCfg === 'function') toastCfg('Datos unificados en la ficha que ya existía' + (nCambios ? ' (' + nCambios + ' campo' + (nCambios>1?'s':'') + ')' : ''));
+  const view = document.querySelector('.view.act');
+  if(view && (view.id === 'vMis' || view.id === 'vTodos')) await cargarContactos(view.id);
+  abrirFichaModal(ex.id);
 }
 
 function toast(msg, color){

@@ -412,7 +412,14 @@
   .ent-nombres button:hover { background:#0E7C5A; border-color:#0E7C5A; color:#fff; }
   .quien-actual { display:flex; align-items:center; gap:.5rem; }
   .quien-actual b { color:var(--ink); }
-  .quien-cambiar { font:inherit; font-size:.76rem; font-weight:700; padding:.22rem .6rem; border-radius:999px; border:1px solid var(--line); background:var(--card); color:var(--mist); cursor:pointer; }
+  .quien-cambiar { font:inherit; font-size:.76rem; font-weight:700; padding:.22rem .6rem; border-radius:999px; border:1px solid var(--line); background:var(--card); color:var(--mist); cursor:pointer; }
+  /* Crear sala / exportar, junto al total (Rayen 2026-08-04) */
+  .acciones-sala { display:flex; flex-direction:column; gap:0.45rem; margin-left:0.8rem; }
+  .btn-crear-sala { font:inherit; font-size:0.92rem; font-weight:800; padding:0.75rem 1.2rem; border:0; border-radius:12px; background:#0E7C5A; color:#fff; cursor:pointer; box-shadow:0 3px 12px rgba(14,124,90,.32); white-space:nowrap; }
+  .btn-crear-sala:hover { background:#0a5f45; }
+  .btn-xls-sala { font:inherit; font-size:0.82rem; font-weight:700; padding:0.5rem 1rem; border:1px solid var(--line); border-radius:10px; background:var(--card); color:var(--ink); cursor:pointer; white-space:nowrap; }
+  .btn-xls-sala:hover { background:var(--paper); }
+  @media (max-width:700px){ .acciones-sala { margin-left:0; width:100%; } .acciones-sala button { width:100%; } }
 </style>
 </head>
 <body>
@@ -434,10 +441,10 @@
 <div id="entrada-nombre"><div class="ent-card">
   <h2>¿Quién eres?</h2>
   <p>Elige tu nombre para entrar al armador de salas.</p>
-  <div class="ent-nombres"><button type="button" data-entra="Rayen">Rayen</button><button type="button" data-entra="Hernán">Hernán</button><button type="button" data-entra="Stephanie">Stephanie</button><button type="button" data-entra="Mario">Mario</button><button type="button" data-entra="William">William</button><button type="button" data-entra="Germán">Germán</button><button type="button" data-entra="Roberto">Roberto</button><button type="button" data-entra="Maximiliano">Maximiliano</button><button type="button" data-entra="Ximena">Ximena</button></div>
+  <div class="ent-nombres"><button type="button" data-entra="Rayen">Rayen</button><button type="button" data-entra="Hernán">Hernán</button><button type="button" data-entra="Mario">Mario</button><button type="button" data-entra="William">William</button><button type="button" data-entra="Germán">Germán</button><button type="button" data-entra="Roberto">Roberto</button><button type="button" data-entra="Maximiliano">Maximiliano</button><button type="button" data-entra="Ximena">Ximena</button></div>
 </div></div>
 <div class="quien-eres">
-  ¿Quién eres? <select id="quien-eres"><option value="">-- Elegir --</option><option>Rayen</option><option>Hernán</option><option>Stephanie</option><option>Mario</option><option>William</option><option>Germán</option><option>Roberto</option><option>Maximiliano</option><option>Ximena</option></select>
+  ¿Quién eres? <select id="quien-eres"><option value="">-- Elegir --</option><option>Rayen</option><option>Hernán</option><option>Mario</option><option>William</option><option>Germán</option><option>Roberto</option><option>Maximiliano</option><option>Ximena</option></select>
 </div>
 <div class="tabs"><button class="grouphead grp-nueva open" data-group="g-nueva">
       <span>Armar sala nueva</span>
@@ -472,6 +479,7 @@
         <div class="totallabel">total IVA inc. &middot; <span id="count-nueva">0</span> productos incluidos</div>
         <div class="totaldesglose" id="desglose-nueva"></div>
       </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="nueva">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="nueva">Exportar a Excel</button></div>
     </div>
     <div class="nueva-guardar">
       <input type="text" id="nueva-nombre" placeholder="Nombre de esta sala (ej. Sala de Calma — Municipalidad de Coronel)" />
@@ -505,11 +513,7 @@
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         Familia y audiencia <span class="filtros-badge" id="fbadge-elemental" style="display:none;"></span>
       </button>
-      <select class="filtroVista" data-sala="nueva">
-        <option value="todos" selected>Ver todos los productos</option>
-        <option value="incluidos">Solo incluidos</option>
-        <option value="sugeridos">Solo sugeridos para esta sala</option>
-      </select>
+      <select class="filtroVista" data-sala="nueva"><option value="stock">Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos" selected>Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
     </div>
     <div class="tablewrap">
       <table>
@@ -1879,6 +1883,7 @@
         <div class="totalnum" id="total-elemental">$0</div>
         <div class="totallabel">total IVA inc. · <span id="count-elemental">0</span> productos incluidos</div>
       </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="elemental">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="elemental">Exportar a Excel</button></div>
     </div>
     <div class="incluidos-box">
       <h3>Productos de esta sala</h3>
@@ -1896,11 +1901,7 @@
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         Familia y audiencia <span class="filtros-badge" id="fbadge-elemental" style="display:none;"></span>
       </button>
-      <select class="filtroVista" data-sala="elemental">
-        <option value="todos">Ver todos los productos</option>
-        <option value="incluidos">Solo incluidos</option>
-        <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-      </select>
+      <select class="filtroVista" data-sala="elemental"><option value="stock">Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos" selected>Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
     </div>
     <div class="tablewrap">
       <table>
@@ -3270,6 +3271,7 @@
         <div class="totalnum" id="total-simple">$0</div>
         <div class="totallabel">total IVA inc. · <span id="count-simple">0</span> productos incluidos</div>
       </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="simple">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="simple">Exportar a Excel</button></div>
     </div>
     <div class="incluidos-box">
       <h3>Productos de esta sala</h3>
@@ -3287,11 +3289,7 @@
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         Familia y audiencia <span class="filtros-badge" id="fbadge-simple" style="display:none;"></span>
       </button>
-      <select class="filtroVista" data-sala="simple">
-        <option value="todos">Ver todos los productos</option>
-        <option value="incluidos">Solo incluidos</option>
-        <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-      </select>
+      <select class="filtroVista" data-sala="simple"><option value="stock">Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos" selected>Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
     </div>
     <div class="tablewrap">
       <table>
@@ -4661,6 +4659,7 @@
         <div class="totalnum" id="total-shx-basic">$0</div>
         <div class="totallabel">total IVA inc. · <span id="count-shx-basic">0</span> productos incluidos</div>
       </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="shx-basic">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="shx-basic">Exportar a Excel</button></div>
     </div>
     <div class="incluidos-box">
       <h3>Productos de esta sala</h3>
@@ -4678,11 +4677,7 @@
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         Familia y audiencia <span class="filtros-badge" id="fbadge-shx-basic" style="display:none;"></span>
       </button>
-      <select class="filtroVista" data-sala="shx-basic">
-        <option value="todos">Ver todos los productos</option>
-        <option value="incluidos">Solo incluidos</option>
-        <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-      </select>
+      <select class="filtroVista" data-sala="shx-basic"><option value="stock">Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos" selected>Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
     </div>
     <div class="tablewrap">
       <table>
@@ -6052,6 +6047,7 @@
         <div class="totalnum" id="total-shx-full-adulto">$0</div>
         <div class="totallabel">total IVA inc. · <span id="count-shx-full-adulto">0</span> productos incluidos</div>
       </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="shx-full-adulto">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="shx-full-adulto">Exportar a Excel</button></div>
     </div>
     <div class="incluidos-box">
       <h3>Productos de esta sala</h3>
@@ -6069,11 +6065,7 @@
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         Familia y audiencia <span class="filtros-badge" id="fbadge-shx-full-adulto" style="display:none;"></span>
       </button>
-      <select class="filtroVista" data-sala="shx-full-adulto">
-        <option value="todos">Ver todos los productos</option>
-        <option value="incluidos">Solo incluidos</option>
-        <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-      </select>
+      <select class="filtroVista" data-sala="shx-full-adulto"><option value="stock">Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos" selected>Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
     </div>
     <div class="tablewrap">
       <table>
@@ -7443,6 +7435,7 @@
         <div class="totalnum" id="total-tea-is">$0</div>
         <div class="totallabel">total IVA inc. · <span id="count-tea-is">0</span> productos incluidos</div>
       </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="tea-is">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="tea-is">Exportar a Excel</button></div>
     </div>
     <div class="incluidos-box">
       <h3>Productos de esta sala</h3>
@@ -7460,11 +7453,7 @@
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         Familia y audiencia <span class="filtros-badge" id="fbadge-tea-is" style="display:none;"></span>
       </button>
-      <select class="filtroVista" data-sala="tea-is">
-        <option value="todos">Ver todos los productos</option>
-        <option value="incluidos">Solo incluidos</option>
-        <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-      </select>
+      <select class="filtroVista" data-sala="tea-is"><option value="stock">Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos" selected>Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
     </div>
     <div class="tablewrap">
       <table>
@@ -8834,6 +8823,7 @@
         <div class="totalnum" id="total-tea-shx">$0</div>
         <div class="totallabel">total IVA inc. · <span id="count-tea-shx">0</span> productos incluidos</div>
       </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="tea-shx">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="tea-shx">Exportar a Excel</button></div>
     </div>
     <div class="incluidos-box">
       <h3>Productos de esta sala</h3>
@@ -8851,11 +8841,7 @@
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         Familia y audiencia <span class="filtros-badge" id="fbadge-tea-shx" style="display:none;"></span>
       </button>
-      <select class="filtroVista" data-sala="tea-shx">
-        <option value="todos">Ver todos los productos</option>
-        <option value="incluidos">Solo incluidos</option>
-        <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-      </select>
+      <select class="filtroVista" data-sala="tea-shx"><option value="stock">Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos" selected>Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
     </div>
     <div class="tablewrap">
       <table>
@@ -10225,6 +10211,7 @@
         <div class="totalnum" id="total-calma">$0</div>
         <div class="totallabel">total IVA inc. · <span id="count-calma">0</span> productos incluidos</div>
       </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="calma">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="calma">Exportar a Excel</button></div>
     </div>
     <div class="incluidos-box">
       <h3>Productos de esta sala</h3>
@@ -10242,11 +10229,7 @@
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         Familia y audiencia <span class="filtros-badge" id="fbadge-calma" style="display:none;"></span>
       </button>
-      <select class="filtroVista" data-sala="calma">
-        <option value="todos">Ver todos los productos</option>
-        <option value="incluidos">Solo incluidos</option>
-        <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-      </select>
+      <select class="filtroVista" data-sala="calma"><option value="stock">Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos" selected>Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
     </div>
     <div class="tablewrap">
       <table>
@@ -11616,6 +11599,7 @@
         <div class="totalnum" id="total-shx-full-infantil">$0</div>
         <div class="totallabel">total IVA inc. · <span id="count-shx-full-infantil">0</span> productos incluidos</div>
       </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="shx-full-infantil">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="shx-full-infantil">Exportar a Excel</button></div>
     </div>
     <div class="incluidos-box">
       <h3>Productos de esta sala</h3>
@@ -11633,11 +11617,7 @@
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         Familia y audiencia <span class="filtros-badge" id="fbadge-shx-full-infantil" style="display:none;"></span>
       </button>
-      <select class="filtroVista" data-sala="shx-full-infantil">
-        <option value="todos">Ver todos los productos</option>
-        <option value="incluidos">Solo incluidos</option>
-        <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-      </select>
+      <select class="filtroVista" data-sala="shx-full-infantil"><option value="stock">Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos" selected>Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
     </div>
     <div class="tablewrap">
       <table>
@@ -13021,6 +13001,7 @@
           <div class="totalnum" id="total-seg-colegios-calma-bajo">$0</div>
           <div class="totallabel">total · <span id="count-seg-colegios-calma-bajo">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-colegios-calma-bajo">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-colegios-calma-bajo">Exportar a Excel</button></div>
       </div>
       <div class="stock-resumen" id="stockresumen-seg-colegios-calma-bajo"></div>
       <button class="btn-definitiva" data-nivel="seg-colegios-calma-bajo" data-segmento="Colegios" data-tiposala="Sala de Calma" data-nivelnombre="Presupuesto Bajo">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -13030,11 +13011,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-colegios-calma-bajo" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-colegios-calma-bajo">
-          <option value="todos" >Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-colegios-calma-bajo"><option value="stock" selected>Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -13394,6 +13371,7 @@
           <div class="totalnum" id="total-seg-colegios-calma-alto">$0</div>
           <div class="totallabel">total · <span id="count-seg-colegios-calma-alto">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-colegios-calma-alto">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-colegios-calma-alto">Exportar a Excel</button></div>
       </div>
       <div class="stock-resumen" id="stockresumen-seg-colegios-calma-alto"></div>
       <button class="btn-definitiva" data-nivel="seg-colegios-calma-alto" data-segmento="Colegios" data-tiposala="Sala de Calma" data-nivelnombre="Presupuesto Alto">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -13403,11 +13381,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-colegios-calma-alto" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-colegios-calma-alto">
-          <option value="todos" >Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-colegios-calma-alto"><option value="stock" selected>Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -13767,6 +13741,7 @@
           <div class="totalnum" id="total-seg-colegios-calma-proyeccion">$0</div>
           <div class="totallabel">total · <span id="count-seg-colegios-calma-proyeccion">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-colegios-calma-proyeccion">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-colegios-calma-proyeccion">Exportar a Excel</button></div>
       </div>
       
       <button class="btn-definitiva" data-nivel="seg-colegios-calma-proyeccion" data-segmento="Colegios" data-tiposala="Sala de Calma" data-nivelnombre="Proyección a Futuro">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -13776,11 +13751,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-colegios-calma-proyeccion" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-colegios-calma-proyeccion">
-          <option value="todos" selected>Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" >Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-colegios-calma-proyeccion"><option value="stock">Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos" selected>Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -16565,6 +16536,7 @@
           <div class="totalnum" id="total-seg-colegios-estim-bajo">$0</div>
           <div class="totallabel">total · <span id="count-seg-colegios-estim-bajo">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-colegios-estim-bajo">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-colegios-estim-bajo">Exportar a Excel</button></div>
       </div>
       <div class="stock-resumen" id="stockresumen-seg-colegios-estim-bajo"></div>
       <button class="btn-definitiva" data-nivel="seg-colegios-estim-bajo" data-segmento="Colegios" data-tiposala="Sala de Estimulación Sensorial" data-nivelnombre="Presupuesto Bajo">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -16574,11 +16546,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-colegios-estim-bajo" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-colegios-estim-bajo">
-          <option value="todos" >Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-colegios-estim-bajo"><option value="stock" selected>Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -16938,6 +16906,7 @@
           <div class="totalnum" id="total-seg-colegios-estim-alto">$0</div>
           <div class="totallabel">total · <span id="count-seg-colegios-estim-alto">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-colegios-estim-alto">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-colegios-estim-alto">Exportar a Excel</button></div>
       </div>
       <div class="stock-resumen" id="stockresumen-seg-colegios-estim-alto"></div>
       <button class="btn-definitiva" data-nivel="seg-colegios-estim-alto" data-segmento="Colegios" data-tiposala="Sala de Estimulación Sensorial" data-nivelnombre="Presupuesto Alto">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -16947,11 +16916,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-colegios-estim-alto" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-colegios-estim-alto">
-          <option value="todos" >Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-colegios-estim-alto"><option value="stock" selected>Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -17311,6 +17276,7 @@
           <div class="totalnum" id="total-seg-colegios-estim-proyeccion">$0</div>
           <div class="totallabel">total · <span id="count-seg-colegios-estim-proyeccion">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-colegios-estim-proyeccion">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-colegios-estim-proyeccion">Exportar a Excel</button></div>
       </div>
       
       <button class="btn-definitiva" data-nivel="seg-colegios-estim-proyeccion" data-segmento="Colegios" data-tiposala="Sala de Estimulación Sensorial" data-nivelnombre="Proyección a Futuro">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -17320,11 +17286,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-colegios-estim-proyeccion" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-colegios-estim-proyeccion">
-          <option value="todos" selected>Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" >Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-colegios-estim-proyeccion"><option value="stock">Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos" selected>Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -20109,6 +20071,7 @@
           <div class="totalnum" id="total-seg-colegios-psico-bajo">$0</div>
           <div class="totallabel">total · <span id="count-seg-colegios-psico-bajo">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-colegios-psico-bajo">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-colegios-psico-bajo">Exportar a Excel</button></div>
       </div>
       <div class="stock-resumen" id="stockresumen-seg-colegios-psico-bajo"></div>
       <button class="btn-definitiva" data-nivel="seg-colegios-psico-bajo" data-segmento="Colegios" data-tiposala="Sala de Psicomotricidad" data-nivelnombre="Presupuesto Bajo">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -20118,11 +20081,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-colegios-psico-bajo" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-colegios-psico-bajo">
-          <option value="todos" >Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-colegios-psico-bajo"><option value="stock" selected>Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -20482,6 +20441,7 @@
           <div class="totalnum" id="total-seg-colegios-psico-alto">$0</div>
           <div class="totallabel">total · <span id="count-seg-colegios-psico-alto">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-colegios-psico-alto">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-colegios-psico-alto">Exportar a Excel</button></div>
       </div>
       <div class="stock-resumen" id="stockresumen-seg-colegios-psico-alto"></div>
       <button class="btn-definitiva" data-nivel="seg-colegios-psico-alto" data-segmento="Colegios" data-tiposala="Sala de Psicomotricidad" data-nivelnombre="Presupuesto Alto">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -20491,11 +20451,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-colegios-psico-alto" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-colegios-psico-alto">
-          <option value="todos" >Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-colegios-psico-alto"><option value="stock" selected>Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -20855,6 +20811,7 @@
           <div class="totalnum" id="total-seg-colegios-psico-proyeccion">$0</div>
           <div class="totallabel">total · <span id="count-seg-colegios-psico-proyeccion">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-colegios-psico-proyeccion">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-colegios-psico-proyeccion">Exportar a Excel</button></div>
       </div>
       
       <button class="btn-definitiva" data-nivel="seg-colegios-psico-proyeccion" data-segmento="Colegios" data-tiposala="Sala de Psicomotricidad" data-nivelnombre="Proyección a Futuro">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -20864,11 +20821,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-colegios-psico-proyeccion" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-colegios-psico-proyeccion">
-          <option value="todos" selected>Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" >Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-colegios-psico-proyeccion"><option value="stock">Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos" selected>Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -23653,6 +23606,7 @@
           <div class="totalnum" id="total-seg-colegios-temprana-bajo">$0</div>
           <div class="totallabel">total · <span id="count-seg-colegios-temprana-bajo">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-colegios-temprana-bajo">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-colegios-temprana-bajo">Exportar a Excel</button></div>
       </div>
       <div class="stock-resumen" id="stockresumen-seg-colegios-temprana-bajo"></div>
       <button class="btn-definitiva" data-nivel="seg-colegios-temprana-bajo" data-segmento="Colegios" data-tiposala="Sala de Atención Temprana" data-nivelnombre="Presupuesto Bajo">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -23662,11 +23616,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-colegios-temprana-bajo" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-colegios-temprana-bajo">
-          <option value="todos" >Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-colegios-temprana-bajo"><option value="stock" selected>Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -24026,6 +23976,7 @@
           <div class="totalnum" id="total-seg-colegios-temprana-alto">$0</div>
           <div class="totallabel">total · <span id="count-seg-colegios-temprana-alto">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-colegios-temprana-alto">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-colegios-temprana-alto">Exportar a Excel</button></div>
       </div>
       <div class="stock-resumen" id="stockresumen-seg-colegios-temprana-alto"></div>
       <button class="btn-definitiva" data-nivel="seg-colegios-temprana-alto" data-segmento="Colegios" data-tiposala="Sala de Atención Temprana" data-nivelnombre="Presupuesto Alto">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -24035,11 +23986,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-colegios-temprana-alto" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-colegios-temprana-alto">
-          <option value="todos" >Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-colegios-temprana-alto"><option value="stock" selected>Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -24399,6 +24346,7 @@
           <div class="totalnum" id="total-seg-colegios-temprana-proyeccion">$0</div>
           <div class="totallabel">total · <span id="count-seg-colegios-temprana-proyeccion">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-colegios-temprana-proyeccion">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-colegios-temprana-proyeccion">Exportar a Excel</button></div>
       </div>
       
       <button class="btn-definitiva" data-nivel="seg-colegios-temprana-proyeccion" data-segmento="Colegios" data-tiposala="Sala de Atención Temprana" data-nivelnombre="Proyección a Futuro">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -24408,11 +24356,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-colegios-temprana-proyeccion" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-colegios-temprana-proyeccion">
-          <option value="todos" selected>Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" >Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-colegios-temprana-proyeccion"><option value="stock">Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos" selected>Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -27197,6 +27141,7 @@
           <div class="totalnum" id="total-seg-universidades-calma-bajo">$0</div>
           <div class="totallabel">total · <span id="count-seg-universidades-calma-bajo">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-universidades-calma-bajo">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-universidades-calma-bajo">Exportar a Excel</button></div>
       </div>
       <div class="stock-resumen" id="stockresumen-seg-universidades-calma-bajo"></div>
       <button class="btn-definitiva" data-nivel="seg-universidades-calma-bajo" data-segmento="Universidades" data-tiposala="Sala de Calma" data-nivelnombre="Presupuesto Bajo">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -27206,11 +27151,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-universidades-calma-bajo" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-universidades-calma-bajo">
-          <option value="todos" >Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-universidades-calma-bajo"><option value="stock" selected>Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -27570,6 +27511,7 @@
           <div class="totalnum" id="total-seg-universidades-calma-alto">$0</div>
           <div class="totallabel">total · <span id="count-seg-universidades-calma-alto">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-universidades-calma-alto">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-universidades-calma-alto">Exportar a Excel</button></div>
       </div>
       <div class="stock-resumen" id="stockresumen-seg-universidades-calma-alto"></div>
       <button class="btn-definitiva" data-nivel="seg-universidades-calma-alto" data-segmento="Universidades" data-tiposala="Sala de Calma" data-nivelnombre="Presupuesto Alto">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -27579,11 +27521,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-universidades-calma-alto" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-universidades-calma-alto">
-          <option value="todos" >Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-universidades-calma-alto"><option value="stock" selected>Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -27943,6 +27881,7 @@
           <div class="totalnum" id="total-seg-universidades-calma-proyeccion">$0</div>
           <div class="totallabel">total · <span id="count-seg-universidades-calma-proyeccion">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-universidades-calma-proyeccion">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-universidades-calma-proyeccion">Exportar a Excel</button></div>
       </div>
       
       <button class="btn-definitiva" data-nivel="seg-universidades-calma-proyeccion" data-segmento="Universidades" data-tiposala="Sala de Calma" data-nivelnombre="Proyección a Futuro">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -27952,11 +27891,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-universidades-calma-proyeccion" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-universidades-calma-proyeccion">
-          <option value="todos" selected>Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" >Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-universidades-calma-proyeccion"><option value="stock">Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos" selected>Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -30741,6 +30676,7 @@
           <div class="totalnum" id="total-seg-universidades-elemental-bajo">$0</div>
           <div class="totallabel">total · <span id="count-seg-universidades-elemental-bajo">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-universidades-elemental-bajo">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-universidades-elemental-bajo">Exportar a Excel</button></div>
       </div>
       <div class="stock-resumen" id="stockresumen-seg-universidades-elemental-bajo"></div>
       <button class="btn-definitiva" data-nivel="seg-universidades-elemental-bajo" data-segmento="Universidades" data-tiposala="Rincón Elemental" data-nivelnombre="Presupuesto Bajo">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -30750,11 +30686,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-universidades-elemental-bajo" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-universidades-elemental-bajo">
-          <option value="todos" >Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-universidades-elemental-bajo"><option value="stock" selected>Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -31114,6 +31046,7 @@
           <div class="totalnum" id="total-seg-universidades-elemental-alto">$0</div>
           <div class="totallabel">total · <span id="count-seg-universidades-elemental-alto">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-universidades-elemental-alto">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-universidades-elemental-alto">Exportar a Excel</button></div>
       </div>
       <div class="stock-resumen" id="stockresumen-seg-universidades-elemental-alto"></div>
       <button class="btn-definitiva" data-nivel="seg-universidades-elemental-alto" data-segmento="Universidades" data-tiposala="Rincón Elemental" data-nivelnombre="Presupuesto Alto">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -31123,11 +31056,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-universidades-elemental-alto" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-universidades-elemental-alto">
-          <option value="todos" >Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-universidades-elemental-alto"><option value="stock" selected>Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -31487,6 +31416,7 @@
           <div class="totalnum" id="total-seg-universidades-elemental-proyeccion">$0</div>
           <div class="totallabel">total · <span id="count-seg-universidades-elemental-proyeccion">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-universidades-elemental-proyeccion">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-universidades-elemental-proyeccion">Exportar a Excel</button></div>
       </div>
       
       <button class="btn-definitiva" data-nivel="seg-universidades-elemental-proyeccion" data-segmento="Universidades" data-tiposala="Rincón Elemental" data-nivelnombre="Proyección a Futuro">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -31496,11 +31426,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-universidades-elemental-proyeccion" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-universidades-elemental-proyeccion">
-          <option value="todos" selected>Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" >Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-universidades-elemental-proyeccion"><option value="stock">Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos" selected>Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -34285,6 +34211,7 @@
           <div class="totalnum" id="total-seg-hospclin-calma-bajo">$0</div>
           <div class="totallabel">total · <span id="count-seg-hospclin-calma-bajo">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-hospclin-calma-bajo">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-hospclin-calma-bajo">Exportar a Excel</button></div>
       </div>
       <div class="stock-resumen" id="stockresumen-seg-hospclin-calma-bajo"></div>
       <button class="btn-definitiva" data-nivel="seg-hospclin-calma-bajo" data-segmento="Hospitales y Clínicas" data-tiposala="Sala de Calma" data-nivelnombre="Presupuesto Bajo">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -34294,11 +34221,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-hospclin-calma-bajo" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-hospclin-calma-bajo">
-          <option value="todos" >Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-hospclin-calma-bajo"><option value="stock" selected>Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -34658,6 +34581,7 @@
           <div class="totalnum" id="total-seg-hospclin-calma-alto">$0</div>
           <div class="totallabel">total · <span id="count-seg-hospclin-calma-alto">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-hospclin-calma-alto">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-hospclin-calma-alto">Exportar a Excel</button></div>
       </div>
       <div class="stock-resumen" id="stockresumen-seg-hospclin-calma-alto"></div>
       <button class="btn-definitiva" data-nivel="seg-hospclin-calma-alto" data-segmento="Hospitales y Clínicas" data-tiposala="Sala de Calma" data-nivelnombre="Presupuesto Alto">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -34667,11 +34591,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-hospclin-calma-alto" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-hospclin-calma-alto">
-          <option value="todos" >Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-hospclin-calma-alto"><option value="stock" selected>Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -35031,6 +34951,7 @@
           <div class="totalnum" id="total-seg-hospclin-calma-proyeccion">$0</div>
           <div class="totallabel">total · <span id="count-seg-hospclin-calma-proyeccion">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-hospclin-calma-proyeccion">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-hospclin-calma-proyeccion">Exportar a Excel</button></div>
       </div>
       
       <button class="btn-definitiva" data-nivel="seg-hospclin-calma-proyeccion" data-segmento="Hospitales y Clínicas" data-tiposala="Sala de Calma" data-nivelnombre="Proyección a Futuro">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -35040,11 +34961,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-hospclin-calma-proyeccion" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-hospclin-calma-proyeccion">
-          <option value="todos" selected>Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" >Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-hospclin-calma-proyeccion"><option value="stock">Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos" selected>Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -37829,6 +37746,7 @@
           <div class="totalnum" id="total-seg-hospclin-estim-bajo">$0</div>
           <div class="totallabel">total · <span id="count-seg-hospclin-estim-bajo">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-hospclin-estim-bajo">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-hospclin-estim-bajo">Exportar a Excel</button></div>
       </div>
       <div class="stock-resumen" id="stockresumen-seg-hospclin-estim-bajo"></div>
       <button class="btn-definitiva" data-nivel="seg-hospclin-estim-bajo" data-segmento="Hospitales y Clínicas" data-tiposala="Sala de Estimulación Sensorial General" data-nivelnombre="Presupuesto Bajo">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -37838,11 +37756,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-hospclin-estim-bajo" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-hospclin-estim-bajo">
-          <option value="todos" >Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-hospclin-estim-bajo"><option value="stock" selected>Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -38202,6 +38116,7 @@
           <div class="totalnum" id="total-seg-hospclin-estim-alto">$0</div>
           <div class="totallabel">total · <span id="count-seg-hospclin-estim-alto">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-hospclin-estim-alto">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-hospclin-estim-alto">Exportar a Excel</button></div>
       </div>
       <div class="stock-resumen" id="stockresumen-seg-hospclin-estim-alto"></div>
       <button class="btn-definitiva" data-nivel="seg-hospclin-estim-alto" data-segmento="Hospitales y Clínicas" data-tiposala="Sala de Estimulación Sensorial General" data-nivelnombre="Presupuesto Alto">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -38211,11 +38126,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-hospclin-estim-alto" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-hospclin-estim-alto">
-          <option value="todos" >Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-hospclin-estim-alto"><option value="stock" selected>Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -38575,6 +38486,7 @@
           <div class="totalnum" id="total-seg-hospclin-estim-proyeccion">$0</div>
           <div class="totallabel">total · <span id="count-seg-hospclin-estim-proyeccion">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-hospclin-estim-proyeccion">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-hospclin-estim-proyeccion">Exportar a Excel</button></div>
       </div>
       
       <button class="btn-definitiva" data-nivel="seg-hospclin-estim-proyeccion" data-segmento="Hospitales y Clínicas" data-tiposala="Sala de Estimulación Sensorial General" data-nivelnombre="Proyección a Futuro">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -38584,11 +38496,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-hospclin-estim-proyeccion" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-hospclin-estim-proyeccion">
-          <option value="todos" selected>Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" >Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-hospclin-estim-proyeccion"><option value="stock">Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos" selected>Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -41373,6 +41281,7 @@
           <div class="totalnum" id="total-seg-hospclin-integracion-bajo">$0</div>
           <div class="totallabel">total · <span id="count-seg-hospclin-integracion-bajo">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-hospclin-integracion-bajo">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-hospclin-integracion-bajo">Exportar a Excel</button></div>
       </div>
       <div class="stock-resumen" id="stockresumen-seg-hospclin-integracion-bajo"></div>
       <button class="btn-definitiva" data-nivel="seg-hospclin-integracion-bajo" data-segmento="Hospitales y Clínicas" data-tiposala="Sala de Integración Sensorial" data-nivelnombre="Presupuesto Bajo">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -41382,11 +41291,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-hospclin-integracion-bajo" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-hospclin-integracion-bajo">
-          <option value="todos" >Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-hospclin-integracion-bajo"><option value="stock" selected>Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -41746,6 +41651,7 @@
           <div class="totalnum" id="total-seg-hospclin-integracion-alto">$0</div>
           <div class="totallabel">total · <span id="count-seg-hospclin-integracion-alto">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-hospclin-integracion-alto">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-hospclin-integracion-alto">Exportar a Excel</button></div>
       </div>
       <div class="stock-resumen" id="stockresumen-seg-hospclin-integracion-alto"></div>
       <button class="btn-definitiva" data-nivel="seg-hospclin-integracion-alto" data-segmento="Hospitales y Clínicas" data-tiposala="Sala de Integración Sensorial" data-nivelnombre="Presupuesto Alto">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -41755,11 +41661,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-hospclin-integracion-alto" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-hospclin-integracion-alto">
-          <option value="todos" >Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-hospclin-integracion-alto"><option value="stock" selected>Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -42119,6 +42021,7 @@
           <div class="totalnum" id="total-seg-hospclin-integracion-proyeccion">$0</div>
           <div class="totallabel">total · <span id="count-seg-hospclin-integracion-proyeccion">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-hospclin-integracion-proyeccion">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-hospclin-integracion-proyeccion">Exportar a Excel</button></div>
       </div>
       
       <button class="btn-definitiva" data-nivel="seg-hospclin-integracion-proyeccion" data-segmento="Hospitales y Clínicas" data-tiposala="Sala de Integración Sensorial" data-nivelnombre="Proyección a Futuro">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -42128,11 +42031,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-hospclin-integracion-proyeccion" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-hospclin-integracion-proyeccion">
-          <option value="todos" selected>Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" >Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-hospclin-integracion-proyeccion"><option value="stock">Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos" selected>Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -44917,6 +44816,7 @@
           <div class="totalnum" id="total-seg-hospclin-psico-bajo">$0</div>
           <div class="totallabel">total · <span id="count-seg-hospclin-psico-bajo">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-hospclin-psico-bajo">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-hospclin-psico-bajo">Exportar a Excel</button></div>
       </div>
       <div class="stock-resumen" id="stockresumen-seg-hospclin-psico-bajo"></div>
       <button class="btn-definitiva" data-nivel="seg-hospclin-psico-bajo" data-segmento="Hospitales y Clínicas" data-tiposala="Sala de Psicomotricidad" data-nivelnombre="Presupuesto Bajo">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -44926,11 +44826,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-hospclin-psico-bajo" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-hospclin-psico-bajo">
-          <option value="todos" >Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-hospclin-psico-bajo"><option value="stock" selected>Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -45290,6 +45186,7 @@
           <div class="totalnum" id="total-seg-hospclin-psico-alto">$0</div>
           <div class="totallabel">total · <span id="count-seg-hospclin-psico-alto">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-hospclin-psico-alto">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-hospclin-psico-alto">Exportar a Excel</button></div>
       </div>
       <div class="stock-resumen" id="stockresumen-seg-hospclin-psico-alto"></div>
       <button class="btn-definitiva" data-nivel="seg-hospclin-psico-alto" data-segmento="Hospitales y Clínicas" data-tiposala="Sala de Psicomotricidad" data-nivelnombre="Presupuesto Alto">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -45299,11 +45196,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-hospclin-psico-alto" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-hospclin-psico-alto">
-          <option value="todos" >Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-hospclin-psico-alto"><option value="stock" selected>Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -45663,6 +45556,7 @@
           <div class="totalnum" id="total-seg-hospclin-psico-proyeccion">$0</div>
           <div class="totallabel">total · <span id="count-seg-hospclin-psico-proyeccion">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-hospclin-psico-proyeccion">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-hospclin-psico-proyeccion">Exportar a Excel</button></div>
       </div>
       
       <button class="btn-definitiva" data-nivel="seg-hospclin-psico-proyeccion" data-segmento="Hospitales y Clínicas" data-tiposala="Sala de Psicomotricidad" data-nivelnombre="Proyección a Futuro">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -45672,11 +45566,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-hospclin-psico-proyeccion" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-hospclin-psico-proyeccion">
-          <option value="todos" selected>Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" >Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-hospclin-psico-proyeccion"><option value="stock">Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos" selected>Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -48461,6 +48351,7 @@
           <div class="totalnum" id="total-seg-rehab-estim-bajo">$0</div>
           <div class="totallabel">total · <span id="count-seg-rehab-estim-bajo">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-rehab-estim-bajo">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-rehab-estim-bajo">Exportar a Excel</button></div>
       </div>
       <div class="stock-resumen" id="stockresumen-seg-rehab-estim-bajo"></div>
       <button class="btn-definitiva" data-nivel="seg-rehab-estim-bajo" data-segmento="Centros de Rehabilitación" data-tiposala="Sala de Estimulación Sensorial (adulto)" data-nivelnombre="Presupuesto Bajo">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -48470,11 +48361,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-rehab-estim-bajo" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-rehab-estim-bajo">
-          <option value="todos" >Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-rehab-estim-bajo"><option value="stock" selected>Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -48834,6 +48721,7 @@
           <div class="totalnum" id="total-seg-rehab-estim-alto">$0</div>
           <div class="totallabel">total · <span id="count-seg-rehab-estim-alto">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-rehab-estim-alto">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-rehab-estim-alto">Exportar a Excel</button></div>
       </div>
       <div class="stock-resumen" id="stockresumen-seg-rehab-estim-alto"></div>
       <button class="btn-definitiva" data-nivel="seg-rehab-estim-alto" data-segmento="Centros de Rehabilitación" data-tiposala="Sala de Estimulación Sensorial (adulto)" data-nivelnombre="Presupuesto Alto">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -48843,11 +48731,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-rehab-estim-alto" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-rehab-estim-alto">
-          <option value="todos" >Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-rehab-estim-alto"><option value="stock" selected>Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -49207,6 +49091,7 @@
           <div class="totalnum" id="total-seg-rehab-estim-proyeccion">$0</div>
           <div class="totallabel">total · <span id="count-seg-rehab-estim-proyeccion">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-rehab-estim-proyeccion">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-rehab-estim-proyeccion">Exportar a Excel</button></div>
       </div>
       
       <button class="btn-definitiva" data-nivel="seg-rehab-estim-proyeccion" data-segmento="Centros de Rehabilitación" data-tiposala="Sala de Estimulación Sensorial (adulto)" data-nivelnombre="Proyección a Futuro">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -49216,11 +49101,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-rehab-estim-proyeccion" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-rehab-estim-proyeccion">
-          <option value="todos" selected>Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" >Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-rehab-estim-proyeccion"><option value="stock">Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos" selected>Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -52005,6 +51886,7 @@
           <div class="totalnum" id="total-seg-rehab-integracion-bajo">$0</div>
           <div class="totallabel">total · <span id="count-seg-rehab-integracion-bajo">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-rehab-integracion-bajo">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-rehab-integracion-bajo">Exportar a Excel</button></div>
       </div>
       <div class="stock-resumen" id="stockresumen-seg-rehab-integracion-bajo"></div>
       <button class="btn-definitiva" data-nivel="seg-rehab-integracion-bajo" data-segmento="Centros de Rehabilitación" data-tiposala="Sala de Integración Sensorial" data-nivelnombre="Presupuesto Bajo">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -52014,11 +51896,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-rehab-integracion-bajo" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-rehab-integracion-bajo">
-          <option value="todos" >Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-rehab-integracion-bajo"><option value="stock" selected>Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -52378,6 +52256,7 @@
           <div class="totalnum" id="total-seg-rehab-integracion-alto">$0</div>
           <div class="totallabel">total · <span id="count-seg-rehab-integracion-alto">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-rehab-integracion-alto">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-rehab-integracion-alto">Exportar a Excel</button></div>
       </div>
       <div class="stock-resumen" id="stockresumen-seg-rehab-integracion-alto"></div>
       <button class="btn-definitiva" data-nivel="seg-rehab-integracion-alto" data-segmento="Centros de Rehabilitación" data-tiposala="Sala de Integración Sensorial" data-nivelnombre="Presupuesto Alto">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -52387,11 +52266,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-rehab-integracion-alto" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-rehab-integracion-alto">
-          <option value="todos" >Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-rehab-integracion-alto"><option value="stock" selected>Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -52751,6 +52626,7 @@
           <div class="totalnum" id="total-seg-rehab-integracion-proyeccion">$0</div>
           <div class="totallabel">total · <span id="count-seg-rehab-integracion-proyeccion">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-rehab-integracion-proyeccion">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-rehab-integracion-proyeccion">Exportar a Excel</button></div>
       </div>
       
       <button class="btn-definitiva" data-nivel="seg-rehab-integracion-proyeccion" data-segmento="Centros de Rehabilitación" data-tiposala="Sala de Integración Sensorial" data-nivelnombre="Proyección a Futuro">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -52760,11 +52636,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-rehab-integracion-proyeccion" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-rehab-integracion-proyeccion">
-          <option value="todos" selected>Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" >Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-rehab-integracion-proyeccion"><option value="stock">Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos" selected>Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -55549,6 +55421,7 @@
           <div class="totalnum" id="total-seg-adultomayor-calma-bajo">$0</div>
           <div class="totallabel">total · <span id="count-seg-adultomayor-calma-bajo">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-adultomayor-calma-bajo">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-adultomayor-calma-bajo">Exportar a Excel</button></div>
       </div>
       <div class="stock-resumen" id="stockresumen-seg-adultomayor-calma-bajo"></div>
       <button class="btn-definitiva" data-nivel="seg-adultomayor-calma-bajo" data-segmento="Adulto Mayor" data-tiposala="Sala de Calma" data-nivelnombre="Presupuesto Bajo">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -55558,11 +55431,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-adultomayor-calma-bajo" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-adultomayor-calma-bajo">
-          <option value="todos" >Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-adultomayor-calma-bajo"><option value="stock" selected>Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -55922,6 +55791,7 @@
           <div class="totalnum" id="total-seg-adultomayor-calma-alto">$0</div>
           <div class="totallabel">total · <span id="count-seg-adultomayor-calma-alto">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-adultomayor-calma-alto">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-adultomayor-calma-alto">Exportar a Excel</button></div>
       </div>
       <div class="stock-resumen" id="stockresumen-seg-adultomayor-calma-alto"></div>
       <button class="btn-definitiva" data-nivel="seg-adultomayor-calma-alto" data-segmento="Adulto Mayor" data-tiposala="Sala de Calma" data-nivelnombre="Presupuesto Alto">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -55931,11 +55801,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-adultomayor-calma-alto" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-adultomayor-calma-alto">
-          <option value="todos" >Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-adultomayor-calma-alto"><option value="stock" selected>Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -56295,6 +56161,7 @@
           <div class="totalnum" id="total-seg-adultomayor-calma-proyeccion">$0</div>
           <div class="totallabel">total · <span id="count-seg-adultomayor-calma-proyeccion">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-adultomayor-calma-proyeccion">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-adultomayor-calma-proyeccion">Exportar a Excel</button></div>
       </div>
       
       <button class="btn-definitiva" data-nivel="seg-adultomayor-calma-proyeccion" data-segmento="Adulto Mayor" data-tiposala="Sala de Calma" data-nivelnombre="Proyección a Futuro">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -56304,11 +56171,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-adultomayor-calma-proyeccion" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-adultomayor-calma-proyeccion">
-          <option value="todos" selected>Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" >Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-adultomayor-calma-proyeccion"><option value="stock">Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos" selected>Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -59093,6 +58956,7 @@
           <div class="totalnum" id="total-seg-adultomayor-memoria-bajo">$0</div>
           <div class="totallabel">total · <span id="count-seg-adultomayor-memoria-bajo">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-adultomayor-memoria-bajo">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-adultomayor-memoria-bajo">Exportar a Excel</button></div>
       </div>
       <div class="stock-resumen" id="stockresumen-seg-adultomayor-memoria-bajo"></div>
       <button class="btn-definitiva" data-nivel="seg-adultomayor-memoria-bajo" data-segmento="Adulto Mayor" data-tiposala="Sala para Personas Mayores (memoria/reminiscencia)" data-nivelnombre="Presupuesto Bajo">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -59102,11 +58966,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-adultomayor-memoria-bajo" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-adultomayor-memoria-bajo">
-          <option value="todos" >Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-adultomayor-memoria-bajo"><option value="stock" selected>Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -59466,6 +59326,7 @@
           <div class="totalnum" id="total-seg-adultomayor-memoria-alto">$0</div>
           <div class="totallabel">total · <span id="count-seg-adultomayor-memoria-alto">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-adultomayor-memoria-alto">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-adultomayor-memoria-alto">Exportar a Excel</button></div>
       </div>
       <div class="stock-resumen" id="stockresumen-seg-adultomayor-memoria-alto"></div>
       <button class="btn-definitiva" data-nivel="seg-adultomayor-memoria-alto" data-segmento="Adulto Mayor" data-tiposala="Sala para Personas Mayores (memoria/reminiscencia)" data-nivelnombre="Presupuesto Alto">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -59475,11 +59336,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-adultomayor-memoria-alto" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-adultomayor-memoria-alto">
-          <option value="todos" >Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" selected>Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-adultomayor-memoria-alto"><option value="stock" selected>Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos">Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -59839,6 +59696,7 @@
           <div class="totalnum" id="total-seg-adultomayor-memoria-proyeccion">$0</div>
           <div class="totallabel">total · <span id="count-seg-adultomayor-memoria-proyeccion">0</span> productos incluidos</div>
         </div>
+      <div class="acciones-sala"><button type="button" class="btn-crear-sala" data-crearsala="seg-adultomayor-memoria-proyeccion">Crear sala con esto</button><button type="button" class="btn-xls-sala" data-xlssala="seg-adultomayor-memoria-proyeccion">Exportar a Excel</button></div>
       </div>
       
       <button class="btn-definitiva" data-nivel="seg-adultomayor-memoria-proyeccion" data-segmento="Adulto Mayor" data-tiposala="Sala para Personas Mayores (memoria/reminiscencia)" data-nivelnombre="Proyección a Futuro">Esta es la sala definitiva — sugerir a Rayen</button>
@@ -59848,11 +59706,7 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Familia y audiencia <span class="filtros-badge" id="fbadge-seg-adultomayor-memoria-proyeccion" style="display:none;"></span>
         </button>
-        <select class="filtroVista" data-sala="seg-adultomayor-memoria-proyeccion">
-          <option value="todos" selected>Ver todos los productos</option>
-          <option value="incluidos">Solo incluidos</option>
-          <option value="sugeridos" >Solo sugeridos para esta sala</option>
-        </select>
+        <select class="filtroVista" data-sala="seg-adultomayor-memoria-proyeccion"><option value="stock">Solo lo que hay en stock</option><option value="venta">Todo el catálogo de venta (con precio)</option><option value="web">Productos de la web de Qinera que no traemos</option><option value="todos" selected>Ver todos los productos</option><option value="sugeridos">Solo sugeridos para esta sala</option><option value="incluidos">Solo los que ya agregué</option></select>
       </div>
       <div class="tablewrap">
         <table>
@@ -65035,7 +64889,7 @@
     <div class="panelhead">
       <div>
         <h2>Propuestas Recibidas</h2>
-        <p class="sug">Las salas que Stephanie (o tú) ya marcaron como definitivas, con sus elementos y valor — sin tener que buscar en todo el listado.</p>
+        <p class="sug">Las salas ya marcadas como definitivas, con sus elementos y valor — sin tener que buscar en todo el listado.</p>
       </div>
     </div>
     <div id="propuestas-recibidas"><p class="incluidos-vacio">Cargando…</p></div>
@@ -66181,8 +66035,27 @@
       sel.dispatchEvent(new Event('change', { bubbles: true }));
       pantalla.classList.remove('abierta');
       pintarQuien();
+      _ajustarNavegacion(nombre);
     }
     // Muestra quién está trabajando, con un "no soy yo" para cambiar.
+
+    // A Hernán solo el armador: el botón "Ir a Stock" lo llevaría a la página de
+    // stock y cotizaciones, que no le toca ver (Rayen 2026-08-04, "se va a
+    // confundir"). Esconderlo es para que no se pierda, NO es un candado: quien
+    // sepa la dirección igual puede abrir esa página. El candado de verdad es la
+    // Central, donde Hernán solo tiene la tarjeta de Salas.
+    function _ajustarNavegacion(nombre){
+      const soloArmador = (nombre === 'Hernán');
+      // Hernán no crea cotizaciones: el botón flotante no le sirve y confunde.
+      const bCot = document.getElementById('salaEnviarCotiz');
+      if (bCot) bCot.style.display = soloArmador ? 'none' : '';
+      const bSpec = document.getElementById('salaSpecsBtn');
+      if (bSpec) bSpec.style.display = soloArmador ? 'none' : '';
+      document.querySelectorAll('.hero-nav a, .topnav a, header a').forEach(function(a){
+        const txt = (a.textContent || '').toLowerCase();
+        if (txt.indexOf('stock') >= 0) a.style.display = soloArmador ? 'none' : '';
+      });
+    }
     function pintarQuien(){
       const cont = sel.parentNode;
       if (!cont) return;
@@ -66209,15 +66082,177 @@
       });
       box.appendChild(btn);
     }
+    // El boton flotante de cotizacion lo crea un <script> POSTERIOR, asi que
+    // cuando corre esto todavia no existe. Se vuelve a aplicar al terminar de
+    // cargar la pagina, cuando ya estan todos los botones puestos.
+    window.addEventListener('load', function(){ _ajustarNavegacion(sel.value); });
+    setTimeout(function(){ _ajustarNavegacion(sel.value); }, 400);
     pantalla.querySelectorAll('[data-entra]').forEach(function(b){
       b.addEventListener('click', function(){ entrar(b.dataset.entra); });
     });
     const guardado = localStorage.getItem('salas_quien_eres') || '';
     // El link con ?quien= manda: así Rayen abre la página tal como la ve él.
     if (desdeLink) entrar(desdeLink);
-    else if (guardado) { sel.value = guardado; pintarQuien(); }
+    else if (guardado) { sel.value = guardado; pintarQuien(); _ajustarNavegacion(guardado); }
     else pantalla.classList.add('abierta');
   })();
+
+
+  // ── Universos de producto ─────────────────────────────────────────────────
+  function _esSoloWeb(sku){ return /^q/.test(String(sku || '')); }
+  function _tieneStock(sku){
+    const f = FICHAS[sku];
+    if (!f) return false;
+    return ((Number(f.stockBodega) || 0) + (Number(f.stockCamino) || 0)) > 0;
+  }
+  // Presupuesto Bajo y Alto se armaron SOLO con lo que hay en bodega (49 filas).
+  // Para poder elegir un universo más amplio hay que traer las filas que faltan.
+  // Se clonan desde la tabla de Proyección del mismo segmento, la primera vez que
+  // se pide: duplicarlas en el archivo lo llevaba de 9 a 20 MB.
+  function _asegurarUniverso(sala){
+    const m = String(sala).match(/^(.*)-(bajo|alto)$/);
+    if (!m) return false;
+    const tb = document.getElementById('tbody-' + sala);
+    const origen = document.getElementById('tbody-' + m[1] + '-proyeccion');
+    if (!tb || !origen || tb.dataset.universoCompleto) return false;
+    const ya = new Set([...tb.querySelectorAll('input.inc')].map(c => c.dataset.sku));
+    const nuevas = [];
+    origen.querySelectorAll('tr').forEach(tr => {
+      const c = tr.querySelector('input.inc');
+      if (!c || ya.has(c.dataset.sku)) return;
+      const copia = tr.cloneNode(true);
+      copia.classList.remove('marked');
+      copia.querySelectorAll('input.inc, input.qty').forEach(el => {
+        el.dataset.sala = sala;
+        el.setAttribute('data-sala', sala);
+        if (el.classList.contains('inc')) el.checked = false;
+        else { el.value = 1; el.disabled = true; }
+      });
+      nuevas.push(copia);
+    });
+    if (!nuevas.length) { tb.dataset.universoCompleto = '1'; return false; }
+    const frag = document.createDocumentFragment();
+    nuevas.forEach(x => frag.appendChild(x));
+    tb.appendChild(frag);
+    // Las filas clonadas necesitan sus propios manejadores: los originales se
+    // engancharon uno por uno al cargar la página y no alcanzan a las nuevas.
+    nuevas.forEach(tr => _engancharFila(tr, sala));
+    tb.dataset.universoCompleto = '1';
+    return true;
+  }
+  function _engancharFila(tr, sala){
+    const chk = tr.querySelector('input.inc');
+    const qty = tr.querySelector('input.qty');
+    if (!chk || !qty) return;
+    const sku = chk.dataset.sku;
+    const k = claveEstado(sala, sku);
+    if (estado.hasOwnProperty(k)) {
+      chk.checked = !!estado[k].on;
+      if (estado[k].qty) qty.value = estado[k].qty;
+      qty.disabled = !chk.checked;
+      tr.classList.toggle('marked', chk.checked);
+    }
+    chk.addEventListener('change', () => {
+      estado[claveEstado(sala, sku)] = { on: chk.checked, qty: Number(qty.value) || 1 };
+      localStorage.setItem(KEY, JSON.stringify(estado));
+      tr.classList.toggle('marked', chk.checked);
+      qty.disabled = !chk.checked;
+      recalcular(sala);
+    });
+    qty.addEventListener('input', () => {
+      estado[claveEstado(sala, sku)] = { on: chk.checked, qty: Number(qty.value) || 1 };
+      localStorage.setItem(KEY, JSON.stringify(estado));
+      recalcular(sala);
+    });
+    // que el nombre y la foto sigan abriendo la ficha
+    tr.querySelectorAll('[data-ficha]').forEach(el => {
+      el.addEventListener('click', () => { if (typeof abrirFicha === 'function') abrirFicha(el.dataset.ficha); });
+    });
+  }
+
+
+  // ── Crear una sala a partir de lo que esté marcado en CUALQUIER pestaña ────
+  // Rayen 2026-08-04: Hernán se para en una sala que ya existe, le agrega
+  // elementos, y desde ahí crea la suya con nombre propio. La sala original
+  // NO se toca: se copia lo marcado.
+  function _seleccionDe(sala){
+    const items = [];
+    document.querySelectorAll('input.inc[data-sala="' + sala + '"]').forEach(function(chk){
+      if (!chk.checked) return;
+      const qty = Number(qtyInputDe(chk).value) || 1;
+      const f = FICHAS[chk.dataset.sku];
+      items.push({ sku: chk.dataset.sku, nombre: (f && f.nombre) || chk.dataset.sku,
+                   qty: qty, precio: Number(chk.dataset.precio) || 0 });
+    });
+    return items;
+  }
+  async function _crearSalaDesde(sala){
+    const items = _seleccionDe(sala);
+    if (!items.length) { alert('Marca al menos un producto antes de crear la sala.'); return; }
+    const total = items.reduce(function(a,b){ return a + b.precio * b.qty; }, 0);
+    const sugerido = (document.querySelector('#panel-' + sala + ' h2') || {}).textContent || '';
+    const nombre = (prompt('¿Cómo se va a llamar esta sala?\n\n' + items.length + ' productos · $' +
+      Math.round(total).toLocaleString('es-CL') + ' IVA inc.', sugerido.trim() + ' — mi versión') || '').trim();
+    if (!nombre) return;
+    const l = salasGuardadas();
+    const ya = l.findIndex(function(s){ return s.nombre.toLowerCase() === nombre.toLowerCase(); });
+    if (ya >= 0 && !confirm('Ya hay una sala guardada con ese nombre. ¿La reemplazo?')) return;
+    const autor = (document.getElementById('quien-eres') && document.getElementById('quien-eres').value) || '';
+    const reg = { nombre: nombre, items: items, total: total, autor: autor,
+                  fecha: new Date().toLocaleDateString('es-CL'), base: sugerido.trim() };
+    if (ya >= 0) l[ya] = reg; else l.unshift(reg);
+    grabarSalas(l);
+    pintarSalasGuardadas();
+    alert('Listo. Se creó la sala "' + nombre + '" con ' + items.length + ' productos por $' +
+      Math.round(total).toLocaleString('es-CL') + '.\n\nLa ves en la pestaña "Armar una sala nueva", en "Salas que has guardado".');
+    // se manda además a Rayen, si el Apps Script contesta
+    try {
+      if (typeof apiPost === 'function') {
+        await apiPost({ accion: 'guardar_propuesta_sala', nivelKey: 'nueva::' + nombre,
+          nombre: nombre, autor: autor || 'Anónimo', estado: 'definitiva',
+          items: items.map(function(x){ return { sku:x.sku, nombre:x.nombre, cantidad:x.qty, precio:x.precio }; }),
+          total: total });
+      }
+    } catch(e){}
+  }
+  function _excelDeSala(sala){
+    if (!window.OCT_excelTabla || !window.OCT_descargar) {
+      alert('No se pudo cargar el generador de Excel. Recarga la página con Ctrl+Shift+R.');
+      return;
+    }
+    const items = _seleccionDe(sala);
+    if (!items.length) { alert('Marca al menos un producto antes de exportar.'); return; }
+    const filas = items.map(function(x){
+      const f = FICHAS[x.sku] || {};
+      return [ { v:x.sku }, { v:x.nombre }, { v:x.qty },
+               { v:x.precio, moneda:true }, { v:x.precio * x.qty, moneda:true },
+               { v: Number(f.stockBodega) || 0 }, { v: Number(f.stockCamino) || 0 } ];
+    });
+    const total = items.reduce(function(a,b){ return a + b.precio * b.qty; }, 0);
+    // La sala nueva puede llevar además la instalación de la región elegida.
+    let inst = 0;
+    if (sala === 'nueva' && typeof _costoRegion === 'function') {
+      inst = Math.round(_costoRegion() * 1.19);
+      if (inst) filas.push([{ v:'' }, { v:'Instalación, transporte y capacitación — ' + _nombreRegion() },
+        { v:1 }, { v:inst, moneda:true }, { v:inst, moneda:true }, { v:'' }, { v:'' }]);
+    }
+    filas.push([{ v:'' }, { v:'TOTAL' }, { v:'' }, { v:'' }, { v: total + inst, moneda:true }, { v:'' }, { v:'' }]);
+    const titulo = ((document.querySelector('#panel-' + sala + ' h2') || {}).textContent || 'Sala').trim();
+    const hoy = new Date();
+    const fecha = String(hoy.getDate()).padStart(2,'0') + '-' + String(hoy.getMonth()+1).padStart(2,'0') + '-' + hoy.getFullYear();
+    const blob = window.OCT_excelTabla({
+      titulo: titulo,
+      subtitulo: fecha + '   ·   ' + items.length + ' productos   ·   total $' + Math.round(total + inst).toLocaleString('es-CL') + ' IVA inc.',
+      hoja: 'Sala', anchos: [16, 48, 8, 15, 15, 13, 13]
+    }, ['SKU','Producto','Cant.','Precio unitario','Total','En bodega','En camino'], filas);
+    window.OCT_descargar(blob, titulo.replace(/[\\/:*?"<>|]/g,'-') + ' - ' + fecha + '.xlsx');
+  }
+  document.addEventListener('click', function(ev){
+    const c = ev.target && ev.target.closest ? ev.target.closest('[data-crearsala]') : null;
+    if (c) { ev.preventDefault(); _crearSalaDesde(c.dataset.crearsala); return; }
+    const x = ev.target && ev.target.closest ? ev.target.closest('[data-xlssala]') : null;
+    if (x) { ev.preventDefault(); _excelDeSala(x.dataset.xlssala); }
+  });
 
   recalcular('nueva');
   recalcular('elemental');
@@ -66290,6 +66325,9 @@
   }
 
   function aplicarFiltro(sala) {
+    // Si pide un universo más amplio del que esa tabla tiene, se traen las filas.
+    const _v = document.querySelector('.filtroVista[data-sala="' + sala + '"]');
+    if (_v && _v.value !== 'stock' && typeof _asegurarUniverso === 'function') _asegurarUniverso(sala);
     // Misma guarda que recalcular(): si esta página no tiene esta sala, no hace nada.
     const elSearch = document.querySelector('.search[data-sala="' + sala + '"]');
     const elVista = document.querySelector('.filtroVista[data-sala="' + sala + '"]');
@@ -66312,6 +66350,12 @@
       const chk = tr.querySelector('input.inc');
       let okVista = true;
       if (vista === 'incluidos') okVista = chk.checked;
+      // Universos (Rayen 2026-08-04). Los SKU que empiezan con 'q' son del catálogo
+      // de la web de Qinera que NO traemos; el resto (BJ-, MP-, WEB-) es lo que
+      // vendemos, o sea lo que ella llama 'el catálogo de Qinera' con precio.
+      else if (vista === 'stock') okVista = _tieneStock(chk.dataset.sku);
+      else if (vista === 'venta') okVista = !_esSoloWeb(chk.dataset.sku);
+      else if (vista === 'web')   okVista = _esSoloWeb(chk.dataset.sku);
       // Si está buscando algo, la búsqueda manda sobre "Solo sugeridos para esta sala": si no,
       // escribir el nombre de un producto que existe pero no es sugerido no devolvía nada.
       if (vista === 'sugeridos' && !palabras.length) {
@@ -66482,7 +66526,7 @@
   }
 
   async function initPillsConfirmar() {
-    // El Sheet compartido manda si hay datos ahi (lo que marco Stephanie/Rayen en otro navegador
+    // El Sheet compartido manda si hay datos ahi (lo que se marco en otro navegador
     // vale mas que lo guardado solo local en este).
     const remoto = await apiGet('listar_confirmaciones');
     if (remoto && remoto.ok) {

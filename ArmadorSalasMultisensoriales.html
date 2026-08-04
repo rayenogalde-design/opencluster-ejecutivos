@@ -400,7 +400,19 @@
   .nueva-region select { flex:1 1 300px; font:inherit; padding:0.6rem 0.8rem; border:1px solid var(--line); border-radius:10px; background:var(--card); color:var(--ink); }
   .nueva-region .rg-lbl { font-size:0.82rem; font-weight:700; }
   .totaldesglose { font-size:0.72rem; color:rgba(255,255,255,0.9); margin-top:0.3rem; line-height:1.35; }
-  .btn-excel-sala { font:inherit; font-weight:700; padding:0.6rem 1rem; border:1px solid var(--line); border-radius:10px; background:var(--card); color:var(--ink); cursor:pointer; }
+  .btn-excel-sala { font:inherit; font-weight:700; padding:0.6rem 1rem; border:1px solid var(--line); border-radius:10px; background:var(--card); color:var(--ink); cursor:pointer; }
+  /* Entrada por nombre (2026-08-04): eliges quién eres y entras directo */
+  #entrada-nombre { position:fixed; inset:0; z-index:200; display:none; align-items:center; justify-content:center; padding:1.5rem; background:linear-gradient(155deg,#0B2118,#123024 65%,#0B2118); }
+  #entrada-nombre.abierta { display:flex; }
+  .ent-card { background:var(--card,#fff); border-radius:18px; padding:2rem 2.2rem; max-width:520px; width:100%; box-shadow:0 24px 60px -18px rgba(0,0,0,.55); text-align:center; }
+  .ent-card h2 { margin:0 0 .3rem; font-size:1.5rem; color:var(--navy,#001A60); }
+  .ent-card p { margin:0 0 1.3rem; font-size:.9rem; color:var(--mist,#7C8794); }
+  .ent-nombres { display:flex; flex-wrap:wrap; gap:.6rem; justify-content:center; }
+  .ent-nombres button { font:inherit; font-size:1rem; font-weight:800; padding:.7rem 1.3rem; border-radius:12px; border:1.5px solid var(--line,#E3E7EC); background:var(--paper,#F7F9FB); color:var(--ink,#0d1b2a); cursor:pointer; }
+  .ent-nombres button:hover { background:#0E7C5A; border-color:#0E7C5A; color:#fff; }
+  .quien-actual { display:flex; align-items:center; gap:.5rem; }
+  .quien-actual b { color:var(--ink); }
+  .quien-cambiar { font:inherit; font-size:.76rem; font-weight:700; padding:.22rem .6rem; border-radius:999px; border:1px solid var(--line); background:var(--card); color:var(--mist); cursor:pointer; }
 </style>
 </head>
 <body>
@@ -419,8 +431,13 @@
 </div>
 </header>
 </div>
+<div id="entrada-nombre"><div class="ent-card">
+  <h2>¿Quién eres?</h2>
+  <p>Elige tu nombre para entrar al armador de salas.</p>
+  <div class="ent-nombres"><button type="button" data-entra="Rayen">Rayen</button><button type="button" data-entra="Hernán">Hernán</button><button type="button" data-entra="Stephanie">Stephanie</button><button type="button" data-entra="Mario">Mario</button><button type="button" data-entra="William">William</button><button type="button" data-entra="Germán">Germán</button><button type="button" data-entra="Roberto">Roberto</button><button type="button" data-entra="Maximiliano">Maximiliano</button><button type="button" data-entra="Ximena">Ximena</button></div>
+</div></div>
 <div class="quien-eres">
-  ¿Quién eres? <select id="quien-eres"><option value="">-- Elegir --</option><option>Rayen</option><option>Stephanie</option></select>
+  ¿Quién eres? <select id="quien-eres"><option value="">-- Elegir --</option><option>Rayen</option><option>Hernán</option><option>Stephanie</option><option>Mario</option><option>William</option><option>Germán</option><option>Roberto</option><option>Maximiliano</option><option>Ximena</option></select>
 </div>
 <div class="tabs"><button class="grouphead grp-nueva open" data-group="g-nueva">
       <span>Armar sala nueva</span>
@@ -66147,6 +66164,61 @@
   // El panel de la sala nueva y el que esté activo arrancan con su stock a la vista.
   try { _ponerStockEnPanel(document.getElementById('panel-nueva')); } catch(e){}
   try { _ponerStockEnPanel(document.querySelector('.panel.active')); } catch(e){}
+
+  // ── Entrar eligiendo el nombre ────────────────────────────────────────────
+  // Pedido de Rayen 2026-08-04: Hernán elige su nombre y entra directo. No es
+  // una contraseña ni pretende serlo: sirve para atribuir lo que cada uno arma.
+  // Se puede forzar con ?quien=Hernán en el link, para poder ver lo que ve él.
+  (function(){
+    const sel = document.getElementById('quien-eres');
+    const pantalla = document.getElementById('entrada-nombre');
+    if (!sel || !pantalla) return;
+    const desdeLink = new URLSearchParams(location.search).get('quien');
+    function entrar(nombre){
+      if (!nombre) return;
+      sel.value = nombre;
+      localStorage.setItem('salas_quien_eres', nombre);
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+      pantalla.classList.remove('abierta');
+      pintarQuien();
+    }
+    // Muestra quién está trabajando, con un "no soy yo" para cambiar.
+    function pintarQuien(){
+      const cont = sel.parentNode;
+      if (!cont) return;
+      let box = cont.querySelector('.quien-actual');
+      const nombre = sel.value;
+      if (!nombre) { if (box) box.remove(); sel.style.display = ''; return; }
+      sel.style.display = 'none';
+      if (!box) {
+        box = document.createElement('span');
+        box.className = 'quien-actual';
+        cont.appendChild(box);
+      }
+      box.innerHTML = 'Estás trabajando como <b></b> ';
+      box.querySelector('b').textContent = nombre;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'quien-cambiar';
+      btn.textContent = 'No soy yo';
+      btn.addEventListener('click', function(){
+        localStorage.removeItem('salas_quien_eres');
+        sel.value = '';
+        pantalla.classList.add('abierta');
+        pintarQuien();
+      });
+      box.appendChild(btn);
+    }
+    pantalla.querySelectorAll('[data-entra]').forEach(function(b){
+      b.addEventListener('click', function(){ entrar(b.dataset.entra); });
+    });
+    const guardado = localStorage.getItem('salas_quien_eres') || '';
+    // El link con ?quien= manda: así Rayen abre la página tal como la ve él.
+    if (desdeLink) entrar(desdeLink);
+    else if (guardado) { sel.value = guardado; pintarQuien(); }
+    else pantalla.classList.add('abierta');
+  })();
+
   recalcular('nueva');
   recalcular('elemental');
   recalcular('simple');

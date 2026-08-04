@@ -65848,9 +65848,11 @@
     // Además se manda a Rayen si el Apps Script está disponible. Si falla, no se pierde nada.
     try {
       if (typeof apiPost === 'function') {
-        await apiPost({ accion: 'guardar_propuesta_sala', nivelKey: 'nueva::' + nombre,
-          nombre: nombre, autor: autor || 'Anónimo', estado: 'definitiva',
-          items: items.map(function(x){ return { sku: x.sku, nombre: x.nombre, cantidad: x.qty, precio: x.precio }; }),
+        // Mismos nombres de campo que entiende el Apps Script (ver _crearSalaDesde).
+        await apiPost({ accion: 'guardar_propuesta_sala', clave: 'sala::' + nombre,
+          segmento: 'Sala armada desde cero', tipoSala: nombre, nivel: '',
+          autor: autor || 'Anónimo', estado: 'definitiva',
+          productos: items.map(function(x){ return { sku: x.sku, nombre: x.nombre, cantidad: x.qty, precio: x.precio }; }),
           total: reg.total });
       }
     } catch(e){}
@@ -66186,34 +66188,63 @@
     });
     return items;
   }
+  // De "seg-adultomayor-calma-bajo" saca el panel ("panel-seg-adultomayor-calma")
+  // y el nivel ("Presupuesto Bajo"). Sin esto el nombre sugerido salía vacío.
+  function _datosDeSala(sala){
+    const m = String(sala).match(/^(.*)-(bajo|alto|proyeccion)$/);
+    const base = m ? m[1] : sala;
+    const NIV = { bajo: 'Presupuesto Bajo', alto: 'Presupuesto Alto', proyeccion: 'Proyección a Futuro' };
+    const h2 = document.querySelector('#panel-' + base + ' h2');
+    return {
+      titulo: h2 ? h2.textContent.trim() : (sala === 'nueva' ? 'Sala nueva' : sala),
+      nivel: m ? NIV[m[2]] : ''
+    };
+  }
   async function _crearSalaDesde(sala){
     const items = _seleccionDe(sala);
     if (!items.length) { alert('Marca al menos un producto antes de crear la sala.'); return; }
     const total = items.reduce(function(a,b){ return a + b.precio * b.qty; }, 0);
-    const sugerido = (document.querySelector('#panel-' + sala + ' h2') || {}).textContent || '';
+    const d = _datosDeSala(sala);
+    const sugerido = d.titulo + (d.nivel ? ' (' + d.nivel + ')' : '') + ' — mi versión';
     const nombre = (prompt('¿Cómo se va a llamar esta sala?\n\n' + items.length + ' productos · $' +
-      Math.round(total).toLocaleString('es-CL') + ' IVA inc.', sugerido.trim() + ' — mi versión') || '').trim();
+      Math.round(total).toLocaleString('es-CL') + ' IVA inc.', sugerido) || '').trim();
     if (!nombre) return;
     const l = salasGuardadas();
     const ya = l.findIndex(function(s){ return s.nombre.toLowerCase() === nombre.toLowerCase(); });
     if (ya >= 0 && !confirm('Ya hay una sala guardada con ese nombre. ¿La reemplazo?')) return;
     const autor = (document.getElementById('quien-eres') && document.getElementById('quien-eres').value) || '';
     const reg = { nombre: nombre, items: items, total: total, autor: autor,
-                  fecha: new Date().toLocaleDateString('es-CL'), base: sugerido.trim() };
+                  fecha: new Date().toLocaleDateString('es-CL'), base: d.titulo, nivel: d.nivel };
     if (ya >= 0) l[ya] = reg; else l.unshift(reg);
     grabarSalas(l);
     pintarSalasGuardadas();
-    alert('Listo. Se creó la sala "' + nombre + '" con ' + items.length + ' productos por $' +
-      Math.round(total).toLocaleString('es-CL') + '.\n\nLa ves en la pestaña "Armar una sala nueva", en "Salas que has guardado".');
-    // se manda además a Rayen, si el Apps Script contesta
+    // Se manda al Apps Script de Salas con LOS NOMBRES DE CAMPO QUE ÉL ENTIENDE
+    // (clave, segmento, tipoSala, nivel, productos). Antes se mandaban otros y
+    // guardaba la fila vacía: contestaba "ok" pero se perdía todo.
+    let enServidor = false;
     try {
       if (typeof apiPost === 'function') {
-        await apiPost({ accion: 'guardar_propuesta_sala', nivelKey: 'nueva::' + nombre,
-          nombre: nombre, autor: autor || 'Anónimo', estado: 'definitiva',
-          items: items.map(function(x){ return { sku:x.sku, nombre:x.nombre, cantidad:x.qty, precio:x.precio }; }),
-          total: total });
+        const r = await apiPost({
+          accion: 'guardar_propuesta_sala',
+          clave: 'sala::' + nombre,
+          segmento: d.titulo,
+          tipoSala: nombre,
+          nivel: d.nivel,
+          productos: items.map(function(x){ return { sku:x.sku, nombre:x.nombre, cantidad:x.qty, precio:x.precio }; }),
+          total: total,
+          autor: autor || 'Anónimo',
+          estado: 'definitiva'
+        });
+        enServidor = !!(r && r.ok);
       }
     } catch(e){}
+    alert('Listo. Se creó la sala "' + nombre + '" con ' + items.length + ' productos por $' +
+      Math.round(total).toLocaleString('es-CL') + '.\n\n' +
+      (enServidor
+        ? 'Ya le llegó a Rayen: la ve en la pestaña "Propuestas Recibidas".'
+        : 'OJO: no se pudo avisar a Rayen (sin conexión). Quedó guardada acá; vuelve a guardarla cuando tengas internet.') +
+      '\n\nTambién la tienes en "Armar una sala nueva" → "Salas que has guardado".');
+    try { if (typeof cargarPropuestasExistentes === 'function') cargarPropuestasExistentes(); } catch(e){}
   }
   function _excelDeSala(sala){
     if (!window.OCT_excelTabla || !window.OCT_descargar) {
@@ -66836,30 +66867,52 @@
   });
 
   async function cargarPropuestasExistentes() {
-    const r = await apiGet('listar_propuestas_sala');
-    if (!(r && r.ok)) return;
-    r.propuestas.forEach(p => {
-      if (p.estado !== 'definitiva') return;
-      // reconstruir la clave de nivel a partir de segmento/tipoSala/nivel
-      const match = segmentosConIncluidos.find(s => s.seg === p.segmento && s.nombre.split('→')[1].trim() === p.tipoSala);
-      if (!match) return;
-      const nivelObj = NIVELES.find(n => n.nombre === p.nivel);
-      if (!nivelObj) return;
-      const nivelKey = match.key + '-' + nivelObj.key;
-      // marcar checkboxes segun lo guardado
-      (p.productos || []).forEach(prod => {
-        const chk = document.querySelector('input.inc[data-sala="' + nivelKey + '"][data-sku="' + prod.sku + '"]');
-        if (chk) {
+    const cont = document.getElementById('propuestas-recibidas');
+    let r = null;
+    try { r = await apiGet('listar_propuestas_sala'); } catch (e) {}
+    if (!(r && r.ok)) {
+      if (cont) cont.innerHTML = '<p class="incluidos-vacio">No se pudo conectar para traer las salas guardadas. Revisa la conexión y recarga.</p>';
+      return;
+    }
+    const definitivas = (r.propuestas || []).filter(p => p.estado === 'definitiva');
+    // Lo primero es MOSTRARLAS. Antes se intentaba primero re-marcar las casillas
+    // usando dos variables que no existen (segmentosConIncluidos, NIVELES): eso
+    // reventaba y la pestaña quedaba en "Cargando..." para siempre.
+    renderPropuestasRecibidas(definitivas);
+    // Y después, si se puede, se dejan marcadas las casillas del nivel de origen.
+    // Va aparte y protegido: si falla, la lista de arriba ya quedó pintada.
+    definitivas.forEach(p => {
+      try {
+        const nivelKey = _claveDeNivel(p);
+        if (!nivelKey) return;
+        (p.productos || []).forEach(prod => {
+          const chk = document.querySelector('input.inc[data-sala="' + nivelKey + '"][data-sku="' + prod.sku + '"]');
+          if (!chk) return;
           chk.checked = true;
           const qtyEl = qtyInputDe(chk);
           qtyEl.value = prod.cantidad;
           qtyEl.disabled = false;
-        }
-      });
-      recalcular(nivelKey);
-      pintarEstadoNivel(nivelKey, p);
+        });
+        recalcular(nivelKey);
+        pintarEstadoNivel(nivelKey, p);
+      } catch (e) {}
     });
-    renderPropuestasRecibidas(r.propuestas.filter(p => p.estado === 'definitiva'));
+  }
+  // Reconstruye a qué pestaña pertenece una propuesta guardada, buscando el
+  // panel cuyo título coincide con el segmento. Devuelve '' si no calza (las
+  // salas creadas a mano por un ejecutivo no pertenecen a ningún nivel).
+  function _claveDeNivel(p) {
+    const NIV = { 'Presupuesto Bajo': 'bajo', 'Presupuesto Alto': 'alto', 'Proyección a Futuro': 'proyeccion' };
+    const suf = NIV[p.nivel];
+    if (!suf || !p.segmento) return '';
+    const paneles = document.querySelectorAll('section.panel[id^="panel-seg-"]');
+    for (let i = 0; i < paneles.length; i++) {
+      const h2 = paneles[i].querySelector('h2');
+      if (h2 && h2.textContent.trim() === String(p.segmento).trim()) {
+        return paneles[i].id.replace(/^panel-/, '') + '-' + suf;
+      }
+    }
+    return '';
   }
   cargarPropuestasExistentes();
 

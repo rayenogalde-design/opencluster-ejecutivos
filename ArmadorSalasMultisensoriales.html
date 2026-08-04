@@ -384,7 +384,23 @@
     .cotiz-filtro-prob { gap:0.4rem; }
     .cotiz-filtro-prob #cotiz-marcar-todas { margin-left:0; }
     #cotiz-marcar-todas, #cotiz-limpiar-seleccion { flex:1 1 auto; }
-  }
+  }
+  /* Stock por producto y barra de presupuesto (para Hernán, 2026-08-04) */
+  .stk-arm { display:block; font-size:0.72rem; line-height:1.3; white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .stk-arm i { width:0.45rem; height:0.45rem; border-radius:50%; display:inline-block; margin-right:0.25rem; }
+  .stk-arm .b { color:#2f7d55; font-weight:700; }
+  .stk-arm .b i { background:#2f7d55; }
+  .stk-arm .b.cero { color:var(--mist); }
+  .stk-arm .b.cero i { background:var(--mist); }
+  .stk-arm .c { color:var(--mist); font-weight:700; }
+  .stk-arm .c i { background:transparent; border:1.5px solid #2f7d55; }
+  .stk-arm .nd { color:var(--mist); font-style:italic; }
+  .panelhead { position:sticky; top:0; z-index:6; background:var(--paper,#F7F9FB); padding-top:0.4rem; }
+  .nueva-region { display:flex; gap:0.6rem; flex-wrap:wrap; align-items:center; margin:0 0 0.9rem; }
+  .nueva-region select { flex:1 1 300px; font:inherit; padding:0.6rem 0.8rem; border:1px solid var(--line); border-radius:10px; background:var(--card); color:var(--ink); }
+  .nueva-region .rg-lbl { font-size:0.82rem; font-weight:700; }
+  .totaldesglose { font-size:0.72rem; color:rgba(255,255,255,0.9); margin-top:0.3rem; line-height:1.35; }
+  .btn-excel-sala { font:inherit; font-weight:700; padding:0.6rem 1rem; border:1px solid var(--line); border-radius:10px; background:var(--card); color:var(--ink); cursor:pointer; }
 </style>
 </head>
 <body>
@@ -437,6 +453,7 @@
       <div class="totalbox">
         <div class="totalnum" id="total-nueva">$0</div>
         <div class="totallabel">total IVA inc. &middot; <span id="count-nueva">0</span> productos incluidos</div>
+        <div class="totaldesglose" id="desglose-nueva"></div>
       </div>
     </div>
     <div class="nueva-guardar">
@@ -444,6 +461,11 @@
       <button type="button" class="btn-guardar-sala" id="nueva-guardar">Guardar esta sala</button>
       <button type="button" class="btn-limpiar-sala" id="nueva-limpiar">Empezar de cero</button>
       <div class="nueva-aviso" id="nueva-aviso"></div>
+    </div>
+    <div class="nueva-region">
+      <span class="rg-lbl">Instalación, transporte y capacitación:</span>
+      <select id="nueva-region"><option value="0">— Sin instalación/capacitación —</option><option value="3401000">Arica y Parinacota</option><option value="3249000">Tarapacá</option><option value="3065000">Antofagasta</option><option value="2044901">Atacama</option><option value="1605000">Coquimbo</option><option value="1163000">Valparaíso</option><option value="1209000">Metropolitana</option><option value="1465000">O'Higgins</option><option value="1593000">Maule</option><option value="1921000">Ñuble</option><option value="2145000">Biobío</option><option value="2165000">Araucanía</option><option value="2593000">Los Ríos</option><option value="2785000">Los Lagos</option><option value="2765000">Aysén</option><option value="2825000">Magallanes</option></select>
+      <button type="button" class="btn-excel-sala" id="nueva-excel">Exportar a Excel</button>
     </div>
     <div class="nueva-guardadas">
       <h3>Salas que has guardado</h3>
@@ -65610,6 +65632,15 @@
   });
   cargarCotizacionesSM();
 
+  // Al abrir una pestaña se le pinta el stock (una sola vez por panel).
+  document.addEventListener('click', function(ev){
+    const b = ev.target && ev.target.closest ? ev.target.closest('.tabbtn') : null;
+    if (!b) return;
+    setTimeout(function(){
+      const p = document.getElementById('panel-' + b.dataset.tab);
+      if (p && typeof _ponerStockEnPanel === 'function') _ponerStockEnPanel(p);
+    }, 0);
+  });
   document.querySelectorAll('.tabbtn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.tabbtn').forEach(b => b.classList.remove('active'));
@@ -65714,6 +65745,8 @@
     elCount.textContent = count;
     renderIncluidos(sala);
     actualizarResumenStock(sala);
+    // La sala nueva suma además la instalación/capacitación de la región elegida.
+    if (sala === 'nueva' && typeof _pintarDesgloseNueva === 'function') _pintarDesgloseNueva();
   }
 
   // Resumen de stock de la sala que se está armando (pedido de Rayen 2026-07-21): en vez de leer
@@ -65967,6 +66000,153 @@
     avisoNueva('Listo, puedes empezar de cero.', 'ok');
   });
 
+
+  // ── Stock por producto en la tabla (Hernán no entra a la página de Stock) ──
+  // Se pide el stock REAL al CRM (inicial menos lo ya vendido). Si no contesta,
+  // se usa el que traen las fichas, que es el inventario inicial.
+  const CRM_STOCK_URL = 'https://script.google.com/macros/s/AKfycbz3Vscxz-OlTHehsnEqqTD1qfql4xzstgWM81RG79P5IiLTkRvaYTU2sNoWV_QpceeowA/exec';
+  function _stkDe(sku){
+    const f = FICHAS[sku];
+    if (!f) return null;
+    const b = Number(f.stockBodega) || 0, c = Number(f.stockCamino) || 0;
+    if (!f.hasOwnProperty('stock') && !b && !c) return null;
+    return { b: b, c: c };
+  }
+  function _celdaStock(sku){
+    const s = _stkDe(sku);
+    if (!s) return '<span class="stk-arm nd">sin dato</span>';
+    return '<span class="stk-arm">'
+      + '<span class="b' + (s.b ? '' : ' cero') + '"><i></i>' + s.b + ' en bodega</span><br>'
+      + '<span class="c"><i></i>' + s.c + ' en camino</span></span>';
+  }
+  // Se agrega la columna al panel que se está mirando, una sola vez por panel:
+  // hacerlo en las 22 salas de golpe (4.000+ filas) dejaba la página pegada.
+  function _ponerStockEnPanel(panel){
+    if (!panel || panel.dataset.stockPuesto) return;
+    const tablas = panel.querySelectorAll('table');
+    tablas.forEach(tabla => {
+      const cab = tabla.querySelector('thead tr');
+      if (!cab) return;
+      const filas = tabla.querySelectorAll('tbody tr');
+      if (!filas.length) return;
+      // solo la tabla grande de productos (la que tiene las casillas .inc)
+      if (!tabla.querySelector('tbody input.inc')) return;
+      const th = document.createElement('th');
+      th.textContent = 'Stock';
+      const celdaPrecio = [...cab.querySelectorAll('th')].findIndex(x => /precio/i.test(x.textContent));
+      if (celdaPrecio >= 0) cab.insertBefore(th, cab.children[celdaPrecio + 1]); else cab.appendChild(th);
+      filas.forEach(tr => {
+        const chk = tr.querySelector('input.inc');
+        if (!chk) return;
+        const td = document.createElement('td');
+        td.innerHTML = _celdaStock(chk.dataset.sku);
+        const pc = tr.querySelector('td.price');
+        if (pc && pc.nextSibling) tr.insertBefore(td, pc.nextSibling);
+        else if (pc) tr.appendChild(td);
+        else tr.appendChild(td);
+      });
+    });
+    panel.dataset.stockPuesto = '1';
+  }
+  function _refrescarStockPintado(){
+    document.querySelectorAll('.panel[data-stock-puesto]').forEach(p => {
+      p.querySelectorAll('tbody tr').forEach(tr => {
+        const chk = tr.querySelector('input.inc');
+        const cel = tr.querySelector('.stk-arm');
+        if (chk && cel && cel.parentNode) cel.parentNode.innerHTML = _celdaStock(chk.dataset.sku);
+      });
+    });
+  }
+  // Stock real del CRM. Falla en silencio: mejor el inicial que nada.
+  (async function(){
+    try {
+      const r = await fetch(CRM_STOCK_URL + '?accion=crm_stock_salas&t=' + Date.now());
+      const j = await r.json();
+      if (!j || !j.ok || !j.stock) return;
+      Object.keys(j.stock).forEach(sku => {
+        const v = j.stock[sku], f = FICHAS[sku];
+        if (!f) return;
+        f.stockBodega = Number(v.bodega) || 0;
+        f.stockCamino = Number(v.camino) || 0;
+        f.stock = f.stockBodega + f.stockCamino;
+      });
+      _refrescarStockPintado();
+      try { recalcular('nueva'); } catch(e){}
+    } catch(e){}
+  })();
+
+  // ── Región: costo de instalación/transporte/capacitación ──
+  // Los valores son EXACTAMENTE los del cotizador (tabla copiada de ahí, en neto).
+  function _costoRegion(){
+    const s = document.getElementById('nueva-region');
+    return s ? (Number(s.value) || 0) : 0;
+  }
+  function _nombreRegion(){
+    const s = document.getElementById('nueva-region');
+    return (s && s.selectedIndex > 0) ? s.options[s.selectedIndex].text : '';
+  }
+  // El total de la sala nueva = productos (IVA inc.) + instalación de la región.
+  // El valor de la región viene NETO en la tabla del cotizador, así que se le
+  // suma el IVA para que el total de arriba sea todo con IVA y no mezcle bases.
+  function _pintarDesgloseNueva(){
+    const el = document.getElementById('desglose-nueva');
+    const elTotal = document.getElementById('total-nueva');
+    if (!el || !elTotal) return;
+    let prod = 0;
+    document.querySelectorAll('input.inc[data-sala="nueva"]').forEach(chk => {
+      if (!chk.checked) return;
+      prod += Number(chk.dataset.precio) * (Number(qtyInputDe(chk).value) || 1);
+    });
+    const neto = _costoRegion();
+    const inst = Math.round(neto * 1.19);
+    elTotal.textContent = '$' + Math.round(prod + inst).toLocaleString('es-CL');
+    el.innerHTML = inst
+      ? 'Productos $' + Math.round(prod).toLocaleString('es-CL')
+        + ' + instalación/capacitación $' + inst.toLocaleString('es-CL')
+        + ' (' + _nombreRegion() + ')'
+      : '';
+  }
+  const selRegionNueva = document.getElementById('nueva-region');
+  if (selRegionNueva) selRegionNueva.addEventListener('change', function(){ recalcular('nueva'); });
+
+  // ── Exportar a Excel lo seleccionado ──
+  const btnExcelSala = document.getElementById('nueva-excel');
+  if (btnExcelSala) btnExcelSala.addEventListener('click', function(){
+    if (!window.OCT_excelTabla || !window.OCT_descargar) {
+      alert('No se pudo cargar el generador de Excel. Recarga la página con Ctrl+Shift+R.');
+      return;
+    }
+    const items = seleccionNueva();
+    if (!items.length) { alert('Marca al menos un producto antes de exportar.'); return; }
+    const filas = items.map(function(x){
+      const s = _stkDe(x.sku);
+      return [
+        { v: x.sku }, { v: x.nombre }, { v: x.qty },
+        { v: x.precio, moneda: true }, { v: x.precio * x.qty, moneda: true },
+        { v: s ? s.b : '' }, { v: s ? s.c : '' }
+      ];
+    });
+    const prod = items.reduce(function(a,b){ return a + b.precio * b.qty; }, 0);
+    const inst = Math.round(_costoRegion() * 1.19);
+    if (inst) filas.push([{ v: '' }, { v: 'Instalación, transporte y capacitación — ' + _nombreRegion() },
+      { v: 1 }, { v: inst, moneda: true }, { v: inst, moneda: true }, { v: '' }, { v: '' }]);
+    filas.push([{ v: '' }, { v: 'TOTAL' }, { v: '' }, { v: '' }, { v: prod + inst, moneda: true }, { v: '' }, { v: '' }]);
+    const nombre = (document.getElementById('nueva-nombre').value || 'Sala nueva').trim();
+    const hoy = new Date();
+    const fecha = String(hoy.getDate()).padStart(2,'0') + '-' + String(hoy.getMonth()+1).padStart(2,'0') + '-' + hoy.getFullYear();
+    const blob = window.OCT_excelTabla({
+      titulo: nombre,
+      subtitulo: fecha + '   ·   ' + items.length + ' productos   ·   total $' + Math.round(prod + inst).toLocaleString('es-CL') + ' IVA inc.'
+        + (inst ? '   ·   incluye instalación/capacitación de ' + _nombreRegion() : ''),
+      hoja: 'Sala',
+      anchos: [16, 48, 8, 15, 15, 13, 13]
+    }, ['SKU', 'Producto', 'Cant.', 'Precio unitario', 'Total', 'En bodega', 'En camino'], filas);
+    window.OCT_descargar(blob, nombre.replace(/[\\/:*?"<>|]/g, '-') + ' - ' + fecha + '.xlsx');
+  });
+
+  // El panel de la sala nueva y el que esté activo arrancan con su stock a la vista.
+  try { _ponerStockEnPanel(document.getElementById('panel-nueva')); } catch(e){}
+  try { _ponerStockEnPanel(document.querySelector('.panel.active')); } catch(e){}
   recalcular('nueva');
   recalcular('elemental');
   recalcular('simple');
@@ -66596,6 +66776,9 @@
   Enviar a cotización
   <span id="salaEnviarCount" style="background:#e8b84b;color:#0b2a4a;border-radius:12px;padding:1px 8px;font-size:12px;min-width:20px;text-align:center;">0</span>
 </button>
+<!-- Stock real y armador de Excel: Hernán trabaja solo en esta página -->
+<script src="StockSalas.js"></script>
+<script src="ExcelFaltantes.js"></script>
 <script src="SalasFichas.js"></script>
 <script src="SalasFichasWeb.js"></script>
 <script src="SalasFotosExtra.js"></script>

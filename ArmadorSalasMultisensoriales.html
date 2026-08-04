@@ -74,6 +74,23 @@
   .stock-hero-dot.dot-bodega { background:#4FD88A; }
   .stock-hero-dot.dot-camino { background:transparent; border:1.5px solid #4FD88A; }
   @media (max-width:600px) { .stock-hero-numero { font-size:2.1rem; } }
+  .grp-nueva { --grp-solid:#0E7C5A; --grp-tint:#E6F6EF; --grp-ink:#0a5f45; }
+  .nueva-guardar { display:flex; gap:0.6rem; flex-wrap:wrap; align-items:center; margin:0 0 1rem; }
+  .nueva-guardar input { flex:1 1 340px; font:inherit; padding:0.6rem 0.8rem; border:1px solid var(--line); border-radius:10px; background:var(--card); color:var(--ink); }
+  .btn-guardar-sala { font:inherit; font-weight:800; padding:0.6rem 1.1rem; border:0; border-radius:10px; background:#0E7C5A; color:#fff; cursor:pointer; }
+  .btn-guardar-sala:hover { background:#0a5f45; }
+  .btn-limpiar-sala { font:inherit; font-weight:700; padding:0.6rem 1rem; border:1px solid var(--line); border-radius:10px; background:var(--card); color:var(--ink); cursor:pointer; }
+  .nueva-aviso { flex:1 1 100%; font-size:0.82rem; font-weight:700; }
+  .nueva-aviso.ok { color:#0E7C5A; }
+  .nueva-aviso.err { color:#c0392b; }
+  .nueva-guardadas { margin:0 0 1.2rem; }
+  .nueva-guardadas h3 { font-size:0.95rem; margin:0 0 0.5rem; }
+  .sala-guardada { display:flex; align-items:center; gap:0.7rem; flex-wrap:wrap; padding:0.6rem 0.8rem; border:1px solid var(--line); border-radius:10px; background:var(--card); margin-bottom:0.45rem; }
+  .sala-guardada .sg-nom { font-weight:800; flex:1 1 220px; min-width:0; }
+  .sala-guardada .sg-meta { font-size:0.78rem; color:var(--mist); }
+  .sala-guardada .sg-tot { font-weight:800; font-variant-numeric:tabular-nums; color:#0E7C5A; }
+  .sala-guardada button { font:inherit; font-size:0.78rem; font-weight:700; padding:0.32rem 0.7rem; border-radius:8px; border:1px solid var(--line); background:var(--paper); color:var(--ink); cursor:pointer; }
+  .sala-guardada button.sg-borrar { color:#c0392b; border-color:rgba(192,57,43,0.35); }
   .grp-propuestas { --grp-solid:#8B5CF6; --grp-tint:#F1EBFF; --grp-ink:#5b3aa8; }
   @media (prefers-color-scheme: dark) {
     .tabbtn { --grp-tint:rgba(255,255,255,0.06); }
@@ -389,7 +406,11 @@
 <div class="quien-eres">
   ¿Quién eres? <select id="quien-eres"><option value="">-- Elegir --</option><option>Rayen</option><option>Stephanie</option></select>
 </div>
-<div class="tabs"><button class="grouphead grp-sala open" data-group="g-sala">
+<div class="tabs"><button class="grouphead grp-nueva open" data-group="g-nueva">
+      <span>Armar sala nueva</span>
+      <svg class="chev" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="grouprow grp-nueva open" data-grouprow="g-nueva"><button class="tabbtn grp-nueva" data-tab="nueva">Armar una sala nueva</button></div><button class="grouphead grp-sala open" data-group="g-sala">
       <span>Por sala (según sitio web)</span>
       <svg class="chev" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
@@ -407,6 +428,1408 @@
     </button>
     <div class="grouprow grp-propuestas" data-grouprow="g-propuestas"><button class="tabbtn grp-propuestas" data-tab="propuestas">Propuestas Recibidas</button></div></div>
 <main>
+  <section class="panel grp-nueva" id="panel-nueva">
+    <div class="panelhead">
+      <div>
+        <h2>Armar una sala nueva</h2>
+        <p class="sug">Marca los productos que quieras del listado completo, ponle nombre y guárdala. Puedes guardar todas las alternativas que necesites y volver a abrirlas después.</p>
+      </div>
+      <div class="totalbox">
+        <div class="totalnum" id="total-nueva">$0</div>
+        <div class="totallabel">total IVA inc. &middot; <span id="count-nueva">0</span> productos incluidos</div>
+      </div>
+    </div>
+    <div class="nueva-guardar">
+      <input type="text" id="nueva-nombre" placeholder="Nombre de esta sala (ej. Sala de Calma — Municipalidad de Coronel)" />
+      <button type="button" class="btn-guardar-sala" id="nueva-guardar">Guardar esta sala</button>
+      <button type="button" class="btn-limpiar-sala" id="nueva-limpiar">Empezar de cero</button>
+      <div class="nueva-aviso" id="nueva-aviso"></div>
+    </div>
+    <div class="nueva-guardadas">
+      <h3>Salas que has guardado</h3>
+      <div id="nueva-lista"><p class="incluidos-vacio">Todavía no has guardado ninguna.</p></div>
+    </div>
+    <div class="stock-resumen" id="stockresumen-nueva"></div>
+    <div class="incluidos-box">
+      <h3>Productos de esta sala</h3>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th class="chk">Cotizar</th><th></th><th>Producto</th><th>Cant.</th><th>Precio</th><th></th></tr></thead>
+          <tbody id="tbody-incluidos-nueva"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="separador-agregar"><span>Agregar más productos a esta sala — marca la casilla del que quieras sumar</span></div>
+    <div class="controls">
+      <input type="text" class="search" data-sala="nueva" placeholder="Buscar producto…" />
+      <button type="button" class="btn-filtros" data-sala="nueva">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4.5 8h7M7 13h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        Familia y audiencia <span class="filtros-badge" id="fbadge-elemental" style="display:none;"></span>
+      </button>
+      <select class="filtroVista" data-sala="nueva">
+        <option value="todos" selected>Ver todos los productos</option>
+        <option value="incluidos">Solo incluidos</option>
+        <option value="sugeridos">Solo sugeridos para esta sala</option>
+      </select>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th class="chk">Agregar</th><th></th><th>Producto</th><th>Cant.</th><th>Precio</th><th>Sala(s) sugerida(s)</th></tr></thead>
+        <tbody id="tbody-elemental"><tr data-familia="Sistema SHX" data-audiencias="Todos" data-salas="Infraestructura/Control" data-nombre="12 tarjetas y 12 pegatinas adicionales proximity" data-precio="68721">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EXPRX12" data-precio="68721"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-EXPRX12">12 tarjetas y 12 pegatinas adicionales Proximity<span class="sku">BJ-EXPRX12 · Sistema SHX</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EXPRX12" disabled /></td>
+      <td class="price">$68.721<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Control</span></td>
+    </tr><tr data-familia="Sistema SHX" data-audiencias="Todos" data-salas="Infraestructura/Control" data-nombre="24 tarjetas y 24 pegatinas adicionales proximity" data-precio="139351">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EXPRX24" data-precio="139351"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-EXPRX24">24 tarjetas y 24 pegatinas adicionales Proximity<span class="stock-badge">3 en camino</span><span class="sku">BJ-EXPRX24 · Sistema SHX</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EXPRX24" disabled /></td>
+      <td class="price">$139.351<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Control</span></td>
+    </tr><tr data-familia="Tubos de burbujas" data-audiencias="Todos" data-salas="Calma|Elemental/Simple|Estimulación General" data-nombre="accesorio para tubo de burbujas: peces de colores" data-precio="71215">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-E50908" data-precio="71215"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-E50908">Accesorio para tubo de burbujas: peces de colores<span class="sku">BJ-E50908 · Tubos de burbujas</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-E50908" disabled /></td>
+      <td class="price">$71.215<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Elemental/Simple</span><span class="tag">Estimulación General</span></td>
+    </tr><tr data-familia="Solo en pagina web (sin fila BJ)" data-audiencias="Todos" data-salas="Integración Sensorial|Psicomotricidad" data-nombre="adaptador para control domótico de electrodomésticos" data-precio="147241">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="WEB-21" data-precio="147241"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="WEB-21">Adaptador Para Control Domótico De Electrodomésticos<span class="sku">WEB-21 · Solo en pagina web (sin fila BJ)</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="WEB-21" disabled /></td>
+      <td class="price">$147.241<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Tubos de burbujas" data-audiencias="Todos" data-salas="Calma|Elemental/Simple|Estimulación General" data-nombre="agarradera para tubo de burbujas" data-precio="290156">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-ETBA" data-precio="290156"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-ETBA">Agarradera para tubo de burbujas<span class="sku">BJ-ETBA · Tubos de burbujas</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-ETBA" disabled /></td>
+      <td class="price">$290.156<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Elemental/Simple</span><span class="tag">Estimulación General</span></td>
+    </tr><tr data-familia="Fibras ópticas" data-audiencias="Todos" data-salas="Calma|Integración Sensorial|Estimulación General" data-nombre="alfombra luminea" data-precio="1832566">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-LAFIB" data-precio="1832566"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/alfombra-luminea.jpg" alt="Alfombra Luminea" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-LAFIB">Alfombra Luminea<span class="sku">BJ-LAFIB · Fibras ópticas</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-LAFIB" disabled /></td>
+      <td class="price">$1.832.566<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Integración Sensorial</span><span class="tag">Estimulación General</span></td>
+    </tr><tr data-familia="Productos sensoriales" data-audiencias="Colegio|Hospital" data-salas="Integración Sensorial|Atención Temprana" data-nombre="almohada vibrante" data-precio="112626">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EPSCV" data-precio="112626"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/almohada-vibrante.jpg" alt="Almohada vibrante" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EPSCV">Almohada vibrante<span class="sku">BJ-EPSCV · Productos sensoriales</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EPSCV" disabled /></td>
+      <td class="price">$112.626<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Atención Temprana</span></td>
+    </tr><tr data-familia="Productos sensoriales" data-audiencias="Colegio|Hospital" data-salas="Integración Sensorial|Atención Temprana" data-nombre="almohada vibrante adaptada para conmutador" data-precio="169894">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-E34101" data-precio="169894"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/almohada-vibrante-adaptada-para-conmutador.jpg" alt="Almohada vibrante adaptada para conmutador" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-E34101">Almohada vibrante adaptada para conmutador<span class="sku">BJ-E34101 · Productos sensoriales</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-E34101" disabled /></td>
+      <td class="price">$169.894<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Atención Temprana</span></td>
+    </tr><tr data-familia="Vibración y Sonido" data-audiencias="Todos" data-salas="Calma|Estimulación General" data-nombre="amplificador vibroacústico adicional" data-precio="752116">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMAVIBX" data-precio="752116"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/amplificador-vibroacustico-shx-compact.jpg" alt="Amplificador vibroacústico adicional" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMAVIBX">Amplificador vibroacústico adicional<span class="stock-badge">1 en bodega + 6 en camino</span><span class="sku">BJ-EMAVIBX · Vibración y Sonido</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMAVIBX" disabled /></td>
+      <td class="price">$752.116<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Estimulación General</span></td>
+    </tr><tr data-familia="Sistema SHX" data-audiencias="Todos" data-salas="Infraestructura/Accesorio" data-nombre="armario para shx compact/ kit vibro bluetooth" data-precio="198528">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EX4-C" data-precio="198528"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-EX4-C">Armario para SHX Compact/ kit vibro bluetooth<span class="stock-badge">6 en camino</span><span class="sku">BJ-EX4-C · Sistema SHX</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EX4-C" disabled /></td>
+      <td class="price">$198.528<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Accesorio</span></td>
+    </tr><tr data-familia="Puffs" data-audiencias="Todos" data-salas="Calma|Mobiliario" data-nombre="asiento confort" data-precio="752116">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMAS" data-precio="752116"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/asiento-confort.jpg" alt="Asiento confort" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMAS">Asiento confort<span class="sku">BJ-EMAS · Puffs</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMAS" disabled /></td>
+      <td class="price">$752.116<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Mobiliario</span></td>
+    </tr><tr data-familia="Puffs" data-audiencias="Todos" data-salas="Calma|Mobiliario" data-nombre="asiento confort alto" data-precio="983095">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMAS-A" data-precio="983095"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/asiento-confort-alto.jpg" alt="Asiento Confort alto" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMAS-A">Asiento Confort alto<span class="sku">BJ-EMAS-A · Puffs</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMAS-A" disabled /></td>
+      <td class="price">$983.095<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Mobiliario</span></td>
+    </tr><tr data-familia="Puffs" data-audiencias="Todos" data-salas="Calma|Mobiliario" data-nombre="asiento confort alto vibroacústico" data-precio="1532865">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMAS-AV" data-precio="1532865"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/asiento-confort-alto-vibroacustico.jpg" alt="Asiento Confort alto vibroacústico" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMAS-AV">Asiento Confort alto vibroacústico<span class="sku">BJ-EMAS-AV · Puffs</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMAS-AV" disabled /></td>
+      <td class="price">$1.532.865<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Mobiliario</span></td>
+    </tr><tr data-familia="Puffs" data-audiencias="Todos" data-salas="Calma|Mobiliario" data-nombre="asiento confort vibroacústico" data-precio="1418330">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMAS-V" data-precio="1418330"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/asiento-confort-vibroacustico.jpg" alt="Asiento Confort vibroacústico" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMAS-V">Asiento Confort vibroacústico<span class="sku">BJ-EMAS-V · Puffs</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMAS-V" disabled /></td>
+      <td class="price">$1.418.330<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Mobiliario</span></td>
+    </tr><tr data-familia="Solo en pagina web (sin fila BJ)" data-audiencias="Todos" data-salas="Integración Sensorial|Psicomotricidad" data-nombre="balancín de espuma" data-precio="360991">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="WEB-1" data-precio="360991"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="WEB-1">Balancín De Espuma<span class="sku">WEB-1 · Solo en pagina web (sin fila BJ)</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="WEB-1" disabled /></td>
+      <td class="price">$360.991<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Vestibular" data-audiencias="Colegio|Hospital" data-salas="Psicomotricidad|Integración Sensorial" data-nombre="balancín de terapia" data-precio="1473689">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMBT" data-precio="1473689"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/balancin-de-terapia.jpg" alt="Balancín de terapia" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMBT">Balancín de terapia<span class="sku">BJ-EMBT · Vestibular</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMBT" disabled /></td>
+      <td class="price">$1.473.689<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Psicomotricidad</span><span class="tag">Integración Sensorial</span></td>
+    </tr><tr data-familia="Vestibular" data-audiencias="Colegio|Hospital" data-salas="Psicomotricidad|Integración Sensorial" data-nombre="balancín de terapia vibroacústico" data-precio="2004369">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMBT-V" data-precio="2004369"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/balancin-de-terapia-vibroacustico.jpg" alt="Balancín de terapia vibroacústico" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMBT-V">Balancín de terapia vibroacústico<span class="stock-badge">1 en bodega</span><span class="sku">BJ-EMBT-V · Vestibular</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMBT-V" disabled /></td>
+      <td class="price">$2.004.369<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Psicomotricidad</span><span class="tag">Integración Sensorial</span></td>
+    </tr><tr data-familia="Bases" data-audiencias="Todos" data-salas="Infraestructura/Accesorio" data-nombre="barra curva para bases circulares para tubo - 30cm" data-precio="271067">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EPS30" data-precio="271067"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/barra-curva-para-bases-circulares-30-cm.jpg" alt="Barra curva para bases circulares para tubo - 30cm" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EPS30">Barra curva para bases circulares para tubo - 30cm<span class="sku">BJ-EPS30 · Bases</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EPS30" disabled /></td>
+      <td class="price">$271.067<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Accesorio</span></td>
+    </tr><tr data-familia="Bases" data-audiencias="Todos" data-salas="Infraestructura/Accesorio" data-nombre="barra curva para bases circulares para tubo - 45cm" data-precio="410418">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EPS45" data-precio="410418"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/barra-curva-para-bases-circulares-45-cm.jpg" alt="Barra curva para bases circulares para tubo - 45cm" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EPS45">Barra curva para bases circulares para tubo - 45cm<span class="sku">BJ-EPS45 · Bases</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EPS45" disabled /></td>
+      <td class="price">$410.418<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Accesorio</span></td>
+    </tr><tr data-familia="Iluminación" data-audiencias="Todos" data-salas="Calma|Estimulación General" data-nombre="barra de luz led" data-precio="431417">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EI02" data-precio="431417"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/barra-de-luz-led.jpg" alt="Barra de luz LED" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EI02">Barra de luz LED<span class="sku">BJ-EI02 · Iluminación</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EI02" disabled /></td>
+      <td class="price">$431.417<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Estimulación General</span></td>
+    </tr><tr data-familia="Ultravioleta" data-audiencias="Colegio|Hospital" data-salas="Estimulación General|Psicomotricidad" data-nombre="barra led uv" data-precio="150805">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EIBLUV" data-precio="150805"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/barra-led-uv.jpg" alt="Barra LED UV" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EIBLUV">Barra LED UV<span class="sku">BJ-EIBLUV · Ultravioleta</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EIBLUV" disabled /></td>
+      <td class="price">$150.805<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Estimulación General</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Ultravioleta" data-audiencias="Colegio|Hospital" data-salas="Estimulación General|Psicomotricidad" data-nombre="barra led uv shx" data-precio="440961">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EIBLUVX" data-precio="440961"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/barra-led-uv-shx.jpg" alt="Barra LED UV SHX" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EIBLUVX">Barra LED UV SHX<span class="stock-badge">1 en camino</span><span class="sku">BJ-EIBLUVX · Ultravioleta</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EIBLUVX" disabled /></td>
+      <td class="price">$440.961<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Estimulación General</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Bases" data-audiencias="Todos" data-salas="Infraestructura/Accesorio" data-nombre="base cuadrada para tubo de burbujas centrado" data-precio="908647">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMBCT" data-precio="908647"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/base-cuadrada-para-tubo-de-burbujas-centrado.jpg" alt="Base cuadrada para tubo de burbujas centrado" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMBCT">Base cuadrada para tubo de burbujas centrado<span class="sku">BJ-EMBCT · Bases</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMBCT" disabled /></td>
+      <td class="price">$908.647<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Accesorio</span></td>
+    </tr><tr data-familia="Bases" data-audiencias="Todos" data-salas="Infraestructura/Accesorio" data-nombre="base cuadrada para tubo de burbujas desplazado" data-precio="908647">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-LEMBCT" data-precio="908647"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/base-cuadrada-para-tubo-de-burbujas-desplazado.jpg" alt="Base cuadrada para tubo de burbujas desplazado" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-LEMBCT">Base cuadrada para tubo de burbujas desplazado<span class="sku">BJ-LEMBCT · Bases</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-LEMBCT" disabled /></td>
+      <td class="price">$908.647<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Accesorio</span></td>
+    </tr><tr data-familia="Bases" data-audiencias="Todos" data-salas="Infraestructura/Accesorio" data-nombre="base cuadrada para tubo de burbujas y fibra óptica" data-precio="908647">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMBCTF" data-precio="908647"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/base-cuadrada-para-tubo-de-burbujas-centrado-y-fibra-optica.jpg" alt="Base cuadrada para tubo de burbujas y fibra óptica" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMBCTF">Base cuadrada para tubo de burbujas y fibra óptica<span class="sku">BJ-EMBCTF · Bases</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMBCTF" disabled /></td>
+      <td class="price">$908.647<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Accesorio</span></td>
+    </tr><tr data-familia="Bases" data-audiencias="Todos" data-salas="Infraestructura/Accesorio" data-nombre="base cuadrada para tubo de burbujas y fibra óptica" data-precio="908647">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-LEMBCTF" data-precio="908647"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/base-cuadrada-para-tubo-de-burbujas-centrado-y-fibra-optica.jpg" alt="Base cuadrada para tubo de burbujas y fibra óptica" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-LEMBCTF">Base cuadrada para tubo de burbujas y fibra óptica<span class="sku">BJ-LEMBCTF · Bases</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-LEMBCTF" disabled /></td>
+      <td class="price">$908.647<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Accesorio</span></td>
+    </tr><tr data-familia="Bases" data-audiencias="Todos" data-salas="Infraestructura/Accesorio" data-nombre="base cuarto de circuferencia para tubo de burbujas" data-precio="857106">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMBT90" data-precio="857106"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/base-cuarto-de-circunferencia-para-tubo-de-burbujas.jpg" alt="Base cuarto de circuferencia para tubo de burbujas" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMBT90">Base cuarto de circuferencia para tubo de burbujas<span class="sku">BJ-EMBT90 · Bases</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMBT90" disabled /></td>
+      <td class="price">$857.106<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Accesorio</span></td>
+    </tr><tr data-familia="Bases" data-audiencias="Todos" data-salas="Infraestructura/Accesorio" data-nombre="base cuarto de circunferencia para tubo y fibra" data-precio="895285">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMBTF90" data-precio="895285"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/base-cuarto-de-circunferencia-para-tubo-y-fibra.jpg" alt="Base cuarto de circunferencia para tubo y fibra" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMBTF90">Base cuarto de circunferencia para tubo y fibra<span class="sku">BJ-EMBTF90 · Bases</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMBTF90" disabled /></td>
+      <td class="price">$895.285<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Accesorio</span></td>
+    </tr><tr data-familia="Bases" data-audiencias="Todos" data-salas="Infraestructura/Accesorio" data-nombre="base esquina para tubo de burbujas despl." data-precio="792203">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-LEMBET" data-precio="792203"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/base-esquina-para-tubo-de-burbujas.jpg" alt="Base esquina para tubo de burbujas despl." loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-LEMBET">Base esquina para tubo de burbujas despl.<span class="sku">BJ-LEMBET · Bases</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-LEMBET" disabled /></td>
+      <td class="price">$792.203<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Accesorio</span></td>
+    </tr><tr data-familia="Bases" data-audiencias="Todos" data-salas="Infraestructura/Accesorio" data-nombre="base esquina para tubo de burbujas y fibra óptica" data-precio="792203">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMBETF" data-precio="792203"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/base-esquina-para-tubo-de-burbujas-y-fibra-optica.jpg" alt="Base esquina para tubo de burbujas y fibra óptica" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMBETF">Base esquina para tubo de burbujas y fibra óptica<span class="sku">BJ-EMBETF · Bases</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMBETF" disabled /></td>
+      <td class="price">$792.203<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Accesorio</span></td>
+    </tr><tr data-familia="Bases" data-audiencias="Todos" data-salas="Infraestructura/Accesorio" data-nombre="base módulo convexo para tubo de burbujas" data-precio="471504">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-LEMAX-P" data-precio="471504"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/base-modulo-convexo-para-tubo-de-burbujas.jpg" alt="Base módulo convexo para tubo de burbujas" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-LEMAX-P">Base módulo convexo para tubo de burbujas<span class="sku">BJ-LEMAX-P · Bases</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-LEMAX-P" disabled /></td>
+      <td class="price">$471.504<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Accesorio</span></td>
+    </tr><tr data-familia="Bases" data-audiencias="Todos" data-salas="Infraestructura/Accesorio" data-nombre="base semiluna para tubo de burbujas- 2 piezas" data-precio="1672217">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMBT180" data-precio="1672217"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/base-semiluna-para-tubo-de-burbujas.jpg" alt="Base semiluna para tubo de burbujas- 2 piezas" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMBT180">Base semiluna para tubo de burbujas- 2 piezas<span class="sku">BJ-EMBT180 · Bases</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMBT180" disabled /></td>
+      <td class="price">$1.672.217<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Accesorio</span></td>
+    </tr><tr data-familia="Ultravioleta" data-audiencias="Colegio|Hospital" data-salas="Estimulación General|Psicomotricidad" data-nombre="bolsa material ultravioleta" data-precio="301610">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-KUV" data-precio="301610"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/kit-material-uv.jpg" alt="Bolsa material Ultravioleta" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-KUV">Bolsa material Ultravioleta<span class="stock-badge">5 en camino</span><span class="sku">BJ-KUV · Ultravioleta</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-KUV" disabled /></td>
+      <td class="price">$301.610<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Estimulación General</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Sillones" data-audiencias="Adulto Mayor|Todos" data-salas="Calma|Mobiliario" data-nombre="butaca relax vibroacústica" data-precio="2004369">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-BUTV" data-precio="2004369"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/butaca-relax-vibroacustica.jpg" alt="Butaca relax vibroacústica" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-BUTV">Butaca relax vibroacústica<span class="stock-badge">1 en bodega + 3 en camino</span><span class="sku">BJ-BUTV · Sillones</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-BUTV" disabled /></td>
+      <td class="price">$2.004.369<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Mobiliario</span></td>
+    </tr><tr data-familia="Sistema SHX" data-audiencias="Todos" data-salas="Infraestructura/Control" data-nombre="button 1" data-precio="297792">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-LCTRL1" data-precio="297792"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/button-1.jpg" alt="Button 1" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-LCTRL1">Button 1<span class="stock-badge">3 en bodega + 2 en camino</span><span class="sku">BJ-LCTRL1 · Sistema SHX</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-LCTRL1" disabled /></td>
+      <td class="price">$297.792<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Control</span></td>
+    </tr><tr data-familia="Controladores" data-audiencias="Todos" data-salas="Infraestructura/Control" data-nombre="button 6" data-precio="691030">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-LCTRL" data-precio="691030"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/button-6.jpg" alt="Button 6" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-LCTRL">Button 6<span class="stock-badge">7 en camino</span><span class="sku">BJ-LCTRL · Controladores</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-LCTRL" disabled /></td>
+      <td class="price">$691.030<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Control</span></td>
+    </tr><tr data-familia="Camas" data-audiencias="Adulto Mayor|Hospital|Todos" data-salas="Calma" data-nombre="cama de agua" data-precio="3577322">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMCA" data-precio="3577322"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/cama-de-agua.jpg" alt="Cama de agua" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMCA">Cama de agua<span class="sku">BJ-EMCA · Camas</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMCA" disabled /></td>
+      <td class="price">$3.577.322<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span></td>
+    </tr><tr data-familia="Camas" data-audiencias="Adulto Mayor|Hospital|Todos" data-salas="Calma" data-nombre="cama de agua vibroacústica" data-precio="4165270">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMCA-V" data-precio="4165270"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/cama-de-agua-vibroacustica.jpg" alt="Cama de agua vibroacústica" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMCA-V">Cama de agua vibroacústica<span class="stock-badge">1 en camino</span><span class="sku">BJ-EMCA-V · Camas</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMCA-V" disabled /></td>
+      <td class="price">$4.165.270<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span></td>
+    </tr><tr data-familia="Solo en pagina web (sin fila BJ)" data-audiencias="Todos" data-salas="Integración Sensorial|Psicomotricidad" data-nombre="chaleco de peso" data-precio="1057341">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="WEB-2" data-precio="1057341"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="WEB-2">Chaleco De Peso<span class="sku">WEB-2 · Solo en pagina web (sin fila BJ)</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="WEB-2" disabled /></td>
+      <td class="price">$1.057.341<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Solo en pagina web (sin fila BJ)" data-audiencias="Todos" data-salas="Integración Sensorial|Psicomotricidad" data-nombre="chaleco de presión" data-precio="284041">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="WEB-3" data-precio="284041"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="WEB-3">Chaleco De Presión<span class="sku">WEB-3 · Solo en pagina web (sin fila BJ)</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="WEB-3" disabled /></td>
+      <td class="price">$284.041<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Fibras ópticas" data-audiencias="Todos" data-salas="Calma|Integración Sensorial|Estimulación General" data-nombre="cielo luminea circular" data-precio="1622585">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-LCCFIB" data-precio="1622585"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/cielo-luminea-circular.jpg" alt="Cielo Luminea circular" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-LCCFIB">Cielo Luminea circular<span class="stock-badge">1 en camino</span><span class="sku">BJ-LCCFIB · Fibras ópticas</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-LCCFIB" disabled /></td>
+      <td class="price">$1.622.585<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Integración Sensorial</span><span class="tag">Estimulación General</span></td>
+    </tr><tr data-familia="Fibras ópticas" data-audiencias="Todos" data-salas="Calma|Integración Sensorial|Estimulación General" data-nombre="cobertor para fuente de luz de fibra óptica" data-precio="146987">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-ETFFOX-P" data-precio="146987"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-ETFFOX-P">Cobertor para fuente de luz de fibra óptica<span class="sku">BJ-ETFFOX-P · Fibras ópticas</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-ETFFOX-P" disabled /></td>
+      <td class="price">$146.987<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Integración Sensorial</span><span class="tag">Estimulación General</span></td>
+    </tr><tr data-familia="Vibración y Sonido" data-audiencias="Todos" data-salas="Calma|Estimulación General" data-nombre="cojín vibroacústico" data-precio="582222">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMCV" data-precio="582222" /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/cojin-vibroacustico.jpg" alt="Cojín vibroacústico" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMCV">Cojín vibroacústico<span class="stock-badge">5 en camino</span><span class="sku">BJ-EMCV · Vibración y Sonido</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMCV" disabled  /></td>
+      <td class="price">$582.222<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Estimulación General</span></td>
+    </tr><tr data-familia="Solo en pagina web (sin fila BJ)" data-audiencias="Todos" data-salas="Integración Sensorial|Psicomotricidad" data-nombre="columpio de rollo 2 en 1" data-precio="1595041">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="WEB-4" data-precio="1595041"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="WEB-4">Columpio De Rollo 2 En 1<span class="sku">WEB-4 · Solo en pagina web (sin fila BJ)</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="WEB-4" disabled /></td>
+      <td class="price">$1.595.041<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Solo en pagina web (sin fila BJ)" data-audiencias="Todos" data-salas="Integración Sensorial|Psicomotricidad" data-nombre="columpio flexor" data-precio="1650141">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="WEB-5" data-precio="1650141"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="WEB-5">Columpio Flexor<span class="sku">WEB-5 · Solo en pagina web (sin fila BJ)</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="WEB-5" disabled /></td>
+      <td class="price">$1.650.141<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Solo en pagina web (sin fila BJ)" data-audiencias="Todos" data-salas="Integración Sensorial|Psicomotricidad" data-nombre="columpio hamaca - adulto" data-precio="639341">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="WEB-6" data-precio="639341"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="WEB-6">Columpio Hamaca - Adulto<span class="sku">WEB-6 · Solo en pagina web (sin fila BJ)</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="WEB-6" disabled /></td>
+      <td class="price">$639.341<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Solo en pagina web (sin fila BJ)" data-audiencias="Todos" data-salas="Integración Sensorial|Psicomotricidad" data-nombre="columpio plataforma de balanceo modificada" data-precio="1327141">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="WEB-7" data-precio="1327141"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="WEB-7">Columpio Plataforma De Balanceo Modificada<span class="sku">WEB-7 · Solo en pagina web (sin fila BJ)</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="WEB-7" disabled /></td>
+      <td class="price">$1.327.141<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Solo en pagina web (sin fila BJ)" data-audiencias="Todos" data-salas="Integración Sensorial|Psicomotricidad" data-nombre="columpio saco elástico - niño" data-precio="751441">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="WEB-8" data-precio="751441"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="WEB-8">Columpio Saco Elástico - Niño<span class="sku">WEB-8 · Solo en pagina web (sin fila BJ)</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="WEB-8" disabled /></td>
+      <td class="price">$751.441<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Bases" data-audiencias="Todos" data-salas="Infraestructura/Accesorio" data-nombre="conjunto 99 para tubo de burbujas" data-precio="1616858">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMB822" data-precio="1616858"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/conjunto-99-para-tubo-de-burbujas.jpg" alt="Conjunto 99 para tubo de burbujas" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMB822">Conjunto 99 para tubo de burbujas<span class="sku">BJ-EMB822 · Bases</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMB822" disabled /></td>
+      <td class="price">$1.616.858<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Accesorio</span></td>
+    </tr><tr data-familia="Productos sensoriales" data-audiencias="Colegio|Hospital" data-salas="Integración Sensorial|Atención Temprana" data-nombre="conjunto de discos táctiles para pies y manos" data-precio="293974">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-E16807" data-precio="293974"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/conjunto-de-discos-tactiles-para-pies-y-manos.jpg" alt="Conjunto de discos táctiles para pies y manos" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-E16807">Conjunto de discos táctiles para pies y manos<span class="stock-badge">1 en bodega</span><span class="sku">BJ-E16807 · Productos sensoriales</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-E16807" disabled /></td>
+      <td class="price">$293.974<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Atención Temprana</span></td>
+    </tr><tr data-familia="Servicios Multisensorial" data-audiencias="Todos" data-salas="Infraestructura/Accesorio" data-nombre="control on/off 3 elementos. enchufe con mando" data-precio="78266">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-ES906" data-precio="78266"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-ES906">Control ON/OFF 3 elementos. Enchufe con mando<span class="sku">BJ-ES906 · Servicios Multisensorial</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-ES906" disabled /></td>
+      <td class="price">$78.266<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Accesorio</span></td>
+    </tr><tr data-familia="Servicios Multisensorial" data-audiencias="Todos" data-salas="Infraestructura/Accesorio" data-nombre="control on/off de 1 elemento. enchufe con mando" data-precio="30543">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-ES907" data-precio="30543"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-ES907">Control ON/OFF de 1 elemento. Enchufe con mando<span class="sku">BJ-ES907 · Servicios Multisensorial</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-ES907" disabled /></td>
+      <td class="price">$30.543<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Accesorio</span></td>
+    </tr><tr data-familia="Vibración y Sonido" data-audiencias="Todos" data-salas="Calma|Estimulación General" data-nombre="conversión a vibroacustico para cama" data-precio="902921">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMCVIBC" data-precio="902921"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-EMCVIBC">Conversión a vibroacustico para cama<span class="sku">BJ-EMCVIBC · Vibración y Sonido</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMCVIBC" disabled /></td>
+      <td class="price">$902.921<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Estimulación General</span></td>
+    </tr><tr data-familia="Vibración y Sonido" data-audiencias="Todos" data-salas="Calma|Estimulación General" data-nombre="conversión a vibroacústico para puff/asiento" data-precio="805566">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMCVIB" data-precio="805566"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-EMCVIB">Conversión a vibroacústico para puff/asiento<span class="sku">BJ-EMCVIB · Vibración y Sonido</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMCVIB" disabled /></td>
+      <td class="price">$805.566<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Estimulación General</span></td>
+    </tr><tr data-familia="Solo en pagina web (sin fila BJ)" data-audiencias="Todos" data-salas="Integración Sensorial|Psicomotricidad" data-nombre="correa elástica vertical" data-precio="623191">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="WEB-9" data-precio="623191"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="WEB-9">Correa Elástica Vertical<span class="sku">WEB-9 · Solo en pagina web (sin fila BJ)</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="WEB-9" disabled /></td>
+      <td class="price">$623.191<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Fibras ópticas" data-audiencias="Todos" data-salas="Calma|Integración Sensorial|Estimulación General" data-nombre="cortina luminea" data-precio="1964282">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-LCFIB" data-precio="1964282"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/cortina-luminea.jpg" alt="Cortina Luminea" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-LCFIB">Cortina Luminea<span class="stock-badge">2 en bodega</span><span class="sku">BJ-LCFIB · Fibras ópticas</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-LCFIB" disabled /></td>
+      <td class="price">$1.964.282<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Integración Sensorial</span><span class="tag">Estimulación General</span></td>
+    </tr><tr data-familia="Fibras ópticas" data-audiencias="Todos" data-salas="Calma|Integración Sensorial|Estimulación General" data-nombre="cortina luminea oscilante" data-precio="3081002">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-LCFIBS" data-precio="3081002"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/cortina-luminea-oscilante.jpg" alt="Cortina Luminea oscilante" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-LCFIBS">Cortina Luminea oscilante<span class="sku">BJ-LCFIBS · Fibras ópticas</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-LCFIBS" disabled /></td>
+      <td class="price">$3.081.002<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Integración Sensorial</span><span class="tag">Estimulación General</span></td>
+    </tr><tr data-familia="Ultravioleta" data-audiencias="Colegio|Hospital" data-salas="Estimulación General|Psicomotricidad" data-nombre="cortina utravioleta" data-precio="1183532">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-UVW10" data-precio="1183532"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/cortina-ultravioleta.jpg" alt="Cortina Utravioleta" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-UVW10">Cortina Utravioleta<span class="sku">BJ-UVW10 · Ultravioleta</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-UVW10" disabled /></td>
+      <td class="price">$1.183.532<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Estimulación General</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Aromaterapia" data-audiencias="Todos" data-salas="Calma" data-nombre="difusor de aromaterapia" data-precio="125989">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EDA" data-precio="125989"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/difusor-de-aromaterapia.jpg" alt="Difusor de aromaterapia" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EDA">Difusor de aromaterapia<span class="stock-badge">1 en bodega + 2 en camino</span><span class="sku">BJ-EDA · Aromaterapia</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EDA" disabled /></td>
+      <td class="price">$125.989<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span></td>
+    </tr><tr data-familia="Aromaterapia" data-audiencias="Todos" data-salas="Calma" data-nombre="difusor de aromaterapia shx para salas de la calma" data-precio="125989">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EDA-SC" data-precio="125989"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-EDA-SC">Difusor de aromaterapia SHX para salas de la calma<span class="sku">BJ-EDA-SC · Aromaterapia</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EDA-SC" disabled /></td>
+      <td class="price">$125.989<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span></td>
+    </tr><tr data-familia="Fibras ópticas" data-audiencias="Todos" data-salas="Calma|Integración Sensorial|Estimulación General" data-nombre="ducha luminea" data-precio="2494962">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-LDFIB" data-precio="2494962"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/ducha-luminea.jpg" alt="Ducha Luminea" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-LDFIB">Ducha Luminea<span class="stock-badge">2 en camino</span><span class="sku">BJ-LDFIB · Fibras ópticas</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-LDFIB" disabled /></td>
+      <td class="price">$2.494.962<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Integración Sensorial</span><span class="tag">Estimulación General</span></td>
+    </tr><tr data-familia="Espejos" data-audiencias="Todos" data-salas="Infraestructura/Accesorio" data-nombre="espejo grande curvo" data-precio="591766">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EEGC" data-precio="591766"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/espejo-grande-curvo.jpg" alt="Espejo grande curvo" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EEGC">Espejo grande curvo<span class="stock-badge">2 en camino</span><span class="sku">BJ-EEGC · Espejos</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="2" data-sala="nueva" data-sku="BJ-EEGC" disabled /></td>
+      <td class="price">$591.766<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Accesorio</span></td>
+    </tr><tr data-familia="Espejos" data-audiencias="Todos" data-salas="Infraestructura/Accesorio" data-nombre="espejo grande recto" data-precio="521136">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EEGR" data-precio="521136" /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/espejo-grande-recto.jpg" alt="Espejo grande recto" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EEGR">Espejo grande recto<span class="stock-badge">13 en camino</span><span class="sku">BJ-EEGR · Espejos</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="2" data-sala="nueva" data-sku="BJ-EEGR" disabled  /></td>
+      <td class="price">$521.136<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Accesorio</span></td>
+    </tr><tr data-familia="Espejos" data-audiencias="Todos" data-salas="Infraestructura/Accesorio" data-nombre="espejo para conjunto 99 y 100 - alto" data-precio="736844">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EEGR180" data-precio="736844"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-EEGR180">Espejo para conjunto 99 y 100 - alto<span class="sku">BJ-EEGR180 · Espejos</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="2" data-sala="nueva" data-sku="BJ-EEGR180" disabled /></td>
+      <td class="price">$736.844<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Accesorio</span></td>
+    </tr><tr data-familia="Espejos" data-audiencias="Todos" data-salas="Infraestructura/Accesorio" data-nombre="espejo para conjunto 99 y 100 - bajo" data-precio="786476">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EEGR150" data-precio="786476"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/espejo-para-conjunto-99-bajo.jpg" alt="Espejo para conjunto 99 y 100 - bajo" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EEGR150">Espejo para conjunto 99 y 100 - bajo<span class="sku">BJ-EEGR150 · Espejos</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="2" data-sala="nueva" data-sku="BJ-EEGR150" disabled /></td>
+      <td class="price">$786.476<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Accesorio</span></td>
+    </tr><tr data-familia="Espejos" data-audiencias="Todos" data-salas="Infraestructura/Accesorio" data-nombre="espejo pequeño curvo" data-precio="450506">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EEPC" data-precio="450506"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/espejo-pequeno-curvo.jpg" alt="Espejo pequeño curvo" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EEPC">Espejo pequeño curvo<span class="sku">BJ-EEPC · Espejos</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="2" data-sala="nueva" data-sku="BJ-EEPC" disabled /></td>
+      <td class="price">$450.506<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Accesorio</span></td>
+    </tr><tr data-familia="Espejos" data-audiencias="Todos" data-salas="Infraestructura/Accesorio" data-nombre="espejo pequeño recto" data-precio="450506">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EEPR" data-precio="450506"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/espejo-pequeno-recto.jpg" alt="Espejo pequeño recto" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EEPR">Espejo pequeño recto<span class="sku">BJ-EEPR · Espejos</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="2" data-sala="nueva" data-sku="BJ-EEPR" disabled /></td>
+      <td class="price">$450.506<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Accesorio</span></td>
+    </tr><tr data-familia="Espejos" data-audiencias="Todos" data-salas="Infraestructura/Accesorio" data-nombre="espejo recto para módulo convexo para tubo" data-precio="481133">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EEM70" data-precio="481133"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/espejo-recto-para-modulo-convexo-para-tubo.jpg" alt="Espejo recto para módulo convexo para tubo" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EEM70">Espejo recto para módulo convexo para tubo<span class="sku">BJ-EEM70 · Espejos</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="2" data-sala="nueva" data-sku="BJ-EEM70" disabled /></td>
+      <td class="price">$481.133<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Accesorio</span></td>
+    </tr><tr data-familia="Espejos" data-audiencias="Todos" data-salas="Infraestructura/Accesorio" data-nombre="espejo recto para módulos convexo para bt" data-precio="481133">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="MP-EEM70" data-precio="481133"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="MP-EEM70">Espejo recto para módulos convexo para BT<span class="sku">MP-EEM70 · Espejos</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="2" data-sala="nueva" data-sku="MP-EEM70" disabled /></td>
+      <td class="price">$481.133<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Accesorio</span></td>
+    </tr><tr data-familia="Sistema SHX" data-audiencias="Todos" data-salas="Calma|Estimulación General" data-nombre="estrellas shx" data-precio="563132">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EX47" data-precio="563132"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/proyector-de-estrellas-shx.jpg" alt="Estrellas SHX" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EX47">Estrellas SHX<span class="stock-badge">3 en bodega + 4 en camino</span><span class="sku">BJ-EX47 · Sistema SHX</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EX47" disabled /></td>
+      <td class="price">$563.132<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Estimulación General</span></td>
+    </tr><tr data-familia="Fibras ópticas" data-audiencias="Todos" data-salas="Calma|Integración Sensorial|Estimulación General" data-nombre="fibra óptica luminea 2m" data-precio="1393514">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-LFIB2" data-precio="1393514"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/fibra-optica-luminea-2m.jpg" alt="Fibra óptica Luminea 2m" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-LFIB2">Fibra óptica Luminea 2m<span class="sku">BJ-LFIB2 · Fibras ópticas</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-LFIB2" disabled /></td>
+      <td class="price">$1.393.514<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Integración Sensorial</span><span class="tag">Estimulación General</span></td>
+    </tr><tr data-familia="Fibras ópticas" data-audiencias="Todos" data-salas="Calma|Integración Sensorial|Estimulación General" data-nombre="fibra óptica luminea 3m" data-precio="1593951">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-LFIB3" data-precio="1593951"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/fibra-optica-luminea-3m.jpg" alt="Fibra óptica Luminea 3m" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-LFIB3">Fibra óptica Luminea 3m<span class="stock-badge">1 en bodega</span><span class="sku">BJ-LFIB3 · Fibras ópticas</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-LFIB3" disabled /></td>
+      <td class="price">$1.593.951<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Integración Sensorial</span><span class="tag">Estimulación General</span></td>
+    </tr><tr data-familia="Fibras ópticas" data-audiencias="Todos" data-salas="Calma|Integración Sensorial|Estimulación General" data-nombre="fibra óptica luminea uv de 2m" data-precio="1773390">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-LFIB2UV" data-precio="1773390"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/fibra-optica-luminea-uv-de-2m.jpg" alt="Fibra óptica Luminea UV de 2m" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-LFIB2UV">Fibra óptica Luminea UV de 2m<span class="sku">BJ-LFIB2UV · Fibras ópticas</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-LFIB2UV" disabled /></td>
+      <td class="price">$1.773.390<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Integración Sensorial</span><span class="tag">Estimulación General</span></td>
+    </tr><tr data-familia="Sistema SHX" data-audiencias="Colegio|Hospital" data-salas="Estimulación General|Fiesta/Sensorial activo" data-nombre="fireball shx" data-precio="412327">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EX410" data-precio="412327"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/fireball-shx.jpg" alt="Fireball SHX" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EX410">Fireball SHX<span class="sku">BJ-EX410 · Sistema SHX</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EX410" disabled /></td>
+      <td class="price">$412.327<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Estimulación General</span><span class="tag">Fiesta/Sensorial activo</span></td>
+    </tr><tr data-familia="Iluminación" data-audiencias="Todos" data-salas="Calma|Estimulación General" data-nombre="foco de luz shx" data-precio="190892">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EI03" data-precio="190892"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/foco-de-luz-shx.jpg" alt="Foco de luz SHX" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EI03">Foco de luz SHX<span class="sku">BJ-EI03 · Iluminación</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EI03" disabled /></td>
+      <td class="price">$190.892<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Estimulación General</span></td>
+    </tr><tr data-familia="Ultravioleta" data-audiencias="Colegio|Hospital" data-salas="Estimulación General|Psicomotricidad" data-nombre="foco de luz uv led" data-precio="150805">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EIFUVL" data-precio="150805"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/foco-de-luz-uv-led.jpg" alt="Foco de luz UV LED" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EIFUVL">Foco de luz UV LED<span class="stock-badge">4 en camino</span><span class="sku">BJ-EIFUVL · Ultravioleta</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EIFUVL" disabled /></td>
+      <td class="price">$150.805<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Estimulación General</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Ultravioleta" data-audiencias="Colegio|Hospital" data-salas="Estimulación General|Psicomotricidad" data-nombre="foco de luz uv led shx" data-precio="450506">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EIFUVLX" data-precio="450506"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/foco-de-luz-uv-led-shx.jpg" alt="Foco de luz UV LED SHX" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EIFUVLX">Foco de luz UV LED SHX<span class="sku">BJ-EIFUVLX · Ultravioleta</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EIFUVLX" disabled /></td>
+      <td class="price">$450.506<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Estimulación General</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Camas" data-audiencias="Adulto Mayor|Hospital|Todos" data-salas="Calma" data-nombre="funda para cama de agua" data-precio="446688">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-FEMCA" data-precio="446688"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-FEMCA">Funda para cama de agua<span class="sku">BJ-FEMCA · Camas</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-FEMCA" disabled /></td>
+      <td class="price">$446.688<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span></td>
+    </tr><tr data-familia="Camas" data-audiencias="Adulto Mayor|Hospital|Todos" data-salas="Calma" data-nombre="funda para cama-sofá con patas" data-precio="446688">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMFCS" data-precio="446688"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-EMFCS">Funda para cama-sofá con patas<span class="sku">BJ-EMFCS · Camas</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMFCS" disabled /></td>
+      <td class="price">$446.688<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span></td>
+    </tr><tr data-familia="Puffs" data-audiencias="Todos" data-salas="Calma|Mobiliario" data-nombre="funda para puff transformable" data-precio="513500">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-FEMPT" data-precio="513500"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-FEMPT">Funda para puff transformable<span class="sku">BJ-FEMPT · Puffs</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-FEMPT" disabled /></td>
+      <td class="price">$513.500<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Mobiliario</span></td>
+    </tr><tr data-familia="Puffs" data-audiencias="Todos" data-salas="Calma|Mobiliario" data-nombre="funda para puff transformable vibroacústico" data-precio="973551">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-FEMPT-V" data-precio="973551"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-FEMPT-V">Funda para puff transformable vibroacústico<span class="sku">BJ-FEMPT-V · Puffs</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-FEMPT-V" disabled /></td>
+      <td class="price">$973.551<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Mobiliario</span></td>
+    </tr><tr data-familia="Solo en pagina web (sin fila BJ)" data-audiencias="Todos" data-salas="Integración Sensorial|Psicomotricidad" data-nombre="kit columpio neumático" data-precio="373341">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="WEB-10" data-precio="373341"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="WEB-10">Kit Columpio Neumático<span class="sku">WEB-10 · Solo en pagina web (sin fila BJ)</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="WEB-10" disabled /></td>
+      <td class="price">$373.341<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Tubos de burbujas" data-audiencias="Todos" data-salas="Calma|Elemental/Simple|Estimulación General" data-nombre="kit de bolas para tubo de burbujas" data-precio="381785">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-ETKB" data-precio="381785"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/kit-de-bolas-para-tubo-de-burbujas.jpg" alt="Kit de bolas para tubo de burbujas" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-ETKB">Kit de bolas para tubo de burbujas<span class="sku">BJ-ETKB · Tubos de burbujas</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-ETKB" disabled /></td>
+      <td class="price">$381.785<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Elemental/Simple</span><span class="tag">Estimulación General</span></td>
+    </tr><tr data-familia="Solo en pagina web (sin fila BJ)" data-audiencias="Todos" data-salas="Integración Sensorial|Psicomotricidad" data-nombre="kit de estimulación sensorial" data-precio="287841">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="WEB-11" data-precio="287841"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="WEB-11">Kit De Estimulación Sensorial<span class="sku">WEB-11 · Solo en pagina web (sin fila BJ)</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="WEB-11" disabled /></td>
+      <td class="price">$287.841<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Aromaterapia" data-audiencias="Todos" data-salas="Calma" data-nombre="kit de iniciación de aromaterapia" data-precio="104991">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EKIA" data-precio="104991"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/kit-de-iniciacion-de-aromaterapia.jpg" alt="Kit de iniciación de aromaterapia" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EKIA">Kit de iniciación de aromaterapia<span class="stock-badge">2 en bodega + 5 en camino</span><span class="sku">BJ-EKIA · Aromaterapia</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EKIA" disabled /></td>
+      <td class="price">$104.991<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span></td>
+    </tr><tr data-familia="Aromaterapia" data-audiencias="Todos" data-salas="Calma" data-nombre="kit de iniciación de aromaterapia sala calma" data-precio="104991">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EKIA-LAV" data-precio="104991"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-EKIA-LAV">Kit de iniciación de aromaterapia Sala Calma<span class="sku">BJ-EKIA-LAV · Aromaterapia</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EKIA-LAV" disabled /></td>
+      <td class="price">$104.991<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span></td>
+    </tr><tr data-familia="Servicios Multisensorial" data-audiencias="Todos" data-salas="Infraestructura/Accesorio" data-nombre="kit de mantenimiento para cama de agua" data-precio="83993">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMCA-MANT" data-precio="83993"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/kit-de-mantenimiento-para-cama-de-agua.jpg" alt="Kit de mantenimiento para cama de agua" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMCA-MANT">Kit de mantenimiento para cama de agua<span class="sku">BJ-EMCA-MANT · Servicios Multisensorial</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMCA-MANT" disabled /></td>
+      <td class="price">$83.993<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Accesorio</span></td>
+    </tr><tr data-familia="Kits multisensoriales" data-audiencias="Adulto Mayor|Todos" data-salas="Calma" data-nombre="kit de masaje" data-precio="334062">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-KMAS" data-precio="334062"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/kit-sensorial-de-masaje.jpg" alt="Kit de masaje" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-KMAS">Kit de masaje<span class="stock-badge">1 en bodega</span><span class="sku">BJ-KMAS · Kits multisensoriales</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-KMAS" disabled /></td>
+      <td class="price">$334.062<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span></td>
+    </tr><tr data-familia="Servicios Multisensorial" data-audiencias="Todos" data-salas="Infraestructura/Accesorio" data-nombre="kit de reparación para colchón de cama de agua" data-precio="30543">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMCA-REP" data-precio="30543"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-EMCA-REP">Kit de reparación para colchón de cama de agua<span class="sku">BJ-EMCA-REP · Servicios Multisensorial</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMCA-REP" disabled /></td>
+      <td class="price">$30.543<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Accesorio</span></td>
+    </tr><tr data-familia="Solo en pagina web (sin fila BJ)" data-audiencias="Todos" data-salas="Integración Sensorial|Psicomotricidad" data-nombre="kit de suspensión y ajuste en altura" data-precio="691591">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="WEB-12" data-precio="691591"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/kit-de-suspension-y-ajuste-en-altura.jpg" alt="Kit De Suspensión y Ajuste En Altura" loading="lazy" /></td>
+      <td class="name" data-ficha="WEB-12">Kit De Suspensión y Ajuste En Altura<span class="sku">WEB-12 · Solo en pagina web (sin fila BJ)</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="WEB-12" disabled /></td>
+      <td class="price">$691.591<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Vibración y Sonido" data-audiencias="Todos" data-salas="Calma|Estimulación General" data-nombre="kit vibroacústico bluetooth" data-precio="1183532">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-KVSL" data-precio="1183532" /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/kit-vibroacustico-bluetooth.jpg" alt="Kit vibroacústico Bluetooth" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-KVSL">Kit vibroacústico Bluetooth<span class="stock-badge">3 en camino</span><span class="sku">BJ-KVSL · Vibración y Sonido</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-KVSL" disabled  /></td>
+      <td class="price">$1.183.532<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Estimulación General</span></td>
+    </tr><tr data-familia="Sistema SHX" data-audiencias="Colegio|Hospital" data-salas="Comunicación|Estimulación General" data-nombre="kit voz shx" data-precio="391329">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EXKV" data-precio="391329"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/kit-voz-shx.jpg" alt="Kit Voz SHX" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EXKV">Kit Voz SHX<span class="stock-badge">1 en bodega + 5 en camino</span><span class="sku">BJ-EXKV · Sistema SHX</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EXKV" disabled /></td>
+      <td class="price">$391.329<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Comunicación</span><span class="tag">Estimulación General</span></td>
+    </tr><tr data-familia="Iluminación" data-audiencias="Todos" data-salas="Calma|Estimulación General" data-nombre="lámpara luminea" data-precio="1103358">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-LLAMP" data-precio="1103358"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/lampara-luminea.jpg" alt="Lámpara Luminea" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-LLAMP">Lámpara Luminea<span class="sku">BJ-LLAMP · Iluminación</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-LLAMP" disabled /></td>
+      <td class="price">$1.103.358<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Estimulación General</span></td>
+    </tr><tr data-familia="Iluminación" data-audiencias="Todos" data-salas="Calma|Estimulación General" data-nombre="línea led de 5m luminea" data-precio="891467">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-LLLT" data-precio="891467"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/linea-led-de-5m-luminea.jpg" alt="Línea led de 5m Luminea" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-LLLT">Línea led de 5m Luminea<span class="stock-badge">10 en camino</span><span class="sku">BJ-LLLT · Iluminación</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-LLLT" disabled /></td>
+      <td class="price">$891.467<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Estimulación General</span></td>
+    </tr><tr data-familia="Iluminación" data-audiencias="Todos" data-salas="Calma|Estimulación General" data-nombre="línea led de 5m luminea para respaldo" data-precio="891467">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-LLLR" data-precio="891467"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/linea-led-de-5m-luminea-para-respaldo.jpg" alt="Línea led de 5m Luminea para respaldo" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-LLLR">Línea led de 5m Luminea para respaldo<span class="sku">BJ-LLLR · Iluminación</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-LLLR" disabled /></td>
+      <td class="price">$891.467<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Estimulación General</span></td>
+    </tr><tr data-familia="Mantenimiento" data-audiencias="Todos" data-salas="Infraestructura/Accesorio" data-nombre="líquido antibacterias para cama de agua 250ml" data-precio="95446">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-E50692" data-precio="95446"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-E50692">Líquido Antibacterias para cama de agua 250ml<span class="sku">BJ-E50692 · Mantenimiento</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-E50692" disabled /></td>
+      <td class="price">$95.446<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Accesorio</span></td>
+    </tr><tr data-familia="Mantenimiento" data-audiencias="Todos" data-salas="Infraestructura/Accesorio" data-nombre="líquido para pompas de jabón 1l" data-precio="36270">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMLPJ1" data-precio="36270"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/liquido-para-pompas-de-jabon-1l.jpg" alt="Líquido para pompas de jabón 1L" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMLPJ1">Líquido para pompas de jabón 1L<span class="sku">BJ-EMLPJ1 · Mantenimiento</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMLPJ1" disabled /></td>
+      <td class="price">$36.270<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Accesorio</span></td>
+    </tr><tr data-familia="Sistema SHX" data-audiencias="Colegio|Hospital" data-salas="Aprendizaje/Estimulación" data-nombre="magic table" data-precio="1424057">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EXMAG" data-precio="1424057"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/magic-table.jpg" alt="Magic Table" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EXMAG">Magic Table<span class="sku">BJ-EXMAG · Sistema SHX</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EXMAG" disabled /></td>
+      <td class="price">$1.424.057<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Aprendizaje/Estimulación</span></td>
+    </tr><tr data-familia="Solo en pagina web (sin fila BJ)" data-audiencias="Todos" data-salas="Integración Sensorial|Psicomotricidad" data-nombre="manta de peso 9kg" data-precio="1111491">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="WEB-13" data-precio="1111491"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/manta-de-peso-9kg.jpg" alt="Manta De Peso 9KG" loading="lazy" /></td>
+      <td class="name" data-ficha="WEB-13">Manta De Peso 9KG<span class="sku">WEB-13 · Solo en pagina web (sin fila BJ)</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="WEB-13" disabled /></td>
+      <td class="price">$1.111.491<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Propiocepción" data-audiencias="Todos" data-salas="Calma|Integración Sensorial" data-nombre="manta de peso azul y roja - mediana - 2,2kg" data-precio="200437">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-SD12319" data-precio="200437"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/manta-de-peso-azul-y-roja-mediana-2-2kg.jpg" alt="Manta de peso azul y roja - mediana - 2,2kg" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-SD12319">Manta de peso azul y roja - mediana - 2,2kg<span class="stock-badge">1 en camino</span><span class="sku">BJ-SD12319 · Propiocepción</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-SD12319" disabled /></td>
+      <td class="price">$200.437<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Integración Sensorial</span></td>
+    </tr><tr data-familia="Propiocepción" data-audiencias="Todos" data-salas="Calma|Integración Sensorial" data-nombre="manta de peso gris y roja - grande - 3,6kg" data-precio="303519">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-SD12320" data-precio="303519"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/manta-de-peso-gris-y-roja-grande-3-6kg.jpg" alt="Manta de peso gris y roja - grande - 3,6kg" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-SD12320">Manta de peso gris y roja - grande - 3,6kg<span class="stock-badge">1 en camino</span><span class="sku">BJ-SD12320 · Propiocepción</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-SD12320" disabled /></td>
+      <td class="price">$303.519<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Integración Sensorial</span></td>
+    </tr><tr data-familia="Propiocepción" data-audiencias="Todos" data-salas="Calma|Integración Sensorial" data-nombre="manta de peso verde y roja - pequeña - 1,3kg" data-precio="167985">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-SD12229" data-precio="167985"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/manta-de-peso-verde-y-roja-pequena-1-3kg.jpg" alt="Manta de peso verde y roja - pequeña - 1,3kg" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-SD12229">Manta de peso verde y roja - pequeña - 1,3kg<span class="sku">BJ-SD12229 · Propiocepción</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-SD12229" disabled /></td>
+      <td class="price">$167.985<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Integración Sensorial</span></td>
+    </tr><tr data-familia="Camas" data-audiencias="Adulto Mayor|Hospital|Todos" data-salas="Calma" data-nombre="módulo cama-sofá con patas" data-precio="1569135">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMCS-P" data-precio="1569135"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/modulo-cama-sofa-con-patas.jpg" alt="Módulo Cama-Sofá con patas" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMCS-P">Módulo Cama-Sofá con patas<span class="sku">BJ-EMCS-P · Camas</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMCS-P" disabled /></td>
+      <td class="price">$1.569.135<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span></td>
+    </tr><tr data-familia="Camas" data-audiencias="Adulto Mayor|Hospital|Todos" data-salas="Calma" data-nombre="módulo cama-sofá con patas vibroacústico" data-precio="2040639">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMCS-P-V" data-precio="2040639"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/modulo-cama-sofa-con-patas-vibroacustico.jpg" alt="Módulo Cama-Sofá con patas vibroacústico" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMCS-P-V">Módulo Cama-Sofá con patas vibroacústico<span class="sku">BJ-EMCS-P-V · Camas</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMCS-P-V" disabled /></td>
+      <td class="price">$2.040.639<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span></td>
+    </tr><tr data-familia="Módulos Cóncavos y Convexos" data-audiencias="Colegio|Hospital" data-salas="Psicomotricidad|Integración Sensorial|Atención Temprana" data-nombre="módulo cóncavo alto" data-precio="526863">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMAV-A" data-precio="526863"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-EMAV-A">Módulo cóncavo alto<span class="sku">BJ-EMAV-A · Módulos Cóncavos y Convexos</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMAV-A" disabled /></td>
+      <td class="price">$526.863<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Psicomotricidad</span><span class="tag">Integración Sensorial</span><span class="tag">Atención Temprana</span></td>
+    </tr><tr data-familia="Módulos Cóncavos y Convexos" data-audiencias="Colegio|Hospital" data-salas="Psicomotricidad|Integración Sensorial|Atención Temprana" data-nombre="módulo cóncavo bajo" data-precio="410418">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMAV-B" data-precio="410418"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-EMAV-B">Módulo cóncavo bajo<span class="sku">BJ-EMAV-B · Módulos Cóncavos y Convexos</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMAV-B" disabled /></td>
+      <td class="price">$410.418<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Psicomotricidad</span><span class="tag">Integración Sensorial</span><span class="tag">Atención Temprana</span></td>
+    </tr><tr data-familia="Módulos Cóncavos y Convexos" data-audiencias="Colegio|Hospital" data-salas="Psicomotricidad|Integración Sensorial|Atención Temprana" data-nombre="módulo cóncavo con patas" data-precio="530681">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMAV-P" data-precio="530681"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/modulo-concavo-con-patas.jpg" alt="Módulo cóncavo con patas" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMAV-P">Módulo cóncavo con patas<span class="sku">BJ-EMAV-P · Módulos Cóncavos y Convexos</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMAV-P" disabled /></td>
+      <td class="price">$530.681<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Psicomotricidad</span><span class="tag">Integración Sensorial</span><span class="tag">Atención Temprana</span></td>
+    </tr><tr data-familia="Módulos Cóncavos y Convexos" data-audiencias="Colegio|Hospital" data-salas="Psicomotricidad|Integración Sensorial|Atención Temprana" data-nombre="módulo convexo alto" data-precio="496320">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMAX-A" data-precio="496320"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-EMAX-A">Módulo convexo alto<span class="sku">BJ-EMAX-A · Módulos Cóncavos y Convexos</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMAX-A" disabled /></td>
+      <td class="price">$496.320<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Psicomotricidad</span><span class="tag">Integración Sensorial</span><span class="tag">Atención Temprana</span></td>
+    </tr><tr data-familia="Módulos Cóncavos y Convexos" data-audiencias="Colegio|Hospital" data-salas="Psicomotricidad|Integración Sensorial|Atención Temprana" data-nombre="módulo convexo bajo" data-precio="391329">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMAX-B" data-precio="391329"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-EMAX-B">Módulo convexo bajo<span class="sku">BJ-EMAX-B · Módulos Cóncavos y Convexos</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMAX-B" disabled /></td>
+      <td class="price">$391.329<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Psicomotricidad</span><span class="tag">Integración Sensorial</span><span class="tag">Atención Temprana</span></td>
+    </tr><tr data-familia="Módulos Cóncavos y Convexos" data-audiencias="Colegio|Hospital" data-salas="Psicomotricidad|Integración Sensorial|Atención Temprana" data-nombre="módulo convexo con patas" data-precio="471504">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMAX-P" data-precio="471504"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/modulo-convexo-con-patas.jpg" alt="Módulo convexo con patas" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMAX-P">Módulo convexo con patas<span class="sku">BJ-EMAX-P · Módulos Cóncavos y Convexos</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMAX-P" disabled /></td>
+      <td class="price">$471.504<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Psicomotricidad</span><span class="tag">Integración Sensorial</span><span class="tag">Atención Temprana</span></td>
+    </tr><tr data-familia="Módulos Cuadrados" data-audiencias="Colegio" data-salas="Psicomotricidad|Integración Sensorial" data-nombre="módulo cuadrado con patas" data-precio="792203">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMAC-P" data-precio="792203"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/modulo-cuadrado-con-patas.jpg" alt="Módulo cuadrado con patas" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMAC-P">Módulo cuadrado con patas<span class="sku">BJ-EMAC-P · Módulos Cuadrados</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMAC-P" disabled /></td>
+      <td class="price">$792.203<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Psicomotricidad</span><span class="tag">Integración Sensorial</span></td>
+    </tr><tr data-familia="Módulos Cóncavos y Convexos" data-audiencias="Colegio|Hospital" data-salas="Psicomotricidad|Integración Sensorial|Atención Temprana" data-nombre="módulo enlace derecho con patas" data-precio="628036">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMAEND-P" data-precio="628036"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/modulo-enlace-derecho-con-patas.jpg" alt="Módulo enlace derecho con patas" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMAEND-P">Módulo enlace derecho con patas<span class="sku">BJ-EMAEND-P · Módulos Cóncavos y Convexos</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMAEND-P" disabled /></td>
+      <td class="price">$628.036<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Psicomotricidad</span><span class="tag">Integración Sensorial</span><span class="tag">Atención Temprana</span></td>
+    </tr><tr data-familia="Módulos Cóncavos y Convexos" data-audiencias="Colegio|Hospital" data-salas="Psicomotricidad|Integración Sensorial|Atención Temprana" data-nombre="módulo enlace izquierdo con patas" data-precio="628036">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMAENI-P" data-precio="628036"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/modulo-enlace-izquierdo-con-patas.jpg" alt="Módulo enlace izquierdo con patas" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMAENI-P">Módulo enlace izquierdo con patas<span class="sku">BJ-EMAENI-P · Módulos Cóncavos y Convexos</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMAENI-P" disabled /></td>
+      <td class="price">$628.036<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Psicomotricidad</span><span class="tag">Integración Sensorial</span><span class="tag">Atención Temprana</span></td>
+    </tr><tr data-familia="Módulos Esquineros" data-audiencias="Colegio" data-salas="Psicomotricidad|Integración Sensorial" data-nombre="módulo esquinero con patas" data-precio="748298">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMAR-P" data-precio="748298"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/modulo-esquinero-con-patas.jpg" alt="Módulo esquinero con patas" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMAR-P">Módulo esquinero con patas<span class="sku">BJ-EMAR-P · Módulos Esquineros</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMAR-P" disabled /></td>
+      <td class="price">$748.298<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Psicomotricidad</span><span class="tag">Integración Sensorial</span></td>
+    </tr><tr data-familia="Módulos Laterales" data-audiencias="Colegio" data-salas="Psicomotricidad|Integración Sensorial" data-nombre="módulo lateral derecho con patas" data-precio="797930">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMALD-P" data-precio="797930"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/modulo-lateral-derecho-con-patas.jpg" alt="Módulo Lateral derecho con patas" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMALD-P">Módulo Lateral derecho con patas<span class="sku">BJ-EMALD-P · Módulos Laterales</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMALD-P" disabled /></td>
+      <td class="price">$797.930<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Psicomotricidad</span><span class="tag">Integración Sensorial</span></td>
+    </tr><tr data-familia="Módulos Laterales" data-audiencias="Colegio" data-salas="Psicomotricidad|Integración Sensorial" data-nombre="módulo lateral izquierdo con patas" data-precio="797930">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMALI-P" data-precio="797930"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/modulo-lateral-izquierdo-con-patas.jpg" alt="Módulo lateral izquierdo con patas" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMALI-P">Módulo lateral izquierdo con patas<span class="sku">BJ-EMALI-P · Módulos Laterales</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMALI-P" disabled /></td>
+      <td class="price">$797.930<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Psicomotricidad</span><span class="tag">Integración Sensorial</span></td>
+    </tr><tr data-familia="Bases" data-audiencias="Todos" data-salas="Infraestructura/Accesorio" data-nombre="módulo protector para electrónica de tubo de burbu" data-precio="479140">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMB820C" data-precio="479140"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/modulo-protector-para-tubo-de-burbujas.jpg" alt="Módulo protector para electrónica de tubo de burbu" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMB820C">Módulo protector para electrónica de tubo de burbu<span class="sku">BJ-EMB820C · Bases</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMB820C" disabled /></td>
+      <td class="price">$479.140<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Accesorio</span></td>
+    </tr><tr data-familia="Módulos Yin-Yan" data-audiencias="Colegio" data-salas="Psicomotricidad|Integración Sensorial" data-nombre="módulo yin alto" data-precio="782658">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMYIN-A" data-precio="782658"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/modulo-yin-alto.jpg" alt="Módulo Yin alto" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMYIN-A">Módulo Yin alto<span class="sku">BJ-EMYIN-A · Módulos Yin-Yan</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMYIN-A" disabled /></td>
+      <td class="price">$782.658<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Psicomotricidad</span><span class="tag">Integración Sensorial</span></td>
+    </tr><tr data-familia="Módulos Yin-Yan" data-audiencias="Colegio" data-salas="Psicomotricidad|Integración Sensorial" data-nombre="módulo yin bajo" data-precio="582222">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMYIN-B" data-precio="582222"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/modulo-yin-bajo.jpg" alt="Módulo Yin bajo" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMYIN-B">Módulo Yin bajo<span class="sku">BJ-EMYIN-B · Módulos Yin-Yan</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMYIN-B" disabled /></td>
+      <td class="price">$582.222<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Psicomotricidad</span><span class="tag">Integración Sensorial</span></td>
+    </tr><tr data-familia="Integración Sensorial" data-audiencias="Colegio|Hospital" data-salas="Integración Sensorial|Psicomotricidad" data-nombre="muñequeras y tobilleras de 0,5kg" data-precio="19089">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-61006500" data-precio="19089"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-61006500">Muñequeras y tobilleras de 0,5kg<span class="sku">BJ-61006500 · Integración Sensorial</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-61006500" disabled /></td>
+      <td class="price">$19.089<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Integración Sensorial" data-audiencias="Colegio|Hospital" data-salas="Integración Sensorial|Psicomotricidad" data-nombre="muñequeras y tobilleras de 1kg" data-precio="24816">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-61006600" data-precio="24816"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/munequeras-y-tobilleras-de-1kg.jpg" alt="Muñequeras y tobilleras de 1kg" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-61006600">Muñequeras y tobilleras de 1kg<span class="sku">BJ-61006600 · Integración Sensorial</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-61006600" disabled /></td>
+      <td class="price">$24.816<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Solo en pagina web (sin fila BJ)" data-audiencias="Todos" data-salas="Integración Sensorial|Psicomotricidad" data-nombre="muro de escalada con colchonetas" data-precio="893941">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="WEB-14" data-precio="893941"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="WEB-14">Muro de Escalada con Colchonetas<span class="sku">WEB-14 · Solo en pagina web (sin fila BJ)</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="WEB-14" disabled /></td>
+      <td class="price">$893.941<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Sistema SHX" data-audiencias="Colegio|Hospital" data-salas="Aprendizaje/Estimulación" data-nombre="panel táctil shx" data-precio="5512970">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EX26" data-precio="5512970"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/panel-tactil-shx.jpg" alt="Panel táctil SHX" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EX26">Panel táctil SHX<span class="stock-badge">1 en camino</span><span class="sku">BJ-EX26 · Sistema SHX</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EX26" disabled /></td>
+      <td class="price">$5.512.970<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Aprendizaje/Estimulación</span></td>
+    </tr><tr data-familia="Paneles" data-audiencias="Colegio|Hospital" data-salas="Integración Sensorial|Atención Temprana" data-nombre="panel toca-toca" data-precio="526863">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMS600" data-precio="526863"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/panel-toca-toca.jpg" alt="Panel toca-toca" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMS600">Panel toca-toca<span class="sku">BJ-EMS600 · Paneles</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMS600" disabled /></td>
+      <td class="price">$526.863<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Atención Temprana</span></td>
+    </tr><tr data-familia="Productos sensoriales" data-audiencias="Colegio|Hospital" data-salas="Integración Sensorial|Atención Temprana" data-nombre="pasillo sensaciones plantares" data-precio="677668">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-438300" data-precio="677668"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/pasillo-sensaciones-plantares.jpg" alt="Pasillo Sensaciones Plantares" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-438300">Pasillo Sensaciones Plantares<span class="sku">BJ-438300 · Productos sensoriales</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-438300" disabled /></td>
+      <td class="price">$677.668<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Atención Temprana</span></td>
+    </tr><tr data-familia="Integración Sensorial" data-audiencias="Colegio|Hospital" data-salas="Integración Sensorial|Psicomotricidad" data-nombre="pelota cacahuete" data-precio="131716">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-43700100" data-precio="131716"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/pelota-cacahuete.jpg" alt="Pelota cacahuete" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-43700100">Pelota cacahuete<span class="stock-badge">1 en bodega</span><span class="sku">BJ-43700100 · Integración Sensorial</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-43700100" disabled /></td>
+      <td class="price">$131.716<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Integración Sensorial" data-audiencias="Colegio|Hospital" data-salas="Integración Sensorial|Psicomotricidad" data-nombre="pelota de terapia de diámetro 45cm" data-precio="32452">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-51090000" data-precio="32452"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/pelota-de-terapia-de-diametro-45cm.jpg" alt="Pelota de terapia de diámetro 45cm" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-51090000">Pelota de terapia de diámetro 45cm<span class="stock-badge">1 en bodega</span><span class="sku">BJ-51090000 · Integración Sensorial</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-51090000" disabled /></td>
+      <td class="price">$32.452<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Integración Sensorial" data-audiencias="Colegio|Hospital" data-salas="Integración Sensorial|Psicomotricidad" data-nombre="pelota de terapia de diámetro 55cm" data-precio="38178">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-51091000" data-precio="38178"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/pelota-de-terapia-de-diametro-55cm.jpg" alt="Pelota de terapia de diámetro 55cm" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-51091000">Pelota de terapia de diámetro 55cm<span class="stock-badge">1 en bodega</span><span class="sku">BJ-51091000 · Integración Sensorial</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-51091000" disabled /></td>
+      <td class="price">$38.178<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Vestibular" data-audiencias="Colegio|Hospital" data-salas="Psicomotricidad|Integración Sensorial" data-nombre="peonza gigante" data-precio="194710">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EVPG" data-precio="194710"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/peonza-gigante.jpg" alt="Peonza gigante" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EVPG">Peonza gigante<span class="stock-badge">1 en bodega</span><span class="sku">BJ-EVPG · Vestibular</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EVPG" disabled /></td>
+      <td class="price">$194.710<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Psicomotricidad</span><span class="tag">Integración Sensorial</span></td>
+    </tr><tr data-familia="Propiocepción" data-audiencias="Todos" data-salas="Calma|Integración Sensorial" data-nombre="peso para hombros: lola la oruga grande 1,3kg" data-precio="101173">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-SD12021" data-precio="101173"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/peso-para-hombros-lola-la-oruga-grande.jpg" alt="Peso para hombros: Lola la Oruga grande 1,3kg" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-SD12021">Peso para hombros: Lola la Oruga grande 1,3kg<span class="sku">BJ-SD12021 · Propiocepción</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-SD12021" disabled /></td>
+      <td class="price">$101.173<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Integración Sensorial</span></td>
+    </tr><tr data-familia="Propiocepción" data-audiencias="Todos" data-salas="Calma|Integración Sensorial" data-nombre="peso para regazo: mariquita grande 2,2 kg" data-precio="101173">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-SD12009" data-precio="101173"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-SD12009">Peso para regazo: Mariquita grande 2,2 kg<span class="sku">BJ-SD12009 · Propiocepción</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-SD12009" disabled /></td>
+      <td class="price">$101.173<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Integración Sensorial</span></td>
+    </tr><tr data-familia="Varios mobiliario multisensorial" data-audiencias="Colegio|Hospital" data-salas="Psicomotricidad|Atención Temprana" data-nombre="piscina de bolas alta" data-precio="2118905">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMPB70" data-precio="2118905"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/piscina-de-bolas-alta.jpg" alt="Piscina de bolas alta" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMPB70">Piscina de bolas alta<span class="stock-badge">1 en camino</span><span class="sku">BJ-EMPB70 · Varios mobiliario multisensorial</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMPB70" disabled /></td>
+      <td class="price">$2.118.905<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Psicomotricidad</span><span class="tag">Atención Temprana</span></td>
+    </tr><tr data-familia="Varios mobiliario multisensorial" data-audiencias="Colegio|Hospital" data-salas="Psicomotricidad|Atención Temprana" data-nombre="piscina de bolas mediana" data-precio="1718031">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMPB45" data-precio="1718031"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/piscina-de-bolas-mediana.jpg" alt="Piscina de bolas mediana" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMPB45">Piscina de bolas mediana<span class="sku">BJ-EMPB45 · Varios mobiliario multisensorial</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMPB45" disabled /></td>
+      <td class="price">$1.718.031<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Psicomotricidad</span><span class="tag">Atención Temprana</span></td>
+    </tr><tr data-familia="Piscinas de Bolas" data-audiencias="Colegio|Hospital" data-salas="Estimulación General|Psicomotricidad" data-nombre="piscina luminea" data-precio="4409612">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-LPIS" data-precio="4409612"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/piscina-luminea.jpg" alt="Piscina Luminea" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-LPIS">Piscina Luminea<span class="stock-badge">1 en bodega</span><span class="sku">BJ-LPIS · Piscinas de Bolas</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-LPIS" disabled /></td>
+      <td class="price">$4.409.612<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Estimulación General</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Piscinas de Bolas" data-audiencias="Colegio|Hospital" data-salas="Estimulación General|Psicomotricidad" data-nombre="piscina luminea vibroacústica" data-precio="4800942">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-LPIS-V" data-precio="4800942"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/piscina-luminea-vibroacustica.jpg" alt="Piscina Luminea vibroacústica" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-LPIS-V">Piscina Luminea vibroacústica<span class="stock-badge">6 en camino</span><span class="sku">BJ-LPIS-V · Piscinas de Bolas</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-LPIS-V" disabled /></td>
+      <td class="price">$4.800.942<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Estimulación General</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Sistema SHX" data-audiencias="Todos" data-salas="Calma" data-nombre="placa zen para foco uv shx" data-precio="561223">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-PZUV" data-precio="561223"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-PZUV">Placa ZEN para Foco UV SHX<span class="sku">BJ-PZUV · Sistema SHX</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-PZUV" disabled /></td>
+      <td class="price">$561.223<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span></td>
+    </tr><tr data-familia="Sistema SHX" data-audiencias="Todos" data-salas="Calma" data-nombre="placa zen para ventilador shx" data-precio="561223">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-PZ41" data-precio="561223"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-PZ41">Placa ZEN para Ventilador SHX<span class="sku">BJ-PZ41 · Sistema SHX</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-PZ41" disabled /></td>
+      <td class="price">$561.223<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span></td>
+    </tr><tr data-familia="Iluminación" data-audiencias="Todos" data-salas="Calma|Estimulación General" data-nombre="planeta luminea" data-precio="992640">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-LPLNT" data-precio="992640"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/planeta-luminea.jpg" alt="Planeta Luminea" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-LPLNT">Planeta Luminea<span class="sku">BJ-LPLNT · Iluminación</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-LPLNT" disabled /></td>
+      <td class="price">$992.640<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Estimulación General</span></td>
+    </tr><tr data-familia="Iluminación" data-audiencias="Todos" data-salas="Calma|Estimulación General" data-nombre="planeta luminea pequeño" data-precio="992640">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-LPLNTP" data-precio="992640"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-LPLNTP">Planeta Luminea pequeño<span class="sku">BJ-LPLNTP · Iluminación</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-LPLNTP" disabled /></td>
+      <td class="price">$992.640<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Estimulación General</span></td>
+    </tr><tr data-familia="Vibración y Sonido" data-audiencias="Todos" data-salas="Calma|Estimulación General" data-nombre="plataforma vibroacústica" data-precio="2252529">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMPL-V" data-precio="2252529"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/plataforma-vibroacustica.jpg" alt="Plataforma vibroacústica" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMPL-V">Plataforma vibroacústica<span class="sku">BJ-EMPL-V · Vibración y Sonido</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMPL-V" disabled /></td>
+      <td class="price">$2.252.529<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Estimulación General</span></td>
+    </tr><tr data-familia="Sistema SHX" data-audiencias="Colegio|Hospital" data-salas="Estimulación General|Fiesta/Sensorial activo" data-nombre="pompas shx" data-precio="471504">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EX46" data-precio="471504"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/pompas-shx.jpg" alt="Pompas SHX" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EX46">Pompas SHX<span class="sku">BJ-EX46 · Sistema SHX</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EX46" disabled /></td>
+      <td class="price">$471.504<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Estimulación General</span><span class="tag">Fiesta/Sensorial activo</span></td>
+    </tr><tr data-familia="Respaldos" data-audiencias="Todos" data-salas="Infraestructura/Mobiliario" data-nombre="protección de pared a medida (por metro)" data-precio="322608">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMRM" data-precio="322608"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/proteccion-de-pared-a-medida-por-metro.jpg" alt="Protección de pared a medida (por metro)" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMRM">Protección de pared a medida (por metro)<span class="sku">BJ-EMRM · Respaldos</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMRM" disabled /></td>
+      <td class="price">$322.608<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Mobiliario</span></td>
+    </tr><tr data-familia="Respaldos" data-audiencias="Todos" data-salas="Infraestructura/Mobiliario" data-nombre="protección de pared para línea de leds (por metro)" data-precio="431417">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMRMLL" data-precio="431417"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-EMRMLL">Protección de pared para línea de LEDs (por metro)<span class="sku">BJ-EMRMLL · Respaldos</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMRMLL" disabled /></td>
+      <td class="price">$431.417<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Mobiliario</span></td>
+    </tr><tr data-familia="Puffs" data-audiencias="Todos" data-salas="Calma|Mobiliario" data-nombre="puff transformable" data-precio="761660">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMPT" data-precio="761660"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/puff-transformable.jpg" alt="Puff transformable" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMPT">Puff transformable<span class="sku">BJ-EMPT · Puffs</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMPT" disabled /></td>
+      <td class="price">$761.660<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Mobiliario</span></td>
+    </tr><tr data-familia="Puffs" data-audiencias="Todos" data-salas="Calma|Mobiliario" data-nombre="puff transformable vibroacústico" data-precio="1477506">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMPT-V" data-precio="1477506"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/puff-transformable-vibroacustico.jpg" alt="Puff transformable vibroacústico" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMPT-V">Puff transformable vibroacústico<span class="stock-badge">9 en camino</span><span class="sku">BJ-EMPT-V · Puffs</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMPT-V" disabled /></td>
+      <td class="price">$1.477.506<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Mobiliario</span></td>
+    </tr><tr data-familia="Solo en pagina web (sin fila BJ)" data-audiencias="Todos" data-salas="Integración Sensorial|Psicomotricidad" data-nombre="rampa de rodillos" data-precio="4384241">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="WEB-15" data-precio="4384241"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="WEB-15">Rampa De Rodillos<span class="sku">WEB-15 · Solo en pagina web (sin fila BJ)</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="WEB-15" disabled /></td>
+      <td class="price">$4.384.241<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Respaldos" data-audiencias="Todos" data-salas="Infraestructura/Mobiliario" data-nombre="remate lateral espejo" data-precio="70630">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMRLE" data-precio="70630"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-EMRLE">Remate lateral espejo<span class="sku">BJ-EMRLE · Respaldos</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMRLE" disabled /></td>
+      <td class="price">$70.630<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Mobiliario</span></td>
+    </tr><tr data-familia="Respaldos" data-audiencias="Todos" data-salas="Infraestructura/Mobiliario" data-nombre="remate lateral para respaldo para línea de led" data-precio="70630">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMRLTL" data-precio="70630"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-EMRLTL">Remate lateral para respaldo para línea de led<span class="sku">BJ-EMRLTL · Respaldos</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMRLTL" disabled /></td>
+      <td class="price">$70.630<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Mobiliario</span></td>
+    </tr><tr data-familia="Respaldos" data-audiencias="Todos" data-salas="Infraestructura/Mobiliario" data-nombre="remate superior esquina de espejos grandes rectos" data-precio="70630">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMRSEG" data-precio="70630"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-EMRSEG">Remate superior esquina de espejos grandes rectos<span class="sku">BJ-EMRSEG · Respaldos</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMRSEG" disabled /></td>
+      <td class="price">$70.630<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Mobiliario</span></td>
+    </tr><tr data-familia="Respaldos" data-audiencias="Todos" data-salas="Infraestructura/Mobiliario" data-nombre="remate superior esquina de espejos pequeños rectos" data-precio="70630">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMRSEP" data-precio="70630"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-EMRSEP">Remate superior esquina de espejos pequeños rectos<span class="sku">BJ-EMRSEP · Respaldos</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMRSEP" disabled /></td>
+      <td class="price">$70.630<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Mobiliario</span></td>
+    </tr><tr data-familia="Respaldos" data-audiencias="Todos" data-salas="Infraestructura/Mobiliario" data-nombre="respaldo foam cóncavo" data-precio="301610">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMRV" data-precio="301610"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/respaldo-foam-concavo.jpg" alt="Respaldo foam cóncavo" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMRV">Respaldo foam cóncavo<span class="stock-badge">2 en camino</span><span class="sku">BJ-EMRV · Respaldos</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMRV" disabled /></td>
+      <td class="price">$301.610<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Mobiliario</span></td>
+    </tr><tr data-familia="Respaldos" data-audiencias="Todos" data-salas="Infraestructura/Mobiliario" data-nombre="respaldo foam convexo" data-precio="311154">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMRX" data-precio="311154"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/respaldo-foam-convexo.jpg" alt="Respaldo foam convexo" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMRX">Respaldo foam convexo<span class="stock-badge">1 en camino</span><span class="sku">BJ-EMRX · Respaldos</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMRX" disabled /></td>
+      <td class="price">$311.154<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Mobiliario</span></td>
+    </tr><tr data-familia="Respaldos" data-audiencias="Todos" data-salas="Infraestructura/Mobiliario" data-nombre="respaldo lateral derecho cóncavo" data-precio="530681">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMRLDV" data-precio="530681"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/respaldo-lateral-derecho-concavo.jpg" alt="Respaldo lateral derecho cóncavo" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMRLDV">Respaldo lateral derecho cóncavo<span class="sku">BJ-EMRLDV · Respaldos</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMRLDV" disabled /></td>
+      <td class="price">$530.681<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Mobiliario</span></td>
+    </tr><tr data-familia="Respaldos" data-audiencias="Todos" data-salas="Infraestructura/Mobiliario" data-nombre="respaldo lateral derecho convexo" data-precio="530681">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMRLDX" data-precio="530681"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/respaldo-lateral-derecho-convexo.jpg" alt="Respaldo lateral derecho convexo" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMRLDX">Respaldo lateral derecho convexo<span class="sku">BJ-EMRLDX · Respaldos</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMRLDX" disabled /></td>
+      <td class="price">$530.681<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Mobiliario</span></td>
+    </tr><tr data-familia="Respaldos" data-audiencias="Todos" data-salas="Infraestructura/Mobiliario" data-nombre="respaldo lateral izquierdo cóncavo" data-precio="530681">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMRLIV" data-precio="530681"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/respaldo-lateral-izquierdo-concavo.jpg" alt="Respaldo lateral izquierdo cóncavo" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMRLIV">Respaldo lateral izquierdo cóncavo<span class="sku">BJ-EMRLIV · Respaldos</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMRLIV" disabled /></td>
+      <td class="price">$530.681<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Mobiliario</span></td>
+    </tr><tr data-familia="Respaldos" data-audiencias="Todos" data-salas="Infraestructura/Mobiliario" data-nombre="respaldo lateral izquierdo convexo" data-precio="530681">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMRLIX" data-precio="530681"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/respaldo-lateral-izquierdo-convexo.jpg" alt="Respaldo lateral izquierdo convexo" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMRLIX">Respaldo lateral izquierdo convexo<span class="sku">BJ-EMRLIX · Respaldos</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMRLIX" disabled /></td>
+      <td class="price">$530.681<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Mobiliario</span></td>
+    </tr><tr data-familia="Respaldos" data-audiencias="Todos" data-salas="Infraestructura/Mobiliario" data-nombre="respaldo recto para cama" data-precio="412327">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMRCA" data-precio="412327"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/respaldo-recto-para-cama.jpg" alt="Respaldo recto para cama" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMRCA">Respaldo recto para cama<span class="sku">BJ-EMRCA · Respaldos</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMRCA" disabled /></td>
+      <td class="price">$412.327<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Mobiliario</span></td>
+    </tr><tr data-familia="Respaldos" data-audiencias="Todos" data-salas="Infraestructura/Mobiliario" data-nombre="respaldo recto para cama y línea de leds" data-precio="652852">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMRCALL" data-precio="652852"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-EMRCALL">Respaldo recto para cama y línea de LEDs<span class="sku">BJ-EMRCALL · Respaldos</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMRCALL" disabled /></td>
+      <td class="price">$652.852<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Mobiliario</span></td>
+    </tr><tr data-familia="Luminea" data-audiencias="Todos" data-salas="Elemental/Simple|Estimulación General" data-nombre="rincón luminea" data-precio="4342800">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-LRIN" data-precio="4342800" /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/rincon-luminea.jpg" alt="Rincón Luminea" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-LRIN">Rincón Luminea<span class="sku">BJ-LRIN · Luminea</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-LRIN" disabled  /></td>
+      <td class="price">$4.342.800<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Elemental/Simple</span><span class="tag">Estimulación General</span></td>
+    </tr><tr data-familia="Luminea" data-audiencias="Todos" data-salas="Elemental/Simple|Estimulación General" data-nombre="rincon luminea con tablet" data-precio="4972745">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-LRIN23" data-precio="4972745"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/rincon-luminea.jpg" alt="Rincon Luminea con tablet" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-LRIN23">Rincon Luminea con tablet<span class="stock-badge">8 en camino</span><span class="sku">BJ-LRIN23 · Luminea</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-LRIN23" disabled /></td>
+      <td class="price">$4.972.745<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Elemental/Simple</span><span class="tag">Estimulación General</span></td>
+    </tr><tr data-familia="Solo en pagina web (sin fila BJ)" data-audiencias="Todos" data-salas="Integración Sensorial|Psicomotricidad" data-nombre="rodillos de presión" data-precio="1505741">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="WEB-16" data-precio="1505741"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/rodillos-de-presion.jpg" alt="Rodillos De Presión" loading="lazy" /></td>
+      <td class="name" data-ficha="WEB-16">Rodillos De Presión<span class="sku">WEB-16 · Solo en pagina web (sin fila BJ)</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="WEB-16" disabled /></td>
+      <td class="price">$1.505.741<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Luminea" data-audiencias="Todos" data-salas="Elemental/Simple|Estimulación General" data-nombre="router luminea" data-precio="62994">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-LWAP" data-precio="62994"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/router-luminea.jpg" alt="Router Luminea" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-LWAP">Router Luminea<span class="sku">BJ-LWAP · Luminea</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-LWAP" disabled /></td>
+      <td class="price">$62.994<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Elemental/Simple</span><span class="tag">Estimulación General</span></td>
+    </tr><tr data-familia="Solo en pagina web (sin fila BJ)" data-audiencias="Todos" data-salas="Integración Sensorial|Psicomotricidad" data-nombre="saco propioceptivo" data-precio="166241">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="WEB-17" data-precio="166241"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="WEB-17">Saco Propioceptivo<span class="sku">WEB-17 · Solo en pagina web (sin fila BJ)</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="WEB-17" disabled /></td>
+      <td class="price">$166.241<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Sistema SHX" data-audiencias="Todos" data-salas="Infraestructura/Control" data-nombre="sensory cube grande" data-precio="881922">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMSC" data-precio="881922"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/sensory-cube-grande.jpg" alt="Sensory Cube grande" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMSC">Sensory Cube grande<span class="stock-badge">1 en bodega + 4 en camino</span><span class="sku">BJ-EMSC · Sistema SHX</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMSC" disabled /></td>
+      <td class="price">$881.922<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Control</span></td>
+    </tr><tr data-familia="Sistema SHX" data-audiencias="Todos" data-salas="Infraestructura/Control" data-nombre="sensory cube pequeño" data-precio="782658">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMSCP" data-precio="782658"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-EMSCP">Sensory Cube pequeño<span class="sku">BJ-EMSCP · Sistema SHX</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMSCP" disabled /></td>
+      <td class="price">$782.658<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Control</span></td>
+    </tr><tr data-familia="Productos sensoriales" data-audiencias="Colegio|Hospital" data-salas="Integración Sensorial|Atención Temprana" data-nombre="sensory feet 1.1" data-precio="524954">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-SF11" data-precio="524954"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/sensory-feet.jpg" alt="Sensory Feet 1.1" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-SF11">Sensory Feet 1.1<span class="stock-badge">1 en bodega + 1 en camino</span><span class="sku">BJ-SF11 · Productos sensoriales</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-SF11" disabled /></td>
+      <td class="price">$524.954<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Atención Temprana</span></td>
+    </tr><tr data-familia="Luminea" data-audiencias="Todos" data-salas="Estimulación General|Elemental/Simple" data-nombre="sensory go luminea" data-precio="8590154">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-SGL" data-precio="8590154"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/sensory-go-luminea.jpg" alt="Sensory Go Luminea" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-SGL">Sensory Go Luminea<span class="sku">BJ-SGL · Luminea</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-SGL" disabled /></td>
+      <td class="price">$8.590.154<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Estimulación General</span><span class="tag">Elemental/Simple</span></td>
+    </tr><tr data-familia="Luminea" data-audiencias="Todos" data-salas="Estimulación General|Elemental/Simple" data-nombre="sensory go luminea plus" data-precio="12408000">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-SGP" data-precio="12408000"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/sensory-go-luminea-plus.jpg" alt="Sensory Go Luminea Plus" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-SGP">Sensory Go Luminea Plus<span class="sku">BJ-SGP · Luminea</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-SGP" disabled /></td>
+      <td class="price">$12.408.000<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Estimulación General</span><span class="tag">Elemental/Simple</span></td>
+    </tr><tr data-familia="Sistema SHX" data-audiencias="Colegio|Hospital" data-salas="Estimulación General" data-nombre="sensory go shx" data-precio="18707446">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-SGSX" data-precio="18707446"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/sensory-go-shx.jpg" alt="Sensory Go SHX" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-SGSX">Sensory Go SHX<span class="stock-badge">1 en bodega</span><span class="sku">BJ-SGSX · Sistema SHX</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-SGSX" disabled /></td>
+      <td class="price">$18.707.446<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Estimulación General</span></td>
+    </tr><tr data-familia="Sistema SHX" data-audiencias="Colegio|Hospital" data-salas="Estimulación General|Psicomotricidad" data-nombre="sensory step" data-precio="561223">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMSST" data-precio="561223"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/sensory-step.jpg" alt="Sensory Step" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMSST">Sensory Step<span class="stock-badge">1 en camino</span><span class="sku">BJ-EMSST · Sistema SHX</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMSST" disabled /></td>
+      <td class="price">$561.223<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Estimulación General</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Solo en pagina web (sin fila BJ)" data-audiencias="Todos" data-salas="Integración Sensorial|Psicomotricidad" data-nombre="set n° 19, 6 piezas - espuma" data-precio="1555141">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="WEB-18" data-precio="1555141"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="WEB-18">Set N° 19, 6 Piezas - Espuma<span class="sku">WEB-18 · Solo en pagina web (sin fila BJ)</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="WEB-18" disabled /></td>
+      <td class="price">$1.555.141<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Sistema SHX" data-audiencias="Todos" data-salas="Infraestructura/Control" data-nombre="shx compact" data-precio="8519524">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EX04" data-precio="8519524"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/shx-compact.jpg" alt="SHX Compact" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EX04">SHX Compact<span class="stock-badge">1 en bodega + 6 en camino</span><span class="sku">BJ-EX04 · Sistema SHX</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EX04" disabled /></td>
+      <td class="price">$8.519.524<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Control</span></td>
+    </tr><tr data-familia="Sistema SHX" data-audiencias="Todos" data-salas="Infraestructura/Control" data-nombre="shx compact con ipad" data-precio="8779137">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EX04-I" data-precio="8779137"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-EX04-I">SHX Compact con iPad<span class="sku">BJ-EX04-I · Sistema SHX</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EX04-I" disabled /></td>
+      <td class="price">$8.779.137<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Control</span></td>
+    </tr><tr data-familia="Sistema SHX" data-audiencias="Todos" data-salas="Infraestructura/Control" data-nombre="shx compact sin proyección" data-precio="7316902">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EX04-SP" data-precio="7316902"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-EX04-SP">SHX Compact sin proyección<span class="sku">BJ-EX04-SP · Sistema SHX</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EX04-SP" disabled /></td>
+      <td class="price">$7.316.902<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Control</span></td>
+    </tr><tr data-familia="Sistema SHX" data-audiencias="Todos" data-salas="Infraestructura/Control" data-nombre="shx proximity" data-precio="1223620">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EXPRX" data-precio="1223620"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/shx-proximity.jpg" alt="SHX Proximity" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EXPRX">SHX Proximity<span class="stock-badge">1 en bodega + 7 en camino</span><span class="sku">BJ-EXPRX · Sistema SHX</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EXPRX" disabled /></td>
+      <td class="price">$1.223.620<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Control</span></td>
+    </tr><tr data-familia="Sistema SHX" data-audiencias="Todos" data-salas="Infraestructura/Control" data-nombre="shx rack" data-precio="11926951">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EX02" data-precio="11926951"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/shx-rack.jpg" alt="SHX Rack" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EX02">SHX Rack<span class="stock-badge">1 en camino</span><span class="sku">BJ-EX02 · Sistema SHX</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EX02" disabled /></td>
+      <td class="price">$11.926.951<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Control</span></td>
+    </tr><tr data-familia="Sistema SHX" data-audiencias="Todos" data-salas="Infraestructura/Control" data-nombre="shx rack - doble proyección" data-precio="13530447">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EX02-2P" data-precio="13530447"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-EX02-2P">SHX Rack - doble proyección<span class="sku">BJ-EX02-2P · Sistema SHX</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EX02-2P" disabled /></td>
+      <td class="price">$13.530.447<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Control</span></td>
+    </tr><tr data-familia="Sistema SHX" data-audiencias="Todos" data-salas="Infraestructura/Control" data-nombre="shx rack con ipad" data-precio="12186565">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EX02-I" data-precio="12186565"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-EX02-I">SHX Rack con iPad<span class="sku">BJ-EX02-I · Sistema SHX</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EX02-I" disabled /></td>
+      <td class="price">$12.186.565<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Control</span></td>
+    </tr><tr data-familia="Sistema SHX" data-audiencias="Todos" data-salas="Infraestructura/Control" data-nombre="shx rack con ipad - doble proyección" data-precio="13790060">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EX02-I2P" data-precio="13790060"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-EX02-I2P">SHX Rack con iPad - doble proyección<span class="sku">BJ-EX02-I2P · Sistema SHX</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EX02-I2P" disabled /></td>
+      <td class="price">$13.790.060<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Control</span></td>
+    </tr><tr data-familia="Sillones" data-audiencias="Adulto Mayor|Todos" data-salas="Calma|Mobiliario" data-nombre="sillón doble con brazos" data-precio="1130082">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMSSDB" data-precio="1130082"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/sillon-doble-con-brazos.jpg" alt="Sillón doble con brazos" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMSSDB">Sillón doble con brazos<span class="sku">BJ-EMSSDB · Sillones</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMSSDB" disabled /></td>
+      <td class="price">$1.130.082<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Mobiliario</span></td>
+    </tr><tr data-familia="Sillones" data-audiencias="Adulto Mayor|Todos" data-salas="Calma|Mobiliario" data-nombre="sillón doble con brazos vibroacústico" data-precio="1653127">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMSSDB-V" data-precio="1653127"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/sillon-doble-con-brazos-vibroacustico.jpg" alt="Sillón doble con brazos vibroacústico" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMSSDB-V">Sillón doble con brazos vibroacústico<span class="sku">BJ-EMSSDB-V · Sillones</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMSSDB-V" disabled /></td>
+      <td class="price">$1.653.127<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Mobiliario</span></td>
+    </tr><tr data-familia="Sillones" data-audiencias="Adulto Mayor|Todos" data-salas="Calma|Mobiliario" data-nombre="sillón doble con brazos vibroacústico alto" data-precio="1704668">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMSSDB-AV" data-precio="1704668"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-EMSSDB-AV">Sillón doble con brazos vibroacústico alto<span class="sku">BJ-EMSSDB-AV · Sillones</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMSSDB-AV" disabled /></td>
+      <td class="price">$1.704.668<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Mobiliario</span></td>
+    </tr><tr data-familia="Sillones" data-audiencias="Adulto Mayor|Todos" data-salas="Calma|Mobiliario" data-nombre="sillón individual con brazos" data-precio="859015">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMSSIB" data-precio="859015"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/sillon-individual-con-brazos.jpg" alt="Sillón individual con brazos" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMSSIB">Sillón individual con brazos<span class="sku">BJ-EMSSIB · Sillones</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMSSIB" disabled /></td>
+      <td class="price">$859.015<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Mobiliario</span></td>
+    </tr><tr data-familia="Sillones" data-audiencias="Adulto Mayor|Todos" data-salas="Calma|Mobiliario" data-nombre="sillón individual con brazos alto" data-precio="723482">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMSSIB-A" data-precio="723482"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-EMSSIB-A">Sillón individual con brazos alto<span class="sku">BJ-EMSSIB-A · Sillones</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMSSIB-A" disabled /></td>
+      <td class="price">$723.482<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Mobiliario</span></td>
+    </tr><tr data-familia="Sillones" data-audiencias="Adulto Mayor|Todos" data-salas="Calma|Mobiliario" data-nombre="sillón individual con brazos vibroacústico" data-precio="1156807">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EMSSIB-V" data-precio="1156807"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/sillon-individual-con-brazos-vibroacustico.jpg" alt="Sillón individual con brazos vibroacústico" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EMSSIB-V">Sillón individual con brazos vibroacústico<span class="sku">BJ-EMSSIB-V · Sillones</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EMSSIB-V" disabled /></td>
+      <td class="price">$1.156.807<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Mobiliario</span></td>
+    </tr><tr data-familia="Bases" data-audiencias="Todos" data-salas="Infraestructura/Accesorio" data-nombre="solución de velcro atornillado para cama y base" data-precio="41996">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-SU-VELCRO" data-precio="41996"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="BJ-SU-VELCRO">Solución de velcro atornillado para cama y base<span class="sku">BJ-SU-VELCRO · Bases</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-SU-VELCRO" disabled /></td>
+      <td class="price">$41.996<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Accesorio</span></td>
+    </tr><tr data-familia="Solo en pagina web (sin fila BJ)" data-audiencias="Todos" data-salas="Integración Sensorial|Psicomotricidad" data-nombre="suelo sensorial en gel" data-precio="360041">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="WEB-19" data-precio="360041"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="WEB-19">Suelo Sensorial En Gel<span class="sku">WEB-19 · Solo en pagina web (sin fila BJ)</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="WEB-19" disabled /></td>
+      <td class="price">$360.041<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Integración Sensorial" data-audiencias="Colegio|Hospital" data-salas="Integración Sensorial|Psicomotricidad" data-nombre="tabla scooter 30cm" data-precio="78266">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-61061500" data-precio="78266"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/tabla-scooter-30cm.jpg" alt="Tabla Scooter 30cm" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-61061500">Tabla Scooter 30cm<span class="sku">BJ-61061500 · Integración Sensorial</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-61061500" disabled /></td>
+      <td class="price">$78.266<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Integración Sensorial" data-audiencias="Colegio|Hospital" data-salas="Integración Sensorial|Psicomotricidad" data-nombre="tabla scooter 40cm" data-precio="93537">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-61062000" data-precio="93537"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/tabla-scooter-40cm.jpg" alt="Tabla Scooter 40cm" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-61062000">Tabla Scooter 40cm<span class="sku">BJ-61062000 · Integración Sensorial</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-61062000" disabled /></td>
+      <td class="price">$93.537<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Sistema SHX" data-audiencias="Todos" data-salas="Infraestructura/Control" data-nombre="tablet shx-luminea" data-precio="721573">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EX23" data-precio="721573"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/tableta-shx-luminea.jpg" alt="Tablet SHX-Luminea" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EX23">Tablet SHX-Luminea<span class="sku">BJ-EX23 · Sistema SHX</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EX23" disabled /></td>
+      <td class="price">$721.573<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Infraestructura/Control</span></td>
+    </tr><tr data-familia="Tubos de burbujas" data-audiencias="Todos" data-salas="Calma|Elemental/Simple|Estimulación General" data-nombre="tubo de burbujas luminea" data-precio="2395698">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-LTUB" data-precio="2395698"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/tubo-de-burbujas-luminea.jpg" alt="Tubo de burbujas Luminea" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-LTUB">Tubo de burbujas Luminea<span class="stock-badge">1 en camino</span><span class="sku">BJ-LTUB · Tubos de burbujas</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-LTUB" disabled /></td>
+      <td class="price">$2.395.698<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span><span class="tag">Elemental/Simple</span><span class="tag">Estimulación General</span></td>
+    </tr><tr data-familia="Solo en pagina web (sin fila BJ)" data-audiencias="Todos" data-salas="Integración Sensorial|Psicomotricidad" data-nombre="túnel de espuma gigante" data-precio="731491">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="WEB-20" data-precio="731491"  /></td>
+      <td class="thumb"><div class="noimg">Sin foto</div></td>
+      <td class="name" data-ficha="WEB-20">Túnel De Espuma Gigante<span class="sku">WEB-20 · Solo en pagina web (sin fila BJ)</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="WEB-20" disabled /></td>
+      <td class="price">$731.491<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Integración Sensorial</span><span class="tag">Psicomotricidad</span></td>
+    </tr><tr data-familia="Sistema SHX" data-audiencias="Todos" data-salas="Calma" data-nombre="ventilador shx" data-precio="502047">
+      <td class="chk"><input type="checkbox" class="inc" data-sala="nueva" data-sku="BJ-EX41" data-precio="502047"  /></td>
+      <td class="thumb"><img class="zoomimg" src="SalasMultisensoriales_Imagenes/ventilador-shx.jpg" alt="Ventilador SHX" loading="lazy" /></td>
+      <td class="name" data-ficha="BJ-EX41">Ventilador SHX<span class="stock-badge">5 en camino</span><span class="sku">BJ-EX41 · Sistema SHX</span></td>
+      <td class="qty"><input type="number" class="qty" min="1" step="1" value="1" data-sala="nueva" data-sku="BJ-EX41" disabled /></td>
+      <td class="price">$502.047<span class="iva">IVA inc. c/u</span></td>
+      <td><span class="tag">Calma</span></td>
+    </tr></tbody>
+      </table>
+    </div>
+  </section>
   <section class="panel grp-sala active" id="panel-elemental">
     <div class="panelhead">
       <div>
@@ -64400,6 +65823,151 @@
     });
     if (typeof window.SM_actualizarContadorCotizacion === 'function') window.SM_actualizarContadorCotizacion();
   }
+
+  // ── Salas guardadas con nombre (pedido de Rayen 2026-08-04) ───────────────
+  // Quedan en el navegador de quien las arma. Si el Apps Script de salas está
+  // disponible, además se mandan para que Rayen las vea; si no, igual se guardan
+  // acá y no se pierde el trabajo.
+  const KEY_SALAS = 'oc_salas_guardadas_v1';
+  // Escape propio: el Armador no tiene una función 'esc' y sin esto la lista de
+  // salas guardadas reventaba en silencio y no se pintaba nada.
+  function escSala(s){
+    return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function salasGuardadas(){
+    try { return JSON.parse(localStorage.getItem(KEY_SALAS) || '[]'); } catch(e){ return []; }
+  }
+  function grabarSalas(l){ localStorage.setItem(KEY_SALAS, JSON.stringify(l)); }
+  function avisoNueva(txt, clase){
+    const el = document.getElementById('nueva-aviso');
+    if (!el) return;
+    el.className = 'nueva-aviso ' + (clase || '');
+    el.textContent = txt;
+    if (txt) setTimeout(function(){ if (el.textContent === txt) { el.textContent = ''; el.className = 'nueva-aviso'; } }, 6000);
+  }
+  // Lo que está marcado ahora en la sala nueva.
+  function seleccionNueva(){
+    const items = [];
+    document.querySelectorAll('input.inc[data-sala="nueva"]').forEach(function(chk){
+      if (!chk.checked) return;
+      const qty = Number(qtyInputDe(chk).value) || 1;
+      const f = FICHAS[chk.dataset.sku];
+      items.push({ sku: chk.dataset.sku, nombre: (f && f.nombre) || chk.dataset.sku, qty: qty, precio: Number(chk.dataset.precio) || 0 });
+    });
+    return items;
+  }
+  function totalDe(items){ return items.reduce(function(a,b){ return a + b.precio * b.qty; }, 0); }
+
+  function pintarSalasGuardadas(){
+    const cont = document.getElementById('nueva-lista');
+    if (!cont) return;
+    const l = salasGuardadas();
+    if (!l.length) { cont.innerHTML = '<p class="incluidos-vacio">Todavía no has guardado ninguna.</p>'; return; }
+    cont.innerHTML = l.map(function(s, i){
+      return '<div class="sala-guardada">'
+        + '<span class="sg-nom">' + escSala(s.nombre) + '</span>'
+        + '<span class="sg-meta">' + s.items.length + ' productos · ' + s.fecha + (s.autor ? ' · ' + escSala(s.autor) : '') + '</span>'
+        + '<span class="sg-tot">$' + Math.round(s.total).toLocaleString('es-CL') + '</span>'
+        + '<button type="button" data-abrir="' + i + '">Abrir</button>'
+        + '<button type="button" data-cotizar="' + i + '">Enviar a cotización</button>'
+        + '<button type="button" class="sg-borrar" data-borrar="' + i + '">Borrar</button>'
+        + '</div>';
+    }).join('');
+    cont.querySelectorAll('[data-abrir]').forEach(function(b){
+      b.addEventListener('click', function(){ abrirSalaGuardada(Number(b.dataset.abrir)); });
+    });
+    cont.querySelectorAll('[data-cotizar]').forEach(function(b){
+      b.addEventListener('click', function(){
+        const s = salasGuardadas()[Number(b.dataset.cotizar)];
+        if (!s) return;
+        if (window.SALAS_enviarACotizacion) {
+          window.SALAS_enviarACotizacion(s.items.map(function(x){
+            const c = (window.SALAS_CATALOGO && window.SALAS_CATALOGO[x.sku]) || {};
+            return { sku: x.sku, nombre: x.nombre, cant: x.qty, precio: x.precio || c.p || 0, img: c.img || '' };
+          }));
+        } else alert('El cotizador no está disponible en esta página.');
+      });
+    });
+    cont.querySelectorAll('[data-borrar]').forEach(function(b){
+      b.addEventListener('click', function(){
+        const l2 = salasGuardadas(); const s = l2[Number(b.dataset.borrar)];
+        if (!s) return;
+        if (!confirm('¿Borrar la sala "' + s.nombre + '"?')) return;
+        l2.splice(Number(b.dataset.borrar), 1); grabarSalas(l2); pintarSalasGuardadas();
+        avisoNueva('Sala borrada.', 'ok');
+      });
+    });
+  }
+  // Abrir una guardada = dejar la sala nueva exactamente como estaba.
+  function abrirSalaGuardada(i){
+    const s = salasGuardadas()[i];
+    if (!s) return;
+    document.querySelectorAll('input.inc[data-sala="nueva"]').forEach(function(chk){
+      const it = s.items.find(function(x){ return x.sku === chk.dataset.sku; });
+      const q = qtyInputDe(chk);
+      chk.checked = !!it;
+      if (it) q.value = it.qty;
+      q.disabled = !chk.checked;
+      chk.closest('tr').classList.toggle('marked', chk.checked);
+      estado[claveEstado('nueva', chk.dataset.sku)] = { on: chk.checked, qty: Number(q.value) || 1 };
+    });
+    localStorage.setItem(KEY, JSON.stringify(estado));
+    const n = document.getElementById('nueva-nombre'); if (n) n.value = s.nombre;
+    recalcular('nueva');
+    avisoNueva('Abierta: "' + s.nombre + '". Puedes cambiarla y volver a guardarla.', 'ok');
+    // Guarda: no todos los navegadores traen scrollIntoView con opciones, y si falla
+    // no puede tumbar el resto (la sala YA quedó abierta antes de esta línea).
+    try { const pn = document.getElementById('panel-nueva'); if (pn && pn.scrollIntoView) pn.scrollIntoView({ behavior:'smooth', block:'start' }); } catch(e){}
+  }
+  document.addEventListener('DOMContentLoaded', pintarSalasGuardadas);
+  pintarSalasGuardadas();
+
+  const btnGuardarSala = document.getElementById('nueva-guardar');
+  if (btnGuardarSala) btnGuardarSala.addEventListener('click', async function(){
+    const nomEl = document.getElementById('nueva-nombre');
+    const nombre = (nomEl.value || '').trim();
+    if (!nombre) { avisoNueva('Ponle un nombre a la sala antes de guardarla.', 'err'); nomEl.focus(); return; }
+    const items = seleccionNueva();
+    if (!items.length) { avisoNueva('Marca al menos un producto.', 'err'); return; }
+    const l = salasGuardadas();
+    const ya = l.findIndex(function(s){ return s.nombre.toLowerCase() === nombre.toLowerCase(); });
+    if (ya >= 0 && !confirm('Ya hay una sala guardada con ese nombre. ¿La reemplazo?')) return;
+    const autor = (document.getElementById('quien-eres') && document.getElementById('quien-eres').value) || '';
+    const reg = {
+      nombre: nombre, items: items, total: totalDe(items), autor: autor,
+      fecha: new Date().toLocaleDateString('es-CL')
+    };
+    if (ya >= 0) l[ya] = reg; else l.unshift(reg);
+    grabarSalas(l); pintarSalasGuardadas();
+    avisoNueva('Guardada: "' + nombre + '" — ' + items.length + ' productos, $' + Math.round(reg.total).toLocaleString('es-CL') + '.', 'ok');
+    // Además se manda a Rayen si el Apps Script está disponible. Si falla, no se pierde nada.
+    try {
+      if (typeof apiPost === 'function') {
+        await apiPost({ accion: 'guardar_propuesta_sala', nivelKey: 'nueva::' + nombre,
+          nombre: nombre, autor: autor || 'Anónimo', estado: 'definitiva',
+          items: items.map(function(x){ return { sku: x.sku, nombre: x.nombre, cantidad: x.qty, precio: x.precio }; }),
+          total: reg.total });
+      }
+    } catch(e){}
+  });
+  const btnLimpiarSala = document.getElementById('nueva-limpiar');
+  if (btnLimpiarSala) btnLimpiarSala.addEventListener('click', function(){
+    if (!confirm('¿Desmarcar todo y empezar una sala nueva? Lo que ya guardaste no se borra.')) return;
+    document.querySelectorAll('input.inc[data-sala="nueva"]').forEach(function(chk){
+      if (!chk.checked) return;
+      chk.checked = false;
+      const q = qtyInputDe(chk); q.value = 1; q.disabled = true;
+      chk.closest('tr').classList.remove('marked');
+      estado[claveEstado('nueva', chk.dataset.sku)] = { on:false, qty:1 };
+    });
+    localStorage.setItem(KEY, JSON.stringify(estado));
+    const n = document.getElementById('nueva-nombre'); if (n) n.value = '';
+    recalcular('nueva');
+    avisoNueva('Listo, puedes empezar de cero.', 'ok');
+  });
+
+  recalcular('nueva');
   recalcular('elemental');
   recalcular('simple');
   recalcular('shx-basic');

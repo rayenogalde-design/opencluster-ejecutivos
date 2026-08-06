@@ -438,14 +438,8 @@
 </div>
 </header>
 </div>
-<div id="entrada-nombre"><div class="ent-card">
-  <h2>¿Quién eres?</h2>
-  <p>Elige tu nombre para entrar al armador de salas.</p>
-  <div class="ent-nombres"><button type="button" data-entra="Rayen">Rayen</button><button type="button" data-entra="Hernán">Hernán</button></div>
-</div></div>
-<div class="quien-eres">
-  ¿Quién eres? <select id="quien-eres"><option value="">-- Elegir --</option><option>Rayen</option><option>Hernán</option></select>
-</div>
+
+<div class="quien-eres" id="quien-eres-fila" style="display:none;"><select id="quien-eres"><option value=""></option></select></div>
 <div class="tabs"><button class="grouphead grp-nueva open" data-group="g-nueva">
       <span>Armar sala nueva</span>
       <svg class="chev" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -66012,83 +66006,7 @@
   try { _ponerStockEnPanel(document.getElementById('panel-nueva')); } catch(e){}
   try { _ponerStockEnPanel(document.querySelector('.panel.active')); } catch(e){}
 
-  // ── Entrar eligiendo el nombre ────────────────────────────────────────────
-  // Pedido de Rayen 2026-08-04: Hernán elige su nombre y entra directo. No es
-  // una contraseña ni pretende serlo: sirve para atribuir lo que cada uno arma.
-  // Se puede forzar con ?quien=Hernán en el link, para poder ver lo que ve él.
-  (function(){
-    const sel = document.getElementById('quien-eres');
-    const pantalla = document.getElementById('entrada-nombre');
-    if (!sel || !pantalla) return;
-    const desdeLink = new URLSearchParams(location.search).get('quien');
-    function entrar(nombre){
-      if (!nombre) return;
-      sel.value = nombre;
-      localStorage.setItem('salas_quien_eres', nombre);
-      sel.dispatchEvent(new Event('change', { bubbles: true }));
-      pantalla.classList.remove('abierta');
-      pintarQuien();
-      _ajustarNavegacion(nombre);
-    }
-    // Muestra quién está trabajando, con un "no soy yo" para cambiar.
 
-    // A Hernán solo el armador: el botón "Ir a Stock" lo llevaría a la página de
-    // stock y cotizaciones, que no le toca ver (Rayen 2026-08-04, "se va a
-    // confundir"). Esconderlo es para que no se pierda, NO es un candado: quien
-    // sepa la dirección igual puede abrir esa página. El candado de verdad es la
-    // Central, donde Hernán solo tiene la tarjeta de Salas.
-    function _ajustarNavegacion(nombre){
-      const soloArmador = (nombre === 'Hernán');
-      // Hernán no crea cotizaciones: el botón flotante no le sirve y confunde.
-      const bCot = document.getElementById('salaEnviarCotiz');
-      if (bCot) bCot.style.display = soloArmador ? 'none' : '';
-      const bSpec = document.getElementById('salaSpecsBtn');
-      if (bSpec) bSpec.style.display = soloArmador ? 'none' : '';
-      document.querySelectorAll('.hero-nav a, .topnav a, header a').forEach(function(a){
-        const txt = (a.textContent || '').toLowerCase();
-        if (txt.indexOf('stock') >= 0) a.style.display = soloArmador ? 'none' : '';
-      });
-    }
-    function pintarQuien(){
-      const cont = sel.parentNode;
-      if (!cont) return;
-      let box = cont.querySelector('.quien-actual');
-      const nombre = sel.value;
-      if (!nombre) { if (box) box.remove(); sel.style.display = ''; return; }
-      sel.style.display = 'none';
-      if (!box) {
-        box = document.createElement('span');
-        box.className = 'quien-actual';
-        cont.appendChild(box);
-      }
-      box.innerHTML = 'Estás trabajando como <b></b> ';
-      box.querySelector('b').textContent = nombre;
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'quien-cambiar';
-      btn.textContent = 'No soy yo';
-      btn.addEventListener('click', function(){
-        localStorage.removeItem('salas_quien_eres');
-        sel.value = '';
-        pantalla.classList.add('abierta');
-        pintarQuien();
-      });
-      box.appendChild(btn);
-    }
-    // El boton flotante de cotizacion lo crea un <script> POSTERIOR, asi que
-    // cuando corre esto todavia no existe. Se vuelve a aplicar al terminar de
-    // cargar la pagina, cuando ya estan todos los botones puestos.
-    window.addEventListener('load', function(){ _ajustarNavegacion(sel.value); });
-    setTimeout(function(){ _ajustarNavegacion(sel.value); }, 400);
-    pantalla.querySelectorAll('[data-entra]').forEach(function(b){
-      b.addEventListener('click', function(){ entrar(b.dataset.entra); });
-    });
-    const guardado = localStorage.getItem('salas_quien_eres') || '';
-    // El link con ?quien= manda: así Rayen abre la página tal como la ve él.
-    if (desdeLink) entrar(desdeLink);
-    else if (guardado) { sel.value = guardado; pintarQuien(); _ajustarNavegacion(guardado); }
-    else pantalla.classList.add('abierta');
-  })();
 
 
   // ── Universos de producto ─────────────────────────────────────────────────
@@ -66275,6 +66193,45 @@
     const x = ev.target && ev.target.closest ? ev.target.closest('[data-xlssala]') : null;
     if (x) { ev.preventDefault(); _excelDeSala(x.dataset.xlssala); }
   });
+
+
+  // ── Quién está trabajando ─────────────────────────────────────────────────
+  // NO se pregunta: viene de la Central, donde ya entró con su contraseña
+  // (index.html guarda 'oc_central_user' al iniciar sesión). Se usa el nombre
+  // de pila, que es como el resto de la página identifica a la gente.
+  (function(){
+    const sel = document.getElementById('quien-eres');
+    if (!sel) return;
+    const completo = localStorage.getItem('oc_central_user') || localStorage.getItem('oc_portal_user') || '';
+    const pila = completo ? String(completo).trim().split(/\s+/)[0] : '';
+    if (pila) {
+      sel.innerHTML = '<option value="' + pila + '" selected>' + pila + '</option>';
+      sel.value = pila;
+      localStorage.setItem('salas_quien_eres', pila);
+    } else {
+      // Entró directo a esta página sin pasar por la Central. No se inventa un
+      // nombre: se queda vacío y lo que se guarde queda como "Anónimo".
+      sel.innerHTML = '<option value=""></option>';
+      sel.value = '';
+    }
+    // A quien no sea Rayen se le esconde lo que no le toca: la pagina de Stock
+    // y el envio a cotizacion. No es un candado (la direccion es publica); el
+    // candado es la Central, que a cada uno le muestra solo sus tarjetas.
+    const soloArmador = !!pila && pila !== 'Rayen';
+    function esconder(){
+      document.querySelectorAll('.hero-nav a, .topnav a, header a').forEach(function(a){
+        if ((a.textContent || '').toLowerCase().indexOf('stock') >= 0) a.style.display = soloArmador ? 'none' : '';
+      });
+      ['salaEnviarCotiz','salaSpecsBtn'].forEach(function(id){
+        const b = document.getElementById(id);
+        if (b) b.style.display = soloArmador ? 'none' : '';
+      });
+    }
+    esconder();
+    // Los botones flotantes los crea un <script> posterior: se repite al final.
+    window.addEventListener('load', esconder);
+    setTimeout(esconder, 400);
+  })();
 
   recalcular('nueva');
   recalcular('elemental');

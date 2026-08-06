@@ -451,20 +451,14 @@
   .venta-msg.err { color:#DC2626; }
 
   /* Desglose bodega / en camino — el verde solo significa "lo tengo acá ahora" */
-  .stk { display:flex; flex-wrap:wrap; gap:0.05rem 0.45rem; align-items:baseline; font-size:0.73rem; line-height:1.35; font-variant-numeric:tabular-nums; }
-  .stk-dot { width:0.45rem; height:0.45rem; border-radius:50%; display:inline-block; flex:none; margin-right:0.28rem; }
-  .stk-dot.bod { background:#2f7d55; }
-  .stk-dot.cam { background:transparent; border:1.5px solid #2f7d55; }
-  .stk-b, .stk-c { white-space:nowrap; font-weight:700; }
-  .stk-b { flex:1 1 100%; color:#2f7d55; }
-  .stk-b.cero { color:var(--mist,#7C8794); }
-  .stk-b.cero .stk-dot.bod { background:var(--mist,#7C8794); }
-  .stk-c { flex:1 1 100%; color:var(--mist,#7C8794); }
-  .stk-aviso { flex:1 1 100%; font-weight:800; font-size:0.71rem; margin-top:0.1rem; }
-  .stk-aviso.cam { color:#B45309; }
-  .stk-aviso.falta { color:#c0392b; }
-  .stk-aviso.ok { color:#2f7d55; }
-  .stk-nodato { font-size:0.71rem; color:var(--mist,#7C8794); font-style:italic; }
+  /* Una sola etiqueta de color por producto (Rayen 2026-08-06) — el desglose numérico
+     bodega/contenedor queda en el title, al pasar el cursor. */
+  .stk-tag { display:inline-block; white-space:nowrap; font-size:0.74rem; font-weight:800;
+             padding:0.22rem 0.6rem; border-radius:999px; letter-spacing:0.01em; cursor:help; }
+  .stk-tag.ok     { background:#DCFCE7; color:#166534; border:1px solid #86EFAC; }
+  .stk-tag.cam    { background:#FFEDD5; color:#9A3412; border:1px solid #FDBA74; }
+  .stk-tag.falta  { background:#FEE2E2; color:#991B1B; border:1px solid #FCA5A5; }
+  .stk-tag.nodato { background:#F1F5F9; color:#64748B; border:1px solid #CBD5E1; font-weight:700; }
   .stock-disp-stk { padding:0 0.55rem 0.6rem; }
   /* Ordenar tocando el título de la columna */
   th.ord { cursor:pointer; user-select:none; white-space:nowrap; }
@@ -472,7 +466,7 @@
   th.ord::after { content:"\2195"; opacity:.35; margin-left:.3rem; font-size:.85em; }
   th.ord.asc::after { content:"\2191"; opacity:1; }
   th.ord.desc::after { content:"\2193"; opacity:1; }
-  .ord-pista { font-size:0.74rem; color:var(--mist); margin:.2rem 0 .5rem; }
+  .ord-pista { font-size:0.74rem; color:var(--mist); margin:.2rem 0 .5rem; }
   .btn-exportar-stock { margin:0 0 .6rem; padding:.5rem .9rem; font-size:.82rem; font-weight:700; border:1px solid var(--line); border-radius:9px; background:var(--card); color:var(--ink); cursor:pointer; }
   .btn-exportar-stock:hover { background:var(--paper); }
 </style>
@@ -2195,16 +2189,17 @@
     else { clase = 'falta'; aviso = 'faltan ' + (n - bod - cam); }
     return { sinDato:false, bod:bod, cam:cam, total:bod + cam, clase:clase, aviso:aviso };
   }
-  // Celda compacta: dos renglones chicos (punto lleno = acá, punto hueco = en camino)
-  // y, solo si hay problema, un tercer renglón con el aviso.
+  // Celda: UNA sola etiqueta de color, sin números (Rayen 2026-08-06: "con tantas letras
+  // es muy confuso"). Verde = alcanza con lo que está en bodega. Naranjo = no alcanza la
+  // bodega pero sí sumando el contenedor. Rojo = no alcanza ni con el contenedor.
+  // Los números siguen ahí: aparecen al dejar el cursor encima (atributo title).
   function _stockCelda(qty, stock){
     const d = _stockPartido(qty, stock);
-    if (d.sinDato) return '<span class="stk-nodato">sin dato de stock</span>';
-    return '<span class="stk">' +
-      '<span class="stk-b' + (d.bod ? '' : ' cero') + '"><i class="stk-dot bod"></i>' + d.bod + ' en bodega</span>' +
-      '<span class="stk-c"><i class="stk-dot cam"></i>' + d.cam + ' en camino</span>' +
-      (d.aviso ? '<span class="stk-aviso ' + d.clase + '">' + d.aviso + '</span>' : '') +
-    '</span>';
+    if (d.sinDato) return '<span class="stk-tag nodato">Sin dato</span>';
+    const texto = d.clase === 'ok' ? 'En bodega' : (d.clase === 'cam' ? 'En camino' : 'Falta stock');
+    const detalle = 'Piden ' + (Number(qty) || 0) + ' · ' + d.bod + ' en bodega · ' + d.cam + ' en camino' +
+      (d.clase === 'falta' ? ' · faltan ' + ((Number(qty) || 0) - d.total) : '');
+    return '<span class="stk-tag ' + d.clase + '" title="' + escapeHtmlSafe(detalle) + '">' + texto + '</span>';
   }
 
   function _cotizFilaComparacion(display, qty, key){

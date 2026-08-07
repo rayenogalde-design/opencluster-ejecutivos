@@ -459,6 +459,41 @@
   .stk-tag.cam    { background:#FFEDD5; color:#9A3412; border:1px solid #FDBA74; }
   .stk-tag.falta  { background:#FEE2E2; color:#991B1B; border:1px solid #FCA5A5; }
   .stk-tag.nodato { background:#F1F5F9; color:#64748B; border:1px solid #CBD5E1; font-weight:700; }
+  /* "Stock disponible después de estas cotizaciones": ahí el NÚMERO es el dato (cuánto queda),
+     así que esa vista conserva los dos renglones. */
+  .stk { display:flex; flex-wrap:wrap; gap:0.05rem 0.45rem; align-items:baseline; font-size:0.73rem; line-height:1.35; font-variant-numeric:tabular-nums; }
+  .stk-dot { width:0.45rem; height:0.45rem; border-radius:50%; display:inline-block; flex:none; margin-right:0.28rem; }
+  .stk-dot.bod { background:#2f7d55; }
+  .stk-dot.cam { background:transparent; border:1.5px solid #2f7d55; }
+  .stk-b, .stk-c { white-space:nowrap; font-weight:700; flex:1 1 100%; }
+  .stk-b { color:#2f7d55; }
+  .stk-b.cero { color:var(--mist,#7C8794); }
+  .stk-b.cero .stk-dot.bod { background:var(--mist,#7C8794); }
+  .stk-c { color:var(--mist,#7C8794); }
+  /* ¿Se puede importar? (Rayen 2026-08-06) — verde = está en el listado marítimo, gris tachado = no */
+  .imp-tag { display:inline-block; white-space:nowrap; font-size:0.66rem; font-weight:800; padding:0.1rem 0.45rem;
+             border-radius:999px; margin-left:0.4rem; vertical-align:middle; letter-spacing:0.01em; }
+  .imp-tag.si { background:#DCFCE7; color:#166534; border:1px solid #86EFAC; }
+  .imp-tag.no { background:#FEE2E2; color:#991B1B; border:1px solid #FCA5A5; }
+  .imp-filtros { display:flex; flex-wrap:wrap; gap:0.5rem; margin:0 0 1rem; }
+  .imp-chip { font-family:inherit; font-size:0.8rem; font-weight:700; padding:0.5rem 0.9rem; border-radius:999px;
+              border:1.5px solid var(--line); background:var(--card); color:var(--ink); cursor:pointer; }
+  .imp-chip.active { background:var(--navy,#001A60); color:#fff; border-color:var(--navy,#001A60); }
+  .imp-resumen { display:flex; flex-wrap:wrap; gap:0.7rem; margin:0 0 1rem; }
+  .imp-caja { flex:1 1 190px; border-radius:12px; padding:0.7rem 0.9rem; border:1px solid var(--line); background:var(--card); }
+  .imp-caja.si { background:rgba(22,163,74,0.08); border-color:rgba(22,163,74,0.35); }
+  .imp-caja.no { background:rgba(220,38,38,0.08); border-color:rgba(220,38,38,0.35); }
+  .imp-caja-n { font-size:1.5rem; font-weight:900; line-height:1.1; }
+  .imp-caja.si .imp-caja-n { color:#166534; }
+  .imp-caja.no .imp-caja-n { color:#991B1B; }
+  .imp-caja-t { font-size:0.74rem; color:var(--mist,#7C8794); font-weight:700; }
+  .imp-precio { font-size:0.7rem; color:var(--mist,#7C8794); padding:0 0.5rem 0.5rem; line-height:1.35; }
+  .stock-disp-card.no-imp { opacity:0.72; border-color:rgba(220,38,38,0.35); }
+  /* Los otros nombres del mismo producto (Rayen: "qué lío tantos nombres") */
+  .tambien-se-llama { font-size:0.66rem; color:var(--mist,#7C8794); font-weight:600; font-style:italic;
+                      line-height:1.3; margin-top:0.15rem; }
+  /* Encabezado de cotización en la matriz: se nota que tiene información al pasar el cursor */
+  th.cm-cabcot { cursor:help; text-decoration:underline dotted; text-underline-offset:3px; }
   .stock-disp-stk { padding:0 0.55rem 0.6rem; }
   /* Ordenar tocando el título de la columna */
   th.ord { cursor:pointer; user-select:none; white-space:nowrap; }
@@ -498,7 +533,7 @@
       <div class="stock-hero-chip"><span class="stock-hero-dot dot-bodega"></span><b>57</b> en bodega</div>
       <div class="stock-hero-chip"><span class="stock-hero-dot dot-camino"></span><b>147</b> en camino</div>
     </div>
-  </div><button class="tabbtn grp-stock active" data-tab="stock-bodega">Bodega</button><button class="tabbtn grp-stock" data-tab="stock-camino">Contenedor (en camino)</button><button class="tabbtn grp-stock" data-tab="stock-combinado">Combinado</button><button class="tabbtn grp-stock" data-tab="stock-comparar">Comparar cotizaciones</button></div></div>
+  </div><button class="tabbtn grp-stock active" data-tab="stock-bodega">Bodega</button><button class="tabbtn grp-stock" data-tab="stock-camino">Contenedor (en camino)</button><button class="tabbtn grp-stock" data-tab="stock-combinado">Combinado</button><button class="tabbtn grp-stock" data-tab="stock-comparar">Comparar cotizaciones</button><button class="tabbtn grp-stock" data-tab="stock-importar">¿Qué puedo importar?</button></div></div>
 <main>
   <section class="panel grp-stock active" id="panel-stock-bodega">
     <div class="panelhead">
@@ -1550,6 +1585,29 @@
     </div>
     <div id="cotiz-lista" class="cotiz-lista"><p class="incluidos-vacio">Cargando cotizaciones…</p></div>
     <div id="cotiz-comparacion"></div>
+  </section>
+
+  <!-- ¿Qué puedo importar? (Rayen 2026-08-06: "necesito una separación clara para saber cuáles sí
+       puedo traer y cuáles no, porque Qinera no me está permitiendo importar lo que no está en el
+       listado"). La lista manda: lo que no está en ella, hoy NO se trae. -->
+  <section class="panel grp-stock" id="panel-stock-importar">
+    <div class="panelhead">
+      <div>
+        <h2>¿Qué puedo importar?</h2>
+        <p class="sug">Qinera solo deja traer los productos de tu listado de valores marítimos. Todo lo demás que aparece en su página web <strong>hoy no se puede importar</strong>. Acá está cada producto con su foto, su código y su precio de venta.</p>
+      </div>
+    </div>
+    <div class="imp-resumen" id="imp-resumen"></div>
+    <div class="controls">
+      <input type="text" class="search" id="imp-buscar" placeholder="Buscar producto o SKU…" />
+    </div>
+    <div class="imp-filtros" id="imp-filtros">
+      <button type="button" class="imp-chip active" data-imp-filtro="si">Sí se puede importar</button>
+      <button type="button" class="imp-chip" data-imp-filtro="no">Ya NO se puede importar</button>
+      <button type="button" class="imp-chip" data-imp-filtro="bodega">Solo lo que tengo en bodega</button>
+      <button type="button" class="imp-chip" data-imp-filtro="todos">Ver todo</button>
+    </div>
+    <div id="imp-grid"></div>
   </section></main>
 <div id="lightbox"><img id="lightbox-img" src="" alt="" /></div>
 <div id="ficha-modal">
@@ -1616,6 +1674,8 @@
 <script src="StockSalas.js"></script>
 <script src="StockAlias.js"></script>
 <script src="TarifaQineraSku.js"></script>
+<!-- Lo que HOY se puede importar de Qinera (Rayen 2026-08-06): fuera de esta lista, no se trae -->
+<script src="QineraImportables.js"></script>
 <script src="ExcelFaltantes.js"></script>
 <!-- Specs verificadas de Qinera (53 productos) + armador del documento de licitación -->
 <script src="LicitacionesData.js"></script>
@@ -1739,6 +1799,24 @@
     });
     return out;
   }
+  // ── ¿Se puede importar? y "también se llama…" ─────────────────────────────
+  // Qinera (2026-08-06) solo deja traer lo que está en el listado de valores marítimos de Rayen:
+  // lo que NO está en esa lista, hoy no se importa. La lista vive en QineraImportables.js (solo
+  // SKU + nombre; los valores de esa planilla NO se publican, este repo es público).
+  const IMPORTABLE = window.QINERA_IMPORTABLE || {};
+  // Rayen: "qué lío tantos nombres". El mismo producto puede tener 4 nombres (catálogo Qinera,
+  // bodega, y como lo escriben los ejecutivos al cotizar). Por dentro los alias ya los unen; el
+  // problema era que no se MOSTRABAN, así que buscaba "máquina de burbujas" y no la encontraba
+  // porque en pantalla decía "Pompas SHX". Mapa inverso: clave del stock -> los otros nombres.
+  const _ALIAS_INVERSO = (function(){
+    const inv = {};
+    Object.keys(_SM_PROD_ALIAS).forEach(function(nombre){
+      const destino = _SM_PROD_ALIAS[nombre];
+      (inv[destino] = inv[destino] || []).push(nombre);
+    });
+    return inv;
+  })();
+
   let COTIZ_SM_TODAS = [];
   // Array (no Set) porque el ORDEN importa: es la fila de prioridad que Rayen arma arrastrando
   // las tarjetas — índice 0 = más prioritaria. Pedido de Rayen 2026-07-21.
@@ -1910,6 +1988,9 @@
   function _refrescarVistasStock(){
     try { renderComparacionCotizaciones(); } catch(e){}
     try { ['bajo','alto'].forEach(s => { actualizarResumenStock(s); renderIncluidos(s); }); } catch(e){}
+    // La pestaña "¿Qué puedo importar?" muestra cuánto hay de cada uno: se repinta con el stock
+    // en vivo del CRM, no con el del archivo.
+    try { if (typeof _pintarImportar === 'function') _pintarImportar(); } catch(e){}
   }
 
 
@@ -2259,23 +2340,28 @@
         matriz[p.key].total += p.qty;
       });
     });
+    // Encabezado: al dejar el cursor sobre el N° se ven los datos de esa cotización — con 30
+    // columnas es imposible acordarse de cuál es cuál (Rayen 2026-08-06).
     const cabecera = '<tr><th class="cm-prod">Producto</th>' +
-      seleccionadas.map(c => '<th>' + escapeHtmlSafe(c.cotizacion) + '</th>').join('') +
+      seleccionadas.map(c => '<th class="cm-cabcot" title="' + escapeHtmlSafe(_resumenCotizacion(c)) + '">' + escapeHtmlSafe(c.cotizacion) + '</th>').join('') +
       '<th>Total pedido</th><th>Estado</th><th class="cm-stock">Bodega + camino</th></tr>';
     // Orden alfabético siempre (pedido de Rayen 2026-07-21: "así veo si estoy pasando algo por
     // alto") — antes quedaban en el orden en que se iban encontrando al recorrer cada cotización,
     // dificultando notar duplicados/variantes del mismo producto con nombre distinto.
-    const filas = Object.keys(matriz).sort((a, b) => matriz[a].display.localeCompare(matriz[b].display, 'es')).map((key, idx) => {
+    const filas = Object.keys(matriz).sort((a, b) => _nombreCanonico(a, matriz[a].display).localeCompare(_nombreCanonico(b, matriz[b].display), 'es')).map((key, idx) => {
       const m = matriz[key];
       const stock = STOCK_SM[key];
       const total = stock ? stock.total : 0;
       const falta = m.total > total;
       const celdas = seleccionadas.map(c => '<td>' + (m.porCotiz[c.cotizacion] || '—') + '</td>').join('');
       // Nombre del producto: toca para ver su ficha (mismo modal que el resto de la herramienta).
+      // MISMO nombre que abajo en "Faltantes" (Rayen 2026-08-06), más los otros nombres con los
+      // que el mismo producto aparece en las cotizaciones, para no buscarlo a ciegas.
+      const nombreMostrado = _nombreCanonico(key, m.display);
       const nombreClase = 'name cm-prod' + (falta ? ' falta' : '');
       const nombreCelda = (stock && stock.sku)
-        ? '<td class="' + nombreClase + '" data-ficha="' + escapeHtmlSafe(stock.sku) + '">' + escapeHtmlSafe(m.display) + '</td>'
-        : '<td class="' + nombreClase + '">' + escapeHtmlSafe(m.display) + '</td>';
+        ? '<td class="' + nombreClase + '" data-ficha="' + escapeHtmlSafe(stock.sku) + '">' + escapeHtmlSafe(nombreMostrado) + _htmlOtrosNombres(key, nombreMostrado) + '</td>'
+        : '<td class="' + nombreClase + '">' + escapeHtmlSafe(nombreMostrado) + _htmlOtrosNombres(key, nombreMostrado) + '</td>';
       // Estado: toca "Alcanza"/"Falta stock" para ver el desglose bodega/contenedor en una
       // ventanita flotante encima (no texto que empuje la fila) — pedido de Rayen 2026-07-21.
       const desglose = stock ? ((stock.bodega || 0) + ' en bodega + ' + (stock.camino || 0) + ' en contenedor') : 'sin datos de stock';
@@ -2332,11 +2418,11 @@
       const s = STOCK_SM[key];
       const pedido = demanda[key] || 0;
       const disponible = Math.max(0, (s.total || 0) - pedido);
-      return { s, disponible, pedido };
+      return { key, s, disponible, pedido };
     }).filter(x => x.disponible > 0 && x.s.item);
     if (!items.length) return '<p class="incluidos-vacio">No queda stock disponible después de estas cotizaciones.</p>';
     items.sort((a, b) => a.s.item.localeCompare(b.s.item, 'es'));
-    return '<div class="stock-disp-grid" id="stock-disp-grid-disponibles">' + items.map(({ s, disponible, pedido }) => {
+    return '<div class="stock-disp-grid" id="stock-disp-grid-disponibles">' + items.map(({ key, s, disponible, pedido }) => {
       const f = s.claveFicha ? FICHAS[s.claveFicha] : null;
       // Respaldo de foto: si FICHAS no tiene imagen, usar la del catálogo (SalasACotizacion.js)
       // — reutiliza el trabajo ya hecho y muestra las fotos que ya están en el repo. 2026-07-27.
@@ -2359,7 +2445,7 @@
       const nombreMostrado = (f && f.nombre) || s.item;
       const notaBodega = (f && f.nombre && f.nombre.toLowerCase() !== s.item.toLowerCase()) ? (' (bodega: ' + s.item + ')') : '';
       const stockExtra = bodegaLibre + ' en bodega · ' + caminoLibre + ' en contenedor' + notaBodega;
-      const buscable = (s.item + ' ' + nombreMostrado + ' ' + (s.sku || '')).toLowerCase();
+      const buscable = _buscablePorClave(key, nombreMostrado, s.item + ' ' + (s.sku || '') + (_esImportable(s.sku) ? ' se importa' : ' no se importa'));
       var skuPick = escapeHtmlSafe(s.sku || s.claveFicha || '');
       // Precio de venta con IVA, siempre a la vista (pedido de Rayen 2026-07-28: "necesito ver el
       // precio con IVA del producto siempre"). Sale de la lista de precios, nunca de Qinera (€).
@@ -2372,7 +2458,7 @@
       return '<div class="stock-disp-card"' + fichaAttr + ' data-stock-extra="' + escapeHtmlSafe(stockExtra) + '" data-buscar="' + escapeHtmlSafe(buscable) + '">' +
         (skuPick ? '<label class="sala-pick-card" title="Marcar para cotización"><input type="checkbox" class="sala-pick" data-sku="' + skuPick + '"></label>' : '') +
         '<div class="stock-disp-thumb">' + thumb + '</div>' +
-        '<div class="stock-disp-nombre">' + escapeHtmlSafe(nombreMostrado) + '</div>' +
+        '<div class="stock-disp-nombre">' + escapeHtmlSafe(nombreMostrado) + _impTag(s.sku) + _htmlOtrosNombres(key, nombreMostrado) + '</div>' +
         precioCard +
         '<div class="stock-disp-stk"><span class="stk">' +
           '<span class="stk-b' + (bodegaLibre ? '' : ' cero') + '"><i class="stk-dot bod"></i>' + bodegaLibre + ' en bodega</span>' +
@@ -2396,7 +2482,9 @@
       const pedido = demanda[key];
       const stockTotal = s ? (s.total || 0) : 0;
       const falta = pedido - stockTotal;
-      const nombre = (s && s.item) || displayPorKey[key] || null;
+      // MISMO nombre que arriba en la matriz (Rayen 2026-08-06) — antes acá mandaba el nombre de
+      // bodega y arriba el de la cotización, y el mismo producto parecía dos productos distintos.
+      const nombre = _nombreCanonico(key, displayPorKey[key]);
       return { key, s, nombre, pedido, stockTotal, falta };
     }).filter(x => x.falta > 0);
     items.sort((a, b) => (a.nombre || a.key).localeCompare(b.nombre || b.key, 'es'));
@@ -2405,20 +2493,21 @@
   function _faltantesGrid(seleccionadas){
     const items = _faltantesLista(seleccionadas);
     if (!items.length) return '<p class="incluidos-vacio">No falta stock para ninguno de los productos pedidos en estas cotizaciones.</p>';
-    return '<div class="stock-disp-grid" id="stock-disp-grid-faltantes">' + items.map(({ s, nombre, pedido, stockTotal, falta }) => {
+    return '<div class="stock-disp-grid" id="stock-disp-grid-faltantes">' + items.map(({ key, s, nombre, pedido, stockTotal, falta }) => {
       const f = (s && s.claveFicha) ? FICHAS[s.claveFicha] : null;
       const _imgCat = ((window.SALAS_CATALOGO && (SALAS_CATALOGO[(s && s.sku)] || SALAS_CATALOGO[(s && s.claveFicha)])) || {}).img || '';
       const _img = (f && f.imagen) || _imgCat;
       const thumb = _img ? '<img src="' + _img + '" alt="" loading="lazy" />' : '<div class="stock-disp-noimg">Sin foto</div>';
       const fichaAttr = (s && (s.claveFicha || s.sku)) ? ' data-ficha="' + escapeHtmlSafe(s.claveFicha || s.sku) + '"' : '';
       // Tarjeta solo foto + nombre (igual que "Stock disponible") — el resto vive en la ficha.
-      const nombreMostrado = (f && f.nombre) || nombre || '(sin nombre de stock)';
-      const notaBodega = (f && f.nombre && nombre && f.nombre.toLowerCase() !== nombre.toLowerCase()) ? (' (bodega: ' + nombre + ')') : '';
-      const stockExtra = 'Faltan ' + falta + ' — piden ' + pedido + ' y el stock total es ' + stockTotal + '.' + notaBodega;
-      const buscable = ((nombre || '') + ' ' + nombreMostrado + ' ' + ((s && s.sku) || '')).toLowerCase();
+      // El nombre ya viene unificado con el de la matriz de arriba (_nombreCanonico).
+      const nombreMostrado = nombre || '(sin nombre de stock)';
+      const stockExtra = 'Faltan ' + falta + ' — piden ' + pedido + ' y el stock total es ' + stockTotal + '.' +
+        (_esImportable(s && s.sku) ? ' Se puede pedir a Qinera.' : ' OJO: este producto YA NO se puede importar.');
+      const buscable = _buscablePorClave(key, nombreMostrado, ((s && s.sku) || '') + (_esImportable(s && s.sku) ? ' se importa' : ' no se importa'));
       return '<div class="stock-disp-card falta"' + fichaAttr + ' data-stock-extra="' + escapeHtmlSafe(stockExtra) + '" data-buscar="' + escapeHtmlSafe(buscable) + '">' +
         '<div class="stock-disp-thumb">' + thumb + '</div>' +
-        '<div class="stock-disp-nombre">' + escapeHtmlSafe(nombreMostrado) + '</div>' +
+        '<div class="stock-disp-nombre">' + escapeHtmlSafe(nombreMostrado) + _impTag(s && s.sku) + _htmlOtrosNombres(key, nombreMostrado) + '</div>' +
         '<div class="stock-disp-falta-badge">Faltan ' + falta + '</div>' +
       '</div>';
     }).join('') + '</div>';
@@ -2910,6 +2999,159 @@
       document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
     });
   });
+
+  // ── ¿Se puede importar? ────────────────────────────────────────────────────
+  // Rayen 2026-08-06: Qinera solo deja traer lo que está en su listado de valores marítimos.
+  // Todo lo demás de su web hoy NO se puede importar. La lista vive en QineraImportables.js
+  // (solo SKU + nombre; los valores de esa planilla NO se publican, este repo es público).
+  function _esImportable(sku){ return !!(sku && IMPORTABLE[sku]); }
+  // Otros nombres de un producto, excluyendo el que ya se está mostrando.
+  function _otrosNombres(key, mostrado){
+    const m = String(mostrado || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+    const lista = (_ALIAS_INVERSO[key] || []).filter(function(n){ return n !== m; });
+    const s = STOCK_SM[key];
+    if (s && s.item){
+      const nb = _smProdNorm(s.item);
+      if (nb !== m && lista.indexOf(nb) < 0) lista.push(nb);
+    }
+    if (key !== m && lista.indexOf(key) < 0) lista.push(key);
+    return lista;
+  }
+  // Texto buscable de un producto: su nombre + TODOS sus otros nombres, para que buscar
+  // "burbujas" encuentre la ficha aunque en pantalla diga "Pompas SHX".
+  function _buscablePorClave(key, mostrado, extra){
+    return ((mostrado || '') + ' ' + _otrosNombres(key, mostrado).join(' ') + ' ' + (extra || '')).toLowerCase();
+  }
+  // UN SOLO nombre para cada producto en TODA la página (Rayen 2026-08-06: "tiene que aparecer
+  // con el mismo nombre que aparece abajo en faltantes o la confusión es mucha"). Manda el nombre
+  // de la ficha; si no hay, el de bodega; y recién al final el que escribió el ejecutivo.
+  function _nombreCanonico(key, display){
+    const s = STOCK_SM[key];
+    const f = (s && s.sku) ? FICHAS[s.sku] : null;
+    return (f && f.nombre) || (s && s.item) || display || key;
+  }
+  // Ficha rápida de una cotización, para el tooltip del encabezado de la matriz.
+  function _resumenCotizacion(c){
+    const pesos = n => (Number(n) || 0).toLocaleString('es-CL');
+    const partes = [c.cotizacion];
+    if (c.institucion) partes.push(c.institucion);
+    if (c.ejecutivo) partes.push('Ejecutivo: ' + c.ejecutivo);
+    if (c.estado) partes.push('Estado: ' + c.estado);
+    if (c.probabilidad) partes.push('Probabilidad de cierre: ' + c.probabilidad + '%');
+    if (c.total_iva) partes.push('Total c/IVA: $' + pesos(c.total_iva));
+    const prods = _smExtraerProductos(c.productos);
+    if (prods.length) partes.push(prods.length + ' productos · ' + prods.reduce((s, p) => s + p.qty, 0) + ' unidades');
+    const ult = (c.seguimientos && c.seguimientos.length) ? c.seguimientos[c.seguimientos.length - 1] : null;
+    if (ult && (ult.comentario || ult.estado)) partes.push('Último seguimiento: ' + (ult.comentario || ult.estado));
+    return partes.join('\n');
+  }
+  function _htmlOtrosNombres(key, mostrado){
+    const otros = _otrosNombres(key, mostrado);
+    if (!otros.length) return '';
+    return '<div class="tambien-se-llama">También: ' + escapeHtmlSafe(otros.join(' · ')) + '</div>';
+  }
+  function _impTag(sku){
+    return _esImportable(sku)
+      ? '<span class="imp-tag si" title="Está en tu listado de valores marítimos: se puede pedir a Qinera.">Se importa</span>'
+      : '<span class="imp-tag no" title="No está en tu listado de valores marítimos: hoy Qinera no deja traerlo.">NO se importa</span>';
+  }
+  // Marca las filas de las tablas de Bodega / Contenedor / Combinado. Se llama una vez al cargar:
+  // esas tablas son HTML fijo (las genera el script del maestro), así que la marca se agrega acá.
+  function _marcarImportablesEnTablas(){
+    ['bodega', 'camino', 'combinado'].forEach(cual => {
+      document.querySelectorAll('#tbody-stock-' + cual + ' tr').forEach(tr => {
+        const celdaNombre = tr.querySelector('td.name');
+        if (!celdaNombre || celdaNombre.querySelector('.imp-tag')) return;
+        const sku = celdaNombre.dataset.ficha || '';
+        celdaNombre.insertAdjacentHTML('beforeend', ' ' + _impTag(sku));
+        // Buscar por CUALQUIERA de los nombres del producto, no solo por el que se muestra.
+        const prod = Object.values(STOCK_COMBINADO).find(p => p.sku === sku);
+        let clave = prod ? _smProdNorm(prod.item) : '';
+        if (clave && _SM_PROD_ALIAS[clave]) clave = _SM_PROD_ALIAS[clave];
+        const otros = clave ? _otrosNombres(clave, prod ? prod.item : '').join(' ') : '';
+        tr.dataset.buscar = (tr.dataset.buscar || '') + ' ' + otros + (_esImportable(sku) ? ' se importa' : ' no se importa');
+      });
+    });
+  }
+  // Universo de la pestaña: los que SÍ se pueden traer (la lista), más los que NO se pueden y a
+  // Rayen le importan — lo que ya tiene en bodega/contenedor y los productos sueltos de la web.
+  function _universoImportar(){
+    const out = [], vistos = {};
+    function push(sku, esImp){
+      if (!sku || vistos[sku]) return;
+      vistos[sku] = 1;
+      const f = FICHAS[sku] || {};
+      const s = Object.values(STOCK_COMBINADO).find(p => p.sku === sku);
+      out.push({
+        sku: sku,
+        nombre: f.nombre || (IMPORTABLE[sku] || sku),
+        imagen: f.imagen || '',
+        precio: f.precio || '',
+        bodega: s ? (Number(s.bodega) || 0) : 0,
+        camino: s ? (Number(s.camino) || 0) : 0,
+        importable: esImp
+      });
+    }
+    Object.keys(IMPORTABLE).forEach(sku => push(sku, true));
+    Object.values(STOCK_COMBINADO).forEach(p => push(p.sku, _esImportable(p.sku)));
+    Object.keys(FICHAS).forEach(sku => { if (sku.indexOf('WEB-') === 0) push(sku, false); });
+    out.sort((a, b) => String(a.nombre).localeCompare(String(b.nombre), 'es'));
+    return out;
+  }
+  let IMP_FILTRO = 'si';
+  function _pintarImportar(){
+    const grid = document.getElementById('imp-grid');
+    const resumen = document.getElementById('imp-resumen');
+    if (!grid) return;
+    const todos = _universoImportar();
+    const nSi = todos.filter(x => x.importable).length;
+    const nNo = todos.length - nSi;
+    const enBodegaNoImp = todos.filter(x => !x.importable && (x.bodega + x.camino) > 0).length;
+    if (resumen) resumen.innerHTML =
+      '<div class="imp-caja si"><div class="imp-caja-n">' + nSi + '</div><div class="imp-caja-t">productos que SÍ puedes importar</div></div>' +
+      '<div class="imp-caja no"><div class="imp-caja-n">' + nNo + '</div><div class="imp-caja-t">productos que ya NO puedes importar</div></div>' +
+      '<div class="imp-caja no"><div class="imp-caja-n">' + enBodegaNoImp + '</div><div class="imp-caja-t">de esos, los tienes en bodega o en camino — cuando se acaben, no se reponen</div></div>';
+    const lista = todos.filter(x =>
+      IMP_FILTRO === 'todos' ? true :
+      IMP_FILTRO === 'si' ? x.importable :
+      IMP_FILTRO === 'no' ? !x.importable :
+      (x.bodega + x.camino) > 0);
+    if (!lista.length) { grid.innerHTML = '<p class="incluidos-vacio">No hay productos en este filtro.</p>'; return; }
+    grid.innerHTML = '<div class="stock-disp-grid" id="stock-disp-grid-importar">' + lista.map(x => {
+      const thumb = x.imagen
+        ? '<img src="' + x.imagen + '" alt="" loading="lazy" />'
+        : '<div class="stock-disp-noimg">Sin foto</div>';
+      const enCasa = (x.bodega + x.camino) > 0
+        ? (x.bodega + ' en bodega · ' + x.camino + ' en camino')
+        : 'no lo tienes';
+      // Buscable por TODOS los nombres del producto (Rayen: buscaba "máquina de burbujas" y no la
+      // encontraba porque en pantalla dice "Pompas SHX").
+      let clave = _smProdNorm(x.nombre);
+      if (_SM_PROD_ALIAS[clave]) clave = _SM_PROD_ALIAS[clave];
+      const buscable = _buscablePorClave(clave, x.nombre, x.sku + (x.importable ? ' se importa' : ' no se importa'));
+      return '<div class="stock-disp-card' + (x.importable ? '' : ' no-imp') + '"' +
+          (FICHAS[x.sku] ? ' data-ficha="' + escapeHtmlSafe(x.sku) + '"' : '') +
+          ' data-stock-extra="' + escapeHtmlSafe(enCasa) + '"' +
+          ' data-buscar="' + escapeHtmlSafe(buscable) + '">' +
+        '<div class="stock-disp-thumb">' + thumb + '</div>' +
+        '<div class="stock-disp-nombre">' + escapeHtmlSafe(x.nombre) + _impTag(x.sku) + _htmlOtrosNombres(clave, x.nombre) + '</div>' +
+        '<div class="imp-precio">' + escapeHtmlSafe(x.sku) + (x.precio ? '<br>' + escapeHtmlSafe(x.precio) : '') + '</div>' +
+      '</div>';
+    }).join('') + '</div>';
+    _wireBuscarGrid('imp-buscar', 'stock-disp-grid-importar');
+  }
+  document.querySelectorAll('#imp-filtros .imp-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('#imp-filtros .imp-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      IMP_FILTRO = chip.dataset.impFiltro;
+      const buscador = document.getElementById('imp-buscar');
+      if (buscador) buscador.value = '';
+      _pintarImportar();
+    });
+  });
+  _marcarImportablesEnTablas();
+  _pintarImportar();
 
   // Buscador de las pestañas de Stock (listas largas, pedido de Rayen) — Bodega, Contenedor y
   // Combinado son ahora pestañas TOP-LEVEL independientes (antes eran sub-pestañas de una sola

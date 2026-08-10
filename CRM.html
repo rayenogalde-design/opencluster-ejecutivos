@@ -2253,6 +2253,11 @@ body{
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l3-3 12 12-3 3z"/><path d="M14 14l7 7"/></svg>
         Mi Territorio
       </div>
+      <div class="side-tab" data-view="vXimenaRev" id="navXimenaRev" onclick="goView('vXimenaRev')" style="display:none;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        Contactos de Ximena
+        <span class="badge" id="badgeXimenaRev" style="display:none;">0</span>
+      </div>
 
       <div class="side-section">Pipeline</div>
       <div class="side-tab" data-view="vKanban" id="navKanban" onclick="goView('vKanban')">
@@ -3021,6 +3026,16 @@ body{
         </div>
         <div id="rxBar" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:14px 0;"></div>
         <div id="rxBody"><div class="loading-state"><div class="spinner"></div>Cargando…</div></div>
+      </div>
+
+      <!-- ═══ Contactos de Ximena — revisión de Roberto ═══ -->
+      <div class="view" id="vXimenaRev">
+        <div class="sec-head">
+          <h1>Contactos de Ximena</h1>
+          <p>Contactos que venían del registro de Ximena. Marca cada uno según lo que sea. Los que marques como ortopedia o distribuidor pasan a tu nombre al instante y los encuentras después en Mis Contactos.</p>
+        </div>
+        <div id="xrBar" style="margin:14px 0;"></div>
+        <div id="xrBody"><div class="loading-state"><div class="spinner"></div>Cargando…</div></div>
       </div>
 
       <!-- ═══ Coaching (admin) ═══ -->
@@ -4594,6 +4609,15 @@ function aplicarVisibilidadPorRol(){
   // El grupo Herramientas se colapsa siempre que no se esté como admin.
   if(verComoEjecutivo){ const g = document.getElementById('grpHerramientas'); if(g) g.style.display='none'; const ch=document.getElementById('chevHerr'); if(ch) ch.textContent='▸'; }
 
+  // "Contactos de Ximena": la ve Roberto (es su segmento) y Rayen para supervisar.
+  try {
+    const _xrTab = document.getElementById('navXimenaRev');
+    if(_xrTab){
+      const _quien = _busqNorm(String(USUARIO||'').split(' ')[0]);
+      _xrTab.style.display = (_quien === 'roberto' || esAdmin) ? '' : 'none';
+    }
+  } catch(e){}
+
   // Vistas PERSONALES del ejecutivo (Mis Contactos, Mi Territorio): el admin NO las necesita
   // porque tiene "Todos los Contactos" y "Territorios". Se muestran solo en modo ejecutivo.
   ['navMis','navMiTerritorio'].forEach(id => {
@@ -4716,6 +4740,7 @@ function goView(id){
     case 'vListaPrecios':    cargarListaPrecios(); break;
     case 'vVentasMes':       cargarVentasMes(); break;
     case 'vRegistroXimena':  cargarRegistroXimena(); break;
+    case 'vXimenaRev':       cargarXimenaRev(); break;
     case 'vMetricas':        cargarMetricas(); break;
     case 'vSalaMultisensorial': cargarSalaMultisensorial(); break;
     case 'vAyudasTecnicas':  cargarAyudasTecnicas(); break;
@@ -10539,6 +10564,152 @@ async function cambiarCategoriaRXSeleccionados(){
   _pintarRX();
   alert('Listo: '+ok+' de '+ids.length+' cambiado'+(ids.length===1?'':'s')+' a "'+cat+'".\n(Ahora aparecen como esa categoría; en "Todos los Contactos" ya no quedan como Personas.)');
 }
+/* ════════════════════════════════════════════════════════════════════════════
+   CONTACTOS DE XIMENA — la revisión de Roberto.
+   Vive en un Apps Script APARTE (proyecto "Nueva Pestaña Roberto - Ximena"),
+   no en el backend del CRM: así un ejecutivo puede tomar el contacto sin
+   necesitar permiso de admin, y no se toca nada del CRM.
+   ════════════════════════════════════════════════════════════════════════════ */
+const XIMENA_API = 'https://script.google.com/macros/s/AKfycbzlM0fGS21uCWPgQKdLG-BOTZOrJ7V2YX8uHgqMzMl0_pZu7BG1SLYF6Ai8AEql5JRxdg/exec';
+
+// Los montos vienen del registro viejo de Ximena y algunos están sucios
+// (hay filas con cifras imposibles). Sobre este tope no se muestra el monto:
+// vale más no mostrar nada que mostrarle a Roberto un número falso.
+const XR_MONTO_MAX_CONFIABLE = 500000000;
+
+let XR_DATA = [], XR_Q = '', XR_TOTAL = 0, XR_LISTOS = 0, XR_OCUPADO = false;
+
+async function _xrFetch(payload){
+  if(!XIMENA_API) return { ok:false, error:'Falta configurar la dirección del guardado (avísale a Rayen).' };
+  try{
+    const resp = await fetch(XIMENA_API, {
+      method:'POST',
+      headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+    if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    return await resp.json();
+  }catch(err){ return { ok:false, error:String(err && err.message || err) }; }
+}
+
+async function cargarXimenaRev(){
+  const body = document.getElementById('xrBody');
+  if(!XR_DATA.length) body.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando contactos…</div>';
+  const r = await _xrFetch({ accion:'ximena_listar' });
+  if(!r || !r.ok){
+    body.innerHTML = '<div class="error-state">No se pudo cargar: ' + esc((r&&r.error)||'error') + '</div>';
+    return;
+  }
+  XR_DATA  = r.pendientes || [];
+  XR_TOTAL = r.total || 0;
+  XR_LISTOS= r.listos || 0;
+  _pintarXR();
+}
+
+function _xrFiltro(q){ XR_Q = q; _pintarXR(); }
+
+function _xrLista(){
+  const q = _busqNorm(XR_Q||'');
+  if(!q) return XR_DATA;
+  return XR_DATA.filter(c => _busqNorm(c.nombre).includes(q) ||
+                             _busqNorm(c.institucion).includes(q) ||
+                             _busqNorm(c.email).includes(q) ||
+                             _busqNorm(c.productos).includes(q));
+}
+
+function _xrPlata(n){
+  n = Number(n)||0;
+  return '$' + n.toLocaleString('es-CL');
+}
+
+function _xrChip(sug){
+  if(sug === 'No parece') return '';
+  const col = (sug === 'Ortopedia y distribuidor') ? '#166534' : '#1D4ED8';
+  const bg  = (sug === 'Ortopedia y distribuidor') ? '#DCFCE7' : '#DBEAFE';
+  return '<span style="background:'+bg+';color:'+col+';border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:800;">Parece '+esc(sug.toLowerCase())+'</span>';
+}
+
+function _xrBoton(id, tipo, texto, color){
+  return '<button onclick="marcarXR(\''+id+'\',\''+tipo+'\')" '+
+    'style="background:'+color+';color:#fff;border:none;border-radius:9px;padding:9px 14px;'+
+    'font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit;">'+texto+'</button>';
+}
+
+function _pintarXR(){
+  const bar  = document.getElementById('xrBar');
+  const body = document.getElementById('xrBody');
+  if(!bar || !body) return;
+
+  const lista = _xrLista();
+  const faltan = XR_DATA.length;
+  const hechos = XR_LISTOS;
+  const pct = XR_TOTAL ? Math.round(hechos * 100 / XR_TOTAL) : 0;
+
+  bar.innerHTML =
+    '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;">'+
+      '<input type="text" oninput="_xrFiltro(this.value)" value="'+esc(XR_Q)+'" placeholder="Buscar nombre, empresa, correo o producto…" '+
+        'style="flex:1;min-width:220px;max-width:380px;padding:9px 13px;border:1px solid var(--smoke,#e5e7eb);border-radius:9px;font-size:13.5px;font-family:inherit;">'+
+      '<span style="font-size:13px;color:var(--subtle);">Te faltan <b style="color:var(--ink);">'+faltan+'</b> de '+XR_TOTAL+'</span>'+
+    '</div>'+
+    '<div style="height:9px;background:#EEF2F7;border-radius:999px;overflow:hidden;">'+
+      '<div style="height:100%;width:'+pct+'%;background:#16A34A;border-radius:999px;transition:width .3s;"></div>'+
+    '</div>'+
+    '<div style="font-size:12.5px;color:var(--subtle);margin-top:6px;">Ya revisaste '+hechos+' ('+pct+'%)</div>';
+
+  if(!lista.length){
+    body.innerHTML = XR_DATA.length
+      ? '<div class="loading-state" style="padding:30px;">Ninguno coincide con esa búsqueda.</div>'
+      : '<div class="loading-state" style="padding:34px;font-size:15px;font-weight:700;color:#16A34A;">Los revisaste todos. Buen trabajo.</div>';
+    return;
+  }
+
+  body.innerHTML = lista.slice(0, 60).map(c => {
+    const compras = c.cotizaciones
+      ? '<div style="font-size:12.5px;color:var(--subtle);margin-top:5px;">Ha pedido <b style="color:var(--ink);">'+c.cotizaciones+'</b> cotización'+(c.cotizaciones===1?'':'es')+
+        (c.vendidas ? ' · <b style="color:#16A34A;">'+c.vendidas+' compra'+(c.vendidas===1?'':'s')+'</b>' : '')+
+        ((c.monto && c.monto <= XR_MONTO_MAX_CONFIABLE) ? ' · '+_xrPlata(c.monto) : '')+
+        (c.productos ? '<br><span style="color:#94a3b8;">'+esc(c.productos)+'</span>' : '')+'</div>'
+      : '';
+    const datos = [c.institucion, c.ciudad, c.email, c.telefono].filter(Boolean).map(esc).join(' · ');
+    return '<div id="xr-'+c.id+'" style="border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:14px 16px;margin-bottom:10px;background:#fff;">'+
+      '<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">'+
+        '<b style="font-size:15px;">'+esc(c.nombre || c.institucion || '(sin nombre)')+'</b>'+
+        _xrChip(c.sugerencia)+
+      '</div>'+
+      (datos ? '<div style="font-size:12.5px;color:var(--subtle);margin-top:3px;">'+datos+'</div>' : '')+
+      compras+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:11px;">'+
+        _xrBoton(c.id,'ortopedia','Es ortopedia','#1D4ED8')+
+        _xrBoton(c.id,'distribuidor','Es distribuidor','#7C3AED')+
+        _xrBoton(c.id,'ambos','Las dos cosas','#166534')+
+        _xrBoton(c.id,'no','No es','#94A3B8')+
+      '</div>'+
+    '</div>';
+  }).join('') +
+  (lista.length > 60 ? '<div style="text-align:center;color:var(--subtle);font-size:13px;padding:10px;">Y '+(lista.length-60)+' más. A medida que marques van apareciendo.</div>' : '');
+}
+
+async function marcarXR(id, tipo){
+  if(XR_OCUPADO) return;
+  XR_OCUPADO = true;
+  const tarjeta = document.getElementById('xr-'+id);
+  if(tarjeta){ tarjeta.style.opacity = '.45'; tarjeta.style.pointerEvents = 'none'; }
+
+  const r = await _xrFetch({ accion:'ximena_marcar', id:id, tipo:tipo, ejecutivo: USUARIO || 'Roberto' });
+  XR_OCUPADO = false;
+
+  if(!r || !r.ok){
+    if(tarjeta){ tarjeta.style.opacity = '1'; tarjeta.style.pointerEvents = 'auto'; }
+    alert('No se pudo guardar: ' + ((r&&r.error)||'error'));
+    return;
+  }
+
+  XR_DATA = XR_DATA.filter(c => c.id !== id);
+  XR_LISTOS++;
+  try{ localStorage.removeItem('crm_cache_contactos_v2_'+USUARIO); }catch(e){}
+  _pintarXR();
+}
+
 /* ════ VENTAS DEL MES — ganadas por fecha de CIERRE (para comisiones) ════ */
 let VENTASMES_MES = '';   // 'YYYY-MM' del mes de cierre elegido
 let VENTASMES_EJEC = '';  // primer nombre del ejecutivo filtrado; '' = todos

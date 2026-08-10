@@ -1,0 +1,699 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Formulario de Diagnóstico Institucional 2027</title>
+<style>
+  :root{
+    --tinta:#16324f;
+    --tinta-suave:#4a6785;
+    --acento:#1f7a8c;
+    --acento-claro:#e6f2f4;
+    --fondo:#f4f6f8;
+    --papel:#ffffff;
+    --borde:#d9e0e7;
+    --ok:#2e7d5b;
+    --radio:12px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--fondo); color:var(--tinta);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:17px; line-height:1.55;
+  }
+  .envoltorio{max-width:820px; margin:0 auto; padding:16px 16px 80px}
+
+  header.tapa{
+    background:var(--papel); border:1px solid var(--borde); border-radius:var(--radio);
+    padding:28px 26px; margin:16px 0 20px;
+  }
+  header.tapa h1{margin:0 0 6px; font-size:1.6rem; line-height:1.25}
+  header.tapa p.bajada{margin:0 0 18px; color:var(--tinta-suave); font-size:1rem}
+  .aviso{
+    background:var(--acento-claro); border-left:4px solid var(--acento);
+    padding:14px 16px; border-radius:8px; font-size:.95rem; margin:0;
+  }
+  .aviso p{margin:0 0 8px} .aviso p:last-child{margin:0}
+
+  .barra{
+    position:sticky; top:0; z-index:20; background:var(--fondo);
+    padding:10px 0 12px; margin-bottom:4px;
+  }
+  .barra .pista{height:8px; background:#e2e8ee; border-radius:99px; overflow:hidden}
+  .barra .relleno{height:100%; width:0; background:var(--acento); transition:width .25s ease}
+  .barra .rotulo{
+    display:flex; justify-content:space-between; align-items:baseline;
+    font-size:.85rem; color:var(--tinta-suave); margin-bottom:6px; gap:12px;
+  }
+  .barra .rotulo b{color:var(--tinta); font-size:.95rem}
+
+  section.bloque{
+    background:var(--papel); border:1px solid var(--borde); border-radius:var(--radio);
+    padding:24px 26px; display:none;
+  }
+  section.bloque.activo{display:block}
+  section.bloque > h2{
+    margin:0 0 20px; font-size:1.15rem; color:var(--acento);
+    border-bottom:2px solid var(--acento-claro); padding-bottom:10px;
+  }
+
+  .pregunta{margin:0 0 24px}
+  .pregunta:last-of-type{margin-bottom:6px}
+  .pregunta .enunciado{font-weight:600; margin:0 0 9px; display:block}
+  .pregunta .enunciado .num{color:var(--acento); margin-right:6px}
+  .pregunta .nota{
+    display:block; font-weight:400; font-size:.85rem; color:var(--tinta-suave); margin-top:3px;
+  }
+
+  input[type=text],input[type=number],input[type=email],input[type=tel],input[type=date],textarea,select{
+    width:100%; padding:11px 13px; border:1px solid var(--borde); border-radius:8px;
+    font:inherit; color:inherit; background:#fbfcfd;
+  }
+  select{
+    appearance:none; cursor:pointer; padding-right:40px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234a6785' stroke-width='2.5' stroke-linecap='round'><path d='M6 9l6 6 6-6'/></svg>");
+    background-repeat:no-repeat; background-position:right 13px center; background-size:17px;
+  }
+  textarea{min-height:96px; resize:vertical}
+  input:focus,textarea:focus,select:focus{outline:2px solid var(--acento); outline-offset:1px; background:#fff}
+
+  /* Desplegable de selección múltiple */
+  .multi{position:relative}
+  .multi-boton{
+    width:100%; text-align:left; font:inherit; font-weight:400; color:var(--tinta-suave);
+    padding:11px 40px 11px 13px; border:1px solid var(--borde); border-radius:8px;
+    background:#fbfcfd; cursor:pointer;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234a6785' stroke-width='2.5' stroke-linecap='round'><path d='M6 9l6 6 6-6'/></svg>");
+    background-repeat:no-repeat; background-position:right 13px center; background-size:17px;
+  }
+  .multi-boton.con-seleccion{color:var(--tinta); font-weight:500}
+  .multi.abierto .multi-boton{border-color:var(--acento); background-color:#fff}
+  .multi-panel{
+    display:none; position:absolute; z-index:15; left:0; right:0; top:calc(100% + 4px);
+    background:#fff; border:1px solid var(--acento); border-radius:8px;
+    box-shadow:0 8px 24px rgba(22,50,79,.13); max-height:290px; overflow:auto; padding:6px;
+  }
+  .multi.abierto .multi-panel{display:block}
+
+  .opcion{
+    display:flex; align-items:flex-start; gap:11px; padding:9px 12px;
+    border-radius:7px; cursor:pointer;
+  }
+  .opcion:hover{background:var(--acento-claro)}
+  .opcion input{margin:4px 0 0; flex:0 0 auto; width:18px; height:18px; accent-color:var(--acento)}
+  .opcion span{flex:1}
+  .subcampo{margin:2px 12px 8px; }
+
+  .campos-contacto{display:grid; gap:12px}
+  .campos-contacto label{font-size:.9rem; color:var(--tinta-suave); display:block; margin-bottom:4px}
+
+  nav.pasos{display:flex; gap:12px; justify-content:space-between; margin-top:24px}
+  button{
+    font:inherit; font-weight:600; padding:12px 22px; border-radius:9px;
+    border:1px solid var(--acento); cursor:pointer;
+  }
+  button.primario{background:var(--acento); color:#fff}
+  button.primario:hover{background:#186372}
+  button.secundario{background:#fff; color:var(--acento)}
+  button.secundario:hover{background:var(--acento-claro)}
+  button[disabled]{opacity:.35; cursor:default}
+
+  .acciones{display:flex; flex-wrap:wrap; gap:12px; margin-top:20px}
+  .final .listo{
+    background:#eaf5ef; border-left:4px solid var(--ok); padding:16px 18px;
+    border-radius:8px; margin-bottom:18px;
+  }
+  .final .listo strong{color:var(--ok)}
+  #resumen{
+    white-space:pre-wrap; font-family:ui-monospace,Consolas,monospace; font-size:.82rem;
+    background:#fbfcfd; border:1px solid var(--borde); border-radius:8px;
+    padding:16px; max-height:340px; overflow:auto; margin-top:18px;
+  }
+  .pie{text-align:center; color:var(--tinta-suave); font-size:.8rem; margin-top:26px}
+
+  @media print{
+    .barra,nav.pasos,.acciones{display:none}
+    section.bloque{display:block !important; break-inside:avoid; border:none; padding:0 0 18px}
+    .multi-panel{display:block !important; position:static; border:none; box-shadow:none; max-height:none}
+    .multi-boton{display:none}
+    body{background:#fff; font-size:12px}
+  }
+  @media (max-width:520px){
+    .envoltorio{padding:8px 10px 60px}
+    header.tapa,section.bloque{padding:20px 16px}
+    nav.pasos button{flex:1; padding:12px 10px}
+  }
+</style>
+</head>
+<body>
+<div class="envoltorio">
+
+  <header class="tapa">
+    <h1>Formulario de Diagnóstico Institucional</h1>
+    <p class="bajada">Organizaciones de discapacidad, neurodivergencia e inclusión</p>
+    <div class="aviso">
+      <p>Estimada directiva y equipo: este cuestionario nos permite conocer la realidad legal, administrativa y técnica de su organización, y también el perfil de las familias que atienden.</p>
+      <p>No hay respuestas buenas ni malas. Si algo no lo saben, elijan «no sabemos»: esa respuesta también nos sirve, y es mejor que adivinar.</p>
+      <p><strong>Tiempo estimado: 12 a 15 minutos.</strong> Idealmente lo responde la presidencia, la dirección o quien lleve la parte administrativa.</p>
+    </div>
+  </header>
+
+  <div class="barra">
+    <div class="rotulo"><b id="tituloPaso">Bloque 1</b><span id="contadorPaso"></span></div>
+    <div class="pista"><div class="relleno" id="relleno"></div></div>
+  </div>
+
+  <form id="formulario"></form>
+
+  <p class="pie">Pueden cerrar la página y seguir después: lo que ya respondieron queda guardado en este dispositivo.</p>
+</div>
+
+<script>
+/* ==================================================================
+   AQUÍ VA LA DIRECCIÓN DEL APPS SCRIPT (la que termina en /exec).
+   Mientras esté vacía, el botón Enviar avisa que no está conectado.
+   ================================================================== */
+const DESTINO = 'https://script.google.com/macros/s/AKfycbyaE3Bbd7h18joghjbD4886H0K_I8AOn4XDjbKuvX-rza8RfJL12whxtaQ0-E4_CGPy/exec';
+
+const BLOQUES = [
+{ titulo: "Bloque 1 · Identificación de la organización", preguntas: [
+  {t:"Nombre legal completo de la organización", tipo:"texto"},
+  {t:"Nombre de fantasía o cómo se les conoce", nota:"Solo si es distinto del nombre legal. Opcional.", tipo:"texto"},
+  {t:"RUT de la organización", tipo:"texto", extra:"No tenemos RUT propio todavía"},
+  {t:"Región donde opera principalmente", tipo:"unica", opciones:[
+    "Arica y Parinacota","Tarapacá","Antofagasta","Atacama","Coquimbo","Valparaíso",
+    "Metropolitana de Santiago","Libertador General Bernardo O'Higgins","Maule","Ñuble",
+    "Biobío","La Araucanía","Los Ríos","Los Lagos",
+    "Aysén del General Carlos Ibáñez del Campo","Magallanes y de la Antártica Chilena"]},
+  {t:"Comuna donde está la sede o el lugar de atención principal", tipo:"texto"},
+  {t:"La organización atiende personas de:", tipo:"unica", opciones:[
+    "Solo nuestra comuna","Nuestra comuna y comunas vecinas","Toda la provincia",
+    "Toda la región","Más de una región"]},
+  {t:"El territorio donde trabajan es principalmente:", tipo:"unica", opciones:[
+    "Urbano","Rural","Mixto (urbano y rural)"]},
+  {t:"Datos de la persona de contacto", tipo:"contacto", campos:[
+    {e:"Nombre completo", tipo:"text"},{e:"Cargo en la organización", tipo:"text"},
+    {e:"Correo electrónico", tipo:"email"},{e:"Teléfono o WhatsApp", tipo:"tel"}]},
+  {t:"¿Por qué vía prefieren que los contactemos?", tipo:"unica", opciones:[
+    "WhatsApp","Correo electrónico","Llamada telefónica"]},
+  {t:"¿Qué canales de comunicación usan activamente?", tipo:"varias", opciones:[
+    "Correo institucional propio","Correo gratuito (Gmail, Outlook, Hotmail)","Instagram",
+    "Facebook","TikTok","Sitio web propio","Solo grupos de WhatsApp","Ninguno"]}
+]},
+
+{ titulo: "Bloque 2 · Situación legal", preguntas: [
+  {t:"¿Qué tipo de organización son legalmente?", tipo:"unica", opciones:[
+    "Fundación","Corporación o asociación sin fines de lucro",
+    "Organización comunitaria funcional (club, centro, agrupación)",
+    "Junta de vecinos o unión comunal","Comunidad o asociación indígena","Cooperativa",
+    "Somos un grupo organizado pero SIN personalidad jurídica",
+    "No sabemos con exactitud qué figura tenemos"]},
+  {t:"Fecha en que obtuvieron la personalidad jurídica", nota:"La fecha de inscripción que aparece en el certificado. Si no recuerdan el día exacto, pongan el primero del mes.", tipo:"fecha", extra:"No tenemos personalidad jurídica"},
+  {t:"¿En qué estado está la directiva actual?", tipo:"unica", opciones:[
+    "Vigente","Vigente, pero vence dentro de los próximos 6 meses","Vencida",
+    "Estamos en proceso de elección o cambio de directiva","No sabemos en qué estado está"]},
+  {t:"¿Qué documentos de la organización tienen hoy a mano?", nota:"Marquen los que podrían enviarnos esta semana sin tener que hacer un trámite.", tipo:"varias", opciones:[
+    "Certificado de vigencia de la personalidad jurídica","Certificado de directiva vigente",
+    "Estatutos de la organización","Acta de la última elección de directiva",
+    "Ninguno de estos","No sabemos cuáles tenemos"]},
+  {t:"¿Están inscritos en el Registro Central de Colaboradores del Estado y Receptores de Fondos Públicos (Ley 19.862)?", tipo:"unica", opciones:[
+    "Sí, estamos inscritos y el registro está al día",
+    "Estamos inscritos pero el registro está desactualizado",
+    "No estamos inscritos","No conocíamos este registro"]},
+  {t:"¿La organización tiene rendiciones pendientes con algún organismo del Estado?", tipo:"unica", opciones:[
+    "No, estamos al día","Sí, tenemos una rendición pendiente",
+    "Sí, tuvimos observaciones que aún no resolvemos","No sabemos"]}
+]},
+
+{ titulo: "Bloque 3 · Capacidad administrativa y financiera", preguntas: [
+  {t:"¿La organización tiene cuenta bancaria a su propio nombre?", nota:"Es decir, con el RUT de la institución.", tipo:"unica", opciones:[
+    "Sí, cuenta corriente","Sí, cuenta vista o chequera electrónica",
+    "No, usamos la cuenta personal de un miembro de la directiva",
+    "Está en trámite de apertura","No tenemos ninguna cuenta"]},
+  {t:"¿Podrían hacer un aporte propio a un proyecto, en dinero o en trabajo valorizado?", nota:"Algunos fondos lo piden, y define cómo armamos el presupuesto.", tipo:"unica", opciones:[
+    "Sí, con aporte en dinero",
+    "Sí, pero solo valorizado (horas de voluntariado, uso de la sede, equipamiento propio)",
+    "No podríamos aportar nada","No sabemos qué significa esto"]},
+  {t:"¿Pueden emitir o recibir boletas y facturas a nombre de la organización?", tipo:"unica", opciones:[
+    "Sí, sin problema","Solo podemos recibir facturas a nombre de la organización",
+    "No, todo lo hacemos a nombre personal","No sabemos"]}
+]},
+
+{ titulo: "Bloque 4 · Equipo humano", preguntas: [
+  {t:"¿Cuántas personas trabajan o colaboran activamente en la organización?", nota:"Un número aproximado, contando voluntarios.", tipo:"numero"},
+  {t:"De ellas, ¿cuántas reciben algún pago?", nota:"Honorarios o sueldo. Si ninguna, pongan 0.", tipo:"numero"},
+  {t:"¿Con qué profesionales cuentan hoy, aunque sea por horas?", tipo:"varias", opciones:[
+    "Psicólogo o psicóloga","Terapeuta ocupacional","Fonoaudiólogo o fonoaudióloga",
+    "Kinesiólogo o kinesióloga","Educador o educadora diferencial",
+    "Trabajador o trabajadora social","Psicopedagogo o psicopedagoga",
+    "Monitores o técnicos capacitados","Ninguno por ahora"], otro:true},
+  {t:"¿Alguien del equipo tiene experiencia formulando proyectos?", tipo:"unica", opciones:[
+    "Sí, tenemos a alguien con experiencia comprobada",
+    "Alguien lo ha hecho, pero aprendiendo sobre la marcha","Nadie tiene experiencia",
+    "Contratamos a alguien externo cuando postulamos"]}
+]},
+
+{ titulo: "Bloque 5 · Experiencia en postulaciones", preguntas: [
+  {t:"¿A qué fondos ha postulado la organización?", nota:"Aunque no se los hayan adjudicado.", tipo:"varias", opciones:[
+    "Fondos del Gobierno Regional","SENADIS","Fondos municipales","FOSIS","SENAMA",
+    "Ministerio de Desarrollo Social","Fondos de empresas privadas o fundaciones",
+    "Nunca hemos postulado a ninguno",
+    "Lo intentamos pero no alcanzamos a enviar la postulación"], otro:true},
+  {t:"¿Se han adjudicado alguno?", tipo:"unica", opciones:[
+    "Sí, y lo ejecutamos y rendimos sin observaciones",
+    "Sí, pero tuvimos dificultades en la rendición",
+    "Sí, pero no alcanzamos a ejecutarlo completo",
+    "Postulamos pero nunca nos hemos adjudicado","Nunca hemos postulado"]},
+  {t:"Si les rechazaron una postulación, ¿cuál fue el motivo?", tipo:"varias", opciones:[
+    "Faltaba un documento o estaba vencido","El proyecto estaba mal formulado o poco claro",
+    "Problemas con el presupuesto o las cotizaciones",
+    "Se nos pasó el plazo o falló la plataforma","Nos dijeron que el puntaje no alcanzó",
+    "Nunca nos dieron un motivo","No aplica"]},
+  {t:"¿Guardan el acta o resolución donde consta el rechazo?", tipo:"unica", opciones:[
+    "Sí, la tenemos","Creemos que sí, habría que buscarla","No la tenemos","No aplica"]}
+]},
+
+{ titulo: "Bloque 6 · A quiénes atienden", preguntas: [
+  {t:"¿A cuántas personas con discapacidad o neurodivergencia atienden hoy de manera directa?", nota:"Un número aproximado.", tipo:"numero"},
+  {t:"¿Cuántas familias en total participan de la organización?", tipo:"numero"},
+  {t:"¿Cuáles son los diagnósticos principales de las personas que atienden?", tipo:"varias", opciones:[
+    "Trastorno del espectro autista (TEA)","Síndrome de Down","TDAH",
+    "Discapacidad intelectual","Parálisis cerebral","Discapacidad física o motora",
+    "Discapacidad visual","Discapacidad auditiva","Retraso global del desarrollo",
+    "Trastornos del lenguaje","Salud mental (depresión, ansiedad, otros)","Multidéficit"], otro:true},
+  {t:"Si atienden personas con TEA, ¿qué grados de apoyo predominan?", tipo:"unica", opciones:[
+    "Mayoritariamente grado 1 (requiere apoyo)",
+    "Mayoritariamente grado 2 (requiere apoyo sustancial)",
+    "Mayoritariamente grado 3 (requiere apoyo muy sustancial)",
+    "Tenemos de todos los grados en proporciones parecidas",
+    "No manejamos esa clasificación","No atendemos personas con TEA"]},
+  {t:"¿Qué edades tienen las personas que atienden?", tipo:"varias", opciones:[
+    "0 a 5 años","6 a 12 años","13 a 17 años","18 a 29 años","30 a 59 años","60 años o más"]},
+  {t:"¿Qué proporción de sus usuarios tiene credencial de discapacidad vigente?", tipo:"unica", opciones:[
+    "Menos del 25%","Entre 25% y 50%","Entre 51% y 75%","Más del 75%","No lo tenemos registrado"]},
+  {t:"Nivel de dependencia predominante de las personas que atienden", tipo:"unica", opciones:[
+    "Autónomas o con dependencia leve",
+    "Dependencia moderada (requieren supervisión o apoyo intermitente)",
+    "Dependencia severa (requieren apoyo continuo y permanente)",
+    "Muy variado, tenemos de todo"]},
+  {t:"¿En qué áreas necesitan más apoyo las personas que atienden?", tipo:"varias", opciones:[
+    "Comunicación y lenguaje","Regulación conductual y sensorial",
+    "Autonomía e higiene básica","Movilidad y desplazamiento","Inclusión escolar",
+    "Transición a la vida laboral","Psicomotricidad y desarrollo físico",
+    "Habilidades sociales","Apoyo emocional y salud mental"]},
+  {t:"¿Llevan un registro ordenado de sus usuarios?", nota:"Nombre, diagnóstico, edad, comuna.", tipo:"unica", opciones:[
+    "Sí, en planilla digital actualizada","Sí, pero en papel o desordenado",
+    "Tenemos algunos datos sueltos","No llevamos registro"]}
+]},
+
+{ titulo: "Bloque 7 · Las familias y los cuidadores", preguntas: [
+  {t:"¿En qué tramo del Registro Social de Hogares está la mayoría de las familias?", tipo:"unica", opciones:[
+    "40% de mayor vulnerabilidad","Entre 41% y 60%","Entre 61% y 80%","Sobre 80%",
+    "No les pedimos el Registro Social de Hogares"]},
+  {t:"¿Qué proporción de los cuidadores está inscrita como cuidador o cuidadora en el Registro Social de Hogares?", tipo:"unica", opciones:[
+    "Menos del 10%","Entre 10% y 50%","Más del 50%","No lo sabemos"]},
+  {t:"Situación laboral predominante de los cuidadores principales", tipo:"unica", opciones:[
+    "Fuera del trabajo por dedicarse al cuidado a tiempo completo",
+    "Trabajos informales o por jornada parcial para poder compatibilizar",
+    "Trabajo formal con contrato y jornada completa","Muy variado","No lo tenemos medido"]},
+  {t:"¿Quién es mayoritariamente el cuidador principal?", tipo:"unica", opciones:[
+    "La madre","El padre","Abuelos o abuelas","Otro familiar","Muy variado"]},
+  {t:"¿Cuál es la mayor dificultad que reportan las familias?", tipo:"varias", opciones:[
+    "Costo de las terapias","Falta de terapias en la comuna",
+    "Transporte para llegar a las atenciones","Falta de apoyo en el colegio",
+    "Agotamiento y salud mental del cuidador","Falta de tiempo o de red de apoyo",
+    "Discriminación o falta de comprensión del entorno",
+    "Falta de espacios recreativos accesibles"]}
+]},
+
+{ titulo: "Bloque 8 · Infraestructura y equipamiento", preguntas: [
+  {t:"¿Con qué espacio físico cuentan para funcionar?", tipo:"unica", opciones:[
+    "Sede propia","Sede en comodato de largo plazo","Espacio arrendado",
+    "Espacio prestado o compartido por horas",
+    "No tenemos espacio, trabajamos a domicilio o de manera virtual"]},
+  {t:"Si tienen un espacio, ¿qué documentación tienen de él?", tipo:"varias", opciones:[
+    "Comodato o contrato de arriendo firmado y vigente","Recepción municipal del inmueble",
+    "Resolución sanitaria","Ninguno de estos","No sabemos cuáles tenemos","No aplica"]},
+  {t:"¿El espacio es accesible para personas con discapacidad?", tipo:"unica", opciones:[
+    "Sí, completamente accesible","Parcialmente accesible","No es accesible","No aplica"]},
+  {t:"¿Con qué equipamiento cuentan hoy?", tipo:"varias", opciones:[
+    "Sala de estimulación multisensorial","Box o sala de atención individual",
+    "Gimnasio o sala de psicomotricidad","Material didáctico especializado",
+    "Equipos tecnológicos (computadores, tablets, proyector)","Mobiliario adecuado",
+    "Vehículo o transporte","Nada de lo anterior"]},
+  {t:"Si tienen sala sensorial, ¿en qué estado está?", tipo:"unica", opciones:[
+    "Equipada y funcionando bien","Funciona pero necesita mejoras o reposición",
+    "La tenemos armada pero sin usar","Es un proyecto que queremos concretar",
+    "No tenemos ni la necesitamos"]}
+]},
+
+{ titulo: "Bloque 9 · El proyecto que quieren financiar", preguntas: [
+  {t:"¿Tienen ya una idea de proyecto para 2027?", tipo:"unica", opciones:[
+    "Sí, la tenemos clara y por escrito","Sí, la tenemos clara pero no escrita",
+    "Tenemos varias ideas sin decidir",
+    "No tenemos idea todavía, necesitamos ayuda para definirla"]},
+  {t:"Si tuvieran el financiamiento, ¿cuál sería la prioridad número uno?", tipo:"unica", opciones:[
+    "Contratar profesionales para atender a los usuarios",
+    "Comprar equipamiento o habilitar salas","Mejorar o construir infraestructura",
+    "Talleres de respiro y salud mental para cuidadores",
+    "Capacitación y formación del equipo",
+    "Actividades recreativas, culturales o deportivas","Transporte adaptado",
+    "Difusión y sensibilización en la comunidad"]},
+  {t:"¿Cuál sería la segunda prioridad?", tipo:"unica", opciones:[
+    "Contratar profesionales para atender a los usuarios",
+    "Comprar equipamiento o habilitar salas","Mejorar o construir infraestructura",
+    "Talleres de respiro y salud mental para cuidadores",
+    "Capacitación y formación del equipo",
+    "Actividades recreativas, culturales o deportivas","Transporte adaptado",
+    "Difusión y sensibilización en la comunidad"]},
+  {t:"¿De cuánto dinero están hablando, aproximadamente?", tipo:"unica", opciones:[
+    "Menos de $3.000.000","Entre $3.000.000 y $10.000.000",
+    "Entre $10.000.000 y $30.000.000","Más de $30.000.000","No tenemos idea del monto"]},
+  {t:"¿Tienen cotizaciones de lo que necesitan comprar o contratar?", tipo:"unica", opciones:[
+    "Sí, tenemos cotizaciones formales y vigentes","Tenemos cotizaciones pero antiguas",
+    "Sabemos a quién pedirlas pero no lo hemos hecho",
+    "No tenemos ni sabemos a quién pedirlas","No aplica, no necesitamos comprar nada"]},
+  {t:"¿Cuentan con profesionales identificados y disponibles para ejecutar?", tipo:"unica", opciones:[
+    "Sí, ya conversamos con ellos y aceptarían","Los conocemos pero no hemos conversado",
+    "No tenemos a nadie identificado","No aplica"]},
+  {t:"¿Tienen convenios o cartas de apoyo de otras instituciones?", tipo:"varias", opciones:[
+    "Municipalidad","Escuelas o jardines infantiles","Consultorio, CESFAM u hospital",
+    "Universidad o centro de formación","Empresas","Otras organizaciones sociales",
+    "No tenemos ninguna"]},
+  {t:"¿Qué capacidad tienen de ejecutar un proyecto en plazo?", tipo:"unica", opciones:[
+    "Alta, tenemos gente disponible para hacerse cargo","Media, nos costaría pero podríamos",
+    "Baja, todos trabajamos en otra cosa","No lo sabemos"]}
+]},
+
+{ titulo: "Bloque 10 · Cierre", preguntas: [
+  {t:"¿Hay algo más que debamos saber sobre la organización?", nota:"Opcional.", tipo:"largo"},
+  {t:"¿Autorizan que usemos esta información para preparar postulaciones a fondos junto a la organización?", tipo:"unica", opciones:[
+    "Sí, autorizamos","Sí, pero queremos revisar antes cada documento","No por ahora"]},
+  {t:"Nombre de quien responde este formulario", tipo:"texto"}
+]}
+];
+
+let __num = 0;
+BLOQUES.forEach(b => b.preguntas.forEach(p => p.n = ++__num));
+
+const form = document.getElementById('formulario');
+const relleno = document.getElementById('relleno');
+const tituloPaso = document.getElementById('tituloPaso');
+const contadorPaso = document.getElementById('contadorPaso');
+const CLAVE = 'diagnostico2027';
+const TOTAL_PREGUNTAS = BLOQUES.reduce((a,b)=>a+b.preguntas.length,0);
+let paso = 0;
+
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+
+function pintarPregunta(p){
+  const id = 'p'+p.n;
+  let campo = '';
+
+  if(p.tipo === 'texto')  campo = `<input type="text" name="${id}">`;
+  if(p.tipo === 'numero') campo = `<input type="number" name="${id}" min="0" step="1">`;
+  if(p.tipo === 'fecha')  campo = `<input type="date" name="${id}">`;
+  if(p.tipo === 'largo')  campo = `<textarea name="${id}"></textarea>`;
+
+  if(p.tipo === 'unica'){
+    campo = `<select name="${id}"><option value="">Seleccione una opción</option>` +
+      p.opciones.map(o=>`<option>${esc(o)}</option>`).join('') + `</select>`;
+  }
+
+  if(p.tipo === 'varias'){
+    let panel = p.opciones.map(o=>
+      `<label class="opcion"><input type="checkbox" name="${id}" value="${esc(o)}"><span>${esc(o)}</span></label>`
+    ).join('');
+    if(p.otro){
+      panel += `<label class="opcion"><input type="checkbox" name="${id}" value="__otro__"><span>Otro</span></label>
+        <div class="subcampo"><input type="text" name="${id}_otro" placeholder="¿Cuál?"></div>`;
+    }
+    campo = `<div class="multi" data-para="${id}">
+      <button type="button" class="multi-boton">Seleccione una o más opciones</button>
+      <div class="multi-panel">${panel}</div>
+    </div>`;
+  }
+
+  if(p.tipo === 'contacto'){
+    campo = `<div class="campos-contacto">` + p.campos.map((c,i)=>
+      `<div><label for="${id}_${i}">${esc(c.e)}</label>
+       <input type="${c.tipo}" id="${id}_${i}" name="${id}_${i}"></div>`
+    ).join('') + `</div>`;
+  }
+
+  if(p.extra){
+    campo += `<label class="opcion" style="margin-top:6px">
+      <input type="checkbox" name="${id}_extra" value="${esc(p.extra)}"><span>${esc(p.extra)}</span></label>`;
+  }
+
+  return `<div class="pregunta">
+    <span class="enunciado"><span class="num">${p.n}.</span>${esc(p.t)}
+    ${p.nota ? `<span class="nota">${esc(p.nota)}</span>` : ''}</span>
+    ${campo}
+  </div>`;
+}
+
+BLOQUES.forEach((b,i)=>{
+  const s = document.createElement('section');
+  s.className = 'bloque'; s.dataset.paso = i;
+  s.innerHTML = `<h2>${esc(b.titulo)}</h2>` + b.preguntas.map(pintarPregunta).join('') + `
+    <nav class="pasos">
+      <button type="button" class="secundario" data-ir="-1" ${i===0?'disabled':''}>← Anterior</button>
+      <button type="button" class="primario" data-ir="1">${i===BLOQUES.length-1?'Terminar →':'Siguiente →'}</button>
+    </nav>`;
+  form.appendChild(s);
+});
+
+const final = document.createElement('section');
+final.className = 'bloque final'; final.dataset.paso = BLOQUES.length;
+final.innerHTML = `
+  <div id="antesDeEnviar">
+    <h2>Última revisión</h2>
+    <div class="listo">Revisen abajo que esté todo correcto y presionen <strong>Enviar respuestas</strong>. Si quieren corregir algo, vuelvan atrás: no se pierde nada de lo que ya escribieron.</div>
+    <div class="acciones">
+      <button type="button" class="primario" id="btnEnviar">Enviar respuestas</button>
+      <button type="button" class="secundario" data-ir="-1">← Volver a revisar</button>
+    </div>
+    <div id="aviso"></div>
+    <div id="resumen"></div>
+  </div>
+  <div id="despuesDeEnviar" hidden>
+    <h2>¡Muchas gracias!</h2>
+    <div class="listo"><strong>Recibimos sus respuestas.</strong> Los estaremos contactando.</div>
+    <p style="color:var(--tinta-suave)">Ya pueden cerrar esta página.</p>
+  </div>`;
+form.appendChild(final);
+
+/* --- Desplegables de selección múltiple --- */
+function rotularMulti(multi){
+  const marcadas = [...multi.querySelectorAll('input[type=checkbox]:checked')];
+  const boton = multi.querySelector('.multi-boton');
+  if(!marcadas.length){
+    boton.textContent = 'Seleccione una o más opciones';
+    boton.classList.remove('con-seleccion');
+    return;
+  }
+  const textos = marcadas.map(c=>{
+    if(c.value === '__otro__'){
+      const o = multi.querySelector('input[type=text]');
+      return 'Otro: ' + ((o && o.value.trim()) || '…');
+    }
+    return c.value;
+  });
+  boton.textContent = textos.length <= 2 ? textos.join(' · ') : `${textos.length} opciones seleccionadas`;
+  boton.classList.add('con-seleccion');
+}
+
+document.addEventListener('click', e=>{
+  const boton = e.target.closest('.multi-boton');
+  document.querySelectorAll('.multi.abierto').forEach(m=>{
+    if(!boton || m !== boton.closest('.multi')) m.classList.remove('abierto');
+  });
+  if(boton) boton.closest('.multi').classList.toggle('abierto');
+});
+form.addEventListener('click', e=>{ if(e.target.closest('.multi-panel')) e.stopPropagation(); });
+
+/* --- Navegación --- */
+function mostrar(n){
+  paso = Math.max(0, Math.min(n, BLOQUES.length));
+  document.querySelectorAll('section.bloque').forEach(s=>
+    s.classList.toggle('activo', +s.dataset.paso === paso));
+  document.querySelectorAll('.multi.abierto').forEach(m=>m.classList.remove('abierto'));
+  const total = BLOQUES.length;
+  relleno.style.width = Math.round((paso/total)*100) + '%';
+  if(paso === total){
+    tituloPaso.textContent = 'Completado';
+    contadorPaso.textContent = TOTAL_PREGUNTAS + ' preguntas respondidas';
+    document.getElementById('resumen').textContent = armarTexto();
+  } else {
+    tituloPaso.textContent = BLOQUES[paso].titulo;
+    contadorPaso.textContent = `Paso ${paso+1} de ${total}`;
+  }
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+form.addEventListener('click', e=>{
+  const b = e.target.closest('button[data-ir]');
+  if(b) mostrar(paso + (+b.dataset.ir));
+});
+
+form.addEventListener('input', alCambiar);
+form.addEventListener('change', alCambiar);
+
+function alCambiar(e){
+  const multi = e.target.closest && e.target.closest('.multi');
+  if(multi) rotularMulti(multi);
+  guardar();
+}
+
+function guardar(){
+  const datos = {};
+  new FormData(form).forEach((v,k)=>{
+    if(k in datos) datos[k] = [].concat(datos[k], v); else datos[k] = v;
+  });
+  try{ localStorage.setItem(CLAVE, JSON.stringify(datos)); }catch(e){}
+}
+
+function recuperar(){
+  let datos; try{ datos = JSON.parse(localStorage.getItem(CLAVE)||'null'); }catch(e){ return; }
+  if(!datos) return;
+  Object.entries(datos).forEach(([k,v])=>{
+    const vals = [].concat(v);
+    form.querySelectorAll(`[name="${k}"]`).forEach(el=>{
+      if(el.type==='radio'||el.type==='checkbox') el.checked = vals.includes(el.value);
+      else el.value = vals[0];
+    });
+  });
+  document.querySelectorAll('.multi').forEach(rotularMulti);
+}
+
+/* --- Recolección de respuestas --- */
+function respuestaDe(p){
+  const id = 'p'+p.n;
+  let r = [];
+  if(p.tipo === 'contacto'){
+    p.campos.forEach((c,i)=>{
+      const el = form.querySelector(`[name="${id}_${i}"]`);
+      if(el && el.value.trim()) r.push(`${c.e}: ${el.value.trim()}`);
+    });
+  } else {
+    form.querySelectorAll(`[name="${id}"]`).forEach(el=>{
+      if(el.type==='checkbox'){
+        if(el.checked){
+          if(el.value==='__otro__'){
+            const o = form.querySelector(`[name="${id}_otro"]`);
+            r.push('Otro: ' + ((o && o.value.trim()) || '(sin especificar)'));
+          } else r.push(el.value);
+        }
+      } else if(el.value.trim()){
+        r.push(p.tipo === 'fecha' ? el.value.split('-').reverse().join('-') : el.value.trim());
+      }
+    });
+  }
+  const ex = form.querySelector(`[name="${id}_extra"]`);
+  if(ex && ex.checked) r.push(ex.value);
+  return r.join(' | ');
+}
+
+function recolectar(){
+  const filas = [];
+  BLOQUES.forEach(b => b.preguntas.forEach(p =>
+    filas.push({ n:p.n, pregunta:p.t, respuesta:respuestaDe(p) })
+  ));
+  return filas;
+}
+
+function armarTexto(){
+  const lineas = ['RESPUESTAS · DIAGNÓSTICO INSTITUCIONAL 2027'];
+  BLOQUES.forEach(b=>{
+    lineas.push('', '===== ' + b.titulo.toUpperCase() + ' =====', '');
+    b.preguntas.forEach(p=>{
+      lineas.push(`${p.n}. ${p.t}`);
+      lineas.push('   -> ' + (respuestaDe(p) || '(sin responder)'));
+      lineas.push('');
+    });
+  });
+  return lineas.join('\n');
+}
+
+function sinResponder(){
+  return recolectar().filter(f => !f.respuesta).length;
+}
+
+/* --- Envío a la planilla --- */
+const marcoEnvio = document.createElement('iframe');
+marcoEnvio.name = 'marcoEnvio'; marcoEnvio.hidden = true;
+marcoEnvio.style.display = 'none';
+document.body.appendChild(marcoEnvio);
+
+const formEnvio = document.createElement('form');
+formEnvio.method = 'POST'; formEnvio.target = 'marcoEnvio';
+formEnvio.style.display = 'none';
+formEnvio.innerHTML = '<input type="hidden" name="payload">';
+document.body.appendChild(formEnvio);
+
+const btnEnviar = document.getElementById('btnEnviar');
+const aviso = document.getElementById('aviso');
+let enviando = false;
+
+function mostrarAviso(texto, tipo){
+  aviso.innerHTML = `<div class="listo" style="margin:14px 0 0;
+    background:${tipo==='error' ? '#fdecea' : '#fff8e1'};
+    border-left-color:${tipo==='error' ? '#c0392b' : '#e0a800'}">${texto}</div>`;
+}
+
+function agradecer(){
+  document.getElementById('antesDeEnviar').hidden = true;
+  document.getElementById('despuesDeEnviar').hidden = false;
+  document.querySelector('.barra').style.display = 'none';
+  try{ localStorage.removeItem(CLAVE); }catch(e){}
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+btnEnviar.addEventListener('click', ()=>{
+  if(enviando) return;
+
+  if(!DESTINO){
+    mostrarAviso('Este formulario todavía no está conectado a la planilla. Avísenos para activarlo.', 'error');
+    return;
+  }
+
+  const faltan = sinResponder();
+  if(faltan > 0 && !btnEnviar.dataset.confirmado){
+    btnEnviar.dataset.confirmado = '1';
+    btnEnviar.textContent = 'Enviar de todas formas';
+    mostrarAviso(`Quedaron <strong>${faltan}</strong> preguntas sin responder. Pueden volver atrás a completarlas, o presionar de nuevo para enviar así.`, 'aviso');
+    return;
+  }
+
+  enviando = true;
+  btnEnviar.disabled = true;
+  btnEnviar.textContent = 'Enviando…';
+  aviso.innerHTML = '';
+
+  const organizacion = (form.querySelector('[name="p1"]')||{}).value || '';
+  formEnvio.action = DESTINO;
+  formEnvio.querySelector('[name="payload"]').value = JSON.stringify({
+    organizacion: organizacion.trim(),
+    respuestas: recolectar()
+  });
+
+  let listo = false;
+  marcoEnvio.addEventListener('load', ()=>{ listo = true; agradecer(); }, {once:true});
+  formEnvio.submit();
+
+  setTimeout(()=>{
+    if(listo) return;
+    enviando = false;
+    btnEnviar.disabled = false;
+    btnEnviar.textContent = 'Reintentar envío';
+    mostrarAviso('No pudimos enviar las respuestas. Revisen su conexión a internet y presionen <strong>Reintentar envío</strong>. Lo que respondieron sigue guardado.', 'error');
+  }, 25000);
+});
+
+recuperar();
+mostrar(0);
+</script>
+</body>
+</html>

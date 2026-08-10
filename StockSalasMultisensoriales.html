@@ -494,6 +494,17 @@
                       line-height:1.3; margin-top:0.15rem; }
   /* Encabezado de cotización en la matriz: se nota que tiene información al pasar el cursor */
   th.cm-cabcot { cursor:help; text-decoration:underline dotted; text-underline-offset:3px; }
+  /* Caja para cargar los costos desde el computador (nunca se publican) */
+  .costos-caja { border:1px dashed var(--line); border-radius:12px; padding:0.9rem 1rem; margin:0.9rem 0;
+                 background:rgba(6,179,253,0.05); }
+  .costos-caja-t { font-size:0.85rem; font-weight:800; margin-bottom:0.3rem; }
+  .costos-caja-p { font-size:0.76rem; color:var(--mist,#7C8794); margin:0 0 0.6rem; line-height:1.45; }
+  .costos-caja-p code { font-size:0.72rem; background:rgba(0,0,0,0.06); padding:0.1rem 0.3rem; border-radius:4px; }
+  .costos-estado { font-size:0.78rem; margin-top:0.5rem; display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center; }
+  .costos-ok { font-weight:800; color:#166534; }
+  .costos-no { font-weight:700; color:var(--mist,#7C8794); }
+  .costos-mini { font-family:inherit; font-size:0.72rem; font-weight:700; padding:0.25rem 0.6rem; border-radius:999px;
+                 border:1px solid var(--line); background:var(--card); color:var(--mist,#7C8794); cursor:pointer; }
   .stock-disp-stk { padding:0 0.55rem 0.6rem; }
   /* Ordenar tocando el título de la columna */
   th.ord { cursor:pointer; user-select:none; white-space:nowrap; }
@@ -1817,6 +1828,95 @@
     return inv;
   })();
 
+  // ── MIS COSTOS (no se publican: se cargan desde el computador de Rayen) ────
+  // Rayen 2026-08-06: el informe de faltantes es PARA ELLA, para hacer el pedido, y necesita ver
+  // cuanto le va a costar. Los costos NO pueden vivir en esta pagina: esta publicada en internet.
+  // Solucion: se cargan una vez desde el archivo del Drive, quedan guardados SOLO en este
+  // navegador y de ahi salen al Excel. En el codigo publicado no hay ni un costo.
+  // Formato del archivo (el .txt de Claude Files, separado por tabuladores):
+  //   SKU <tab> nombre <tab> costo Qinera <tab> costo puesto en Chile <tab> venta neto <tab> venta c/IVA
+  const COSTOS_KEY = 'oct_salas_mis_costos_v1';
+  let MIS_COSTOS = {};
+  function _costosCargar(){
+    try { MIS_COSTOS = JSON.parse(localStorage.getItem(COSTOS_KEY) || '{}') || {}; }
+    catch(e){ MIS_COSTOS = {}; }
+    return Object.keys(MIS_COSTOS).length;
+  }
+  function _costosGuardar(){
+    try { localStorage.setItem(COSTOS_KEY, JSON.stringify(MIS_COSTOS)); return true; }
+    catch(e){ return false; }
+  }
+  function _costosBorrar(){
+    MIS_COSTOS = {};
+    try { localStorage.removeItem(COSTOS_KEY); } catch(e){}
+  }
+  // Lee el texto del archivo. Tolera lineas de comentario, espacios y el signo $ con comas.
+  function _costosParsear(texto){
+    const num = s => Number(String(s == null ? '' : s).replace(/[$\s]/g, '').replace(/,/g, '')) || 0;
+    const out = {};
+    String(texto || '').split(/\r?\n/).forEach(function(linea){
+      if (!/^\s*(BJ|MP)-/.test(linea)) return;                    // solo filas de producto
+      const c = linea.split('\t').map(x => String(x).trim());
+      if (c.length < 4) return;
+      const sku = c[0];
+      if (!sku) return;
+      out[sku] = {
+        nombre: c[1] || '',
+        costoQinera: num(c[2]),      // "Precio OTC container completo" de la tarifa oficial
+        costoPuesto: num(c[3]),      // el anterior x 1,551 → puesto en Chile
+        ventaNeto: num(c[4]),
+        ventaIva: num(c[5])
+      };
+    });
+    return out;
+  }
+  function _costosEstado(){
+    const n = Object.keys(MIS_COSTOS).length;
+    const cont = document.getElementById('costos-estado');
+    if (!cont) return;
+    cont.innerHTML = n
+      ? '<span class="costos-ok">Costos cargados: ' + n + ' productos</span> ' +
+        '<button type="button" class="costos-mini" id="costos-quitar">Quitar de este computador</button>'
+      : '<span class="costos-no">Sin costos cargados — el Excel saldrá sin valores</span>';
+    const q = document.getElementById('costos-quitar');
+    if (q) q.onclick = function(){
+      if (!confirm('¿Quitar los costos guardados en este computador? Podrás volver a cargarlos cuando quieras.')) return;
+      _costosBorrar(); _costosEstado();
+    };
+  }
+  // Conecta el boton y el selector de archivo. Se llama en cada repintado del comparador.
+  function _wireCargarCostos(){
+    const btn = document.getElementById('costos-cargar');
+    const inp = document.getElementById('costos-archivo');
+    if (!btn || !inp || btn.dataset.listo) return;
+    btn.dataset.listo = '1';
+    btn.onclick = function(){ inp.click(); };
+    inp.onchange = function(){
+      const file = inp.files && inp.files[0];
+      if (!file) return;
+      const lector = new FileReader();
+      lector.onload = function(){
+        const datos = _costosParsear(lector.result);
+        const n = Object.keys(datos).length;
+        if (!n) {
+          alert('No encontré costos en ese archivo.\n\nDebe ser el archivo de la lista de Qinera, con cada producto en una línea: el código, el nombre y los valores separados por tabuladores.');
+          return;
+        }
+        MIS_COSTOS = datos;
+        const ok = _costosGuardar();
+        _costosEstado();
+        alert('Listo: ' + n + ' productos con costo.' +
+          (ok ? '\n\nQuedaron guardados en este computador, así que no te los voy a pedir de nuevo.'
+              : '\n\nOJO: no pude guardarlos en este navegador, así que habrá que cargarlos de nuevo la próxima vez.'));
+      };
+      lector.onerror = function(){ alert('No pude leer el archivo.'); };
+      lector.readAsText(file, 'utf-8');
+      inp.value = '';
+    };
+    _costosEstado();
+  }
+  _costosCargar();
+
   let COTIZ_SM_TODAS = [];
   // Array (no Set) porque el ORDEN importa: es la fila de prioridad que Rayen arma arrastrando
   // las tarjetas — índice 0 = más prioritaria. Pedido de Rayen 2026-07-21.
@@ -2736,14 +2836,26 @@
       + '\n\nSaludos,\nRayen';
     const asunto = 'Pedido nuevo — faltantes Sala Multisensorial (' + items.length + ' productos) — ' + _fechaHoyCL();
     // Datos para el Excel que pidió Mario: SOLO los faltantes, nada más.
+    // Si Rayen cargó sus costos en este computador, el Excel los lleva (y el total del pedido).
+    // Si no los cargó, sale como siempre: SKU, producto y cuántos faltan.
+    const hayCostos = Object.keys(MIS_COSTOS).length > 0;
     const datosExcel = {
-      filas: items.map(it => ({
-        sku: _skuFaltante(it.nombre, it.s) || '',
-        nombre: it.nombre || '(sin nombre)',
-        falta: it.falta, pedido: it.pedido, stock: it.stockTotal
-      })),
+      filas: items.map(it => {
+        const sku = _skuFaltante(it.nombre, it.s) || '';
+        const c = MIS_COSTOS[sku] || null;
+        return {
+          sku: sku,
+          nombre: it.nombre || '(sin nombre)',
+          falta: it.falta, pedido: it.pedido, stock: it.stockTotal,
+          costoQinera: c ? c.costoQinera : 0,
+          costoPuesto: c ? c.costoPuesto : 0,
+          ventaNeto: c ? c.ventaNeto : 0,
+          ventaIva: c ? c.ventaIva : 0
+        };
+      }),
       fecha: _fechaHoyCL(),
-      cotizaciones: seleccionadas.length
+      cotizaciones: seleccionadas.length,
+      conCostos: hayCostos
     };
     _mostrarInforme(html, asunto, texto, MARIO_EMAIL, _informeParaCorreo(ordenadas, items), datosExcel);
   }
@@ -2885,10 +2997,21 @@
       stockDisponibleGrid +
       '<h3 style="margin-top:1.4rem;">Faltantes para el próximo pedido</h3>' +
       '<p class="nivel-nota">Productos donde estas cotizaciones piden más de lo que hay en stock — con foto y SKU para armar el pedido nuevo.</p>' +
+      // Costos para el Excel del pedido. No viven en esta página (es pública): se cargan del
+      // computador de Rayen y quedan guardados solo en su navegador.
+      '<div class="costos-caja">' +
+        '<div class="costos-caja-t">Costos para tu Excel del pedido</div>' +
+        '<p class="costos-caja-p">Los costos <strong>no están en esta página</strong> (está publicada en internet). Cárgalos una vez desde tu archivo del Drive y quedan guardados en este computador: de ahí en adelante tu Excel de faltantes sale con lo que te cuesta cada producto y con el total del pedido.</p>' +
+        '<button type="button" class="btn-secundario" id="costos-cargar">Cargar mis costos</button>' +
+        '<input type="file" id="costos-archivo" accept=".txt,.tsv,.csv,text/plain" style="display:none;">' +
+        '<div id="costos-estado" class="costos-estado"></div>' +
+        '<p class="costos-caja-p" style="margin-top:0.5rem;">El archivo es <code>Claude Files\\Qinera_Lista_Importable_2026-08-06.txt</code> en tu Drive.</p>' +
+      '</div>' +
       botonCorreo +
       '<input type="text" class="search" id="faltantes-buscar" placeholder="Buscar producto o SKU…" style="margin-bottom:0.7rem;" />' +
       faltantesGrid;
     _wireDragPrioridad();
+    _wireCargarCostos();
     // [data-ficha] ya no se conecta acá — lo cubre la delegación global en document (más abajo en
     // el script), que lee data-stock-extra igual que antes. Sigue el wiring propio de
     // [data-desglose], que no está delegado.

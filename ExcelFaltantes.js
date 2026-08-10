@@ -80,15 +80,27 @@
 
   window.OCT_excelFaltantes = function (filas, info) {
     info = info || {};
-    // Mario quiere ver SOLO lo que falta: nada de "se piden" ni "en stock".
-    var COLS = ['SKU', 'Producto', 'Faltan'];
+    // Con costos (Rayen 2026-08-06): el informe de faltantes es PARA ELLA, para hacer el pedido,
+    // asi que necesita ver cuanto le va a costar. Los costos NO viven en la pagina publicada: se
+    // cargan desde su computador (ver "Cargar mis costos" en StockSalasMultisensoriales.html), y
+    // solo se agregan al Excel si estan cargados.
+    //   costoQinera      = "Precio OTC container completo" de la tarifa oficial (lo que le factura
+    //                      Qinera; el transporte NO va incluido)
+    //   costoPuesto      = el mismo x 1,551 → ya puesto en Chile (flete maritimo + importacion)
+    var conCostos = !!info.conCostos;
+    var COLS = conCostos
+      ? ['SKU', 'Producto', 'Faltan', 'Costo Qinera c/u', 'Costo Qinera total',
+         'Costo puesto en Chile c/u', 'Costo puesto en Chile total', 'Venta neto c/u', 'Venta c/IVA c/u']
+      : ['SKU', 'Producto', 'Faltan'];
+    var ULT = col(COLS.length - 1);
     var f = 0, xml = '';
 
     // Bloque de encabezado
     xml += '<row r="1" ht="24" customHeight="1">' + celdaTexto('A1', 1, 'Faltantes — Salas Multisensoriales') + '</row>';
     xml += '<row r="2" ht="16" customHeight="1">' + celdaTexto('A2', 2,
       (info.fecha || '') + (info.cotizaciones ? '   ·   ' + info.cotizaciones + ' cotizaciones consideradas' : '') +
-      '   ·   ' + filas.length + ' productos por pedir') + '</row>';
+      '   ·   ' + filas.length + ' productos por pedir' +
+      (conCostos ? '   ·   con costos (uso interno — no compartir)' : '')) + '</row>';
     xml += '<row r="3"></row>';
 
     // Cabecera de la tabla (fila 4)
@@ -97,15 +109,46 @@
     xml += '</row>';
 
     // Datos desde la fila 5
+    var totQ = 0, totP = 0;
     filas.forEach(function (r, i) {
       f = i + 5;
       xml += '<row r="' + f + '">'
         + celdaTexto('A' + f, 4, r.sku || '—')
         + celdaTexto('B' + f, 4, r.nombre || '(sin nombre)')
-        + celdaNumero('C' + f, 6, r.falta)
-        + '</row>';
+        + celdaNumero('C' + f, 6, r.falta);
+      if (conCostos) {
+        var cq = Number(r.costoQinera) || 0, cp = Number(r.costoPuesto) || 0;
+        // Sin costo = ese producto NO esta en la lista de lo que hoy se puede importar de Qinera
+        // (o es de otro proveedor: Tobii, licencias de software). Se dice, en vez de poner $0, que
+        // se leeria como "sale gratis" y ademas ensuciaria el total del pedido.
+        if (!cq && !cp) {
+          xml += celdaTexto('D' + f, 5, 'no está en la lista')
+            + celdaTexto('E' + f, 5, '—') + celdaTexto('F' + f, 5, '—') + celdaTexto('G' + f, 5, '—')
+            + celdaTexto('H' + f, 5, '—') + celdaTexto('I' + f, 5, '—');
+        } else {
+          var q = cq * (Number(r.falta) || 0), p = cp * (Number(r.falta) || 0);
+          totQ += q; totP += p;
+          xml += celdaNumero('D' + f, 7, cq)
+            + celdaNumero('E' + f, 7, q)
+            + celdaNumero('F' + f, 7, cp)
+            + celdaNumero('G' + f, 7, p)
+            + celdaNumero('H' + f, 7, Number(r.ventaNeto) || 0)
+            + celdaNumero('I' + f, 7, Number(r.ventaIva) || 0);
+        }
+      }
+      xml += '</row>';
     });
     var ultima = filas.length ? (filas.length + 4) : 4;
+
+    // Fila de totales: cuanto cuesta el pedido completo.
+    if (conCostos && filas.length) {
+      ultima = ultima + 1;
+      xml += '<row r="' + ultima + '" ht="20" customHeight="1">'
+        + celdaTexto('B' + ultima, 1, 'TOTAL DEL PEDIDO')
+        + celdaNumero('E' + ultima, 8, totQ)
+        + celdaNumero('G' + ultima, 8, totP)
+        + '</row>';
+    }
 
     var hoja = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
       + '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
@@ -118,9 +161,10 @@
       +   '<col min="1" max="1" width="18" customWidth="1"/>'
       +   '<col min="2" max="2" width="58" customWidth="1"/>'
       +   '<col min="3" max="3" width="12" customWidth="1"/>'
+      +   (conCostos ? '<col min="4" max="9" width="19" customWidth="1"/>' : '')
       + '</cols>'
       + '<sheetData>' + xml + '</sheetData>'
-      + '<autoFilter ref="A4:C' + ultima + '"/>'
+      + '<autoFilter ref="A4:' + ULT + (filas.length ? (filas.length + 4) : 4) + '"/>'
       + '<pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/>'
       + '</worksheet>';
 
@@ -143,7 +187,8 @@
       +   '<border><left/><right/><top/><bottom style="thin"><color rgb="FFE3E7EC"/></bottom><diagonal/></border>'
       + '</borders>'
       + '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
-      + '<cellXfs count="7">'
+      + '<numFmts count="1"><numFmt numFmtId="200" formatCode="&quot;$&quot;#,##0"/></numFmts>'
+      + '<cellXfs count="9">'
       +   '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
       +   '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
       +   '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
@@ -151,6 +196,9 @@
       +   '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>'
       +   '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
       +   '<xf numFmtId="0" fontId="4" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
+      // 7 = pesos con separador de miles · 8 = igual pero en negrita, para la fila del total
+      +   '<xf numFmtId="200" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>'
+      +   '<xf numFmtId="200" fontId="1" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>'
       + '</cellXfs>'
       + '</styleSheet>';
 

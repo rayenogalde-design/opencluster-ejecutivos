@@ -889,41 +889,62 @@ chipsMarcaEl.addEventListener('click', (e) => {
   if(!A || !A.catres.length) return;
   var COD = "COMBO-CATRES";
 
+  /* Paleta: la que YA usa la pagina y el manual de marca de OCT.
+     Sky #06b3fd para lo elegido, tinta #182233 para el texto, naranjo #ff7e00 solo en el
+     sello. NO se usan el rojo ni el verde: en esta pagina el rojo es de alertas y el verde
+     de margenes, y usarlos aca hacia que la tarjeta compitiera con todo lo demas.
+     Pedido de Rayen: "hay muchos colores y no se ve armonioso". */
   var css = document.createElement('style');
   css.textContent = ''
-   + '.pcard.pcard-combo{grid-column:1/-1;display:block;border:2px solid #111827}'
-   + '.cb-head{display:flex;align-items:center;gap:10px;padding:12px 15px;background:#111827;color:#fff;flex-wrap:wrap}'
-   + '.cb-head b{font-size:15px;font-weight:800}'
-   + '.cb-head .cb-tag{background:#dc2626;font-size:10px;font-weight:800;letter-spacing:.05em;padding:3px 8px;border-radius:20px;text-transform:uppercase}'
-   + '.cb-head .cb-hint{font-size:11.5px;opacity:.75;flex:1;min-width:150px}'
-   + '.cb-body{padding:13px 15px 15px}'
-   + '.cb-paso{margin-bottom:14px}'
-   + '.cb-t{font-size:11.5px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.04em;margin-bottom:7px;display:flex;align-items:center;gap:6px}'
-   + '.cb-n{background:#111827;color:#fff;width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10.5px;flex:0 0 auto}'
-   + '.cb-ops{display:flex;flex-wrap:wrap;gap:8px}'
-   + '.cb-op{position:relative;border:1.5px solid #d9dee7;background:#fff;border-radius:11px;padding:0 0 7px;cursor:pointer;font-family:inherit;color:#111827;width:132px;text-align:center;overflow:hidden}'
-   + '.cb-op:hover{border-color:#9aa5b5}'
-   + '.cb-op.on{border-color:#111827;box-shadow:0 0 0 2.5px #11182722}'
-   + '.cb-op.off{opacity:.36;cursor:not-allowed}'
+   + '.pcard-combo{--cb-tinta:#182233;--cb-suave:#5b6779;--cb-tenue:#8b96a5;--cb-linea:#dfe4ea;'
+   + '--cb-fondo:#f6f8fb;--cb-acento:#06b3fd;--cb-acento-fondo:#dff3ff;--cb-acento-tinta:#0a78d6}'
+   + '.pcard.pcard-combo{grid-column:1/-1;display:block;border:1px solid var(--cb-linea);border-radius:14px;overflow:hidden;background:#fff}'
+   /* cabecera */
+   + '.cb-head{display:flex;align-items:center;gap:10px;padding:13px 16px;background:var(--cb-tinta);color:#fff;flex-wrap:wrap}'
+   + '.cb-head b{font-size:15px;font-weight:700;letter-spacing:-.01em}'
+   + '.cb-head .cb-tag{background:#ff7e00;color:#fff;font-size:9.5px;font-weight:700;letter-spacing:.06em;padding:4px 9px;border-radius:4px;text-transform:uppercase}'
+   + '.cb-head .cb-hint{font-size:11.5px;color:#b9c2ce;flex:1;min-width:160px;line-height:1.4}'
+   /* pasos */
+   + '.cb-body{padding:16px}'
+   + '.cb-paso{margin-bottom:18px}'
+   + '.cb-paso:last-of-type{margin-bottom:0}'
+   + '.cb-t{font-size:10.5px;font-weight:700;color:var(--cb-suave);text-transform:uppercase;letter-spacing:.07em;margin-bottom:9px;display:flex;align-items:center;gap:7px}'
+   + '.cb-n{background:var(--cb-fondo);color:var(--cb-suave);border:1px solid var(--cb-linea);width:19px;height:19px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex:0 0 auto}'
+   /* opciones: grilla, para que todas midan lo mismo */
+   + '.cb-ops{display:grid;grid-template-columns:repeat(auto-fill,minmax(138px,1fr));gap:9px}'
+   + '.cb-si{display:grid;grid-template-columns:repeat(auto-fill,minmax(138px,1fr));gap:9px;max-width:430px}'
+   + '.cb-op{position:relative;display:flex;flex-direction:column;border:1px solid var(--cb-linea);background:#fff;border-radius:10px;padding:0;cursor:pointer;font-family:inherit;color:var(--cb-tinta);text-align:left;overflow:hidden;transition:border-color .12s,box-shadow .12s}'
+   + '.cb-op:hover{border-color:var(--cb-tenue)}'
+   + '.cb-op:focus-visible{outline:2px solid var(--cb-acento);outline-offset:2px}'
+   + '.cb-op.on{border-color:var(--cb-acento);box-shadow:inset 0 0 0 1px var(--cb-acento)}'
+   + '.cb-op.on .cb-op-pie{background:var(--cb-acento-fondo)}'
+   + '.cb-op.off{opacity:.4;cursor:not-allowed}'
    + '.cb-op.off .cb-op-img{filter:grayscale(1)}'
-   + '.cb-op-img{width:100%;height:74px;object-fit:contain;background:#f6f7f9;display:block;padding:4px}'
-   + '.cb-op-ph{width:100%;height:74px;background:#f6f7f9;display:flex;align-items:center;justify-content:center;font-size:24px}'
-   + '.cb-op-tx{font-size:11.5px;font-weight:700;line-height:1.25;padding:6px 7px 0;display:block}'
-   + '.cb-op-px{font-size:11px;font-weight:800;color:#0f766e;display:block;padding-top:2px}'
-   + '.cb-op.on .cb-op-px{color:#111827}'
-   + '.cb-op-no{font-size:10px;color:#b91c1c;display:block;padding:2px 5px 0;line-height:1.2}'
-   + '.cb-op-f{position:absolute;top:4px;right:4px;background:rgba(17,24,39,.82);color:#fff;border:0;border-radius:6px;font-size:9.5px;font-weight:800;padding:3px 6px;cursor:pointer;font-family:inherit}'
-   + '.cb-op-f:hover{background:#111827}'
-   + '.cb-op-lupa{right:auto;left:4px;font-size:12px;line-height:1;padding:3px 6px}'
-   + '.cb-si{display:flex;gap:8px;flex-wrap:wrap}'
-   + '.cb-aviso{font-size:11.5px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:6px 9px;margin-top:6px}'
-   + '.cb-fin{border-top:1.5px dashed #e3e7ee;padding-top:13px;display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}'
-   + '.cb-fin-tx{flex:1;min-width:170px}'
-   + '.cb-lbl{font-size:10.5px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em}'
-   + '.cb-px{font-size:27px;font-weight:900;line-height:1.05;letter-spacing:-.02em}'
-   + '.cb-cod{font-size:11px;color:#6b7280;font-weight:700;margin-top:2px}'
-   + '.cb-res{font-size:12px;color:#4b5563;margin-top:6px;line-height:1.45}'
-   + '.cb-nope{font-size:12.5px;color:#c0392b;font-weight:700}';
+   + '.cb-op-img{width:100%;height:92px;object-fit:contain;background:var(--cb-fondo);display:block;padding:8px;box-sizing:border-box}'
+   + '.cb-op-ph{width:100%;height:92px;background:var(--cb-fondo);display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--cb-tenue)}'
+   + '.cb-op-pie{padding:8px 10px 9px;border-top:1px solid var(--cb-linea);flex:1;display:flex;flex-direction:column;justify-content:space-between;gap:3px}'
+   + '.cb-op-tx{font-size:12px;font-weight:650;line-height:1.3;display:block}'
+   + '.cb-op-sub{font-size:10.5px;font-weight:500;color:var(--cb-tenue);display:block}'
+   + '.cb-op-px{font-size:11px;font-weight:700;color:var(--cb-suave);display:block;font-variant-numeric:tabular-nums}'
+   + '.cb-op.on .cb-op-px{color:var(--cb-acento-tinta)}'
+   + '.cb-op-no{font-size:10px;color:var(--cb-tenue);display:block;line-height:1.25}'
+   /* las de si/no (batería) no llevan foto: solo el pie */
+   + '.cb-op-chico .cb-op-pie{border-top:0;padding:11px 12px}'
+   + '.cb-op-chico{max-width:150px}'
+   /* lupa y ficha: discretos, sobre la foto */
+   + '.cb-op-f{position:absolute;top:6px;right:6px;background:rgba(255,255,255,.94);color:var(--cb-suave);border:1px solid var(--cb-linea);border-radius:5px;font-size:9.5px;font-weight:700;padding:3px 6px;cursor:pointer;font-family:inherit;line-height:1.2}'
+   + '.cb-op-f:hover{color:var(--cb-tinta);border-color:var(--cb-tenue)}'
+   + '.cb-op-lupa{right:auto;left:6px;font-size:11px;padding:3px 6px}'
+   /* aviso */
+   + '.cb-aviso{font-size:11.5px;color:#9a5310;background:#fdeee0;border:1px solid #f6d9bd;border-radius:8px;padding:7px 10px;margin-top:8px;line-height:1.45}'
+   /* resultado */
+   + '.cb-fin{border-top:1px solid var(--cb-linea);margin-top:16px;padding-top:15px;display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}'
+   + '.cb-fin-tx{flex:1;min-width:180px}'
+   + '.cb-lbl{font-size:10px;font-weight:700;color:var(--cb-tenue);text-transform:uppercase;letter-spacing:.07em}'
+   + '.cb-px{font-size:26px;font-weight:750;line-height:1.1;letter-spacing:-.025em;color:var(--cb-tinta);font-variant-numeric:tabular-nums;margin-top:2px}'
+   + '.cb-cod{font-size:11px;color:var(--cb-tenue);font-weight:600;margin-top:3px;font-variant-numeric:tabular-nums}'
+   + '.cb-res{font-size:12px;color:var(--cb-suave);margin-top:8px;line-height:1.5}'
+   + '.cb-nope{font-size:12.5px;color:#c0392b;font-weight:600}';
   document.head.appendChild(css);
 
   /* 1) esconder las 70 variantes del listado (siguen en DATA para la cotizacion) */
@@ -1011,9 +1032,10 @@ chipsMarcaEl.addEventListener('click', (e) => {
     var o1 = document.createElement('div'); o1.className='cb-ops';
     A.catres.forEach(function(c){
       var b = document.createElement('button'); b.type='button'; b.className='cb-op'; b.dataset.catre=c.id;
-      b.innerHTML = (c.img ? '<img class="cb-op-img" src="'+c.img+'" loading="lazy" alt="">' : '<div class="cb-op-ph">🛏️</div>')
-        + '<span class="cb-op-tx">'+esc(c.titulo.replace('Catre Clínico ',''))+'<br><span style="font-weight:600;color:#6b7280">'+esc(c.sub)+'</span></span>'
-        + '<span class="cb-op-px">desde '+clpx(c.desde)+'</span>';
+      b.innerHTML = (c.img ? '<img class="cb-op-img" src="'+c.img+'" loading="lazy" alt="">' : '<div class="cb-op-ph">sin foto</div>')
+        + '<div class="cb-op-pie"><span class="cb-op-tx">'+esc(c.titulo.replace('Catre Clínico ',''))+'</span>'
+        + '<span class="cb-op-sub">'+esc(c.sub)+'</span>'
+        + '<span class="cb-op-px">desde '+clpx(c.desde)+'</span></div>';
       b.addEventListener('click', function(ev){
         if(ev.target.classList.contains('cb-op-f')) return;
         e.catre = c.id;
@@ -1032,9 +1054,9 @@ chipsMarcaEl.addEventListener('click', (e) => {
     var o2 = document.createElement('div'); o2.className='cb-ops';
     A.colchones.forEach(function(c){
       var b = document.createElement('button'); b.type='button'; b.className='cb-op'; b.dataset.colchon=c.key;
-      b.innerHTML = (c.img ? '<img class="cb-op-img" src="'+c.img+'" loading="lazy" alt="">' : '<div class="cb-op-ph">'+(c.key===''?'∅':'🛏️')+'</div>')
-        + '<span class="cb-op-tx">'+esc(c.label)+'</span>'
-        + '<span class="cb-op-px" data-px></span>';
+      b.innerHTML = (c.img ? '<img class="cb-op-img" src="'+c.img+'" loading="lazy" alt="">' : '<div class="cb-op-ph">'+(c.key===''?'ninguno':'sin foto')+'</div>')
+        + '<div class="cb-op-pie"><span class="cb-op-tx">'+esc(c.label)+'</span>'
+        + '<span class="cb-op-px" data-px></span></div>';
       b.addEventListener('click', function(ev){
         if(ev.target.classList.contains('cb-op-f')) return;
         if(b.classList.contains('off')) return;
@@ -1051,8 +1073,8 @@ chipsMarcaEl.addEventListener('click', (e) => {
     var o3 = document.createElement('div'); o3.className='cb-si';
     [['no','Sin Systam',false],['si','Con Colchón Systam',true]].forEach(function(x){
       var b = document.createElement('button'); b.type='button'; b.className='cb-op'; b.dataset.sys=x[0];
-      var im = (x[2] && A.systam && A.systam.img) ? '<img class="cb-op-img" src="'+A.systam.img+'" loading="lazy" alt="">' : '<div class="cb-op-ph">'+(x[2]?'🛏️':'∅')+'</div>';
-      b.innerHTML = im + '<span class="cb-op-tx">'+x[1]+'</span><span class="cb-op-px" data-px></span><span class="cb-op-no" data-no></span>';
+      var im = (x[2] && A.systam && A.systam.img) ? '<img class="cb-op-img" src="'+A.systam.img+'" loading="lazy" alt="">' : '<div class="cb-op-ph">'+(x[2]?'sin foto':'ninguno')+'</div>';
+      b.innerHTML = im + '<div class="cb-op-pie"><span class="cb-op-tx">'+x[1]+'</span><span class="cb-op-px" data-px></span><span class="cb-op-no" data-no></span></div>';
       b.addEventListener('click', function(ev){
         if(ev.target.classList.contains('cb-op-f')) return;
         if(b.classList.contains('off')) return;
@@ -1072,9 +1094,8 @@ chipsMarcaEl.addEventListener('click', (e) => {
     p4.innerHTML = '<div class="cb-t"><span class="cb-n">4</span>Batería de emergencia</div>';
     var o4 = document.createElement('div'); o4.className='cb-si';
     [['si','Con batería',true],['no','Sin batería',false]].forEach(function(x){
-      var b = document.createElement('button'); b.type='button'; b.className='cb-op'; b.dataset.bat=x[0];
-      b.style.width='118px';
-      b.innerHTML = '<div class="cb-op-ph">'+(x[2]?'🔋':'∅')+'</div><span class="cb-op-tx">'+x[1]+'</span><span class="cb-op-px" data-px></span>';
+      var b = document.createElement('button'); b.type='button'; b.className='cb-op cb-op-chico'; b.dataset.bat=x[0];
+      b.innerHTML = '<div class="cb-op-pie"><span class="cb-op-tx">'+x[1]+'</span><span class="cb-op-px" data-px></span></div>';
       b.addEventListener('click', function(){ if(b.classList.contains('off')) return; e.bateria = x[2]; pinta(); });
       o4.appendChild(b);
     });

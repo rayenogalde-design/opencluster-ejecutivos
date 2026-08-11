@@ -710,6 +710,15 @@ countEl.textContent = DATA.length + ' productos en total';
    + '.cb-op-f:hover{color:var(--cb-tinta);border-color:var(--cb-tenue)}'
    /* aviso */
    + '.cb-aviso{font-size:11.5px;color:#9a5310;background:#fdeee0;border:1px solid #f6d9bd;border-radius:8px;padding:7px 10px;margin-top:8px;line-height:1.45}'
+   /* el aviso de "sin batería" pesa un poco más: borde izquierdo grueso y el ⚠ delante, para
+      que no se lea como una nota al pie. Rayen: "hay que destacar que no traerá batería". */
+   + '.cb-aviso-ojo{border-left:3px solid #e8891f;padding-left:11px}'
+   + '.cb-aviso-ojo:before{content:"⚠ ";font-weight:700}'
+   /* la batería en el resumen del precio: pastilla, no texto corrido */
+   + '.cb-res-bat{margin-top:7px}'
+   + '.cb-bat{display:inline-block;font-size:11px;font-weight:700;padding:4px 9px;border-radius:999px;letter-spacing:.01em}'
+   + '.cb-bat-si{background:#dff3ff;color:#0a78d6;border:1px solid #b8e4fb}'
+   + '.cb-bat-no{background:#fdeee0;color:#9a5310;border:1px solid #f6d9bd}'
    /* resultado */
    + '.cb-fin{border-top:1px solid var(--cb-linea);margin-top:16px;padding-top:15px;display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}'
    + '.cb-fin-tx{flex:1;min-width:180px}'
@@ -916,7 +925,10 @@ countEl.textContent = DATA.length + ' productos en total';
     var p4 = document.createElement('div'); p4.className='cb-paso';
     p4.innerHTML = '<div class="cb-t"><span class="cb-n">4</span>Batería de emergencia</div>';
     var o4 = document.createElement('div'); o4.className='cb-si';
-    [['si','Con batería',true],['no','Sin batería',false]].forEach(function(x){
+    /* Primero SIN batería y después CON. Rayen, 11-ago-2026: "quiero que primero aparezca el
+       valor sin batería y luego con batería". Así se lee de menor a mayor precio, y el "+$X"
+       de la batería queda a la derecha, que es donde se espera el agregado. */
+    [['no','Sin batería',false],['si','Con batería',true]].forEach(function(x){
       var b = document.createElement('button'); b.type='button'; b.className='cb-op cb-op-chico'; b.dataset.bat=x[0];
       b.innerHTML = '<div class="cb-op-pie"><span class="cb-op-tx">'+x[1]+'</span><span class="cb-op-px" data-px></span></div>';
       b.addEventListener('click', function(){ if(b.classList.contains('off')) return; e.bateria = x[2]; pinta(); });
@@ -926,6 +938,14 @@ countEl.textContent = DATA.length + ' productos en total';
     var avisoB = document.createElement('div'); avisoB.className='cb-aviso'; avisoB.style.display='none';
     avisoB.textContent = 'Este catre es manual y no lleva batería de emergencia.';
     p4.appendChild(avisoB);
+    /* Rayen, 11-ago-2026: "necesito que hagas hincapie en esto, en la parte sin bateria: si lo
+       eligen asi hay que destacar que no traera bateria de emergencia el catre".
+       Antes solo lo decia el texto chico del resumen y se pasaba por alto. Ahora, al elegir
+       "Sin batería", sale este aviso con la consecuencia concreta — que es lo que el cliente
+       necesita entender antes de decidir, no el dato a secas. */
+    var avisoSin = document.createElement('div'); avisoSin.className='cb-aviso cb-aviso-ojo'; avisoSin.style.display='none';
+    /* el texto se completa en pinta(), porque cuanto cuesta la bateria depende del catre */
+    p4.appendChild(avisoSin);
     body.appendChild(p4);
 
     /* --- resultado --- */
@@ -983,6 +1003,7 @@ countEl.textContent = DATA.length + ' productos en total';
       /* bateria */
       p4.style.opacity = C2.hayBateria ? '' : '.55';
       avisoB.style.display = C2.hayBateria ? 'none' : '';
+      var costoBat = null;
       o4.querySelectorAll('[data-bat]').forEach(function(b){
         var val = b.dataset.bat==='si';
         b.classList.toggle('on', C2.hayBateria && !!e.bateria===val);
@@ -990,9 +1011,18 @@ countEl.textContent = DATA.length + ' productos en total';
         var px = b.querySelector('[data-px]');
         if(val && C2.hayBateria){
           var s1 = precioDe({ bateria:false }), s2 = precioDe({ bateria:true });
-          px.textContent = (s1!=null && s2!=null) ? '+ '+clpx(s2-s1) : '';
+          costoBat = (s1!=null && s2!=null) ? (s2-s1) : null;
+          px.textContent = (costoBat!=null) ? '+ '+clpx(costoBat) : '';
         } else px.textContent='';
       });
+      /* el aviso de que va SIN batería, con la consecuencia concreta */
+      var vaSinBat = C2.hayBateria && !e.bateria;
+      avisoSin.style.display = vaSinBat ? '' : 'none';
+      if(vaSinBat){
+        avisoSin.innerHTML = '<b>Este catre NO lleva batería de emergencia.</b> Si se corta la luz, la cama '
+          + 'queda detenida en la posición en que esté: no se puede subir ni bajar hasta que vuelva la corriente.'
+          + (costoBat!=null ? ' La versión con batería cuesta <b>' + clpx(costoBat) + ' más</b>.' : '');
+      }
       /* resultado */
       var v = A.variantes.filter(function(x){ return calza(x, e); })[0];
       if(!v){
@@ -1005,11 +1035,19 @@ countEl.textContent = DATA.length + ' productos en total';
       var lab = A.colchones.filter(function(c){ return c.key===e.colchon; })[0];
       partes.push(e.colchon==='' ? 'sin colchón' : 'con colchón '+lab.label);
       if(e.systam) partes.push('más Colchón Systam');
-      if(C2.hayBateria) partes.push(e.bateria ? 'con batería de emergencia' : 'sin batería de emergencia');
+      /* la batería NO va en la lista corrida: se saca aparte y se destaca, porque en gris
+         entre las demás palabras se pasaba por alto. Pedido de Rayen del 11-ago-2026. */
+      var bat = '';
+      if(C2.hayBateria){
+        bat = e.bateria
+          ? '<span class="cb-bat cb-bat-si">✓ Con batería de emergencia</span>'
+          : '<span class="cb-bat cb-bat-no">SIN batería de emergencia</span>';
+      }
       tx.innerHTML = '<div class="cb-lbl">Precio · IVA incl.</div>'
         + '<div class="cb-px">'+clpx(v.precio)+'</div>'
         + '<div class="cb-cod">Código '+esc(v.codigo)+'</div>'
-        + '<div class="cb-res">'+esc(C2.titulo+' '+C2.sub+', '+partes.join(', ')+'.')+'</div>';
+        + '<div class="cb-res">'+esc(C2.titulo+' '+C2.sub+', '+partes.join(', ')+'.')+'</div>'
+        + (bat ? '<div class="cb-res-bat">'+bat+'</div>' : '');
       btn.dataset.addBtn = v.codigo;
       quoteRenderAddBtn(btn, v.codigo);
       btn.onclick = function(){ quoteToggle(v.codigo); pinta(); };
@@ -1101,62 +1139,7 @@ countEl.textContent = DATA.length + ' productos en total';
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', engancha);
   else engancha();
 })();
-/*__SUBCATS_INI__*/
-/* Sillas de ruedas: al elegirla, la fila de familias se recoge y su lugar lo toman las
-   subcategorias, con un boton para volver. La fila de marcas se oculta: Rayen decidio que
-   con categoria y subcategoria basta, la marca no le sirve para elegir. */
-(function(){
-  var SUBS = [["estandar","Estándar"],["activas","Activas"],["electricas","Eléctricas"],["neurologicas","Neurológicas"],["pediatricas","Pediátricas"],["bipedestadoras","Bipedestadoras"],["bariatricas","Bariátricas"],["handbikes","Handbikes"],["rampas","Rampas"]];
-  var activeSub = '';
-  var baseFiltro = (typeof filtroExtra !== 'undefined') ? filtroExtra : null;
-  var contFam = document.getElementById('chips');
-  var filaFam = contFam ? contFam.parentNode : null;
-  if(!filaFam) return;
-  /* La fila de marcas SE QUEDA VISIBLE. Antes se ocultaba aca porque Rayen dijo que la
-     marca no le servia al cliente para elegir; el 4-ago-2026 lo revirtio: "los ejecutivos
-     me dicen que es esencial poder tener para los clientes y para ellos las marcas de los
-     productos desde lo que seleccionar". */
-  var contMarca = document.getElementById('chipsMarca');
-  if(contMarca && contMarca.parentNode) contMarca.parentNode.style.display='';
-  var wrap = document.getElementById('subWrap');
-  if(!wrap){
-    wrap = document.createElement('div'); wrap.className='chips-scroll'; wrap.id='subWrap';
-    var cont0 = document.createElement('div'); cont0.className='chips'; cont0.id='chipsSub'; wrap.appendChild(cont0);
-    filaFam.parentNode.insertBefore(wrap, filaFam.nextSibling);
-  }
-  wrap.style.display='none';
-  var cont = document.getElementById('chipsSub');
-  function esSillas(){ return activeFam === 'silla_ruedas'; }
-  function cuentaSub(){ var h={}; DATA.forEach(function(p){ if(p.familiaKey==='silla_ruedas' && p.tipoSilla) h[p.tipoSilla]=(h[p.tipoSilla]||0)+1; }); return h; }
-  function pintaSub(){
-    var h = cuentaSub();
-    var html = '<button class="chip'+(activeSub?'':' active')+'" data-sub="">Todas</button>';
-    SUBS.forEach(function(s){ if(!h[s[0]]) return; html += '<button class="chip'+(activeSub===s[0]?' active':'')+'" data-sub="'+s[0]+'">'+s[1]+' <span style="opacity:.55;font-weight:700">'+h[s[0]]+'</span></button>'; });
-    cont.innerHTML = html;
-  }
-  function pinta(){
-    // La fila de categorias se queda arriba y las subcategorias aparecen ABAJO. Asi lo pidio
-    // Rayen: antes se recogia la de arriba y se perdia la referencia de donde estabas.
-    var ver = esSillas();
-    wrap.style.display = ver ? '' : 'none';
-    if(ver) pintaSub(); else activeSub='';
-  }
-  filtroExtra = function(p){
-    if(baseFiltro && !baseFiltro(p)) return false;
-    if(activeSub && p.tipoSilla !== activeSub) return false;
-    return true;
-  };
-  function refresca(){ if(typeof applyFilters==='function') applyFilters(); else if(typeof aplicar==='function') aplicar(); }
-  document.addEventListener('click', function(e){
-    if(!e.target.closest) return;
-    var sub = e.target.closest('#chipsSub [data-sub]');
-    if(sub){ activeSub = sub.getAttribute('data-sub'); pintaSub(); refresca(); return; }
-    var fam = e.target.closest('#chips [data-fam]');
-    if(fam){ setTimeout(function(){ pinta(); refresca(); }, 0); return; }
-  });
-  pinta();
-})();
-/*__SUBCATS_FIN__*/
+
 /*__ARMADOR_THERAFLEX_INI__*/
 /* "Arma tu cama" Theraflex Hi-Lo — 11-ago-2026.
    OJO: a diferencia del armador de catres, ESTE SUMA. Las combinaciones cama+colchon no
@@ -1418,4 +1401,59 @@ countEl.textContent = DATA.length + ' productos en total';
   if(typeof applyFilters === 'function') applyFilters();
 })();
 /*__ARMADOR_THERAFLEX_FIN__*/
-</script>
+/*__SUBCATS_INI__*/
+/* Sillas de ruedas: al elegirla, la fila de familias se recoge y su lugar lo toman las
+   subcategorias, con un boton para volver. La fila de marcas se oculta: Rayen decidio que
+   con categoria y subcategoria basta, la marca no le sirve para elegir. */
+(function(){
+  var SUBS = [["estandar","Estándar"],["activas","Activas"],["electricas","Eléctricas"],["neurologicas","Neurológicas"],["pediatricas","Pediátricas"],["bipedestadoras","Bipedestadoras"],["bariatricas","Bariátricas"],["handbikes","Handbikes"],["rampas","Rampas"]];
+  var activeSub = '';
+  var baseFiltro = (typeof filtroExtra !== 'undefined') ? filtroExtra : null;
+  var contFam = document.getElementById('chips');
+  var filaFam = contFam ? contFam.parentNode : null;
+  if(!filaFam) return;
+  /* La fila de marcas SE QUEDA VISIBLE. Antes se ocultaba aca porque Rayen dijo que la
+     marca no le servia al cliente para elegir; el 4-ago-2026 lo revirtio: "los ejecutivos
+     me dicen que es esencial poder tener para los clientes y para ellos las marcas de los
+     productos desde lo que seleccionar". */
+  var contMarca = document.getElementById('chipsMarca');
+  if(contMarca && contMarca.parentNode) contMarca.parentNode.style.display='';
+  var wrap = document.getElementById('subWrap');
+  if(!wrap){
+    wrap = document.createElement('div'); wrap.className='chips-scroll'; wrap.id='subWrap';
+    var cont0 = document.createElement('div'); cont0.className='chips'; cont0.id='chipsSub'; wrap.appendChild(cont0);
+    filaFam.parentNode.insertBefore(wrap, filaFam.nextSibling);
+  }
+  wrap.style.display='none';
+  var cont = document.getElementById('chipsSub');
+  function esSillas(){ return activeFam === 'silla_ruedas'; }
+  function cuentaSub(){ var h={}; DATA.forEach(function(p){ if(p.familiaKey==='silla_ruedas' && p.tipoSilla) h[p.tipoSilla]=(h[p.tipoSilla]||0)+1; }); return h; }
+  function pintaSub(){
+    var h = cuentaSub();
+    var html = '<button class="chip'+(activeSub?'':' active')+'" data-sub="">Todas</button>';
+    SUBS.forEach(function(s){ if(!h[s[0]]) return; html += '<button class="chip'+(activeSub===s[0]?' active':'')+'" data-sub="'+s[0]+'">'+s[1]+' <span style="opacity:.55;font-weight:700">'+h[s[0]]+'</span></button>'; });
+    cont.innerHTML = html;
+  }
+  function pinta(){
+    // La fila de categorias se queda arriba y las subcategorias aparecen ABAJO. Asi lo pidio
+    // Rayen: antes se recogia la de arriba y se perdia la referencia de donde estabas.
+    var ver = esSillas();
+    wrap.style.display = ver ? '' : 'none';
+    if(ver) pintaSub(); else activeSub='';
+  }
+  filtroExtra = function(p){
+    if(baseFiltro && !baseFiltro(p)) return false;
+    if(activeSub && p.tipoSilla !== activeSub) return false;
+    return true;
+  };
+  function refresca(){ if(typeof applyFilters==='function') applyFilters(); else if(typeof aplicar==='function') aplicar(); }
+  document.addEventListener('click', function(e){
+    if(!e.target.closest) return;
+    var sub = e.target.closest('#chipsSub [data-sub]');
+    if(sub){ activeSub = sub.getAttribute('data-sub'); pintaSub(); refresca(); return; }
+    var fam = e.target.closest('#chips [data-fam]');
+    if(fam){ setTimeout(function(){ pinta(); refresca(); }, 0); return; }
+  });
+  pinta();
+})();
+/*__SUBCATS_FIN__*/</script>

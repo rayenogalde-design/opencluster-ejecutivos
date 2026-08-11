@@ -699,7 +699,32 @@ countEl.textContent = DATA.length + ' productos en total';
    + '.cb-px{font-size:26px;font-weight:750;line-height:1.1;letter-spacing:-.025em;color:var(--cb-tinta);font-variant-numeric:tabular-nums;margin-top:2px}'
    + '.cb-cod{font-size:11px;color:var(--cb-tenue);font-weight:600;margin-top:3px;font-variant-numeric:tabular-nums}'
    + '.cb-res{font-size:12px;color:var(--cb-suave);margin-top:8px;line-height:1.5}'
-   + '.cb-nope{font-size:12.5px;color:#c0392b;font-weight:600}';
+   + '.cb-nope{font-size:12.5px;color:#c0392b;font-weight:600}'
+   /* la foto se puede tocar para verla grande */
+   + '.cb-op-img.cb-zoom{cursor:zoom-in}'
+   /* ---- CELULAR ----
+      Rayen: "asegúrate que esto también se vea bien desde el celular, y ahora no se puede
+      ver". En pantalla angosta la tarjeta entraba con las opciones apretadas y el precio
+      final se iba fuera de vista. Aca: dos columnas de opciones, fotos mas bajas, todo
+      un poco mas chico, y el precio final arriba del boton en vez de al lado. */
+   + '@media(max-width:560px){'
+   + '.cb-head{padding:11px 13px;gap:7px}'
+   + '.cb-head b{font-size:14px}'
+   + '.cb-head .cb-hint{font-size:11px;min-width:100%}'
+   + '.cb-body{padding:13px}'
+   + '.cb-paso{margin-bottom:15px}'
+   + '.cb-ops,.cb-si{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}'
+   + '.cb-op-img,.cb-op-ph{height:78px;padding:6px}'
+   + '.cb-op-pie{padding:7px 9px 8px}'
+   + '.cb-op-tx{font-size:11.5px}'
+   + '.cb-op-chico{max-width:none}'
+   + '.cb-fin{gap:11px;align-items:stretch}'
+   + '.cb-fin-tx{min-width:100%}'
+   + '.cb-px{font-size:23px}'
+   + '.cb-fin .pcard-add-btn{width:100%;justify-content:center}'
+   + '}'
+   /* pantallas muy angostas: una sola columna, para que el nombre no se corte */
+   + '@media(max-width:360px){.cb-ops,.cb-si{grid-template-columns:1fr}.cb-op-img,.cb-op-ph{height:96px}}';
   document.head.appendChild(css);
 
   /* 1) esconder las 70 variantes del listado (siguen en DATA para la cotizacion) */
@@ -752,9 +777,19 @@ countEl.textContent = DATA.length + ' productos en total';
     if(!url) return;
     if(typeof openLightbox === 'function') openLightbox(url, alt || '');
   }
-  /* pone la lupa y el boton de ficha en una opcion */
+  /* Pone la lupa, el boton de ficha, y hace que TOCAR LA FOTO la abra grande.
+     Rayen, 11-ago-2026: "si yo toco sobre la imagen, quiero que se abra grande para que
+     ellos la puedan ver bien ... a veces la gente no quiere ver la ficha, quiere solo ver
+     la imagen". Entonces: la foto abre la foto grande, y el resto de la tarjeta elige.
+     La lupa se queda como pista de que la foto se puede agrandar. */
   function botones(b, pr, img, alt){
     if(img){
+      var foto = b.querySelector('.cb-op-img');
+      if(foto){
+        foto.classList.add('cb-zoom');
+        foto.title = 'Toca la foto para verla grande';
+        foto.addEventListener('click', function(ev){ ev.stopPropagation(); grande(img, alt); });
+      }
       var lupa = document.createElement('button');
       lupa.type='button'; lupa.className='cb-op-f cb-op-lupa'; lupa.title='Ver la foto grande';
       lupa.textContent='⤢';
@@ -768,6 +803,16 @@ countEl.textContent = DATA.length + ' productos en total';
       b.appendChild(fb);
     }
   }
+
+  /* Y dentro de la FICHA: tocar la foto grande tambien la abre en el visor.
+     El listener va en el contenedor y se resuelve al vuelo, porque la ficha se arma cada
+     vez que se abre. */
+  document.addEventListener('click', function(ev){
+    var im = ev.target.closest ? ev.target.closest('.ficha-media img') : null;
+    if(!im || !im.src) return;
+    ev.stopPropagation();
+    grande(im.src, im.alt || '');
+  }, true);
 
   function tarjeta(p){
     var C = A.catres[0];

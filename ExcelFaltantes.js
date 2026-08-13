@@ -88,6 +88,20 @@
     //                      Qinera; el transporte NO va incluido)
     //   costoPuesto      = el mismo x 1,551 → ya puesto en Chile (flete maritimo + importacion)
     var conCostos = !!info.conCostos;
+    // DOS PESTAÑAS (Rayen 2026-08-12): la tarifa de Qinera tiene dos vías y no se piden igual.
+    // Los que viajan en el contenedor marítimo (via 'M') van en la primera hoja; los que llegan
+    // aparte, con el transporte ya incluido (via 'T': los Tobii, el soporte Rehadapt, Look to
+    // Learn), van en la segunda. Mezclarlos en una sola lista hacía parecer que todo venía en el
+    // mismo cargamento. Cada fila trae su via; sin via se asume contenedor.
+    var _hojas = [
+      { nombre: 'Contenedor', titulo: 'Faltantes — lo que viene en el contenedor',
+        filas: filas.filter(function (r) { return r.via !== 'T'; }) }
+    ];
+    var _aparte = filas.filter(function (r) { return r.via === 'T'; });
+    if (_aparte.length) _hojas.push({ nombre: 'Llegan aparte', filas: _aparte,
+      titulo: 'Faltantes — se piden aparte (Qinera los manda con el transporte incluido)' });
+
+    function _armarHoja(filas, tituloHoja) {
     var COLS = conCostos
       ? ['SKU', 'Producto', 'Faltan', 'Costo Qinera c/u', 'Costo Qinera total',
          'Costo puesto en Chile c/u', 'Costo puesto en Chile total', 'Venta neto c/u', 'Venta c/IVA c/u']
@@ -96,7 +110,7 @@
     var f = 0, xml = '';
 
     // Bloque de encabezado
-    xml += '<row r="1" ht="24" customHeight="1">' + celdaTexto('A1', 1, 'Faltantes — Salas Multisensoriales') + '</row>';
+    xml += '<row r="1" ht="24" customHeight="1">' + celdaTexto('A1', 1, tituloHoja) + '</row>';
     xml += '<row r="2" ht="16" customHeight="1">' + celdaTexto('A2', 2,
       (info.fecha || '') + (info.cotizaciones ? '   ·   ' + info.cotizaciones + ' cotizaciones consideradas' : '') +
       '   ·   ' + filas.length + ' productos por pedir' +
@@ -167,6 +181,8 @@
       + '<autoFilter ref="A4:' + ULT + (filas.length ? (filas.length + 4) : 4) + '"/>'
       + '<pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/>'
       + '</worksheet>';
+      return hoja;
+    }
 
     var estilos = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
       + '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
@@ -202,13 +218,21 @@
       + '</cellXfs>'
       + '</styleSheet>';
 
+    // El libro se arma con TANTAS hojas como tenga _hojas (1 o 2). Los tres sitios que hay que
+    // mantener en fila son: el Override de cada sheetN.xml, el <sheet> del workbook y su relación
+    // rIdN. Si uno no calza, Excel se niega a abrir el archivo.
+    var xmlHojas = _hojas.map(function (h) { return _armarHoja(h.filas, h.titulo); });
+    var idEstilos = 'rId' + (xmlHojas.length + 1);
+
     var archivos = [
       { nombre: '[Content_Types].xml', contenido: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
         + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
         + '<Default Extension="xml" ContentType="application/xml"/>'
         + '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
-        + '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+        + xmlHojas.map(function (h, i) {
+            return '<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>';
+          }).join('')
         + '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
         + '</Types>' },
       { nombre: '_rels/.rels', contenido: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
@@ -218,15 +242,22 @@
       { nombre: 'xl/workbook.xml', contenido: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         + '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
         + 'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
-        + '<sheets><sheet name="Faltantes" sheetId="1" r:id="rId1"/></sheets></workbook>' },
+        + '<sheets>'
+        + _hojas.map(function (h, i) {
+            return '<sheet name="' + esc(h.nombre) + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>';
+          }).join('')
+        + '</sheets></workbook>' },
       { nombre: 'xl/_rels/workbook.xml.rels', contenido: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-        + '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
-        + '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+        + xmlHojas.map(function (h, i) {
+            return '<Relationship Id="rId' + (i + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>';
+          }).join('')
+        + '<Relationship Id="' + idEstilos + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
         + '</Relationships>' },
-      { nombre: 'xl/styles.xml', contenido: estilos },
-      { nombre: 'xl/worksheets/sheet1.xml', contenido: hoja }
-    ];
+      { nombre: 'xl/styles.xml', contenido: estilos }
+    ].concat(xmlHojas.map(function (h, i) {
+      return { nombre: 'xl/worksheets/sheet' + (i + 1) + '.xml', contenido: h };
+    }));
     return armarZip(archivos);
   };
 

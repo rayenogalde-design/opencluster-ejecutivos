@@ -2867,7 +2867,9 @@
       filas: items.map(it => {
         // skuForzado: lo pone el desdoble del rincón (con tablet / sin tablet), que sabe cuál es
         // el código correcto mejor que la búsqueda por nombre.
-        const sku = it.skuForzado || _skuFaltante(it.nombre, it.s) || '';
+        // El pedido va con el código de la tarifa de Qinera, no con el de bodega (ver _skuQinera).
+        const skuNuestro = it.skuForzado || _skuFaltante(it.nombre, it.s) || '';
+        const sku = it.skuForzado || _skuQinera(skuNuestro, it.nombre) || skuNuestro;
         const c = _costoDe(sku, it.nombre);
         // 'via' decide en qué pestaña del Excel cae el producto: 'M' = viene en el contenedor
         // marítimo · 'T' = Qinera lo manda aparte, con el transporte incluido (Tobii, soporte
@@ -3209,6 +3211,15 @@
     const otros = _otrosNombres(key, mostrado).filter(function(n){ return n.indexOf('tablet') < 0; });
     if (!otros.length) return '';
     return '<div class="tambien-se-llama">También: ' + escapeHtmlSafe(otros.join(' · ')) + '</div>';
+  }
+  // Código con el que hay que pedirle a QINERA, que no siempre es el de bodega: la "Máquina de
+  // burbujas" es MP-EX46-1 acá y BJ-EX46 "Pompas SHX" en la tarifa. El pedido va con el de ellos
+  // (2026-08-13); si el producto no está en la tarifa se deja el nuestro, que es lo único que hay.
+  function _skuQinera(sku, nombreOClave){
+    if (sku && IMPORTABLE[sku]) return sku;
+    var k = nombreOClave ? _claveNombre(nombreOClave) : '';
+    var s2 = k ? IMPORTABLE_POR_NOMBRE[k] : '';
+    return s2 || sku || '';
   }
   function _impTag(sku, nombreOClave){
     const r = _importableDe(sku, nombreOClave);

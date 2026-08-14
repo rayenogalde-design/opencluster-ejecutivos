@@ -95,11 +95,17 @@
     // mismo cargamento. Cada fila trae su via; sin via se asume contenedor.
     var _hojas = [
       { nombre: 'Contenedor', titulo: 'Faltantes — lo que viene en el contenedor', via: 'M',
-        filas: filas.filter(function (r) { return r.via !== 'T'; }) }
+        filas: filas.filter(function (r) { return r.via !== 'T' && r.via !== 'X'; }) }
     ];
     var _aparte = filas.filter(function (r) { return r.via === 'T'; });
     if (_aparte.length) _hojas.push({ nombre: 'Llegan aparte', filas: _aparte, via: 'T',
       titulo: 'Faltantes — se piden aparte (Qinera los manda con el transporte incluido)' });
+    // Tercera hoja: los que Qinera NO tiene en su tarifa. Rayen 2026-08-13: "si no están en el
+    // listado no me lo venden, así de sencillo, no hay que buscarlo". No se piden: hay que
+    // conseguirlos en otro lado, así que lo que importa es cuántos hay y cuántos faltan.
+    var _noQinera = filas.filter(function (r) { return r.via === 'X'; });
+    if (_noQinera.length) _hojas.push({ nombre: 'Conseguir aparte', filas: _noQinera, via: 'X',
+      titulo: 'NO están en la tarifa de Qinera — hay que conseguirlos en otro lado' });
 
     function _armarHoja(filas, tituloHoja, viaHoja) {
     // Rayen 2026-08-12: en el pedido quiere SKU de Qinera, nombre, cuántos y el COSTO DE COMPRA,
@@ -108,12 +114,15 @@
     //     pesos y ese número es el EXW en euros x1000 (verificado contra la factura OC 028/2026:
     //     39 de 40 líneas calzan al céntimo). Por eso se divide por mil: €2.084, no 2.084.000.
     //   · llegan aparte (via T) → ese precio ya viene en PESOS y con el flete dentro, no se toca.
-    var _eur = viaHoja !== 'T';
-    var COLS = conCostos
-      ? (_eur
-          ? ['SKU Qinera', 'Producto', 'Cantidad a pedir', 'EXW c/u (EUR)', 'EXW total (EUR)']
-          : ['SKU Qinera', 'Producto', 'Cantidad a pedir', 'Costo compra c/u (CLP)', 'Costo compra total (CLP)'])
-      : ['SKU Qinera', 'Producto', 'Cantidad a pedir'];
+    var _noQ = viaHoja === 'X';
+    var _eur = viaHoja !== 'T' && !_noQ;
+    var COLS = _noQ
+      ? ['SKU', 'Producto', 'En stock', 'Faltan — conseguir en otro lado']
+      : conCostos
+        ? (_eur
+            ? ['SKU Qinera', 'Producto', 'Cantidad a pedir', 'EXW c/u (EUR)', 'EXW total (EUR)']
+            : ['SKU Qinera', 'Producto', 'Cantidad a pedir', 'Costo compra c/u (CLP)', 'Costo compra total (CLP)'])
+        : ['SKU Qinera', 'Producto', 'Cantidad a pedir'];
     var ULT = col(COLS.length - 1);
     var f = 0, xml = '';
 
@@ -121,8 +130,8 @@
     xml += '<row r="1" ht="24" customHeight="1">' + celdaTexto('A1', 1, tituloHoja) + '</row>';
     xml += '<row r="2" ht="16" customHeight="1">' + celdaTexto('A2', 2,
       (info.fecha || '') + (info.cotizaciones ? '   ·   ' + info.cotizaciones + ' cotizaciones consideradas' : '') +
-      '   ·   ' + filas.length + ' productos por pedir' +
-      (conCostos ? '   ·   con costos (uso interno — no compartir)' : '')) + '</row>';
+      '   ·   ' + filas.length + (_noQ ? ' productos que hay que conseguir en otro lado' : ' productos por pedir') +
+      (conCostos && !_noQ ? '   ·   con costos (uso interno — no compartir)' : '')) + '</row>';
     xml += '<row r="3"></row>';
 
     // Cabecera de la tabla (fila 4)
@@ -137,6 +146,17 @@
     var estNum = _eur ? 9 : 7, estTot = _eur ? 10 : 8;
     filas.forEach(function (r, i) {
       f = i + 5;
+      // Los que no están en la tarifa llevan otra tabla: no hay costo que poner, lo que sirve es
+      // cuántos hay guardados y cuántos hay que salir a buscar.
+      if (_noQ) {
+        xml += '<row r="' + f + '">'
+          + celdaTexto('A' + f, 4, r.sku || '—')
+          + celdaTexto('B' + f, 4, r.nombre || '(sin nombre)')
+          + celdaNumero('C' + f, 5, Number(r.stock) || 0)
+          + celdaNumero('D' + f, 6, r.falta)
+          + '</row>';
+        return;
+      }
       xml += '<row r="' + f + '">'
         + celdaTexto('A' + f, 4, r.sku || '—')
         + celdaTexto('B' + f, 4, r.nombre || '(sin nombre)')
@@ -159,8 +179,8 @@
     });
     var ultima = filas.length ? (filas.length + 4) : 4;
 
-    // Fila de totales: cuanto cuesta el pedido completo.
-    if (conCostos && filas.length) {
+    // Fila de totales: cuanto cuesta el pedido completo. La hoja de los que no se piden no lleva.
+    if (conCostos && filas.length && !_noQ) {
       ultima = ultima + 1;
       xml += '<row r="' + ultima + '" ht="20" customHeight="1">'
         + celdaTexto('B' + ultima, 1, _eur ? 'TOTAL DEL PEDIDO (EUR)' : 'TOTAL DEL PEDIDO (CLP)')

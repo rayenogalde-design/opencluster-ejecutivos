@@ -94,18 +94,26 @@
     // Learn), van en la segunda. Mezclarlos en una sola lista hacía parecer que todo venía en el
     // mismo cargamento. Cada fila trae su via; sin via se asume contenedor.
     var _hojas = [
-      { nombre: 'Contenedor', titulo: 'Faltantes — lo que viene en el contenedor',
+      { nombre: 'Contenedor', titulo: 'Faltantes — lo que viene en el contenedor', via: 'M',
         filas: filas.filter(function (r) { return r.via !== 'T'; }) }
     ];
     var _aparte = filas.filter(function (r) { return r.via === 'T'; });
-    if (_aparte.length) _hojas.push({ nombre: 'Llegan aparte', filas: _aparte,
+    if (_aparte.length) _hojas.push({ nombre: 'Llegan aparte', filas: _aparte, via: 'T',
       titulo: 'Faltantes — se piden aparte (Qinera los manda con el transporte incluido)' });
 
-    function _armarHoja(filas, tituloHoja) {
+    function _armarHoja(filas, tituloHoja, viaHoja) {
+    // Rayen 2026-08-12: en el pedido quiere SKU de Qinera, nombre, cuántos y el COSTO DE COMPRA,
+    // nada más. Y la moneda tiene que leerse fácil:
+    //   · contenedor (via M) → EXW en EUROS. El costo guardado es el "OTC container completo" en
+    //     pesos y ese número es el EXW en euros x1000 (verificado contra la factura OC 028/2026:
+    //     39 de 40 líneas calzan al céntimo). Por eso se divide por mil: €2.084, no 2.084.000.
+    //   · llegan aparte (via T) → ese precio ya viene en PESOS y con el flete dentro, no se toca.
+    var _eur = viaHoja !== 'T';
     var COLS = conCostos
-      ? ['SKU', 'Producto', 'Faltan', 'Costo Qinera c/u', 'Costo Qinera total',
-         'Costo puesto en Chile c/u', 'Costo puesto en Chile total', 'Venta neto c/u', 'Venta c/IVA c/u']
-      : ['SKU', 'Producto', 'Faltan'];
+      ? (_eur
+          ? ['SKU Qinera', 'Producto', 'Cantidad a pedir', 'EXW c/u (EUR)', 'EXW total (EUR)']
+          : ['SKU Qinera', 'Producto', 'Cantidad a pedir', 'Costo compra c/u (CLP)', 'Costo compra total (CLP)'])
+      : ['SKU Qinera', 'Producto', 'Cantidad a pedir'];
     var ULT = col(COLS.length - 1);
     var f = 0, xml = '';
 
@@ -123,7 +131,10 @@
     xml += '</row>';
 
     // Datos desde la fila 5
-    var totQ = 0, totP = 0;
+    var totCompra = 0;
+    // 9 = euros con dos decimales · 10 = lo mismo en negrita (fila del total). En pesos siguen
+    // siendo el 7 y el 8, que ya existían.
+    var estNum = _eur ? 9 : 7, estTot = _eur ? 10 : 8;
     filas.forEach(function (r, i) {
       f = i + 5;
       xml += '<row r="' + f + '">'
@@ -131,23 +142,17 @@
         + celdaTexto('B' + f, 4, r.nombre || '(sin nombre)')
         + celdaNumero('C' + f, 6, r.falta);
       if (conCostos) {
-        var cq = Number(r.costoQinera) || 0, cp = Number(r.costoPuesto) || 0;
-        // Sin costo = ese producto NO esta en la lista de lo que hoy se puede importar de Qinera
-        // (o es de otro proveedor: Tobii, licencias de software). Se dice, en vez de poner $0, que
-        // se leeria como "sale gratis" y ademas ensuciaria el total del pedido.
-        if (!cq && !cp) {
-          xml += celdaTexto('D' + f, 5, 'no está en la lista')
-            + celdaTexto('E' + f, 5, '—') + celdaTexto('F' + f, 5, '—') + celdaTexto('G' + f, 5, '—')
-            + celdaTexto('H' + f, 5, '—') + celdaTexto('I' + f, 5, '—');
+        // costoQinera viene en pesos. En los del contenedor ese numero es el EXW en euros x1000.
+        var bruto = Number(r.costoQinera) || 0;
+        var unit = _eur ? (bruto / 1000) : bruto;
+        // Sin costo = ese producto NO esta en la tarifa de Qinera (o es de otro proveedor). Se dice,
+        // en vez de poner 0, que se leeria como "sale gratis" y ensuciaria el total del pedido.
+        if (!bruto) {
+          xml += celdaTexto('D' + f, 5, 'no está en la tarifa') + celdaTexto('E' + f, 5, '—');
         } else {
-          var q = cq * (Number(r.falta) || 0), p = cp * (Number(r.falta) || 0);
-          totQ += q; totP += p;
-          xml += celdaNumero('D' + f, 7, cq)
-            + celdaNumero('E' + f, 7, q)
-            + celdaNumero('F' + f, 7, cp)
-            + celdaNumero('G' + f, 7, p)
-            + celdaNumero('H' + f, 7, Number(r.ventaNeto) || 0)
-            + celdaNumero('I' + f, 7, Number(r.ventaIva) || 0);
+          var total = unit * (Number(r.falta) || 0);
+          totCompra += total;
+          xml += celdaNumero('D' + f, estNum, unit) + celdaNumero('E' + f, estNum, total);
         }
       }
       xml += '</row>';
@@ -158,9 +163,8 @@
     if (conCostos && filas.length) {
       ultima = ultima + 1;
       xml += '<row r="' + ultima + '" ht="20" customHeight="1">'
-        + celdaTexto('B' + ultima, 1, 'TOTAL DEL PEDIDO')
-        + celdaNumero('E' + ultima, 8, totQ)
-        + celdaNumero('G' + ultima, 8, totP)
+        + celdaTexto('B' + ultima, 1, _eur ? 'TOTAL DEL PEDIDO (EUR)' : 'TOTAL DEL PEDIDO (CLP)')
+        + celdaNumero('E' + ultima, estTot, totCompra)
         + '</row>';
     }
 
@@ -175,7 +179,7 @@
       +   '<col min="1" max="1" width="18" customWidth="1"/>'
       +   '<col min="2" max="2" width="58" customWidth="1"/>'
       +   '<col min="3" max="3" width="12" customWidth="1"/>'
-      +   (conCostos ? '<col min="4" max="9" width="19" customWidth="1"/>' : '')
+      +   (conCostos ? '<col min="4" max="5" width="22" customWidth="1"/>' : '')
       + '</cols>'
       + '<sheetData>' + xml + '</sheetData>'
       + '<autoFilter ref="A4:' + ULT + (filas.length ? (filas.length + 4) : 4) + '"/>'
@@ -203,8 +207,12 @@
       +   '<border><left/><right/><top/><bottom style="thin"><color rgb="FFE3E7EC"/></bottom><diagonal/></border>'
       + '</borders>'
       + '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
-      + '<numFmts count="1"><numFmt numFmtId="200" formatCode="&quot;$&quot;#,##0"/></numFmts>'
-      + '<cellXfs count="9">'
+      // 201 = euros. Se muestran con dos decimales porque los EXW los tienen (€52,8 el difusor).
+      + '<numFmts count="2">'
+      +   '<numFmt numFmtId="200" formatCode="&quot;$&quot;#,##0"/>'
+      +   '<numFmt numFmtId="201" formatCode="&quot;€&quot;#,##0.00"/>'
+      + '</numFmts>'
+      + '<cellXfs count="11">'
       +   '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
       +   '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
       +   '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
@@ -215,13 +223,17 @@
       // 7 = pesos con separador de miles · 8 = igual pero en negrita, para la fila del total
       +   '<xf numFmtId="200" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>'
       +   '<xf numFmtId="200" fontId="1" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>'
+      // 9 = euros · 10 = euros en negrita (fila del total). Van AL FINAL para no correr los indices
+      // de los estilos que ya usaban los otros generadores.
+      +   '<xf numFmtId="201" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>'
+      +   '<xf numFmtId="201" fontId="1" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>'
       + '</cellXfs>'
       + '</styleSheet>';
 
     // El libro se arma con TANTAS hojas como tenga _hojas (1 o 2). Los tres sitios que hay que
     // mantener en fila son: el Override de cada sheetN.xml, el <sheet> del workbook y su relación
     // rIdN. Si uno no calza, Excel se niega a abrir el archivo.
-    var xmlHojas = _hojas.map(function (h) { return _armarHoja(h.filas, h.titulo); });
+    var xmlHojas = _hojas.map(function (h) { return _armarHoja(h.filas, h.titulo, h.via); });
     var idEstilos = 'rId' + (xmlHojas.length + 1);
 
     var archivos = [

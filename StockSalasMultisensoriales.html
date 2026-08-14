@@ -1722,9 +1722,15 @@
       if(!rawName || rawName.length<3) return;
       // Descarta lo que no es un producto (servicios, instalación, fletes): no debe
       // contar como faltante ni salir en el informe. Lista en StockAlias.js.
-      const _nn = _smProdNorm(rawName);
+      // La lista de STOCK_NO_PRODUCTO viene SIN espacios ("serviciodeimplementacion"), asi que hay
+      // que compararla contra el nombre tambien sin espacios. Comparandola con el normalizado
+      // normal (que si los tiene) el filtro no pillaba nada de mas de una palabra y el "Servicio
+      // integral de implementacion y habilitacion tecnica" se colaba al pedido como si fuera un
+      // producto. Encontrado el 2026-08-13 revisando los codigos uno a uno.
+      const _nn = _normTightJS(rawName);
       const _noProd = window.STOCK_NO_PRODUCTO || [];
-      if (_noProd.some(function(x){ return _nn === x || (x.length >= 8 && _nn.indexOf(x) >= 0); })) return;
+      // Umbral 5 y no 8: si no, "Flete Punta Arenas" pasaba como producto porque "flete" es corto.
+      if (_noProd.some(function(x){ return _nn === x || (x.length >= 5 && _nn.indexOf(x) >= 0); })) return;
       // Descarta fragmentos como "6kg": la mitad derecha de un peso con coma decimal chilena
       // (ej. "...grande - 3,6kg") que el split(",") corta por la mitad — no es un producto real.
       if(/^\d+([.,]\d+)?\s*k?g?s?$/i.test(rawName)) return;
@@ -2655,7 +2661,20 @@
     { m:'look to learn', sku:'BJ-785-1' },
     { m:'sensory guru', sku:'BJ-1000145' },
     { m:'soporte de pie rehadapt', sku:'BJ-610' },
-    { m:'tobii', sku:'BJ-I16' }
+    // Los dos Tobii son productos DISTINTOS (verificado en la tarifa de marzo 2026): el PC Eye 5 es
+    // el "Lector ocular PCEye®". Va ANTES que la regla generica 'tobii', que si no se lo comia y le
+    // ponia el codigo del I-16.
+    { m:'pc eye', sku:'BJ-PCEYE5' },
+    { m:'pceye', sku:'BJ-PCEYE5' },
+    { m:'tobii', sku:'BJ-I16' },
+    { m:'td snap', sku:'BJ-SCF' },
+    // Nombres que los ejecutivos escriben distinto y por eso salian SIN codigo en el pedido
+    // (verificados uno a uno contra la tarifa oficial, 2026-08-13):
+    { m:'pelota cacahu', sku:'BJ-43700100' },        // "Cacahuate" con a; en la tarifa es cacahuete
+    { m:'tabla scooter 40', sku:'BJ-61062000' },
+    { m:'tabla scooter 30', sku:'BJ-61061500' },
+    { m:'proyector estrellas luz led', sku:'BJ-EX47' },   // Rayen confirmo que es el Estrellas SHX
+    { m:'lola la oruga', sku:'BJ-SD12021' }          // el nombre se corta en la coma de "1,3kg"
   ];
   // Mapa nombre→SKU desde la LISTA DE PRECIOS (SalasSku.js) — fuente oficial. Se arma al primer uso
   // (por si SalasSku.js carga después de este script).

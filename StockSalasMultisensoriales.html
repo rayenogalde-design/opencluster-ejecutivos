@@ -1683,6 +1683,12 @@
     'tubo de burbujas luminea': 'tubo de burbujas pequeno',
     'tubo de burbujas': 'tubo de burbujas pequeno',
     'pelota cacahuete': 'mani terapeutico',
+    // Los mismos productos escritos como los escribio Neuroarcoiris. Sin esto salian como
+    // "Sin dato" aunque estan en bodega: el mani (1), la pelota de 45 (1) y las estrellas (3+4).
+    'pelota cacahuate': 'mani terapeutico',
+    'pelota de terapia de diametro 45cm': 'pelota terapeutica 45 cm diametro',
+    'pelota de terapia de diametro 55cm ': 'pelota terapeutica 55 cm diametro',
+    'proyector estrellas luz led': 'estrellas shx',
     'cortina de fibra optica': 'cortina luminea',
     'cortina de fibra optica luminea': 'cortina luminea',
     // Rayen 2026-07-21: "burbujas y pompas es lo mismo" / "kit de estimulacion sensorial y kit de
@@ -2367,7 +2373,10 @@
   // Los números siguen ahí: aparecen al dejar el cursor encima (atributo title).
   function _stockCelda(qty, stock){
     const d = _stockPartido(qty, stock);
-    if (d.sinDato) return '<span class="stk-tag nodato">Sin dato</span>';
+    // Rayen 2026-08-13: "sin dato no tiene sentido, debiera ser falta stock". Tiene razon: si el
+    // producto no tiene ficha en el inventario es porque no lo tenemos, ni en bodega ni en el
+    // contenedor, asi que falta entero. El detalle del por que queda al pasar el cursor.
+    if (d.sinDato) return '<span class="stk-tag falta" title="No está en el inventario de bodega ni en el contenedor: falta entero. Si crees que sí lo tienes, puede estar guardado con otro nombre.">Falta stock</span>';
     const texto = d.clase === 'ok' ? 'En bodega' : (d.clase === 'cam' ? 'En camino' : 'Falta stock');
     const detalle = 'Piden ' + (Number(qty) || 0) + ' · ' + d.bod + ' en bodega · ' + d.cam + ' en camino' +
       (d.clase === 'falta' ? ' · faltan ' + ((Number(qty) || 0) - d.total) : '');
@@ -2460,7 +2469,7 @@
       // (Rayen 2026-07-30). Verde = está en bodega hoy; ámbar = llega en el contenedor.
       const _dm = _stockPartido(m.total, stock);
       const _clsEstado = _dm.sinDato ? 'falta' : (_dm.clase === 'ok' ? 'alcanza' : (_dm.clase === 'cam' ? 'encamino' : 'falta'));
-      const _txtEstado = _dm.sinDato ? 'Sin dato' : (_dm.clase === 'ok' ? 'En bodega' : (_dm.clase === 'cam' ? 'En camino' : 'Falta stock'));
+      const _txtEstado = _dm.sinDato ? 'Falta stock' : (_dm.clase === 'ok' ? 'En bodega' : (_dm.clase === 'cam' ? 'En camino' : 'Falta stock'));
       const estadoCelda = '<td class="' + _clsEstado + '">' +
         '<span class="cotiz-estado-clickable" data-desglose="' + escapeHtmlSafe(desglose) + '">' + _txtEstado + '</span>' +
       '</td>';

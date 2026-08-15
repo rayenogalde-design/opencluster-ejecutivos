@@ -1648,6 +1648,12 @@
     'linea led luminea para techo 5 metros': 'linea led luminea para techo',
     'linea led luminea': 'linea led luminea para techo',
     'manta de peso azul y roja mediana 2': 'manta de peso azul y roja mediana 2,2kg',
+    // Neuroarcoiris cotizo "azul y roja - mediana - 3,6kg", que NO existe: en la tarifa la azul y
+    // roja mediana es de 2,2kg y la de 3,6kg es la grande gris y roja. Rayen 2026-08-13: "pesan
+    // igual, no me importa el color" -> MANDA EL PESO. 3,6kg = BJ-SD12320, la grande.
+    'manta de peso azul y roja mediana 3': 'manta de peso gris y roja grande 3,6kg',
+    'manta de peso azul y roja mediana 3,6kg': 'manta de peso gris y roja grande 3,6kg',
+    'manta de peso azul y roja grande 3': 'manta de peso gris y roja grande 3,6kg',
     'manta de peso gris y roja grande 3': 'manta de peso gris y roja grande 3,6kg',
     'piscina vibroacustica luminea': 'piscina luminea vibroacustica',
     'rincon luminea con tablet': 'rincon luminea',
@@ -1736,7 +1742,14 @@
       if (_noProd.some(function(x){ return _nn === x || (x.length >= 5 && _nn.indexOf(x) >= 0); })) return;
       // Descarta fragmentos como "6kg": la mitad derecha de un peso con coma decimal chilena
       // (ej. "...grande - 3,6kg") que el split(",") corta por la mitad — no es un producto real.
-      if(/^\d+([.,]\d+)?\s*k?g?s?$/i.test(rawName)) return;
+      if(/^\d+([.,]\d+)?\s*k?g?s?$/i.test(rawName)) {
+        // Es la mitad derecha de un peso con coma decimal: "Manta ... - 3" + "6 kg x3". La CANTIDAD
+        // viaja en este pedazo, no en el del nombre, asi que hay que devolversela al producto
+        // anterior. Sin esto Neuroarcoiris pedia 3 mantas y 3 Lola la Oruga y se contaba 1 de cada
+        // una (encontrado el 2026-08-13 revisando los codigos del pedido).
+        if (m && out.length) out[out.length - 1].qty = qty;
+        return;
+      }
       let key = _smProdNorm(rawName);
       if(_SM_PROD_ALIAS[key]) key = _SM_PROD_ALIAS[key];
       if(vistos.has(key)) return;

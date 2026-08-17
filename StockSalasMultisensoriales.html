@@ -1823,6 +1823,8 @@
   // Formato del archivo (el .txt de Claude Files, separado por tabuladores):
   //   SKU <tab> nombre <tab> costo Qinera <tab> costo puesto en Chile <tab> venta neto <tab> venta c/IVA
   const COSTOS_KEY = 'oct_salas_mis_costos_v1';
+  // Ruta EXACTA del archivo en el Drive de Rayen. Es solo un nombre de archivo, no un costo.
+  const COSTOS_RUTA = 'G:\\Mi unidad\\Claude Code Backup\\Claude Files\\Qinera_Costos_Completo_2026-08-10.txt';
   let MIS_COSTOS = {};
   const MIS_COSTOS_POR_NOMBRE = {};   // el mismo producto tiene codigo distinto en bodega y en Qinera
   function _costosIndexar(){
@@ -1839,6 +1841,19 @@
     var k = nombreOClave ? _claveNombre(nombreOClave) : '';
     var s2 = k ? MIS_COSTOS_POR_NOMBRE[k] : '';
     return s2 ? MIS_COSTOS[s2] : null;
+  }
+  // Copiar sin la API moderna (por si el navegador la bloquea): campo oculto + execCommand.
+  function _copiarAlPortapapelesViejo(texto, alTerminar){
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = texto;
+      ta.style.position = 'fixed'; ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+      if (alTerminar) alTerminar();
+    } catch(e){ alert('No pude copiar la ruta. Es esta:\n\n' + texto); }
   }
   function _costosCargar(){
     try { MIS_COSTOS = JSON.parse(localStorage.getItem(COSTOS_KEY) || '{}') || {}; }
@@ -1893,6 +1908,20 @@
   function _wireCargarCostos(){
     const btn = document.getElementById('costos-cargar');
     const inp = document.getElementById('costos-archivo');
+    // Copiar la ruta al portapapeles para pegarla en el buscador de archivos.
+    const btnRuta = document.getElementById('costos-ruta');
+    if (btnRuta && !btnRuta.dataset.listo) {
+      btnRuta.dataset.listo = '1';
+      btnRuta.onclick = function(){
+        const avisar = () => {
+          btnRuta.textContent = 'Ruta copiada ✓';
+          setTimeout(() => { btnRuta.textContent = 'Copiar la ruta del archivo'; }, 2500);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(COSTOS_RUTA).then(avisar, () => _copiarAlPortapapelesViejo(COSTOS_RUTA, avisar));
+        } else _copiarAlPortapapelesViejo(COSTOS_RUTA, avisar);
+      };
+    }
     if (!btn || !inp || btn.dataset.listo) return;
     btn.dataset.listo = '1';
     btn.onclick = function(){ inp.click(); };
@@ -3136,10 +3165,14 @@
       '<div class="costos-caja">' +
         '<div class="costos-caja-t">Costos para tu Excel del pedido</div>' +
         '<p class="costos-caja-p">Los costos <strong>no están en esta página</strong> (está publicada en internet). Cárgalos una vez desde tu archivo del Drive y quedan guardados en este computador: de ahí en adelante tu Excel de faltantes sale con lo que te cuesta cada producto y con el total del pedido.</p>' +
-        '<button type="button" class="btn-secundario" id="costos-cargar">Cargar mis costos</button>' +
+        '<button type="button" class="btn-secundario" id="costos-cargar">Cargar mis costos</button> ' +
+        // Rayen 2026-08-17: buscar el archivo carpeta por carpeta es lento (lo buscó en
+        // OpenCluster\\Productos, donde no está). Con la ruta copiada se pega en el campo
+        // "Nombre" del buscador de archivos y se abre directo.
+        '<button type="button" class="btn-secundario" id="costos-ruta">Copiar la ruta del archivo</button>' +
         '<input type="file" id="costos-archivo" accept=".txt,.tsv,.csv,text/plain" style="display:none;">' +
         '<div id="costos-estado" class="costos-estado"></div>' +
-        '<p class="costos-caja-p" style="margin-top:0.5rem;">El archivo es <code>Claude Files\\Qinera_Costos_Completo_2026-08-10.txt</code> en tu Drive.</p>' +
+        '<p class="costos-caja-p" style="margin-top:0.5rem;">Aprieta <strong>Copiar la ruta</strong>, después <strong>Cargar mis costos</strong>, y en el buscador de archivos pega la ruta con Ctrl+V en el campo <em>Nombre</em> y dale Abrir. Es este archivo:<br><code>' + COSTOS_RUTA + '</code></p>' +
       '</div>' +
       botonCorreo +
       '<input type="text" class="search" id="faltantes-buscar" placeholder="Buscar producto o SKU…" style="margin-bottom:0.7rem;" />' +

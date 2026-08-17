@@ -138,17 +138,7 @@
     var _noQinera = filas.filter(function (r) { return r.via === 'X'; });
     if (!SOLO_CONTENEDOR && _noQinera.length) _hojas.push({ nombre: 'Conseguir aparte', filas: _noQinera, via: 'X',
       titulo: 'NO están en la tarifa de Qinera — hay que conseguirlos en otro lado' });
-    // Aviso al pie de la hoja del contenedor: qué más hay que pedir y dónde está. Así no se
-    // confunden las vías ni se olvida lo que va por separado.
-    var _fueraTexto = '';
-    if (_aparte.length || _noQinera.length) {
-      var _p = [];
-      if (_aparte.length)   _p.push(_aparte.length + ' en la pestaña "Pedido Qinera - Aparte" (los manda por separado, con transporte incluido)');
-      if (_noQinera.length) _p.push(_noQinera.length + ' en la pestaña "Conseguir aparte" (Qinera no los vende)');
-      _fueraTexto = SOLO_CONTENEDOR
-        ? 'Fuera de este pedido quedaron ' + _p.join(' y ') + '. Este Excel trae SOLO lo del contenedor marítimo.'
-        : 'Esta pestaña es solo lo que viaja en el contenedor. Además hay ' + _p.join(' y ') + '.';
-    }
+    // Sin notas ni avisos dentro de la hoja: el Excel lleva solo lo que Rayen pidió (17-ago-2026).
 
     function _armarHoja(filas, tituloHoja, viaHoja) {
     // Rayen 2026-08-12: en el pedido quiere SKU de Qinera, nombre, cuántos y el COSTO DE COMPRA,
@@ -229,11 +219,6 @@
         + celdaTexto('B' + ultima, 1, _eur ? 'TOTAL DEL PEDIDO (EUR)' : 'TOTAL DEL PEDIDO (CLP)')
         + celdaNumero('E' + ultima, estTot, totCompra)
         + '</row>';
-    }
-    // Lo que quedó fuera del Excel, dicho en la propia hoja (ver SOLO_CONTENEDOR).
-    if (_fueraTexto && viaHoja === 'M') {
-      ultima = ultima + 2;
-      xml += '<row r="' + ultima + '">' + celdaTexto('B' + ultima, 6, _fueraTexto) + '</row>';
     }
 
     var hoja = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'

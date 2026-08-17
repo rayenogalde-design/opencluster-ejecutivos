@@ -18727,6 +18727,7 @@ function _webCoincide(i){
   if(WEB_FILTRO === 'interesados' && String(i.interes_capacitacion || '').toLowerCase() !== 'sí' && String(i.interes_capacitacion || '').toLowerCase() !== 'si') return false;
   if(WEB_FILTRO === 'asistieron' && !_webSi(i.asistio)) return false;
   if(WEB_FILTRO === 'soloregistro' && (_webSi(i.asistio) || _webSi(i.confirmado))) return false;
+  if(WEB_FILTRO === 'rebotados' && !i.correo_rebotado) return false;
   if(WEB_BUSCA){
     const txt = [i.nombre, i.establecimiento, i.comuna, i.email, i.cargo].join(' ').toLowerCase();
     if(txt.indexOf(WEB_BUSCA) < 0) return false;
@@ -18756,7 +18757,8 @@ function renderWebinarInscritos(soloLista){
     ['asistieron', 'Asistieron', WEB_INSCRITOS.filter(i => _webSi(i.asistio)).length],
     ['soloregistro', 'Solo se registraron', WEB_INSCRITOS.filter(i => !_webSi(i.asistio) && !_webSi(i.confirmado)).length],
     ['interesados', 'Quieren capacitación', WEB_INSCRITOS.filter(i => String(i.interes_capacitacion || '').toLowerCase().indexOf('s') === 0).length],
-    ['concomentarios', 'Dejaron comentarios', WEB_INSCRITOS.filter(_webTieneVoz).length]
+    ['concomentarios', 'Dejaron comentarios', WEB_INSCRITOS.filter(_webTieneVoz).length],
+    ['rebotados', 'Les rebotó el correo', WEB_INSCRITOS.filter(i => i.correo_rebotado).length]
   ];
 
   cont.innerHTML =
@@ -18795,7 +18797,9 @@ function _webFilasHTML(lista){
       // Se inscribió pero nunca confirmó ni asistió: se dice claro, no se deja en blanco.
       (!_webSi(i.confirmado) && !_webSi(i.asistio) ? '<span style="background:#f1f5f9;color:#475569;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;">Se registró</span> ' : '') +
       (_webSi(i.llamado) ? '<span style="background:#ede9fe;color:#5b21b6;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;">Llamado ' + esc(String(i.fecha_llamado || '').substring(0, 10)) + '</span> ' : '<span style="background:#fce7f3;color:#9d174d;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;">Por llamar</span> ') +
-      (String(i.interes_capacitacion || '').toLowerCase().indexOf('s') === 0 ? '<span style="background:#d1fae5;color:#065f46;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;">Quiere capacitación</span> ' : '');
+      (String(i.interes_capacitacion || '').toLowerCase().indexOf('s') === 0 ? '<span style="background:#d1fae5;color:#065f46;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;">Quiere capacitación</span> ' : '') +
+      (i.correo_rebotado ? '<span style="background:#fef3c7;color:#92400e;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;" title="' + esc(i.correo_rebotado) + '">Correo rebotado</span> ' : '') +
+      (i.baja_motivo ? '<span style="background:#fee2e2;color:#991b1b;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;">No quiere correos</span> ' : '');
 
     const abierto = WEB_ABIERTOS[i.id] === true;
     const chev = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(' + (abierto ? '90' : '0') + 'deg);transition:transform .15s;"><polyline points="9 18 15 12 9 6"/></svg>';

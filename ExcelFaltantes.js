@@ -125,14 +125,26 @@
         filas: filas.filter(function (r) { return r.via !== 'T' && r.via !== 'X'; }) }
     ];
     var _aparte = filas.filter(function (r) { return r.via === 'T'; });
-    if (_aparte.length) _hojas.push({ nombre: 'Pedido Qinera - Aparte', filas: _aparte, via: 'T',
+    // Rayen 2026-08-17: "lo que está fuera de la hoja marítima nunca lo voy a pedir". El Excel sale
+    // SOLO con la pestaña del contenedor, para que no haya forma de pedir algo de otra vía por
+    // error. Lo que queda fuera no desaparece en silencio: se cuenta al pie de la hoja.
+    var SOLO_CONTENEDOR = true;
+    if (!SOLO_CONTENEDOR && _aparte.length) _hojas.push({ nombre: 'Pedido Qinera - Aparte', filas: _aparte, via: 'T',
       titulo: 'Pedido Qinera — Aparte: los manda por separado, con el transporte incluido' });
     // Tercera hoja: los que Qinera NO tiene en su tarifa. Rayen 2026-08-13: "si no están en el
     // listado no me lo venden, así de sencillo, no hay que buscarlo". No se piden: hay que
     // conseguirlos en otro lado, así que lo que importa es cuántos hay y cuántos faltan.
     var _noQinera = filas.filter(function (r) { return r.via === 'X'; });
-    if (_noQinera.length) _hojas.push({ nombre: 'Conseguir aparte', filas: _noQinera, via: 'X',
+    if (!SOLO_CONTENEDOR && _noQinera.length) _hojas.push({ nombre: 'Conseguir aparte', filas: _noQinera, via: 'X',
       titulo: 'NO están en la tarifa de Qinera — hay que conseguirlos en otro lado' });
+    // Aviso al pie: cuántos productos quedaron fuera de este Excel y por qué. Nunca en silencio.
+    var _fueraTexto = '';
+    if (SOLO_CONTENEDOR && (_aparte.length || _noQinera.length)) {
+      var _p = [];
+      if (_aparte.length)   _p.push(_aparte.length + ' que Qinera manda aparte (no viajan en el contenedor)');
+      if (_noQinera.length) _p.push(_noQinera.length + ' que Qinera no vende');
+      _fueraTexto = 'Fuera de este pedido quedaron ' + _p.join(' y ') + '. Este Excel trae SOLO lo del contenedor marítimo.';
+    }
 
     function _armarHoja(filas, tituloHoja, viaHoja) {
     // Rayen 2026-08-12: en el pedido quiere SKU de Qinera, nombre, cuántos y el COSTO DE COMPRA,
@@ -213,6 +225,11 @@
         + celdaTexto('B' + ultima, 1, _eur ? 'TOTAL DEL PEDIDO (EUR)' : 'TOTAL DEL PEDIDO (CLP)')
         + celdaNumero('E' + ultima, estTot, totCompra)
         + '</row>';
+    }
+    // Lo que quedó fuera del Excel, dicho en la propia hoja (ver SOLO_CONTENEDOR).
+    if (_fueraTexto && viaHoja === 'M') {
+      ultima = ultima + 2;
+      xml += '<row r="' + ultima + '">' + celdaTexto('B' + ultima, 6, _fueraTexto) + '</row>';
     }
 
     var hoja = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'

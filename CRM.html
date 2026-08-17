@@ -6122,7 +6122,10 @@ async function chequearMetaSemanalObligatoria(){
   try {
     if (document.getElementById('modalAnuncio') || document.getElementById('bloqueoMetaOv')) return;
     if (typeof hayDrillDown==='function' && hayDrillDown()) return;
-    if (ROL === 'admin' && typeof getModoVista==='function' && getModoVista() === 'admin') return;
+    // Rayen NO tiene metas propias (decisión suya, 2026-08-17): no es ejecutiva de venta,
+    // así que nunca se le pide la meta de la semana, ni en modo admin ni en modo ejecutiva.
+    // Para los ejecutivos sigue siendo obligatoria igual que antes.
+    if (ROL === 'admin') return;
     const r = await fetchAPI('crm_metas_semanales', { ejecutivo: USUARIO, modo_vista: MODO_VISTA, solicitante: USUARIO });
     if (!r || !r.ok) return; // backend no disponible: no bloqueamos por un error ajeno
     if (r.actual && (r.actual.meta || r.actual.metrics)) return; // ya la puso esta semana
@@ -6796,6 +6799,13 @@ async function cargarMetaSemanal(){
     box.innerHTML = '<div class="dv3-card"><div class="dv3-cardhd"><h3>Mi meta de la semana</h3></div><div class="dv3-empty">Todavía no disponible (falta instalar la actualización del backend).</div></div>';
     return;
   }
+  // Rayen no tiene meta propia: se le muestra el panel del equipo, nunca su tarjeta.
+  if (ROL === 'admin' && !soloLectura) {
+    box.innerHTML = '';
+    if((typeof esActuandoComoAdmin==='function') && esActuandoComoAdmin() && r.equipo) renderMetasEquipo(r.equipo);
+    else { const eqBox0 = document.getElementById('dshMetasEquipo'); if(eqBox0) eqBox0.innerHTML=''; }
+    return;
+  }
   renderMetaSemanal(r.actual, ejec, soloLectura);
   if((typeof esActuandoComoAdmin==='function') && esActuandoComoAdmin() && !soloLectura && r.equipo) renderMetasEquipo(r.equipo);
   else { const eqBox = document.getElementById('dshMetasEquipo'); if(eqBox) eqBox.innerHTML=''; }
@@ -6998,6 +7008,11 @@ async function marcarMetaSemanal(cumplida){
 function renderMetasEquipo(equipo){
   const box = document.getElementById('dshMetasEquipo');
   if(!box) return;
+  // Rayen no lleva meta propia, así que tampoco se lista en el panel del equipo.
+  equipo = (equipo || []).filter(function(x){
+    const n = String(x && x.ejecutivo || '').toLowerCase();
+    return n.indexOf('rayen') < 0;
+  });
   window.__METAS_EQUIPO = equipo || [];
   const filas = (equipo||[]).map(function(x){
     const a = x.actual;
@@ -18699,7 +18714,12 @@ async function abrirWebinar(key){
 function webFiltro(f){ WEB_FILTRO = f; renderWebinarInscritos(); }
 function webBuscar(v){ WEB_BUSCA = String(v || '').toLowerCase(); renderWebinarInscritos(true); }
 
+function _webTieneVoz(i){
+  return !!(i.pregunta || i.comentarios_form || i.preguntas);
+}
+
 function _webCoincide(i){
+  if(WEB_FILTRO === 'concomentarios' && !_webTieneVoz(i)) return false;
   if(WEB_FILTRO === 'porllamar' && _webSi(i.llamado)) return false;
   if(WEB_FILTRO === 'llamados' && !_webSi(i.llamado)) return false;
   if(WEB_FILTRO === 'interesados' && String(i.interes_capacitacion || '').toLowerCase() !== 'sí' && String(i.interes_capacitacion || '').toLowerCase() !== 'si') return false;
@@ -18731,7 +18751,8 @@ function renderWebinarInscritos(soloLista){
     ['porllamar', 'Por llamar', WEB_INSCRITOS.filter(i => !_webSi(i.llamado)).length],
     ['llamados', 'Ya llamados', WEB_INSCRITOS.filter(i => _webSi(i.llamado)).length],
     ['asistieron', 'Asistieron', WEB_INSCRITOS.filter(i => _webSi(i.asistio)).length],
-    ['interesados', 'Quieren capacitación', WEB_INSCRITOS.filter(i => String(i.interes_capacitacion || '').toLowerCase().indexOf('s') === 0).length]
+    ['interesados', 'Quieren capacitación', WEB_INSCRITOS.filter(i => String(i.interes_capacitacion || '').toLowerCase().indexOf('s') === 0).length],
+    ['concomentarios', 'Dejaron comentarios', WEB_INSCRITOS.filter(_webTieneVoz).length]
   ];
 
   cont.innerHTML =
@@ -18785,11 +18806,14 @@ function _webFilasHTML(lista){
         '</div>' +
 
         '<div style="font-size:12px;color:var(--subtle);">' +
+          _webBloqueVoz(i) +
           (i.temas ? '<div style="margin-bottom:7px;"><b style="color:var(--mist);">Le interesa:</b> ' + esc(i.temas) + '</div>' : '') +
           (i.sala_sensorial ? '<div style="margin-bottom:7px;"><b style="color:var(--mist);">Sala sensorial:</b> ' + esc(i.sala_sensorial) + '</div>' : '') +
-          (i.pregunta ? '<div style="margin-bottom:7px;"><b style="color:var(--mist);">Preguntó:</b> ' + esc(i.pregunta) + '</div>' : '') +
-          (i.comentarios_form ? '<div style="margin-bottom:7px;"><b style="color:var(--mist);">Comentó al inscribirse:</b> ' + esc(i.comentarios_form) + '</div>' : '') +
-          (i.comentario ? '<div style="background:var(--paper);border-radius:8px;padding:9px 11px;white-space:pre-line;color:var(--ink);margin-top:8px;"><b style="color:var(--mist);font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Llamadas</b><br>' + esc(i.comentario) + '</div>' : '') +
+          (i.baja_motivo ? '<div style="background:#fee2e2;color:#991b1b;border-radius:8px;padding:7px 10px;margin-bottom:7px;font-weight:700;">Pidió no recibir más correos: ' + esc(i.baja_motivo) + '</div>' : '') +
+          (i.correo_rebotado ? '<div style="background:#fef3c7;color:#92400e;border-radius:8px;padding:7px 10px;margin-bottom:7px;font-weight:700;">El correo rebotó (' + esc(i.correo_rebotado) + ') — mejor llamarla por teléfono</div>' : '') +
+          '<button class="btn" style="margin:2px 0 8px;" onclick="webVerDatos(\'' + esc(i.id) + '\')">Ver todos sus datos del formulario</button>' +
+          '<div id="webdatos-' + esc(i.id) + '" style="display:none;background:var(--paper);border-radius:8px;padding:10px 12px;white-space:pre-line;color:var(--ink);margin-bottom:8px;">' + esc(i.datos_form || 'Sin datos adicionales') + '</div>' +
+          (i.comentario ? '<div style="background:#ede9fe;border-radius:8px;padding:9px 11px;white-space:pre-line;color:var(--ink);margin-top:8px;"><b style="color:#5b21b6;font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Llamadas</b><br>' + esc(i.comentario) + '</div>' : '') +
         '</div>' +
 
         '<div>' +
@@ -18807,6 +18831,30 @@ function _webFilasHTML(lista){
       '</div>' +
     '</div>';
   }).join('');
+}
+
+// Lo que la persona escribió con sus palabras al inscribirse: va destacado, es lo que más
+// sirve para la llamada.
+function _webBloqueVoz(i){
+  const trozos = [];
+  if(i.pregunta) trozos.push(['Preguntó al inscribirse', i.pregunta]);
+  if(i.comentarios_form) trozos.push(['Comentó al inscribirse', i.comentarios_form]);
+  if(i.preguntas) trozos.push(['Preguntas que dejó en el webinar', i.preguntas]);
+  if(!trozos.length) return '';
+  return '<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:11px 13px;margin-bottom:10px;">' +
+    trozos.map(t =>
+      '<div style="margin-bottom:8px;">' +
+        '<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#92400e;margin-bottom:3px;">' + t[0] + '</div>' +
+        '<div style="font-size:13px;color:#3a2200;line-height:1.5;white-space:pre-line;">' + esc(t[1]) + '</div>' +
+      '</div>'
+    ).join('') +
+  '</div>';
+}
+
+function webVerDatos(id){
+  const d = document.getElementById('webdatos-' + id);
+  if(!d) return;
+  d.style.display = (d.style.display === 'none' || !d.style.display) ? 'block' : 'none';
 }
 
 function _webBtnInteres(id, texto, activo){

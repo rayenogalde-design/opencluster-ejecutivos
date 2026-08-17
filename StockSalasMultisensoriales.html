@@ -2774,11 +2774,22 @@
     try { localStorage.setItem(EXTRA_KEY, JSON.stringify(lista)); } catch(e){}
   }
   // Sugerencias: todo lo que Qinera sí vende, para que escriba dos letras y elija.
+  // El código va como texto de la opción (Rayen 2026-08-17: "sería bueno ponerle los códigos"):
+  // así se ve al elegir, pero lo que queda escrito es el NOMBRE, que es lo que va al pedido.
   function _extraOpcionesHTML(){
     return Object.keys(IMPORTABLE).map(function(sku){
       const n = (IMPORTABLE[sku] && IMPORTABLE[sku].n) || '';
-      return n ? '<option value="' + escapeHtmlSafe(n) + '"></option>' : '';
+      return n ? '<option value="' + escapeHtmlSafe(n) + '">' + escapeHtmlSafe(sku) + '</option>' : '';
     }).join('');
+  }
+  // Deja escribir el CÓDIGO en vez del nombre: si lo tecleado es un SKU de la tarifa, se cambia
+  // por su nombre. Si no calza con nada, se respeta lo que escribió (irá a "Conseguir aparte").
+  function _extraNombreDesdeTexto(txt){
+    const t = String(txt || '').trim();
+    if (!t) return '';
+    const directo = Object.keys(IMPORTABLE).find(function(sku){ return sku.toLowerCase() === t.toLowerCase(); });
+    if (directo) return IMPORTABLE[directo].n || t;
+    return t;
   }
   // Suma los agregados a mano a la lista de faltantes. Si el producto YA venía faltando por las
   // cotizaciones, no se duplica: se suman las unidades a esa misma línea.
@@ -2836,7 +2847,7 @@
     if (!btn.dataset.listo) {
       btn.dataset.listo = '1';
       btn.onclick = function(){
-        const nombre = String(inp.value || '').trim();
+        const nombre = _extraNombreDesdeTexto(inp.value);
         const n = Math.max(1, Number(cant && cant.value) || 1);
         if (!nombre) { alert('Escribe qué producto quieres agregar al pedido.'); return; }
         const l = _extraLeer();
@@ -3385,7 +3396,7 @@
         '<div class="costos-caja-t">Agregar al pedido algo que no está en las cotizaciones</div>' +
         '<p class="costos-caja-p">Escribe el producto (o su código) y cuántos quieres pedir. Se suma al pedido tal cual, sin descontar el stock, y queda guardado en este computador hasta que lo quites.</p>' +
         '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">' +
-          '<input type="text" class="search" id="extra-nombre" list="extra-lista" placeholder="Producto de la tarifa de Qinera…" style="flex:1 1 320px;margin:0;" />' +
+          '<input type="text" class="search" id="extra-nombre" list="extra-lista" placeholder="Nombre del producto o su código (BJ-…)" style="flex:1 1 320px;margin:0;" />' +
           '<datalist id="extra-lista">' + _extraOpcionesHTML() + '</datalist>' +
           '<input type="number" id="extra-cant" min="1" step="1" value="1" style="width:90px;" />' +
           '<button type="button" class="btn-secundario" id="extra-agregar">Agregar al pedido</button>' +

@@ -1855,6 +1855,53 @@
       if (alTerminar) alTerminar();
     } catch(e){ alert('No pude copiar la ruta. Es esta:\n\n' + texto); }
   }
+  // ── Recordar el archivo de costos (Rayen 17-ago-2026: "un solo clic") ──────────────
+  // El navegador puede quedarse con una referencia al archivo elegido (File System Access
+  // API, Chrome/Edge). Se guarda en IndexedDB porque un handle no cabe en localStorage.
+  // Así la próxima vez NO hay que buscar el archivo: se lee del mismo lugar del Drive, con
+  // los costos actualizados si cambiaron. Si el navegador no soporta la API, todo sigue
+  // funcionando con el selector de archivos de siempre.
+  const COSTOS_DB = 'oct_costos_v1', COSTOS_STORE = 'handles', COSTOS_HANDLE_KEY = 'archivo';
+  let COSTOS_HANDLE = null;
+  function _costosDB(){
+    return new Promise(function(res, rej){
+      if (!window.indexedDB) return rej(new Error('sin indexedDB'));
+      const req = indexedDB.open(COSTOS_DB, 1);
+      req.onupgradeneeded = function(){ req.result.createObjectStore(COSTOS_STORE); };
+      req.onsuccess = function(){ res(req.result); };
+      req.onerror = function(){ rej(req.error); };
+    });
+  }
+  function _costosHandleGuardar(handle){
+    return _costosDB().then(function(db){
+      return new Promise(function(res){
+        const tx = db.transaction(COSTOS_STORE, 'readwrite');
+        tx.objectStore(COSTOS_STORE).put(handle, COSTOS_HANDLE_KEY);
+        tx.oncomplete = function(){ res(true); };
+        tx.onerror = function(){ res(false); };
+      });
+    }).catch(function(){ return false; });
+  }
+  function _costosHandleLeer(){
+    return _costosDB().then(function(db){
+      return new Promise(function(res){
+        const req = db.transaction(COSTOS_STORE, 'readonly').objectStore(COSTOS_STORE).get(COSTOS_HANDLE_KEY);
+        req.onsuccess = function(){ res(req.result || null); };
+        req.onerror = function(){ res(null); };
+      });
+    }).catch(function(){ return null; });
+  }
+  function _costosHandleOlvidar(){
+    COSTOS_HANDLE = null;
+    return _costosDB().then(function(db){
+      return new Promise(function(res){
+        const tx = db.transaction(COSTOS_STORE, 'readwrite');
+        tx.objectStore(COSTOS_STORE).delete(COSTOS_HANDLE_KEY);
+        tx.oncomplete = function(){ res(true); };
+        tx.onerror = function(){ res(false); };
+      });
+    }).catch(function(){ return false; });
+  }
   function _costosCargar(){
     try { MIS_COSTOS = JSON.parse(localStorage.getItem(COSTOS_KEY) || '{}') || {}; }
     catch(e){ MIS_COSTOS = {}; }
@@ -1894,10 +1941,15 @@
     const n = Object.keys(MIS_COSTOS).length;
     const cont = document.getElementById('costos-estado');
     if (!cont) return;
-    cont.innerHTML = n
+    const recordado = COSTOS_HANDLE
+      ? '<span class="costos-ok">Archivo recordado: ' + (COSTOS_HANDLE.name || 'el de siempre') +
+        ' — apretar "Cargar mis costos" lo relee solo</span> '
+      : '';
+    cont.innerHTML = (n
       ? '<span class="costos-ok">Costos cargados: ' + n + ' productos</span> ' +
         '<button type="button" class="costos-mini" id="costos-quitar">Quitar de este computador</button>'
-      : '<span class="costos-no">Sin costos cargados — el Excel saldrá sin valores</span>';
+      : '<span class="costos-no">Sin costos cargados — el Excel saldrá sin valores</span>')
+      + (recordado ? '<br>' + recordado : '');
     const q = document.getElementById('costos-quitar');
     if (q) q.onclick = function(){
       if (!confirm('¿Quitar los costos guardados en este computador? Podrás volver a cargarlos cuando quieras.')) return;
@@ -1924,30 +1976,84 @@
     }
     if (!btn || !inp || btn.dataset.listo) return;
     btn.dataset.listo = '1';
-    btn.onclick = function(){ inp.click(); };
+
+    // Un solo lugar donde se interpreta el archivo, lo abra como lo abra.
+    function _costosAplicarTexto(texto, recordado){
+      const datos = _costosParsear(texto);
+      const n = Object.keys(datos).length;
+      if (!n) {
+        alert('No encontré costos en ese archivo.\n\nDebe ser el archivo de la lista de Qinera, con cada producto en una línea: el código, el nombre y los valores separados por tabuladores.');
+        return false;
+      }
+      MIS_COSTOS = datos;
+      _costosIndexar();
+      const ok = _costosGuardar();
+      _costosEstado();
+      alert('Listo: ' + n + ' productos con costo.' +
+        (ok ? '\n\nQuedaron guardados en este computador, así que no te los voy a pedir de nuevo.'
+            : '\n\nOJO: no pude guardarlos en este navegador, así que habrá que cargarlos de nuevo la próxima vez.') +
+        (recordado ? '\n\nY me quedé con el archivo: la próxima vez es un solo clic, sin buscarlo.' : ''));
+      return true;
+    }
+
+    // Leer por el archivo recordado. Devuelve false si no hay o si el permiso no se dio.
+    async function _costosDesdeHandle(){
+      try {
+        if (!COSTOS_HANDLE) COSTOS_HANDLE = await _costosHandleLeer();
+        if (!COSTOS_HANDLE || !COSTOS_HANDLE.queryPermission) return false;
+        let permiso = await COSTOS_HANDLE.queryPermission({ mode:'read' });
+        if (permiso === 'prompt') permiso = await COSTOS_HANDLE.requestPermission({ mode:'read' });
+        if (permiso !== 'granted') return false;
+        const file = await COSTOS_HANDLE.getFile();
+        return _costosAplicarTexto(await file.text(), false);
+      } catch(e){
+        // Archivo movido, renombrado o permiso revocado: se olvida y se vuelve a pedir.
+        await _costosHandleOlvidar();
+        return false;
+      }
+    }
+
+    // Elegir el archivo. Con la API moderna el navegador se queda con la referencia y
+    // recuerda además la carpeta (id), así no hay que empezar de cero cada vez.
+    async function _costosElegir(){
+      if (!window.showOpenFilePicker) { inp.click(); return; }
+      try {
+        const [handle] = await window.showOpenFilePicker({
+          id: 'oct-costos-salas',
+          multiple: false,
+          types: [{ description: 'Lista de costos (texto)', accept: { 'text/plain': ['.txt', '.tsv', '.csv'] } }]
+        });
+        if (!handle) return;
+        const file = await handle.getFile();
+        if (_costosAplicarTexto(await file.text(), true)) {
+          COSTOS_HANDLE = handle;
+          await _costosHandleGuardar(handle);
+          _costosEstado();
+        }
+      } catch(e){ /* el usuario cerró el buscador de archivos */ }
+    }
+
+    btn.onclick = async function(){
+      if (await _costosDesdeHandle()) return;   // camino de un solo clic
+      await _costosElegir();
+    };
+    // Botón "Elegir otro archivo": siempre abre el buscador, aunque haya uno recordado.
+    const btnOtro = document.getElementById('costos-otro');
+    if (btnOtro && !btnOtro.dataset.listo) {
+      btnOtro.dataset.listo = '1';
+      btnOtro.onclick = async function(){ await _costosHandleOlvidar(); await _costosElegir(); };
+    }
     inp.onchange = function(){
       const file = inp.files && inp.files[0];
       if (!file) return;
       const lector = new FileReader();
-      lector.onload = function(){
-        const datos = _costosParsear(lector.result);
-        const n = Object.keys(datos).length;
-        if (!n) {
-          alert('No encontré costos en ese archivo.\n\nDebe ser el archivo de la lista de Qinera, con cada producto en una línea: el código, el nombre y los valores separados por tabuladores.');
-          return;
-        }
-        MIS_COSTOS = datos;
-        _costosIndexar();
-        const ok = _costosGuardar();
-        _costosEstado();
-        alert('Listo: ' + n + ' productos con costo.' +
-          (ok ? '\n\nQuedaron guardados en este computador, así que no te los voy a pedir de nuevo.'
-              : '\n\nOJO: no pude guardarlos en este navegador, así que habrá que cargarlos de nuevo la próxima vez.'));
-      };
+      lector.onload = function(){ _costosAplicarTexto(lector.result, false); };
       lector.onerror = function(){ alert('No pude leer el archivo.'); };
       lector.readAsText(file, 'utf-8');
       inp.value = '';
     };
+    // Mostrar en el estado si ya hay un archivo recordado.
+    _costosHandleLeer().then(function(h){ if (h) { COSTOS_HANDLE = h; _costosEstado(); } });
     _costosEstado();
   }
   _costosCargar();
@@ -3169,10 +3275,13 @@
         // Rayen 2026-08-17: buscar el archivo carpeta por carpeta es lento (lo buscó en
         // OpenCluster\\Productos, donde no está). Con la ruta copiada se pega en el campo
         // "Nombre" del buscador de archivos y se abre directo.
+        '<button type="button" class="btn-secundario" id="costos-otro">Elegir otro archivo</button> ' +
         '<button type="button" class="btn-secundario" id="costos-ruta">Copiar la ruta del archivo</button>' +
         '<input type="file" id="costos-archivo" accept=".txt,.tsv,.csv,text/plain" style="display:none;">' +
         '<div id="costos-estado" class="costos-estado"></div>' +
-        '<p class="costos-caja-p" style="margin-top:0.5rem;">Aprieta <strong>Copiar la ruta</strong>, después <strong>Cargar mis costos</strong>, y en el buscador de archivos pega la ruta con Ctrl+V en el campo <em>Nombre</em> y dale Abrir. Es este archivo:<br><code>' + COSTOS_RUTA + '</code></p>' +
+        // Rayen 17-ago-2026: la primera vez hay que ir a buscarlo una sola vez; después el
+        // navegador se queda con el archivo y "Cargar mis costos" lo relee sin preguntar nada.
+        '<p class="costos-caja-p" style="margin-top:0.5rem;"><strong>La primera vez</strong> hay que ir a buscar el archivo una sola vez: aprieta <strong>Copiar la ruta</strong>, después <strong>Cargar mis costos</strong>, y en el buscador de archivos pega la ruta con Ctrl+V en el campo <em>Nombre</em> y dale Abrir. Es este archivo:<br><code>' + COSTOS_RUTA + '</code><br><strong>Después</strong> queda recordado: apretar <strong>Cargar mis costos</strong> lo relee del Drive de una, sin buscar nada. Si algún día cambias de archivo, usa <strong>Elegir otro archivo</strong>.</p>' +
       '</div>' +
       botonCorreo +
       '<input type="text" class="search" id="faltantes-buscar" placeholder="Buscar producto o SKU…" style="margin-bottom:0.7rem;" />' +

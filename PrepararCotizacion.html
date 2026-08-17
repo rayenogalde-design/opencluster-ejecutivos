@@ -57,6 +57,11 @@ a.sec,button.sec{background:#fff;color:var(--navy);border:1px solid var(--linea)
    padding:11px 16px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none;
    display:inline-flex;align-items:center;gap:8px;transition:.15s}
 a.sec:hover,button.sec:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,26,96,.08);background:var(--hover)}
+.control{display:flex;gap:12px;flex-wrap:wrap}
+.control .kpi{flex:1 1 180px;background:var(--info-bg);color:var(--info-tx);border-radius:10px;padding:12px 14px}
+.control .kpi .lbl{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;opacity:.85}
+.control .kpi .val{font-size:19px;font-weight:800;margin-top:3px;font-variant-numeric:tabular-nums}
+.control .kpi .pie{font-size:11.5px;margin-top:3px;opacity:.85}
 .pasos{margin:0;padding-left:18px;font-size:13px;color:var(--texto)}
 .pasos li{margin-bottom:5px}
 .lista-prep{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
@@ -116,7 +121,11 @@ a.sec:hover,button.sec:hover{transform:translateY(-1px);box-shadow:0 4px 12px rg
   </div>
 
   <div class="card" id="cardAcciones" style="display:none">
-    <h2>Cómo sigue</h2>
+    <h2>Control antes de enviar</h2>
+    <p class="sub" style="margin:0 0 10px">Compara estos tres números con el PDF antes de mandarlo. Si alguno no calza, el PDF está mal: no lo envíes.</p>
+    <div id="control" class="control"></div>
+
+    <h2 style="margin-top:22px">Cómo sigue</h2>
     <ol class="pasos">
       <li>Aprieta <strong>Abrir en el cotizador</strong>: los productos entran cargados, en este mismo orden, con foto y precio.</li>
       <li>En el cotizador completa los datos del cliente (el <strong>email es obligatorio</strong> para generar el PDF).</li>
@@ -190,7 +199,10 @@ function pintar(datos){
     if (!precioIva) sinPrecio.push(nombre);
     if (!img) sinFoto.push(nombre);
 
-    var netoUn = precioIva / 1.19;
+    // El catálogo guarda el precio CON IVA; al Cotizador se le manda el NETO ya calculado.
+    // Se manda neto a propósito: es el modo por defecto del Cotizador, así que aunque el
+    // campo "modo" se perdiera por el camino, el número sigue siendo el correcto.
+    var netoUn = Math.round(precioIva / 1.19);
     subNeto += netoUn * cant;
 
     var tr = document.createElement("tr");
@@ -205,13 +217,11 @@ function pintar(datos){
       '<td class="c">' + cant + '</td>' +
       '<td class="n">' + (precioIva ? CLP(netoUn) : '—') + '</td>' +
       '<td class="n">' + (precioIva ? CLP(netoUn * cant) : '—') + '</td>' +
-      '<td class="n">' + (precioIva ? CLP(precioIva * cant) : '—') + '</td>';
+      '<td class="n">' + (precioIva ? CLP(netoUn * cant * 1.19) : '—') + '</td>';
     tb.appendChild(tr);
 
-    // modo:"iva" es OBLIGATORIO: el precio que va acá es el de la lista CON IVA incluido.
-    // Sin ese campo el Cotizador lo toma como NETO y el documento sale 19% más caro.
     FILAS.push({ nombre:nombre, desc:p.desc || "", cant:String(cant),
-                 precio:String(Math.round(precioIva)), modo:"iva", img:img });
+                 precio:String(netoUn), modo:"neto", img:img });
   });
 
   document.getElementById("tNeto").textContent  = CLP(subNeto);
@@ -219,6 +229,22 @@ function pintar(datos){
   document.getElementById("tTotal").textContent = CLP(subNeto * 1.19);
   document.getElementById("cardTabla").style.display = "block";
   document.getElementById("cardAcciones").style.display = "block";
+
+  // Control: los números que TIENEN que salir en el PDF. Sirven para pillar de un
+  // vistazo un PDF con los precios corridos, sin revisar las líneas una por una.
+  var caro = FILAS.reduce(function(a, f){
+    return (Number(f.precio) > Number(a.precio)) ? f : a;
+  }, FILAS[0] || { precio:0, nombre:"—" });
+  document.getElementById("control").innerHTML =
+    '<div class="kpi"><div class="lbl">Subtotal productos, neto</div>' +
+      '<div class="val">' + CLP(subNeto) + '</div>' +
+      '<div class="pie">Sin transporte ni instalación</div></div>' +
+    '<div class="kpi"><div class="lbl">Total con IVA, solo productos</div>' +
+      '<div class="val">' + CLP(subNeto * 1.19) + '</div>' +
+      '<div class="pie">Si sumas transporte, el total del PDF será mayor</div></div>' +
+    '<div class="kpi"><div class="lbl">Neto unitario del más caro</div>' +
+      '<div class="val">' + CLP(Number(caro.precio)) + '</div>' +
+      '<div class="pie">' + caro.nombre + '</div></div>';
 
   var alertas = [];
   if (desconocidos.length) alertas.push("SKU que no están en el catálogo de salas: " + desconocidos.join(", "));

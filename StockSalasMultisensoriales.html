@@ -2773,23 +2773,32 @@
   function _extraGuardar(lista){
     try { localStorage.setItem(EXTRA_KEY, JSON.stringify(lista)); } catch(e){}
   }
-  // Sugerencias: todo lo que Qinera sí vende, para que escriba dos letras y elija.
-  // El código va como texto de la opción (Rayen 2026-08-17: "sería bueno ponerle los códigos"):
-  // así se ve al elegir, pero lo que queda escrito es el NOMBRE, que es lo que va al pedido.
+  // Sugerencias: todo lo que Qinera sí vende. El CÓDIGO va dentro del texto de la sugerencia
+  // (Rayen 2026-08-17) y no es un adorno: en la tarifa hay nombres repetidos —BJ-EMBCTF y
+  // BJ-LEMBCTF se llaman los dos "Base cuadrada para tubo de burbujas y fibra óptica"— y sin el
+  // código salían dos opciones idénticas, imposibles de distinguir.
+  const _EXTRA_SEP = '  ·  ';
   function _extraOpcionesHTML(){
     return Object.keys(IMPORTABLE).map(function(sku){
       const n = (IMPORTABLE[sku] && IMPORTABLE[sku].n) || '';
-      return n ? '<option value="' + escapeHtmlSafe(n) + '">' + escapeHtmlSafe(sku) + '</option>' : '';
+      return n ? '<option value="' + escapeHtmlSafe(n + _EXTRA_SEP + sku) + '"></option>' : '';
     }).join('');
   }
-  // Deja escribir el CÓDIGO en vez del nombre: si lo tecleado es un SKU de la tarifa, se cambia
-  // por su nombre. Si no calza con nada, se respeta lo que escribió (irá a "Conseguir aparte").
-  function _extraNombreDesdeTexto(txt){
+  // Acepta las tres formas: "Nombre · SKU" (lo que deja la sugerencia), el código solo, o un
+  // nombre escrito a mano. Devuelve el nombre y, si se pudo saber, el código exacto — ese código
+  // manda en el pedido, así no depende de adivinar por nombre.
+  function _extraDesdeTexto(txt){
     const t = String(txt || '').trim();
-    if (!t) return '';
+    if (!t) return { nombre:'', sku:'' };
+    const corte = t.lastIndexOf(_EXTRA_SEP.trim());
+    if (corte > 0) {
+      const posibleSku = t.slice(corte + 1).trim();
+      const nom = t.slice(0, corte).trim();
+      if (IMPORTABLE[posibleSku]) return { nombre: IMPORTABLE[posibleSku].n || nom, sku: posibleSku };
+    }
     const directo = Object.keys(IMPORTABLE).find(function(sku){ return sku.toLowerCase() === t.toLowerCase(); });
-    if (directo) return IMPORTABLE[directo].n || t;
-    return t;
+    if (directo) return { nombre: IMPORTABLE[directo].n || t, sku: directo };
+    return { nombre: t, sku:'' };
   }
   // Suma los agregados a mano a la lista de faltantes. Si el producto YA venía faltando por las
   // cotizaciones, no se duplica: se suman las unidades a esa misma línea.
@@ -2799,7 +2808,16 @@
     extras.forEach(function(x){
       const cant = Math.max(1, Number(x.cant) || 1);
       const key = _claveNombre(x.nombre || '');
-      const ya = items.find(function(it){ return it.key === key; });
+      // Se fusiona con la línea que ya existía SOLO si es el mismo producto de verdad. Si ella
+      // eligió un código concreto y la línea existente tiene otro, son productos distintos aunque
+      // se llamen igual (en la tarifa "Base cuadrada para tubo de burbujas y fibra óptica" son dos:
+      // BJ-EMBCTF y BJ-LEMBCTF) y tienen que ir en líneas separadas.
+      const ya = items.find(function(it){
+        if (it.key !== key) return false;
+        if (!x.sku) return true;
+        const skuIt = it.skuForzado || _skuQinera(_skuFaltante(it.nombre, it.s) || '', it.nombre) || '';
+        return String(skuIt).toUpperCase() === String(x.sku).toUpperCase();
+      });
       if (ya) {
         ya.pedido = (Number(ya.pedido) || 0) + cant;
         ya.falta  = (Number(ya.falta)  || 0) + cant;
@@ -2810,9 +2828,12 @@
       items.push({
         key: key, s: s,
         nombre: x.nombre || '(sin nombre)',
+        // Si se eligió de la lista, el código elegido manda: hay nombres repetidos en la tarifa
+        // y buscar por nombre podría traer el otro.
+        skuForzado: x.sku || undefined,
         pedido: cant, stockTotal: (s && s.total) || 0, falta: cant,
         agregadoAMano: cant,
-        nota: 'Agregado a mano al pedido, no viene de una cotización.'
+        nota: 'Agregado a mano al pedido' + (x.sku ? ' (código ' + x.sku + ')' : '') + ', no viene de una cotización.'
       });
     });
     items.sort((a, b) => (a.nombre || a.key).localeCompare(b.nombre || b.key, 'es'));
@@ -2831,7 +2852,8 @@
         ? '<span class="costos-ok">Agregados a mano: ' + l.length + '</span> ' +
           l.map(function(x, i){
             return '<button type="button" class="costos-mini" data-quitar-extra="' + i + '">' +
-              escapeHtmlSafe(x.nombre) + ' × ' + x.cant + '  ✕</button>';
+              escapeHtmlSafe(x.nombre) + (x.sku ? ' (' + escapeHtmlSafe(x.sku) + ')' : '') +
+              ' × ' + x.cant + '  ✕</button>';
           }).join(' ')
         : '<span class="costos-no">Todavía no agregaste nada a mano</span>';
       cont.querySelectorAll('[data-quitar-extra]').forEach(function(b){
@@ -2847,11 +2869,12 @@
     if (!btn.dataset.listo) {
       btn.dataset.listo = '1';
       btn.onclick = function(){
-        const nombre = _extraNombreDesdeTexto(inp.value);
+        const elegido = _extraDesdeTexto(inp.value);
+        const nombre = elegido.nombre;
         const n = Math.max(1, Number(cant && cant.value) || 1);
         if (!nombre) { alert('Escribe qué producto quieres agregar al pedido.'); return; }
         const l = _extraLeer();
-        l.push({ nombre: nombre, cant: n });
+        l.push({ nombre: nombre, cant: n, sku: elegido.sku || '' });
         _extraGuardar(l);
         inp.value = ''; if (cant) cant.value = 1;
         renderComparacionCotizaciones();   // se repinta todo: grilla, correo y Excel ya lo incluyen

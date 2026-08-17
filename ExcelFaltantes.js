@@ -125,10 +125,11 @@
         filas: filas.filter(function (r) { return r.via !== 'T' && r.via !== 'X'; }) }
     ];
     var _aparte = filas.filter(function (r) { return r.via === 'T'; });
-    // Rayen 2026-08-17: "lo que está fuera de la hoja marítima nunca lo voy a pedir". El Excel sale
-    // SOLO con la pestaña del contenedor, para que no haya forma de pedir algo de otra vía por
-    // error. Lo que queda fuera no desaparece en silencio: se cuenta al pie de la hoja.
-    var SOLO_CONTENEDOR = true;
+    // Rayen 2026-08-17: los Tobii, los de comunicación y las licencias SÍ se piden — van en el
+    // Excel igual, en su propia pestaña. Lo que ella quería evitar era confundirse entre vías, no
+    // dejar productos fuera; para eso al pie de la hoja del contenedor se dice qué hay en las otras.
+    // (Poner en true si alguna vez quiere el Excel con la pestaña del contenedor y nada más.)
+    var SOLO_CONTENEDOR = false;
     if (!SOLO_CONTENEDOR && _aparte.length) _hojas.push({ nombre: 'Pedido Qinera - Aparte', filas: _aparte, via: 'T',
       titulo: 'Pedido Qinera — Aparte: los manda por separado, con el transporte incluido' });
     // Tercera hoja: los que Qinera NO tiene en su tarifa. Rayen 2026-08-13: "si no están en el
@@ -137,13 +138,16 @@
     var _noQinera = filas.filter(function (r) { return r.via === 'X'; });
     if (!SOLO_CONTENEDOR && _noQinera.length) _hojas.push({ nombre: 'Conseguir aparte', filas: _noQinera, via: 'X',
       titulo: 'NO están en la tarifa de Qinera — hay que conseguirlos en otro lado' });
-    // Aviso al pie: cuántos productos quedaron fuera de este Excel y por qué. Nunca en silencio.
+    // Aviso al pie de la hoja del contenedor: qué más hay que pedir y dónde está. Así no se
+    // confunden las vías ni se olvida lo que va por separado.
     var _fueraTexto = '';
-    if (SOLO_CONTENEDOR && (_aparte.length || _noQinera.length)) {
+    if (_aparte.length || _noQinera.length) {
       var _p = [];
-      if (_aparte.length)   _p.push(_aparte.length + ' que Qinera manda aparte (no viajan en el contenedor)');
-      if (_noQinera.length) _p.push(_noQinera.length + ' que Qinera no vende');
-      _fueraTexto = 'Fuera de este pedido quedaron ' + _p.join(' y ') + '. Este Excel trae SOLO lo del contenedor marítimo.';
+      if (_aparte.length)   _p.push(_aparte.length + ' en la pestaña "Pedido Qinera - Aparte" (los manda por separado, con transporte incluido)');
+      if (_noQinera.length) _p.push(_noQinera.length + ' en la pestaña "Conseguir aparte" (Qinera no los vende)');
+      _fueraTexto = SOLO_CONTENEDOR
+        ? 'Fuera de este pedido quedaron ' + _p.join(' y ') + '. Este Excel trae SOLO lo del contenedor marítimo.'
+        : 'Esta pestaña es solo lo que viaja en el contenedor. Además hay ' + _p.join(' y ') + '.';
     }
 
     function _armarHoja(filas, tituloHoja, viaHoja) {

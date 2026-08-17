@@ -2761,6 +2761,94 @@
   // imágenes y códigos SKU y la opción de enviar un correo a Mario... para el nuevo pedido") —
   // mismo criterio que la matriz (pedido > stock), pero como tarjetas con foto+SKU, para copiar
   // directo a un pedido nuevo. Devuelve también la lista cruda (para el botón de correo).
+  // ── Agregar productos al pedido a mano (Rayen 2026-08-17) ───────────────────
+  // "Al final, donde se supone que yo tengo que poder agregar productos aunque no estén en las
+  // cotizaciones": lo que se agrega acá se trata como un faltante más, así entra de una vez en la
+  // grilla, en el correo a Mario y en el Excel (que salen todos de _faltantesLista).
+  const EXTRA_KEY = 'oct_salas_pedido_extra_v1';
+  function _extraLeer(){
+    try { const l = JSON.parse(localStorage.getItem(EXTRA_KEY) || '[]'); return Array.isArray(l) ? l : []; }
+    catch(e){ return []; }
+  }
+  function _extraGuardar(lista){
+    try { localStorage.setItem(EXTRA_KEY, JSON.stringify(lista)); } catch(e){}
+  }
+  // Sugerencias: todo lo que Qinera sí vende, para que escriba dos letras y elija.
+  function _extraOpcionesHTML(){
+    return Object.keys(IMPORTABLE).map(function(sku){
+      const n = (IMPORTABLE[sku] && IMPORTABLE[sku].n) || '';
+      return n ? '<option value="' + escapeHtmlSafe(n) + '"></option>' : '';
+    }).join('');
+  }
+  // Suma los agregados a mano a la lista de faltantes. Si el producto YA venía faltando por las
+  // cotizaciones, no se duplica: se suman las unidades a esa misma línea.
+  function _extraSumarAFaltantes(items){
+    const extras = _extraLeer();
+    if (!extras.length) return items;
+    extras.forEach(function(x){
+      const cant = Math.max(1, Number(x.cant) || 1);
+      const key = _claveNombre(x.nombre || '');
+      const ya = items.find(function(it){ return it.key === key; });
+      if (ya) {
+        ya.pedido = (Number(ya.pedido) || 0) + cant;
+        ya.falta  = (Number(ya.falta)  || 0) + cant;
+        ya.agregadoAMano = (Number(ya.agregadoAMano) || 0) + cant;
+        return;
+      }
+      const s = STOCK_SM[key];
+      items.push({
+        key: key, s: s,
+        nombre: x.nombre || '(sin nombre)',
+        pedido: cant, stockTotal: (s && s.total) || 0, falta: cant,
+        agregadoAMano: cant,
+        nota: 'Agregado a mano al pedido, no viene de una cotización.'
+      });
+    });
+    items.sort((a, b) => (a.nombre || a.key).localeCompare(b.nombre || b.key, 'es'));
+    return items;
+  }
+  function _wireExtras(seleccionadas){
+    const inp  = document.getElementById('extra-nombre');
+    const cant = document.getElementById('extra-cant');
+    const btn  = document.getElementById('extra-agregar');
+    const cont = document.getElementById('extra-lista-agregados');
+    if (!inp || !btn || !cont) return;
+
+    function pintar(){
+      const l = _extraLeer();
+      cont.innerHTML = l.length
+        ? '<span class="costos-ok">Agregados a mano: ' + l.length + '</span> ' +
+          l.map(function(x, i){
+            return '<button type="button" class="costos-mini" data-quitar-extra="' + i + '">' +
+              escapeHtmlSafe(x.nombre) + ' × ' + x.cant + '  ✕</button>';
+          }).join(' ')
+        : '<span class="costos-no">Todavía no agregaste nada a mano</span>';
+      cont.querySelectorAll('[data-quitar-extra]').forEach(function(b){
+        b.onclick = function(){
+          const l2 = _extraLeer();
+          l2.splice(Number(b.dataset.quitarExtra), 1);
+          _extraGuardar(l2);
+          renderComparacionCotizaciones();
+        };
+      });
+    }
+
+    if (!btn.dataset.listo) {
+      btn.dataset.listo = '1';
+      btn.onclick = function(){
+        const nombre = String(inp.value || '').trim();
+        const n = Math.max(1, Number(cant && cant.value) || 1);
+        if (!nombre) { alert('Escribe qué producto quieres agregar al pedido.'); return; }
+        const l = _extraLeer();
+        l.push({ nombre: nombre, cant: n });
+        _extraGuardar(l);
+        inp.value = ''; if (cant) cant.value = 1;
+        renderComparacionCotizaciones();   // se repinta todo: grilla, correo y Excel ya lo incluyen
+      };
+      if (inp) inp.onkeydown = function(ev){ if (ev.key === 'Enter') btn.click(); };
+    }
+    pintar();
+  }
   function _faltantesLista(seleccionadas){
     const demanda = _demandaPorKey(seleccionadas);
     // Nombre que viene en la cotización, por si el producto no calza con el stock (así no queda
@@ -2778,7 +2866,9 @@
       return { key, s, nombre, pedido, stockTotal, falta };
     }).filter(x => x.falta > 0);
     items.sort((a, b) => (a.nombre || a.key).localeCompare(b.nombre || b.key, 'es'));
-    return _rinconConOSinTablet(items, seleccionadas);
+    // Los agregados a mano se suman DESPUÉS del cálculo contra stock: son unidades que ella
+    // decidió pedir igual, no salen de ninguna cotización.
+    return _extraSumarAFaltantes(_rinconConOSinTablet(items, seleccionadas));
   }
   // ── Rincón Luminea: con tablet o sin tablet ────────────────────────────────
   // Rayen 2026-08-12: "todos los SHX, los Rack, traen tablet". Entonces en las salas que llevan un
@@ -3288,10 +3378,25 @@
         '<p class="costos-caja-p" style="margin-top:0.5rem;"><strong>La primera vez</strong> hay que ir a buscar el archivo una sola vez: aprieta <strong>Copiar la ruta</strong>, después <strong>Cargar mis costos</strong>, y en el buscador de archivos pega la ruta con Ctrl+V en el campo <em>Nombre</em> y dale Abrir. Es este archivo:<br><code>' + COSTOS_RUTA + '</code><br><strong>Después</strong> queda recordado: apretar <strong>Cargar mis costos</strong> lo relee del Drive de una, sin buscar nada. Si algún día cambias de archivo, usa <strong>Elegir otro archivo</strong>.</p>' +
       '</div>' +
       botonCorreo +
+      // Agregar productos a mano (Rayen 2026-08-17): el pedido no es solo lo que piden las
+      // cotizaciones; a veces quiere sumar cosas que no cotizó nadie (reponer bodega, un repuesto).
+      // Lo que se agrega acá entra en la grilla de faltantes, en el correo a Mario y en el Excel.
+      '<div class="costos-caja" style="margin-bottom:0.9rem;">' +
+        '<div class="costos-caja-t">Agregar al pedido algo que no está en las cotizaciones</div>' +
+        '<p class="costos-caja-p">Escribe el producto (o su código) y cuántos quieres pedir. Se suma al pedido tal cual, sin descontar el stock, y queda guardado en este computador hasta que lo quites.</p>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">' +
+          '<input type="text" class="search" id="extra-nombre" list="extra-lista" placeholder="Producto de la tarifa de Qinera…" style="flex:1 1 320px;margin:0;" />' +
+          '<datalist id="extra-lista">' + _extraOpcionesHTML() + '</datalist>' +
+          '<input type="number" id="extra-cant" min="1" step="1" value="1" style="width:90px;" />' +
+          '<button type="button" class="btn-secundario" id="extra-agregar">Agregar al pedido</button>' +
+        '</div>' +
+        '<div id="extra-lista-agregados" class="costos-estado"></div>' +
+      '</div>' +
       '<input type="text" class="search" id="faltantes-buscar" placeholder="Buscar producto o SKU…" style="margin-bottom:0.7rem;" />' +
       faltantesGrid;
     _wireDragPrioridad();
     _wireCargarCostos();
+    _wireExtras(seleccionadas);
     // [data-ficha] ya no se conecta acá — lo cubre la delegación global en document (más abajo en
     // el script), que lee data-stock-extra igual que antes. Sigue el wiring propio de
     // [data-desglose], que no está delegado.

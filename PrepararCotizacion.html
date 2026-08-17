@@ -191,8 +191,8 @@ function pintar(datos){
 
   (datos.productos || []).forEach(function(p, i){
     var c       = cat[p.sku] || null;
-    if (!c) desconocidos.push(p.sku);
-    var nombre  = p.nombre || (c && c.n) || p.sku;
+    if (!c) desconocidos.push(p.nombre || p.sku);
+    var nombre  = p.nombre || (c && c.n) || "(producto sin nombre)";
     var cant    = Number(p.cant || 1);
     var precioIva = (p.precio != null && p.precio !== "") ? Number(p.precio) : (c ? Number(c.p || 0) : 0);
     var img     = p.img || (c && c.img) || "";
@@ -211,9 +211,9 @@ function pintar(datos){
       '<td>' + (img
           ? '<img class="foto" src="' + img + '" alt="">'
           : '<div class="sinfoto">sin foto</div>') + '</td>' +
+      // Sin código de proveedor: regla de Rayen, ni en el documento ni en pantalla.
       '<td><div class="nom">' + nombre + '</div>' +
-          (p.desc ? '<div class="desc">' + p.desc + '</div>' : '') +
-          '<div class="sku">' + p.sku + '</div></td>' +
+          (p.desc ? '<div class="desc">' + p.desc + '</div>' : '') + '</td>' +
       '<td class="c">' + cant + '</td>' +
       '<td class="n">' + (precioIva ? CLP(netoUn) : '—') + '</td>' +
       '<td class="n">' + (precioIva ? CLP(netoUn * cant) : '—') + '</td>' +
@@ -247,7 +247,7 @@ function pintar(datos){
       '<div class="pie">' + caro.nombre + '</div></div>';
 
   var alertas = [];
-  if (desconocidos.length) alertas.push("SKU que no están en el catálogo de salas: " + desconocidos.join(", "));
+  if (desconocidos.length) alertas.push("Productos que no están en el catálogo de salas: " + desconocidos.join(", "));
   if (sinPrecio.length)    alertas.push("Sin precio en la lista: " + sinPrecio.join(", "));
   if (sinFoto.length)      alertas.push("Sin foto: " + sinFoto.join(", "));
   if (alertas.length) msg("aviso-am", alertas.join("<br>"));

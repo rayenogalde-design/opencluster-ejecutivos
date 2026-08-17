@@ -120,13 +120,13 @@
     // cuando es justo al revés: es lo que hay que PEDIR y llegará por contenedor. Los títulos
     // y los nombres de pestaña dicen ahora la acción, no el medio de transporte a secas.
     var _hojas = [
-      { nombre: 'Pedir en contenedor', via: 'M',
-        titulo: 'Por pedir a Qinera — viajan en el contenedor marítimo',
+      { nombre: 'Pedido Qinera - Contenedor', via: 'M',
+        titulo: 'Pedido Qinera — Contenedor: lo que hay que pedir, viaja en el contenedor marítimo',
         filas: filas.filter(function (r) { return r.via !== 'T' && r.via !== 'X'; }) }
     ];
     var _aparte = filas.filter(function (r) { return r.via === 'T'; });
-    if (_aparte.length) _hojas.push({ nombre: 'Pedir aparte', filas: _aparte, via: 'T',
-      titulo: 'Por pedir a Qinera — se piden aparte, los manda con el transporte incluido' });
+    if (_aparte.length) _hojas.push({ nombre: 'Pedido Qinera - Aparte', filas: _aparte, via: 'T',
+      titulo: 'Pedido Qinera — Aparte: los manda por separado, con el transporte incluido' });
     // Tercera hoja: los que Qinera NO tiene en su tarifa. Rayen 2026-08-13: "si no están en el
     // listado no me lo venden, así de sencillo, no hay que buscarlo". No se piden: hay que
     // conseguirlos en otro lado, así que lo que importa es cuántos hay y cuántos faltan.

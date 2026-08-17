@@ -88,18 +88,45 @@
     //                      Qinera; el transporte NO va incluido)
     //   costoPuesto      = el mismo x 1,551 → ya puesto en Chile (flete maritimo + importacion)
     var conCostos = !!info.conCostos;
+    // UNA LÍNEA POR CÓDIGO (Rayen 2026-08-17). Dos nombres distintos pueden terminar en el mismo
+    // SKU de Qinera ("Tabla Scooter" y "Tabla Scooter 40 cm" son BJ-61062000): en el pedido eso
+    // salía como dos productos, con el mismo código y el mismo precio. Se juntan en una sola fila.
+    // El stock NO se suma (es el mismo producto, el mismo stock): se toma el mayor, y lo que falta
+    // se recalcula sobre el pedido total, que no es lo mismo que sumar los dos "faltan".
+    filas = (function (fs) {
+      var porSku = {}, salida = [];
+      (fs || []).forEach(function (r) {
+        var k = String(r.sku || '').trim().toUpperCase();
+        if (!k || k === '—' || k === '-') { salida.push(r); return; }   // sin código no se puede juntar
+        var a = porSku[k];
+        if (!a) { a = porSku[k] = Object.assign({}, r); salida.push(a); return; }
+        a.pedido = (Number(a.pedido) || 0) + (Number(r.pedido) || 0);
+        a.stock  = Math.max(Number(a.stock) || 0, Number(r.stock) || 0);
+        a.falta  = a.pedido ? Math.max(0, a.pedido - a.stock)
+                            : (Number(a.falta) || 0) + (Number(r.falta) || 0);
+        // se queda con el nombre más específico ("Tabla Scooter 40 cm" antes que "Tabla Scooter")
+        if (String(r.nombre || '').length > String(a.nombre || '').length) a.nombre = r.nombre;
+        if (!a.costoQinera && r.costoQinera) a.costoQinera = r.costoQinera;
+        if (!a.costoPuesto && r.costoPuesto) a.costoPuesto = r.costoPuesto;
+      });
+      return salida;
+    })(filas);
     // DOS PESTAÑAS (Rayen 2026-08-12): la tarifa de Qinera tiene dos vías y no se piden igual.
     // Los que viajan en el contenedor marítimo (via 'M') van en la primera hoja; los que llegan
     // aparte, con el transporte ya incluido (via 'T': los Tobii, el soporte Rehadapt, Look to
     // Learn), van en la segunda. Mezclarlos en una sola lista hacía parecer que todo venía en el
     // mismo cargamento. Cada fila trae su via; sin via se asume contenedor.
+    // Rayen 2026-08-17: "lo que viene en el contenedor" se leía como si YA viniera en camino,
+    // cuando es justo al revés: es lo que hay que PEDIR y llegará por contenedor. Los títulos
+    // y los nombres de pestaña dicen ahora la acción, no el medio de transporte a secas.
     var _hojas = [
-      { nombre: 'Contenedor', titulo: 'Faltantes — lo que viene en el contenedor', via: 'M',
+      { nombre: 'Pedir en contenedor', via: 'M',
+        titulo: 'Por pedir a Qinera — viajan en el contenedor marítimo',
         filas: filas.filter(function (r) { return r.via !== 'T' && r.via !== 'X'; }) }
     ];
     var _aparte = filas.filter(function (r) { return r.via === 'T'; });
-    if (_aparte.length) _hojas.push({ nombre: 'Llegan aparte', filas: _aparte, via: 'T',
-      titulo: 'Faltantes — se piden aparte (Qinera los manda con el transporte incluido)' });
+    if (_aparte.length) _hojas.push({ nombre: 'Pedir aparte', filas: _aparte, via: 'T',
+      titulo: 'Por pedir a Qinera — se piden aparte, los manda con el transporte incluido' });
     // Tercera hoja: los que Qinera NO tiene en su tarifa. Rayen 2026-08-13: "si no están en el
     // listado no me lo venden, así de sencillo, no hay que buscarlo". No se piden: hay que
     // conseguirlos en otro lado, así que lo que importa es cuántos hay y cuántos faltan.

@@ -2292,6 +2292,10 @@ body{
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         Actividad del equipo
       </div>
+      <div class="side-tab admin" data-view="vWebinars" id="navWebinars" onclick="goView('vWebinars')" style="display:none;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="15" height="14" rx="2"/><polygon points="17 9 22 6 22 16 17 13"/></svg>
+        Webinars
+      </div>
       <div class="side-tab admin" data-view="vTerritorios" id="navTerr" onclick="goView('vTerritorios')" style="display:none;">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l3-3 12 12-3 3z"/><path d="M14 14l7 7"/><circle cx="6" cy="6" r="2"/></svg>
         Territorios
@@ -2374,7 +2378,19 @@ body{
       </div>
 
       <!-- ═══ Configuración (admin) ═══ -->
-      <div class="view" id="vConfig">
+            <!-- ═══ Webinars (admin) ═══ -->
+      <div class="view" id="vWebinars">
+        <div class="sec-head" style="display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;">
+          <div>
+            <h1>Webinars</h1>
+            <p>Inscritos de cada webinar por región, con el seguimiento de las llamadas</p>
+          </div>
+          <button class="btn" id="btnWebSync" onclick="sincronizarWebinars()">Actualizar desde las planillas</button>
+        </div>
+        <div id="webBody"><div class="loading-state"><div class="spinner"></div>Cargando…</div></div>
+      </div>
+
+<div class="view" id="vConfig">
         <div class="sec-head">
           <h1>Configuración</h1>
           <p>Ejecutivos, segmentos y plantillas de mensajes</p>
@@ -4399,7 +4415,8 @@ const ACCIONES_POST = [
   'crm_meta_semanal_guardar','crm_meta_semanal_marcar',
   'crm_mensaje_cotizacion_agregar','crm_mensaje_cotizacion_eliminar',
   'crm_informe_mensual','crm_informe_mensual_pdf','crm_informe_mensual_enviar',
-  'crm_html_a_pdf'
+  'crm_html_a_pdf',
+  'crm_webinar_seguimiento','crm_webinar_sync'
 ];
 async function fetchAPI(accion, params, body){
   if(!deployOK()){
@@ -4602,7 +4619,7 @@ function aplicarVisibilidadPorRol(){
 
   // Vistas admin (Territorios, Auditoría, Migración, Importar): visibles solo si Rayen está
   // en modo Admin. En modo Ejecutiva o para ejecutivos no admin, se ocultan.
-  ['navLeads', 'navCoaching', 'navActividad', 'navTerr', 'navSalaMS', 'navAyudasTecnicas', 'navConfig', 'secAdmin', 'secHerramientas', 'navVentasMes'].forEach(id => {
+  ['navLeads', 'navCoaching', 'navActividad', 'navWebinars', 'navTerr', 'navSalaMS', 'navAyudasTecnicas', 'navConfig', 'secAdmin', 'secHerramientas', 'navVentasMes'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.style.display = verComoEjecutivo ? 'none' : '';
   });
@@ -4747,6 +4764,7 @@ function goView(id){
     case 'vCoaching':        cargarCoaching(); break;
     case 'vOlvidados':       cargarOlvidados(); break;
     case 'vTerritorios':     cargarTerritorios(); break;
+    case 'vWebinars':        cargarWebinars(); break;
     case 'vMiTerritorio':    cargarMiTerritorio(); break;
     case 'vProductosCampana': cargarProductosCampana(); break;
     case 'vAud':             cargarAuditoria(); break;
@@ -18599,6 +18617,254 @@ document.addEventListener('click', function(e){
     setTimeout(cerrarMobileMenu, 50);
   }
 });
+
+// ════════════════════════════════════════════════════════════════════════════
+// WEBINARS — inscritos por región + seguimiento telefónico dictado
+// Agregado 2026-08-17. Cada webinar tiene su tarjeta; al abrirla aparece el
+// listado completo de inscritos, con un cuadro por persona para dictar el
+// comentario de la llamada. El comentario queda también en su ficha del CRM.
+// ════════════════════════════════════════════════════════════════════════════
+let WEB_LISTA = [];
+let WEB_ACTUAL = null;
+let WEB_INSCRITOS = [];
+let WEB_FILTRO = 'todos';
+let WEB_BUSCA = '';
+
+async function cargarWebinars(){
+  WEB_ACTUAL = null;
+  const cont = document.getElementById('webBody');
+  if(!cont) return;
+  cont.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando webinars…</div>';
+  const r = await fetchAPI('crm_webinars', { solicitante: USUARIO });
+  if(!r.ok){ cont.innerHTML = '<div class="error-state">' + esc(r.error || 'No se pudo cargar') + '</div>'; return; }
+  WEB_LISTA = r.webinars || [];
+  renderWebinarTarjetas();
+}
+
+function renderWebinarTarjetas(){
+  const cont = document.getElementById('webBody');
+  if(!WEB_LISTA.length){
+    cont.innerHTML = '<div class="loading-state">Todavía no hay inscritos cargados. Apretá "Actualizar desde las planillas".</div>';
+    return;
+  }
+  cont.innerHTML =
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;">' +
+    WEB_LISTA.map(w =>
+      '<div class="card" style="cursor:pointer;" onclick="abrirWebinar(\'' + esc(w.key) + '\')">' +
+        '<div class="card-body">' +
+          '<div style="font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--mist);">' + esc(w.region || '') + '</div>' +
+          '<div style="font-size:16.5px;font-weight:800;color:var(--ink);margin:4px 0 2px;">' + esc(w.nombre || '') + '</div>' +
+          '<div style="font-size:12.5px;color:var(--subtle);margin-bottom:12px;">' + (w.fecha_evento ? esc(_webFechaCorta(w.fecha_evento)) : 'Fecha por confirmar') + ' · ' + esc(w.ejecutivo || '') + '</div>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
+            _webDato('Inscritos', w.inscritos) +
+            _webDato('Confirmaron', w.confirmados) +
+            _webDato('Asistieron', w.asistieron) +
+            _webDato('Ya llamados', w.llamados) +
+            _webDato('Por llamar', w.por_llamar, '#DB2777') +
+            _webDato('Quieren capacitación', w.interesados, '#059669') +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    ).join('') +
+    '</div>';
+}
+
+function _webDato(rotulo, valor, color){
+  return '<div style="background:var(--paper);border-radius:8px;padding:8px 10px;">' +
+    '<div style="font-size:19px;font-weight:800;color:' + (color || 'var(--ink)') + ';line-height:1;">' + (valor || 0) + '</div>' +
+    '<div style="font-size:11px;color:var(--mist);margin-top:3px;">' + rotulo + '</div>' +
+  '</div>';
+}
+
+function _webFechaCorta(f){
+  const s = String(f || '').substring(0, 10);
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!m) return s;
+  const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  return Number(m[3]) + ' de ' + meses[Number(m[2]) - 1] + ' ' + m[1];
+}
+
+async function abrirWebinar(key){
+  const cont = document.getElementById('webBody');
+  cont.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando inscritos…</div>';
+  const r = await fetchAPI('crm_webinar_inscritos', { solicitante: USUARIO, webinar: key });
+  if(!r.ok){ cont.innerHTML = '<div class="error-state">' + esc(r.error || 'No se pudo cargar') + '</div>'; return; }
+  WEB_ACTUAL = WEB_LISTA.find(w => w.key === key) || { key: key, nombre: key };
+  WEB_INSCRITOS = r.inscritos || [];
+  WEB_FILTRO = 'todos';
+  WEB_BUSCA = '';
+  renderWebinarInscritos();
+}
+
+function webFiltro(f){ WEB_FILTRO = f; renderWebinarInscritos(); }
+function webBuscar(v){ WEB_BUSCA = String(v || '').toLowerCase(); renderWebinarInscritos(true); }
+
+function _webCoincide(i){
+  if(WEB_FILTRO === 'porllamar' && _webSi(i.llamado)) return false;
+  if(WEB_FILTRO === 'llamados' && !_webSi(i.llamado)) return false;
+  if(WEB_FILTRO === 'interesados' && String(i.interes_capacitacion || '').toLowerCase() !== 'sí' && String(i.interes_capacitacion || '').toLowerCase() !== 'si') return false;
+  if(WEB_FILTRO === 'asistieron' && !_webSi(i.asistio)) return false;
+  if(WEB_BUSCA){
+    const txt = [i.nombre, i.establecimiento, i.comuna, i.email, i.cargo].join(' ').toLowerCase();
+    if(txt.indexOf(WEB_BUSCA) < 0) return false;
+  }
+  return true;
+}
+
+function _webSi(v){
+  const s = String(v || '').trim().toLowerCase();
+  return !!s && s !== 'no' && s !== '0';
+}
+
+function renderWebinarInscritos(soloLista){
+  const cont = document.getElementById('webBody');
+  const visibles = WEB_INSCRITOS.filter(_webCoincide);
+
+  if(soloLista && document.getElementById('webListaInscritos')){
+    document.getElementById('webListaInscritos').innerHTML = _webFilasHTML(visibles);
+    document.getElementById('webContador').textContent = visibles.length + ' de ' + WEB_INSCRITOS.length;
+    return;
+  }
+
+  const chips = [
+    ['todos', 'Todos', WEB_INSCRITOS.length],
+    ['porllamar', 'Por llamar', WEB_INSCRITOS.filter(i => !_webSi(i.llamado)).length],
+    ['llamados', 'Ya llamados', WEB_INSCRITOS.filter(i => _webSi(i.llamado)).length],
+    ['asistieron', 'Asistieron', WEB_INSCRITOS.filter(i => _webSi(i.asistio)).length],
+    ['interesados', 'Quieren capacitación', WEB_INSCRITOS.filter(i => String(i.interes_capacitacion || '').toLowerCase().indexOf('s') === 0).length]
+  ];
+
+  cont.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:16px;">' +
+      '<div>' +
+        '<button class="btn" onclick="cargarWebinars()" style="margin-bottom:8px;">&#8592; Todos los webinars</button>' +
+        '<div style="font-size:19px;font-weight:800;color:var(--ink);">' + esc(WEB_ACTUAL.nombre || '') + '</div>' +
+        '<div style="font-size:12.5px;color:var(--subtle);margin-top:2px;">' + esc(WEB_ACTUAL.region || '') + ' · <span id="webContador">' + visibles.length + ' de ' + WEB_INSCRITOS.length + '</span></div>' +
+      '</div>' +
+      '<input type="text" placeholder="Buscar nombre, escuela o comuna…" oninput="webBuscar(this.value)" ' +
+        'style="padding:9px 12px;border:1px solid var(--purple-lt);border-radius:9px;font-size:13.5px;font-family:var(--font-sans);min-width:260px;">' +
+    '</div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">' +
+      chips.map(c =>
+        '<button onclick="webFiltro(\'' + c[0] + '\')" style="padding:7px 13px;border-radius:999px;font-size:12.5px;font-weight:700;cursor:pointer;border:1px solid ' +
+        (WEB_FILTRO === c[0] ? 'var(--purple-dk);background:var(--purple-dk);color:white;' : 'var(--purple-lt);background:white;color:var(--subtle);') +
+        '">' + c[1] + ' (' + c[2] + ')</button>'
+      ).join('') +
+    '</div>' +
+    '<div style="background:#f5f2fb;border-radius:10px;padding:11px 14px;font-size:12.5px;color:var(--subtle);margin-bottom:16px;">' +
+      'Para dictar: hacé clic en el cuadro de comentario y apretá la tecla <b>Windows + H</b>. Al guardar, el comentario queda en la ficha del contacto con la fecha de hoy.' +
+    '</div>' +
+    '<div id="webListaInscritos">' + _webFilasHTML(visibles) + '</div>';
+}
+
+function _webFilasHTML(lista){
+  if(!lista.length) return '<div class="loading-state">No hay inscritos con ese filtro.</div>';
+  return lista.map(i => {
+    const interes = String(i.interes_capacitacion || '').toLowerCase();
+    const tel = String(i.telefono || '').replace(/[^\d+]/g, '');
+    const chips =
+      (_webSi(i.asistio) ? '<span style="background:#d1fae5;color:#065f46;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;">Asistió</span> ' : '') +
+      (_webSi(i.confirmado) && !_webSi(i.asistio) ? '<span style="background:#dbeafe;color:#1e40af;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;">Confirmó</span> ' : '') +
+      (_webSi(i.llamado) ? '<span style="background:#ede9fe;color:#5b21b6;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;">Llamado ' + esc(String(i.fecha_llamado || '').substring(0, 10)) + '</span> ' : '<span style="background:#fce7f3;color:#9d174d;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;">Por llamar</span> ');
+
+    return '<div class="card" style="margin-bottom:12px;" id="webrow-' + esc(i.id) + '">' +
+      '<div class="card-body" style="display:grid;grid-template-columns:1.3fr 1fr 300px;gap:16px;align-items:start;">' +
+
+        '<div>' +
+          '<div style="font-size:15px;font-weight:800;color:var(--ink);">' + esc(i.nombre || '(sin nombre)') + '</div>' +
+          '<div style="font-size:12.5px;color:var(--subtle);margin:3px 0 6px;">' + esc(i.cargo || '') + (i.cargo && i.establecimiento ? ' · ' : '') + esc(i.establecimiento || '') + '</div>' +
+          '<div style="font-size:12px;color:var(--mist);margin-bottom:8px;">' + esc(i.comuna || '') + (i.comuna && i.region ? ' · ' : '') + esc(i.region || '') + '</div>' +
+          '<div style="margin-bottom:8px;">' + chips + '</div>' +
+          '<div style="font-size:12.5px;display:flex;flex-direction:column;gap:3px;">' +
+            (i.email ? '<a href="mailto:' + esc(i.email) + '" style="color:var(--purple-dk);">' + esc(i.email) + '</a>' : '') +
+            (tel ? '<span>' + esc(i.telefono) + ' · <a href="tel:' + esc(tel) + '" style="color:var(--purple-dk);">Llamar</a> · <a href="https://wa.me/' + esc(tel.replace(/\+/g, '')) + '" target="_blank" style="color:#059669;">WhatsApp</a></span>' : '') +
+          '</div>' +
+          (i.contacto_id ? '<button class="btn" style="margin-top:9px;" onclick="abrirFichaModal(\'' + esc(i.contacto_id) + '\')">Ver ficha</button>' : '') +
+        '</div>' +
+
+        '<div style="font-size:12px;color:var(--subtle);">' +
+          (i.temas ? '<div style="margin-bottom:7px;"><b style="color:var(--mist);">Le interesa:</b> ' + esc(i.temas) + '</div>' : '') +
+          (i.sala_sensorial ? '<div style="margin-bottom:7px;"><b style="color:var(--mist);">Sala sensorial:</b> ' + esc(i.sala_sensorial) + '</div>' : '') +
+          (i.pregunta ? '<div style="margin-bottom:7px;"><b style="color:var(--mist);">Preguntó:</b> ' + esc(i.pregunta) + '</div>' : '') +
+          (i.comentarios_form ? '<div style="margin-bottom:7px;"><b style="color:var(--mist);">Comentó al inscribirse:</b> ' + esc(i.comentarios_form) + '</div>' : '') +
+          (i.comentario ? '<div style="background:var(--paper);border-radius:8px;padding:9px 11px;white-space:pre-line;color:var(--ink);margin-top:8px;"><b style="color:var(--mist);font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Llamadas</b><br>' + esc(i.comentario) + '</div>' : '') +
+        '</div>' +
+
+        '<div>' +
+          '<textarea id="webcom-' + esc(i.id) + '" rows="3" placeholder="Comentario de la llamada — podés dictarlo con Windows + H" ' +
+            'style="width:100%;padding:9px 11px;border:1px solid var(--purple-lt);border-radius:9px;font-size:13px;font-family:var(--font-sans);resize:vertical;"></textarea>' +
+          '<div style="font-size:11px;color:var(--mist);margin:9px 0 5px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;">Capacitación gratuita</div>' +
+          '<div style="display:flex;gap:6px;margin-bottom:10px;" id="webint-' + esc(i.id) + '">' +
+            _webBtnInteres(i.id, 'Sí', interes.indexOf('s') === 0) +
+            _webBtnInteres(i.id, 'No', interes === 'no') +
+            _webBtnInteres(i.id, 'Pendiente', interes.indexOf('pend') === 0) +
+          '</div>' +
+          '<button class="btn primary" style="width:100%;" onclick="guardarSeguimientoWebinar(\'' + esc(i.id) + '\')">Guardar y marcar llamado</button>' +
+        '</div>' +
+
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function _webBtnInteres(id, texto, activo){
+  return '<button type="button" data-val="' + texto + '" onclick="webSetInteres(\'' + id + '\',\'' + texto + '\')" ' +
+    'style="flex:1;padding:7px 4px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid ' +
+    (activo ? 'var(--purple-dk);background:var(--purple-dk);color:white;' : 'var(--purple-lt);background:white;color:var(--subtle);') + '">' + texto + '</button>';
+}
+
+function webSetInteres(id, valor){
+  const cont = document.getElementById('webint-' + id);
+  if(!cont) return;
+  Array.from(cont.children).forEach(b => {
+    const act = b.getAttribute('data-val') === valor;
+    b.style.border = '1px solid ' + (act ? 'var(--purple-dk)' : 'var(--purple-lt)');
+    b.style.background = act ? 'var(--purple-dk)' : 'white';
+    b.style.color = act ? 'white' : 'var(--subtle)';
+  });
+  cont.setAttribute('data-elegido', valor);
+}
+
+async function guardarSeguimientoWebinar(id){
+  const ta = document.getElementById('webcom-' + id);
+  const cont = document.getElementById('webint-' + id);
+  const comentario = ta ? ta.value.trim() : '';
+  const interes = cont ? (cont.getAttribute('data-elegido') || '') : '';
+  if(!comentario && !interes){
+    alert('Escribí o dictá un comentario, o marcá si le interesa la capacitación.');
+    return;
+  }
+  const fila = document.getElementById('webrow-' + id);
+  const btn = fila ? fila.querySelector('button.primary') : null;
+  if(btn){ btn.disabled = true; btn.textContent = 'Guardando…'; }
+
+  const payload = { solicitante: USUARIO, id: id, comentario: comentario, llamado: true };
+  if(interes) payload.interes_capacitacion = interes;
+  const r = await fetchAPI('crm_webinar_seguimiento', null, payload);
+
+  if(!r.ok){
+    if(btn){ btn.disabled = false; btn.textContent = 'Guardar y marcar llamado'; }
+    alert('No se pudo guardar: ' + (r.error || ''));
+    return;
+  }
+  const idx = WEB_INSCRITOS.findIndex(x => String(x.id) === String(id));
+  if(idx >= 0) WEB_INSCRITOS[idx] = r.inscrito;
+  renderWebinarInscritos(true);
+}
+
+async function sincronizarWebinars(){
+  const btn = document.getElementById('btnWebSync');
+  if(btn){ btn.disabled = true; btn.textContent = 'Actualizando…'; }
+  const r = await fetchAPI('crm_webinar_sync', null, { solicitante: USUARIO });
+  if(btn){ btn.disabled = false; btn.textContent = 'Actualizar desde las planillas'; }
+  if(!r.ok){ alert('No se pudo actualizar: ' + (r.error || '')); return; }
+  const err = (r.errores || []).length ? '\n\nAvisos:\n' + r.errores.join('\n') : '';
+  alert('Listo.\n\nInscritos leídos: ' + (r.inscritos || 0) +
+        '\nFichas nuevas creadas: ' + (r.contactos_nuevos || 0) +
+        '\nInscritos nuevos en la lista: ' + (r.filas_nuevas || 0) + err);
+  cargarWebinars();
+}
+
 </script>
 
 <style>

@@ -18644,6 +18644,7 @@ let WEB_ACTUAL = null;
 let WEB_INSCRITOS = [];
 let WEB_FILTRO = 'todos';
 let WEB_BUSCA = '';
+let WEB_ABIERTOS = {};   // qué fichas están desplegadas (la lista arranca toda plegada)
 
 async function cargarWebinars(){
   WEB_ACTUAL = null;
@@ -18708,6 +18709,7 @@ async function abrirWebinar(key){
   WEB_INSCRITOS = r.inscritos || [];
   WEB_FILTRO = 'todos';
   WEB_BUSCA = '';
+  WEB_ABIERTOS = {};
   renderWebinarInscritos();
 }
 
@@ -18772,8 +18774,10 @@ function renderWebinarInscritos(soloLista){
         '">' + c[1] + ' (' + c[2] + ')</button>'
       ).join('') +
     '</div>' +
-    '<div style="background:#f5f2fb;border-radius:10px;padding:11px 14px;font-size:12.5px;color:var(--subtle);margin-bottom:16px;">' +
-      'Para dictar: hacé clic en el cuadro de comentario y apretá la tecla <b>Windows + H</b>. Al guardar, el comentario queda en la ficha del contacto con la fecha de hoy.' +
+    '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#f5f2fb;border-radius:10px;padding:11px 14px;font-size:12.5px;color:var(--subtle);margin-bottom:16px;">' +
+      '<span style="flex:1;min-width:280px;">Toca a la persona para abrir su ficha completa. Para dictar el comentario: clic en el cuadro y apretá <b>Windows + H</b>.</span>' +
+      '<button class="btn" onclick="webAbrirTodos(true)">Abrir todas</button>' +
+      '<button class="btn" onclick="webAbrirTodos(false)">Cerrar todas</button>' +
     '</div>' +
     '<div id="webListaInscritos">' + _webFilasHTML(visibles) + '</div>';
 }
@@ -18786,18 +18790,36 @@ function _webFilasHTML(lista){
     const chips =
       (_webSi(i.asistio) ? '<span style="background:#d1fae5;color:#065f46;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;">Asistió</span> ' : '') +
       (_webSi(i.confirmado) && !_webSi(i.asistio) ? '<span style="background:#dbeafe;color:#1e40af;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;">Confirmó</span> ' : '') +
-      (_webSi(i.llamado) ? '<span style="background:#ede9fe;color:#5b21b6;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;">Llamado ' + esc(String(i.fecha_llamado || '').substring(0, 10)) + '</span> ' : '<span style="background:#fce7f3;color:#9d174d;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;">Por llamar</span> ');
+      (_webSi(i.llamado) ? '<span style="background:#ede9fe;color:#5b21b6;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;">Llamado ' + esc(String(i.fecha_llamado || '').substring(0, 10)) + '</span> ' : '<span style="background:#fce7f3;color:#9d174d;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;">Por llamar</span> ') +
+      (String(i.interes_capacitacion || '').toLowerCase().indexOf('s') === 0 ? '<span style="background:#d1fae5;color:#065f46;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;">Quiere capacitación</span> ' : '');
 
-    return '<div class="card" style="margin-bottom:12px;" id="webrow-' + esc(i.id) + '">' +
-      '<div class="card-body" style="display:grid;grid-template-columns:1.3fr 1fr 300px;gap:16px;align-items:start;">' +
+    const abierto = WEB_ABIERTOS[i.id] === true;
+    const chev = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(' + (abierto ? '90' : '0') + 'deg);transition:transform .15s;"><polyline points="9 18 15 12 9 6"/></svg>';
+    const resumen = _webResumenVoz(i);
+
+    return '<div class="card" style="margin-bottom:8px;" id="webrow-' + esc(i.id) + '">' +
+
+      // ── Línea compacta: es lo único que se ve hasta que la abre ──
+      '<div style="padding:11px 16px;display:grid;grid-template-columns:22px 1fr auto;gap:12px;align-items:center;cursor:pointer;" onclick="webToggleFila(\'' + esc(i.id) + '\')" title="Abrir o cerrar">' +
+        '<div style="color:var(--mist);display:flex;">' + chev + '</div>' +
+        '<div style="min-width:0;">' +
+          '<div style="font-size:14px;font-weight:800;color:var(--ink);">' +
+            (i.contacto_id
+              ? '<span style="color:var(--purple-dk);text-decoration:underline;text-decoration-color:#d4c5ec;text-underline-offset:3px;" onclick="event.stopPropagation();abrirFichaModal(\'' + esc(i.contacto_id) + '\')" title="Abrir su ficha del CRM">' + esc(i.nombre || '(sin nombre)') + '</span>'
+              : esc(i.nombre || '(sin nombre)')) +
+            '<span style="font-weight:500;color:var(--subtle);font-size:12.5px;"> · ' + esc(i.establecimiento || '') + (i.comuna ? ' · ' + esc(i.comuna) : '') + '</span>' +
+          '</div>' +
+          (resumen ? '<div style="font-size:12px;color:#92400e;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(resumen) + '</div>' : '') +
+        '</div>' +
+        '<div style="white-space:nowrap;">' + chips + '</div>' +
+      '</div>' +
+
+      // ── Todo el detalle, plegado ──
+      '<div id="webdet-' + esc(i.id) + '" style="display:' + (abierto ? 'grid' : 'none') + ';grid-template-columns:1.3fr 1fr 300px;gap:16px;align-items:start;padding:16px;border-top:1px solid var(--purple-lt);">' +
 
         '<div>' +
-          (i.contacto_id
-            ? '<div style="font-size:15px;font-weight:800;color:var(--purple-dk);cursor:pointer;text-decoration:underline;text-decoration-color:#d4c5ec;text-underline-offset:3px;" onclick="abrirFichaModal(\'' + esc(i.contacto_id) + '\')" title="Abrir su ficha del CRM">' + esc(i.nombre || '(sin nombre)') + '</div>'
-            : '<div style="font-size:15px;font-weight:800;color:var(--ink);">' + esc(i.nombre || '(sin nombre)') + '</div>') +
-          '<div style="font-size:12.5px;color:var(--subtle);margin:3px 0 6px;">' + esc(i.cargo || '') + (i.cargo && i.establecimiento ? ' · ' : '') + esc(i.establecimiento || '') + '</div>' +
+          '<div style="font-size:12.5px;color:var(--subtle);margin:0 0 6px;">' + esc(i.cargo || '') + (i.cargo && i.establecimiento ? ' · ' : '') + esc(i.establecimiento || '') + '</div>' +
           '<div style="font-size:12px;color:var(--mist);margin-bottom:8px;">' + esc(i.comuna || '') + (i.comuna && i.region ? ' · ' : '') + esc(i.region || '') + '</div>' +
-          '<div style="margin-bottom:8px;">' + chips + '</div>' +
           '<div style="font-size:12.5px;display:flex;flex-direction:column;gap:3px;">' +
             (i.email ? '<a href="mailto:' + esc(i.email) + '" style="color:var(--purple-dk);">' + esc(i.email) + '</a>' : '') +
             (tel ? '<span>' + esc(i.telefono) + ' · <a href="tel:' + esc(tel) + '" style="color:var(--purple-dk);">Llamar</a> · <a href="https://wa.me/' + esc(tel.replace(/\+/g, '')) + '" target="_blank" style="color:#059669;">WhatsApp</a></span>' : '') +
@@ -18831,6 +18853,27 @@ function _webFilasHTML(lista){
       '</div>' +
     '</div>';
   }).join('');
+}
+
+// Primera línea de lo que escribió, para verla sin abrir la ficha.
+function _webResumenVoz(i){
+  const txt = String(i.pregunta || i.comentarios_form || i.preguntas || '').replace(/\s+/g, ' ').trim();
+  if(!txt) return '';
+  return txt.length > 120 ? txt.slice(0, 120) + '…' : txt;
+}
+
+function webToggleFila(id){
+  WEB_ABIERTOS[id] = !WEB_ABIERTOS[id];
+  const det = document.getElementById('webdet-' + id);
+  if(det) det.style.display = WEB_ABIERTOS[id] ? 'grid' : 'none';
+  const fila = document.getElementById('webrow-' + id);
+  const svg = fila ? fila.querySelector('svg') : null;
+  if(svg) svg.style.transform = 'rotate(' + (WEB_ABIERTOS[id] ? '90' : '0') + 'deg)';
+}
+
+function webAbrirTodos(abrir){
+  WEB_INSCRITOS.filter(_webCoincide).forEach(i => { WEB_ABIERTOS[i.id] = !!abrir; });
+  renderWebinarInscritos(true);
 }
 
 // Lo que la persona escribió con sus palabras al inscribirse: va destacado, es lo que más

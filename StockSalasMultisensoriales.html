@@ -2100,8 +2100,60 @@
   }
 
 
+  // Los mismos montos que muestra la ficha en pantalla, pero como NÚMEROS, para el Excel.
+  // Reales del CRM si vienen; si no, el estimado con la lista de precios, marcado como tal.
+  function _montosCotizNumeros(c){
+    const neto = Number(c.neto) || 0;
+    const transporte = Number(c.transporte) || 0;
+    const totalIva = Number(c.total_iva) || 0;
+    if (neto > 0 || totalIva > 0) return { neto, transporte, totalIva, estimado: false, nota: '' };
+    const est = _montoEstCotizDetalle(c);
+    if (!est.total) return { neto: 0, transporte: 0, totalIva: 0, estimado: true, nota: '' };
+    return {
+      neto: Math.round(est.total / 1.19),
+      transporte: 0,
+      totalIva: est.total,
+      estimado: true,
+      nota: est.sinPrecio.length
+        ? 'El estimado no incluye ' + est.sinPrecio.length + ' producto' + (est.sinPrecio.length === 1 ? '' : 's') + ' sin precio en la lista.'
+        : ''
+    };
+  }
+  // Los productos de una cotización cruzados con el stock, tal como los espera el
+  // generador de Excel. Lo usan el Excel de una cotización y las pestañas del de varias.
+  function _filasStockDeCotizacion(c){
+    return _smExtraerProductos(c.productos).map(p => {
+      const s = STOCK_SM[p.key];
+      const d = _stockPartido(p.qty, s);
+      return {
+        sku: (s && s.sku) || '—',
+        nombre: (s && s.item) || p.display,
+        pide: p.qty,
+        bodega: d.sinDato ? 0 : d.bod,
+        camino: d.sinDato ? 0 : d.cam,
+        sinDato: !!d.sinDato
+      };
+    });
+  }
+  // Ficha de una cotización para el Excel: sus datos, sus montos y sus productos.
+  function _detalleCotizParaExcel(c, fecha){
+    const m = _montosCotizNumeros(c);
+    return {
+      num: c.cotizacion,
+      institucion: c.institucion,
+      ejecutivo: c.ejecutivo,
+      estado: c.ganada ? 'Ganada' : (c.perdida ? 'Descartada' : 'En gestión'),
+      probabilidad: c.probabilidad || 0,
+      fecha: fecha,
+      neto: m.neto, transporte: m.transporte, totalIva: m.totalIva,
+      estimado: m.estimado, notaMonto: m.nota,
+      filas: _filasStockDeCotizacion(c)
+    };
+  }
+
   // Excel de TODAS las cotizaciones marcadas juntas — la misma tabla "lado a lado"
-  // que se ve en pantalla (pedido de Rayen 2026-07-30).
+  // que se ve en pantalla (pedido de Rayen 2026-07-30), y detrás UNA PESTAÑA POR
+  // COTIZACIÓN con su detalle completo (pedido de Rayen 2026-08-17).
   function _descargarExcelComparacion(seleccionadas){
     if (!window.OCT_excelComparacion || !window.OCT_descargar) {
       alert('No se pudo cargar el generador de Excel. Recarga la página con Ctrl+Shift+R.');
@@ -2138,7 +2190,9 @@
     const hoy = new Date();
     const fecha = String(hoy.getDate()).padStart(2,'0') + '-' + String(hoy.getMonth()+1).padStart(2,'0') + '-' + hoy.getFullYear();
     const nums = seleccionadas.map(c => c.cotizacion);
-    const blob = window.OCT_excelComparacion({ fecha: fecha }, nums, filas);
+    // Una pestaña por cotización, en el mismo orden de prioridad de la pantalla.
+    const detalles = seleccionadas.map(c => _detalleCotizParaExcel(c, fecha));
+    const blob = window.OCT_excelComparacion({ fecha: fecha }, nums, filas, detalles);
     window.OCT_descargar(blob, 'Cotizaciones lado a lado (' + nums.length + ') - stock.xlsx');
   }
 
@@ -2151,24 +2205,12 @@
       alert('No se pudo cargar el generador de Excel. Recarga la página con Ctrl+Shift+R.');
       return;
     }
-    const filas = _smExtraerProductos(c.productos).map(p => {
-      const s = STOCK_SM[p.key];
-      const d = _stockPartido(p.qty, s);
-      return {
-        sku: (s && s.sku) || '—',
-        nombre: (s && s.item) || p.display,
-        pide: p.qty,
-        bodega: d.sinDato ? 0 : d.bod,
-        camino: d.sinDato ? 0 : d.cam,
-        sinDato: !!d.sinDato
-      };
-    });
+    const filas = _filasStockDeCotizacion(c);
     if (!filas.length) { alert('Esta cotización no tiene productos que listar.'); return; }
     const hoy = new Date();
     const fecha = String(hoy.getDate()).padStart(2,'0') + '-' + String(hoy.getMonth()+1).padStart(2,'0') + '-' + hoy.getFullYear();
-    const blob = window.OCT_excelCotizacion(
-      { num: c.cotizacion, institucion: c.institucion, ejecutivo: c.ejecutivo, fecha: fecha },
-      filas);
+    // Mismo detalle que las pestañas del Excel de varias: datos, montos y productos.
+    const blob = window.OCT_excelCotizacion(_detalleCotizParaExcel(c, fecha), filas);
     const limpio = String(c.cotizacion).replace(/[\\/:*?"<>|]/g, '-');
     window.OCT_descargar(blob, 'Cotizacion ' + limpio + ' - stock.xlsx');
   }

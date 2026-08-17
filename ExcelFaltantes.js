@@ -210,6 +210,13 @@
 
     var estilos = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
       + '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+      // numFmts va PRIMERO: es el orden que exige el formato. Estuvo entre cellStyleXfs y
+      // cellXfs y por eso Excel se negaba a abrir este archivo (2026-08-17). 201 = euros,
+      // con dos decimales porque los EXW los tienen (€52,8 el difusor).
+      + '<numFmts count="2">'
+      +   '<numFmt numFmtId="200" formatCode="&quot;$&quot;#,##0"/>'
+      +   '<numFmt numFmtId="201" formatCode="&quot;€&quot;#,##0.00"/>'
+      + '</numFmts>'
       + '<fonts count="5">'
       +   '<font><sz val="11"/><name val="Calibri"/></font>'
       +   '<font><b/><sz val="15"/><color rgb="FF16324F"/><name val="Calibri"/></font>'
@@ -227,11 +234,6 @@
       +   '<border><left/><right/><top/><bottom style="thin"><color rgb="FFE3E7EC"/></bottom><diagonal/></border>'
       + '</borders>'
       + '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
-      // 201 = euros. Se muestran con dos decimales porque los EXW los tienen (€52,8 el difusor).
-      + '<numFmts count="2">'
-      +   '<numFmt numFmtId="200" formatCode="&quot;$&quot;#,##0"/>'
-      +   '<numFmt numFmtId="201" formatCode="&quot;€&quot;#,##0.00"/>'
-      + '</numFmts>'
       + '<cellXfs count="11">'
       +   '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
       +   '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
@@ -301,7 +303,26 @@
   // Empaqueta una hoja ya armada en un .xlsx, con la paleta de estilos compartida
   // (0 normal · 1 titulo · 2 subtitulo · 3 cabecera · 4 texto · 5 centrado ·
   //  6 centrado gris · 7 rojo · 8 verde · 9 ambar).
+  // Excel prohíbe : \ / ? * [ ] en el nombre de una pestaña y la corta en 31 caracteres.
+  // Si un nombre se repite, el archivo no abre, así que se numera el repetido.
+  function _nombreHoja(n, usados) {
+    var s = String(n == null ? '' : n).replace(/[:\\\/?*\[\]]/g, '-').slice(0, 31) || 'Hoja';
+    if (!usados) return s;
+    var base = s, i = 2;
+    while (usados[s.toLowerCase()]) { s = (base.slice(0, 27) + ' (' + i + ')'); i++; }
+    usados[s.toLowerCase()] = true;
+    return s;
+  }
+
+  // Acepta UNA hoja (xml + nombre) o VARIAS: _octZipExcel([{nombre, xml}, ...]).
+  // Las tres listas que tienen que calzar son el Override de cada sheetN.xml, el
+  // <sheet> del workbook y su rIdN; si una no calza, Excel se niega a abrir el archivo.
   function _octZipExcel(hoja, nombreHoja) {
+    var _usados = {};
+    var hojas = (Array.isArray(hoja) ? hoja : [{ nombre: nombreHoja || 'Hoja1', xml: hoja }])
+      .filter(function (h) { return h && h.xml; })
+      .map(function (h) { return { nombre: _nombreHoja(h.nombre, _usados), xml: h.xml }; });
+    if (!hojas.length) hojas = [{ nombre: 'Hoja1', xml: '' }];
     var estilos = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
       + '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
       + '<numFmts count="1"><numFmt numFmtId="164" formatCode="&quot;$&quot;#,##0"/></numFmts>'
@@ -339,13 +360,16 @@
       +   '<xf numFmtId="164" fontId="1" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1"/>'
       + '</cellXfs>'
       + '</styleSheet>';
+    var idEstilos = 'rId' + (hojas.length + 1);
     return armarZip([
       { nombre: '[Content_Types].xml', contenido: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
         + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
         + '<Default Extension="xml" ContentType="application/xml"/>'
         + '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
-        + '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+        + hojas.map(function (h, i) {
+            return '<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>';
+          }).join('')
         + '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
         + '</Types>' },
       { nombre: '_rels/.rels', contenido: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
@@ -355,18 +379,29 @@
       { nombre: 'xl/workbook.xml', contenido: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         + '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
         + 'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
-        + '<sheets><sheet name="' + (nombreHoja || 'Hoja1') + '" sheetId="1" r:id="rId1"/></sheets></workbook>' },
+        + '<sheets>'
+        + hojas.map(function (h, i) {
+            return '<sheet name="' + esc(h.nombre) + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>';
+          }).join('')
+        + '</sheets></workbook>' },
       { nombre: 'xl/_rels/workbook.xml.rels', contenido: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-        + '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
-        + '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+        + hojas.map(function (h, i) {
+            return '<Relationship Id="rId' + (i + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>';
+          }).join('')
+        + '<Relationship Id="' + idEstilos + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
         + '</Relationships>' },
-      { nombre: 'xl/styles.xml', contenido: estilos },
-      { nombre: 'xl/worksheets/sheet1.xml', contenido: hoja }
-    ]);
+      { nombre: 'xl/styles.xml', contenido: estilos }
+    ].concat(hojas.map(function (h, i) {
+      return { nombre: 'xl/worksheets/sheet' + (i + 1) + '.xml', contenido: h.xml };
+    })));
   }
 
-  window.OCT_excelCotizacion = function (info, filas) {
+  // Hoja de UNA cotización: cabecera con sus datos, tabla de productos cruzada con el stock
+  // y, al pie, los montos si vienen. Se usa igual para el Excel de una sola cotización y para
+  // cada pestaña del Excel de varias (Rayen 2026-08-17: "que aparezca cada una con el detalle
+  // de su cotización"), así los dos no pueden salir distintos.
+  function _hojaCotizacionXml(info, filas) {
     info = info || {}; filas = filas || [];
     var COLS = ['SKU', 'Producto', 'Pide', 'En bodega', 'En camino', 'Estado'];
     // El estado se DEDUCE de los numeros de cada fila, no de una etiqueta que manda
@@ -390,9 +425,13 @@
       else nSin++;
     });
     var xml = '';
-    xml += '<row r="1" ht="24" customHeight="1">' + celdaTexto('A1', 1, 'Cotización ' + (info.num || '') + (info.institucion ? ' — ' + info.institucion : '')) + '</row>';
+    // trim: los nombres del CRM vienen con espacios de más y quedaban feos en el título.
+    var _tr = function (v) { return String(v == null ? '' : v).trim(); };
+    xml += '<row r="1" ht="24" customHeight="1">' + celdaTexto('A1', 1, 'Cotización ' + _tr(info.num) + (_tr(info.institucion) ? ' — ' + _tr(info.institucion) : '')) + '</row>';
     xml += '<row r="2" ht="16" customHeight="1">' + celdaTexto('A2', 2,
-      (info.ejecutivo ? 'Ejecutivo: ' + info.ejecutivo + '   ·   ' : '') + (info.fecha || '') +
+      (_tr(info.ejecutivo) ? 'Ejecutivo: ' + _tr(info.ejecutivo) + '   ·   ' : '') +
+      (info.estado ? info.estado + '   ·   ' : '') +
+      (info.probabilidad ? info.probabilidad + '% de probabilidad   ·   ' : '') + (info.fecha || '') +
       '   ·   ' + filas.length + ' productos   ·   ' + nOk + ' en bodega, ' + nCam + ' esperan el contenedor, ' + nFalta + ' faltan' + (nSin ? ', ' + nSin + ' sin dato' : '')) + '</row>';
     xml += '<row r="3"></row>';
     xml += '<row r="4" ht="20" customHeight="1">';
@@ -410,27 +449,52 @@
         + '</row>';
     });
     var ultima = filas.length ? (filas.length + 4) : 4;
+    var finTabla = ultima;
+
+    // Montos al pie: lo mismo que muestra la ficha en pantalla (neto de los productos,
+    // transporte y total con IVA). Si el CRM no los trae y vienen calculados con la lista
+    // de precios, la etiqueta lo dice — un estimado no es el valor cotizado.
+    var _neto = Number(info.neto) || 0, _transp = Number(info.transporte) || 0, _tot = Number(info.totalIva) || 0;
+    if (_neto > 0 || _tot > 0) {
+      var suf = info.estimado ? ' (estimado)' : '';
+      var fm = ultima + 2;
+      xml += '<row r="' + fm + '">' + celdaTexto('B' + fm, 2, 'Neto productos' + suf) + celdaNumero('C' + fm, 10, _neto) + '</row>';
+      fm++;
+      xml += '<row r="' + fm + '">' + celdaTexto('B' + fm, 2, 'Transporte')
+        + (_transp > 0 ? celdaNumero('C' + fm, 10, _transp) : celdaTexto('C' + fm, 2, info.estimado ? 'No informado' : 'No incluido')) + '</row>';
+      fm++;
+      xml += '<row r="' + fm + '" ht="18" customHeight="1">' + celdaTexto('B' + fm, 1, 'Total con IVA' + suf) + celdaNumero('C' + fm, 11, _tot) + '</row>';
+      if (info.notaMonto) { fm += 2; xml += '<row r="' + fm + '">' + celdaTexto('B' + fm, 2, info.notaMonto) + '</row>'; }
+      ultima = fm;
+    }
 
     var hoja = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
       + '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+      // El <selection> explícito importa: sin él Excel abría la hoja con la primera fila de
+      // productos medio tapada por la cabecera inmovilizada (lo vio Rayen el 2026-08-17).
       + '<sheetViews><sheetView workbookViewId="0" showGridLines="0">'
       +   '<pane ySplit="4" topLeftCell="A5" activePane="bottomLeft" state="frozen"/>'
+      +   '<selection pane="bottomLeft" activeCell="A5" sqref="A5"/>'
       + '</sheetView></sheetViews>'
       + '<sheetFormatPr defaultRowHeight="15"/>'
       + '<cols>'
       +   '<col min="1" max="1" width="16" customWidth="1"/>'
       +   '<col min="2" max="2" width="52" customWidth="1"/>'
-      +   '<col min="3" max="3" width="8" customWidth="1"/>'
+      +   '<col min="3" max="3" width="14" customWidth="1"/>'
       +   '<col min="4" max="4" width="12" customWidth="1"/>'
       +   '<col min="5" max="5" width="12" customWidth="1"/>'
       +   '<col min="6" max="6" width="14" customWidth="1"/>'
       + '</cols>'
       + '<sheetData>' + xml + '</sheetData>'
-      + '<autoFilter ref="A4:F' + ultima + '"/>'
+      + '<autoFilter ref="A4:F' + finTabla + '"/>'
       + '<pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/>'
       + '</worksheet>';
 
-    return _octZipExcel(hoja, 'Cotizacion');
+    return hoja;
+  }
+
+  window.OCT_excelCotizacion = function (info, filas) {
+    return _octZipExcel(_hojaCotizacionXml(info, filas), 'Cotizacion');
   };
 
 
@@ -438,8 +502,13 @@
   // tabla "lado a lado" de la pantalla: una columna por cotización con lo que pide
   // cada una del mismo producto, el total sumado y el stock. El estado se deduce
   // acá de los números, igual que en el Excel de una sola cotización.
-  // Uso: OCT_excelComparacion({fecha}, ['OC26-1-SM', ...], [{sku,nombre,porCotiz,total,bodega,camino,sinDato}])
-  window.OCT_excelComparacion = function (info, nums, filas) {
+  // Uso: OCT_excelComparacion({fecha}, ['OC26-1-SM', ...], [{sku,nombre,porCotiz,total,bodega,camino,sinDato}], detalles)
+  // 'detalles' (opcional) = una entrada por cotización, cada una con sus datos y su propio
+  // listado de productos: se convierte en UNA PESTAÑA por cotización, detrás del resumen
+  // (Rayen 2026-08-17: "que no solo aparezca el resumen, sino cada una con su detalle").
+  //   [{num, institucion, ejecutivo, estado, probabilidad, fecha, neto, transporte, totalIva,
+  //     estimado, notaMonto, filas:[{sku,nombre,pide,bodega,camino,sinDato}]}]
+  window.OCT_excelComparacion = function (info, nums, filas, detalles) {
     info = info || {}; nums = nums || []; filas = filas || [];
     var TXT = { ok: 'En bodega', camino: 'En camino', falta: 'FALTA', sindato: 'Sin dato' };
     var EST = { ok: 8, camino: 9, falta: 7, sindato: 6 };
@@ -465,7 +534,8 @@
     xml += '<row r="2" ht="16" customHeight="1">' + celdaTexto('A2', 2,
       (info.fecha || '') + '   ·   ' + filas.length + ' productos distintos   ·   ' +
       nOk + ' en bodega, ' + nCam + ' esperan el contenedor, ' + nFalta + ' faltan' +
-      (nSin ? ', ' + nSin + ' sin dato' : '')) + '</row>';
+      (nSin ? ', ' + nSin + ' sin dato' : '') +
+      ((detalles && detalles.length) ? '   ·   el detalle de cada cotización está en las pestañas de abajo' : '')) + '</row>';
     xml += '<row r="3"></row>';
     xml += '<row r="4" ht="20" customHeight="1">';
     COLS.forEach(function (c, i) { xml += celdaTexto(col(i) + '4', 3, c); });
@@ -499,6 +569,7 @@
       + '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
       + '<sheetViews><sheetView workbookViewId="0" showGridLines="0">'
       +   '<pane xSplit="2" ySplit="4" topLeftCell="C5" activePane="bottomRight" state="frozen"/>'
+      +   '<selection pane="bottomRight" activeCell="C5" sqref="C5"/>'
       + '</sheetView></sheetViews>'
       + '<sheetFormatPr defaultRowHeight="15"/>'
       + '<cols>' + anchos + '</cols>'
@@ -507,7 +578,14 @@
       + '<pageMargins left="0.4" right="0.4" top="0.6" bottom="0.6" header="0.3" footer="0.3"/>'
       + '</worksheet>';
 
-    return _octZipExcel(hoja, 'Comparacion');
+    // Primera pestaña el resumen, y detrás una por cotización, en el mismo orden de prioridad
+    // que Rayen armó en pantalla. La pestaña se llama como la cotización.
+    var _hojas = [{ nombre: 'Resumen', xml: hoja }];
+    (detalles || []).forEach(function (d) {
+      if (!d) return;
+      _hojas.push({ nombre: d.num || 'Cotización', xml: _hojaCotizacionXml(d, d.filas || []) });
+    });
+    return _octZipExcel(_hojas);
   };
 
 

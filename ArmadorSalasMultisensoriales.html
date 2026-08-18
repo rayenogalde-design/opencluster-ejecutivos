@@ -67031,40 +67031,5 @@ window.OCT_VENTA_APARTE = {
   document.addEventListener('click', function(){ setTimeout(aplicar, 300); });
 })();
 </script>
-
-<script src="QineraImportables.js"></script>
-<script>
-// oct-quitar-transporte-incluido — Rayen 18-ago-2026: de la tarifa de Qinera, la hoja "incluido
-// transporte" (comunicadores, ratones, soportes…) no se usa para armar salas y solo estorbaba en
-// el listado. Se sacan de la vista; la única excepción es el Enabler Socket+ (BJ-234), que sí se
-// usa en salas. Los demás productos del catálogo web de Qinera se quedan como estaban.
-(function(){
-  var DEJAR = { 'BJ-234': 1 };
-  function norm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,''); }
-  function quitar(){
-    try{
-      var imp = window.QINERA_IMPORTABLE || {};
-      var conTransporte = {};
-      Object.keys(imp).forEach(function(sku){
-        if (imp[sku].v === 'T' && !DEJAR[sku]) conTransporte[norm(imp[sku].n)] = sku;
-      });
-      var n = 0;
-      document.querySelectorAll('tr[data-nombre]').forEach(function(tr){
-        if (!conTransporte[norm(tr.dataset.nombre)]) return;
-        var chk = tr.querySelector('input.inc');
-        if (chk && DEJAR[chk.dataset.sku]) return;      // por si ya se le puso el código real
-        var det = tr.nextElementSibling;
-        if (det && det.classList.contains('detailrow')) det.remove();
-        tr.remove();
-        n++;
-      });
-      return n;
-    }catch(e){ return 0; }
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', quitar);
-  else quitar();
-  document.addEventListener('click', function(){ setTimeout(quitar, 300); });
-})();
-</script>
 </body>
 </html>

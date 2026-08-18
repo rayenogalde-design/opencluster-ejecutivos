@@ -66955,5 +66955,39 @@
   updCount();
 })();
 </script>
+
+<style>
+/* Pastilla "Web" (Rayen 18-ago-2026): los productos de nuestra tienda no vienen en el contenedor
+   de Qinera y se confunden con los demas al cotizar. Se marcan a la vista, junto al nombre. */
+.oct-bullet-web{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:999px;
+  background:#FAEEDA;color:#412402;font-size:10.5px;font-weight:800;letter-spacing:.4px;
+  text-transform:uppercase;vertical-align:middle;}
+</style>
+<script>
+// Marca con la pastilla "Web" todo producto de la tienda (SKU WEB-*). Aditivo: si algo falla,
+// la pagina sigue igual.
+(function(){
+  function marcar(){
+    try{
+      var n=0;
+      document.querySelectorAll('td.name[data-ficha^="WEB-"]').forEach(function(td){
+        if(td.querySelector('.oct-bullet-web')) return;
+        var etq=document.createElement('span');
+        etq.className='oct-bullet-web';
+        etq.textContent='Web';
+        etq.title='Producto de nuestra tienda web: no viene en el contenedor de Qinera';
+        var sku=td.querySelector('.sku');
+        if(sku) td.insertBefore(etq, sku); else td.appendChild(etq);
+        n++;
+      });
+      return n;
+    }catch(e){ return 0; }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', marcar);
+  else marcar();
+  // Las tablas de las otras salas se pintan despues: se vuelve a pasar cuando cambian.
+  document.addEventListener('click', function(){ setTimeout(marcar, 300); });
+})();
+</script>
 </body>
 </html>

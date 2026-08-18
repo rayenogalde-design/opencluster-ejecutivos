@@ -66989,5 +66989,47 @@
   document.addEventListener('click', function(){ setTimeout(marcar, 300); });
 })();
 </script>
+
+<script>
+// Productos que Qinera manda APARTE (via T) y que Rayen sí cotiza: en esta página venían del
+// catálogo web de Qinera, sin código de compra y con un precio referencial en euros, así que no
+// se podían cotizar. Acá se les pone el código real y el precio de venta de la tarifa (CLP con
+// IVA). Para sumar otro, basta agregarlo a esta lista. Rayen 18-ago-2026.
+window.OCT_VENTA_APARTE = {
+  'q93': { sku:'BJ-234', nombre:'Enabler Socket+', precio:252554 }
+};
+(function(){
+  function clp(n){ return '$' + Number(n).toLocaleString('es-CL'); }
+  function aplicar(){
+    try{
+      var mapa = window.OCT_VENTA_APARTE || {}, tocadas = 0;
+      Object.keys(mapa).forEach(function(viejo){
+        var d = mapa[viejo];
+        document.querySelectorAll('[data-sku="' + viejo + '"]').forEach(function(el){
+          el.dataset.sku = d.sku;
+          if (el.dataset.precio !== undefined) el.dataset.precio = String(d.precio);
+        });
+        document.querySelectorAll('td.name[data-ficha="' + viejo + '"]').forEach(function(td){
+          var fila = td.closest('tr');
+          if (fila) fila.dataset.precio = String(d.precio);
+          var sku = td.querySelector('.sku');
+          if (sku && sku.textContent.indexOf(d.sku) < 0) sku.textContent = d.sku + ' · se pide aparte a Qinera';
+          var celda = fila && fila.querySelector('td.price');
+          if (celda) celda.innerHTML = clp(d.precio) + '<span class="iva">IVA inc. c/u</span>';
+          tocadas++;
+        });
+        // la ficha del producto mostraba el precio en euros
+        try {
+          if (window.FICHAS && FICHAS[viejo]) FICHAS[viejo].precio = 'Neto: ' + clp(Math.round(d.precio/1.19)) + ' · IVA inc.: ' + clp(d.precio);
+        } catch(e){}
+      });
+      return tocadas;
+    }catch(e){ return 0; }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', aplicar);
+  else aplicar();
+  document.addEventListener('click', function(){ setTimeout(aplicar, 300); });
+})();
+</script>
 </body>
 </html>

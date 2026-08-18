@@ -67031,5 +67031,104 @@ window.OCT_VENTA_APARTE = {
   document.addEventListener('click', function(){ setTimeout(aplicar, 300); });
 })();
 </script>
+
+<script src="QineraImportables.js"></script>
+<script src="SalasCAA.js"></script>
+<style>
+/* oct-seccion-caa — Rayen 18-ago-2026: los productos de comunicacion aumentativa se cotizan junto
+   con la sala, pero mezclados en la misma tabla estorbaban. Van en su propia seccion, debajo. */
+.caa-box{margin-top:1.6rem;border:1px solid #E5E7EB;border-radius:14px;background:#fff;padding:14px 16px 6px;}
+.caa-box h3{margin:0 0 4px;font-size:17px;color:#001A60;}
+.caa-box .caa-sub{margin:0 0 10px;font-size:12.5px;color:#5B6472;}
+.caa-box .caa-search{width:100%;max-width:420px;margin:0 0 10px;}
+.caa-pill{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:999px;background:#E6F1FB;
+  color:#042C53;font-size:10.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;vertical-align:middle;}
+</style>
+<script>
+// Mueve los productos CAA de la tabla de cada sala a una seccion propia, poniendoles su codigo
+// real de Qinera y su precio de venta en pesos (venian con "EUR xxx sin IVA, referencial" y un
+// codigo interno q*, con lo cual no se podian cotizar). Las casillas son las MISMAS, asi que lo
+// que se marque aca suma al total de la sala y sale en la misma cotizacion.
+(function(){
+  function clp(n){ return '$' + Number(n).toLocaleString('es-CL'); }
+  function norm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,''); }
+  var PORNOMBRE = null;
+  function indice(){
+    if (PORNOMBRE) return PORNOMBRE;
+    PORNOMBRE = {};
+    var d = window.SALAS_CAA || {};
+    Object.keys(d).forEach(function(sku){ PORNOMBRE[norm(d[sku].n)] = { sku: sku, n: d[sku].n, p: d[sku].p }; });
+    return PORNOMBRE;
+  }
+  function seccionDe(tbody, sala){
+    var ya = document.getElementById('caa-' + sala);
+    if (ya) return ya.querySelector('tbody');
+    var wrap = tbody.closest('.tablewrap') || tbody.closest('table').parentNode;
+    var box = document.createElement('div');
+    box.className = 'caa-box';
+    box.id = 'caa-' + sala;
+    box.innerHTML =
+      '<h3>CAA — Comunicación Aumentativa y acceso</h3>' +
+      '<p class="caa-sub">Se piden aparte a Qinera (no vienen en el contenedor) y el transporte ya está en el precio. ' +
+      'Lo que marques acá se suma a la misma cotización de la sala.</p>' +
+      '<input type="text" class="search caa-search" placeholder="Buscar en CAA…">' +
+      '<div class="tablewrap"><table><thead><tr>' +
+        '<th class="chk">Agregar</th><th></th><th>Producto</th><th>Cant.</th><th>Precio</th><th></th>' +
+      '</tr></thead><tbody id="tbody-caa-' + sala + '"></tbody></table></div>';
+    wrap.parentNode.insertBefore(box, wrap.nextSibling);
+    var buscador = box.querySelector('.caa-search');
+    buscador.addEventListener('input', function(){
+      var palabras = norm(buscador.value).length ? buscador.value.toLowerCase().split(/s+/).filter(Boolean).map(norm) : [];
+      box.querySelectorAll('tbody tr').forEach(function(tr){
+        var texto = norm(tr.dataset.nombre) + norm((tr.querySelector('input.inc')||{}).dataset ? tr.querySelector('input.inc').dataset.sku : '');
+        tr.classList.toggle('hidden', palabras.length ? !palabras.every(function(p){ return texto.indexOf(p) > -1; }) : false);
+      });
+    });
+    return box.querySelector('tbody');
+  }
+  function mover(){
+    try{
+      var idx = indice(), movidas = 0;
+      document.querySelectorAll('tbody[id^="tbody-"]').forEach(function(tbody){
+        var id = tbody.id;
+        if (id.indexOf('tbody-incluidos-') === 0 || id.indexOf('tbody-caa-') === 0) return;
+        var sala = id.slice('tbody-'.length);
+        var filas = [...tbody.querySelectorAll('tr[data-nombre]')].filter(function(tr){ return idx[norm(tr.dataset.nombre)]; });
+        if (!filas.length) return;
+        var destino = seccionDe(tbody, sala);
+        filas.forEach(function(tr){
+          var d = idx[norm(tr.dataset.nombre)];
+          var chk = tr.querySelector('input.inc');
+          if (chk) { chk.dataset.sku = d.sku; chk.dataset.precio = String(d.p); }
+          var q = tr.querySelector('input.qty');
+          if (q) q.dataset.sku = d.sku;
+          tr.dataset.precio = String(d.p);
+          var td = tr.querySelector('td.name');
+          if (td) {
+            var sku = td.querySelector('.sku');
+            if (sku) sku.textContent = d.sku + ' · se pide aparte a Qinera';
+            if (!td.querySelector('.caa-pill')) {
+              var p = document.createElement('span');
+              p.className = 'caa-pill'; p.textContent = 'CAA';
+              p.title = 'Comunicación aumentativa / acceso — se pide aparte a Qinera';
+              sku ? td.insertBefore(p, sku) : td.appendChild(p);
+            }
+          }
+          var precio = tr.querySelector('td.price');
+          if (precio) precio.innerHTML = clp(d.p) + '<span class="iva">IVA inc. c/u</span>';
+          var det = tr.nextElementSibling;
+          destino.appendChild(tr);
+          if (det && det.classList.contains('detailrow')) destino.appendChild(det);
+          movidas++;
+        });
+      });
+      return movidas;
+    }catch(e){ return 0; }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', mover);
+  else mover();
+  document.addEventListener('click', function(){ setTimeout(mover, 300); });
+})();
+</script>
 </body>
 </html>

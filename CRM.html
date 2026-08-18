@@ -18844,6 +18844,8 @@ function _webFilasHTML(lista){
           (i.sala_sensorial ? '<div style="margin-bottom:7px;"><b style="color:var(--mist);">Sala sensorial:</b> ' + esc(i.sala_sensorial) + '</div>' : '') +
           (i.baja_motivo ? '<div style="background:#fee2e2;color:#991b1b;border-radius:8px;padding:7px 10px;margin-bottom:7px;font-weight:700;">Pidió no recibir más correos: ' + esc(i.baja_motivo) + '</div>' : '') +
           (i.correo_rebotado ? '<div style="background:#fef3c7;color:#92400e;border-radius:8px;padding:7px 10px;margin-bottom:7px;font-weight:700;">El correo rebotó (' + esc(i.correo_rebotado) + ') — mejor llamarla por teléfono</div>' : '') +
+          '<button class="btn" style="margin:2px 0 8px;' + (i.correo_rebotado ? '' : 'color:#92400e;border-color:#fcd34d;') + '" onclick="webMarcarRebote(\'' + esc(i.id) + '\',' + (i.correo_rebotado ? 'false' : 'true') + ')">' +
+            (i.correo_rebotado ? 'Su correo sí funciona: quitar la marca' : 'Marcar: su correo rebotó') + '</button>' +
           '<button class="btn" style="margin:2px 0 8px;" onclick="webVerDatos(\'' + esc(i.id) + '\')">Ver todos sus datos del formulario</button>' +
           '<div id="webdatos-' + esc(i.id) + '" style="display:none;background:var(--paper);border-radius:8px;padding:10px 12px;white-space:pre-line;color:var(--ink);margin-bottom:8px;">' + esc(i.datos_form || 'Sin datos adicionales') + '</div>' +
           (i.comentario ? '<div style="background:#ede9fe;border-radius:8px;padding:9px 11px;white-space:pre-line;color:var(--ink);margin-top:8px;"><b style="color:#5b21b6;font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Llamadas</b><br>' + esc(_webComentarioLimpio(i.comentario)) + '</div>' : '') +
@@ -18961,6 +18963,19 @@ async function guardarSeguimientoWebinar(id){
     alert('No se pudo guardar: ' + (r.error || ''));
     return;
   }
+  const idx = WEB_INSCRITOS.findIndex(x => String(x.id) === String(id));
+  if(idx >= 0) WEB_INSCRITOS[idx] = r.inscrito;
+  renderWebinarInscritos(true);
+}
+
+// Marca (o borra) "a esta persona le rebotó el correo". Queda guardado en la lista del
+// webinar y el sync de cada 15 minutos ya no lo pisa.
+async function webMarcarRebote(id, marcar){
+  const hoy = new Date().toISOString().slice(0, 10);
+  const texto = marcar ? ('marcado a mano el ' + hoy) : '';
+  if(marcar && !confirm('¿Marcar que a esta persona le rebotó el correo?\n\nVa a aparecer con la etiqueta amarilla y en el filtro "Les rebotó el correo".')) return;
+  const r = await fetchAPI('crm_webinar_seguimiento', null, { solicitante: USUARIO, id: id, correo_rebotado: texto });
+  if(!r.ok){ alert('No se pudo guardar: ' + (r.error || '')); return; }
   const idx = WEB_INSCRITOS.findIndex(x => String(x.id) === String(id));
   if(idx >= 0) WEB_INSCRITOS[idx] = r.inscrito;
   renderWebinarInscritos(true);

@@ -1326,7 +1326,9 @@ function preguntasDe(dom) {
 }
 
 /* ---- render ---- */
+var _pasoPintado = -1, _scrollAntes = null;
 function pintar() {
+  if (_scrollAntes === null) _scrollAntes = window.scrollY;
   const pasos = pasosBase();
   if (paso >= pasos.length) paso = pasos.length - 1;
   const actual = pasos[paso];
@@ -1346,7 +1348,17 @@ function pintar() {
   else if (actual.startsWith('dom:')) vistaDominio(actual.slice(4));
   else if (actual === 'ges') vistaGes();
   else if (actual === 'resultado') vistaResultado();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  /* Rayen, 18-ago-2026: 'cada vez que respondo una pregunta que va tirando otras preguntas te
+     devuelve hacia arriba, entonces te pierdes'. pintar() se llama por dos motivos distintos:
+     cambiar de paso (ahi SI corresponde partir arriba) y responder una pregunta que abre otras
+     dentro del mismo paso (ahi hay que quedarse donde estaba). Se distingue por el paso. */
+  if (paso !== _pasoPintado) {
+    _pasoPintado = paso;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } else if (_scrollAntes !== null) {
+    window.scrollTo({ top: _scrollAntes });
+  }
+  _scrollAntes = null;
 }
 
 function campo(id, etiqueta, tipo, extra) {

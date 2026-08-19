@@ -163,7 +163,8 @@ a.sec:hover,button.sec:hover{transform:translateY(-1px);box-shadow:0 4px 12px rg
 // Sin ?d= muestra el índice de las preparadas conocidas.
 
 var PREPARADAS = [
-  { id:"almendros-rauco", titulo:"Escuela Los Almendros — Rauco" }
+  { id:"almendros-rauco", titulo:"Escuela Los Almendros — Rauco" },
+  { id:"udd-rampas",      titulo:"Universidad del Desarrollo — Rampa portátil plegable" }
 ];
 
 var CLP = function(n){
@@ -191,7 +192,10 @@ function pintar(datos){
 
   (datos.productos || []).forEach(function(p, i){
     var c       = cat[p.sku] || null;
-    if (!c) desconocidos.push(p.nombre || p.sku);
+    // Solo avisa si el producto no está en el catálogo de salas Y tampoco trae su propio
+    // precio en el archivo. Las cotizaciones de ayudas técnicas traen precio y foto propios:
+    // no están en SALAS_CATALOGO y eso no es un error.
+    if (!c && (p.precio == null || p.precio === "")) desconocidos.push(p.nombre || p.sku);
     var nombre  = p.nombre || (c && c.n) || "(producto sin nombre)";
     var cant    = Number(p.cant || 1);
     var precioIva = (p.precio != null && p.precio !== "") ? Number(p.precio) : (c ? Number(c.p || 0) : 0);

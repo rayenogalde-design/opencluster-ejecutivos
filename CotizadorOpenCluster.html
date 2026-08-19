@@ -907,7 +907,7 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
 <div class="ed-body">
     <div class="sec">Cotización</div>
     <div class="g2">
-      <div class="f"><label>N° Cotización</label><input id="eNum" value="1126-2026" oninput="upd()"></div>
+      <div class="f"><label>N° Cotización</label><input id="eNum" value="" placeholder="Se asignará al registrar" oninput="upd()"></div>
       <div class="f"><label>Fecha</label><input id="eFecha" value="" oninput="upd()"></div>
     </div>
     <div class="f"><label>Ciudad</label><input id="eCiudad" value="Quilpué" oninput="upd()" list="lista-ciudades" autocomplete="off"></div>
@@ -4326,7 +4326,7 @@ async function registrarCotizacion() {
   // Si el servidor asignó/reasignó el número (original duplicado, vacío o inválido), actualizar UI
   if(respData.num && respData.num !== num) {
     const numEl2 = document.getElementById("eNum");
-    if(numEl2) numEl2.value = respData.num;
+    if(numEl2) { numEl2.value = respData.num; upd(); }  // upd(): si no, la vista previa (y el PDF) se quedan con el número viejo
     const motivo = num ? "por colisión con otro registro" : "(lo asignó el servidor)";
     showToast("ℹ️ Número de cotización: " + respData.num + " " + motivo + ". Si ya generaste el PDF, regenéralo con este número.", "warning");
   }
@@ -4864,8 +4864,17 @@ window.addEventListener("DOMContentLoaded", () => {
         // "¿Estás cotizando salas multisensoriales?" para que el número salga -SM y no -AT.
         // Rayen 2026-08-18: las -AT no entran al CRM como sala y quedan fuera de las
         // comparaciones y del pedido. Le pasó con OC26-3791-AT (Escuela Amapolas).
-        const _rSi = document.querySelector('input[name="salaMulti"][value="si"]');
-        if (_rSi && !_rSi.checked) { _rSi.checked = true; switchSalaMulti("si"); }
+        // OJO: SOLO cuando el origen es Salas. Los productos que llegan de la lista de precios
+        // de administradora (_origen "lista-adm") o de PrepararCotizacion ("preparada") NO son
+        // sala y tienen que seguir saliendo -AT.
+        const _esSala = (_d._origen === "salas") || !!_d.sala;
+        if (_esSala) {
+          const _rSi = document.querySelector('input[name="salaMulti"][value="si"]');
+          if (_rSi && !_rSi.checked) { _rSi.checked = true; switchSalaMulti("si"); }
+        }
+        // La cotización viene armada desde otra pantalla: se le pre-carga el correlativo REAL
+        // del registro (no un número inventado). Se hace más abajo, después de limpiar el campo.
+        window._ocPrecargarNumero = true;
         upd();
       }
     }
@@ -4892,6 +4901,13 @@ window.addEventListener("DOMContentLoaded", () => {
     numEl.style.fontStyle = "italic";
     numEl.readOnly = true; // no editable manualmente
   }
+  // Repintar la vista previa DESPUÉS de limpiar. Sin esto el título del PDF se quedaba con lo
+  // que el campo tenía cuando corrió upd() (el "1126-2026" que venía escrito en el HTML).
+  upd();
+  // Si la cotización llegó armada desde otra pantalla (lista de administradora, Armador, Stock,
+  // PrepararCotización), se pide el correlativo real al registro para que el PDF no salga sin
+  // número. El número definitivo lo confirma igual el servidor al registrar.
+  if (window._ocPrecargarNumero) { window._ocPrecargarNumero = false; fetchYAsignarNumero(); }
 
   // Guardar perfil automáticamente cuando el ejecutivo escribe
   EXEC_FIELDS.forEach(id => {

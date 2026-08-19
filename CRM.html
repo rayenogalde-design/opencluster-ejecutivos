@@ -2386,6 +2386,7 @@ body{
             <p>Inscritos de cada webinar por región, con el seguimiento de las llamadas</p>
           </div>
           <button class="btn" id="btnWebSync" onclick="sincronizarWebinars()">Actualizar desde las planillas</button>
+          <button class="btn" id="btnWebReb" onclick="revisarRebotesWebinar()">Revisar rebotes ahora</button>
         </div>
         <div id="webBody"><div class="loading-state"><div class="spinner"></div>Cargando…</div></div>
       </div>
@@ -18979,6 +18980,24 @@ async function webMarcarRebote(id, marcar){
   const idx = WEB_INSCRITOS.findIndex(x => String(x.id) === String(id));
   if(idx >= 0) WEB_INSCRITOS[idx] = r.inscrito;
   renderWebinarInscritos(true);
+}
+
+// Le pide al CRM que mire la bandeja de entrada y marque solo a quienes les rebotó el
+// correo. Igual corre solo cada hora; este botón es para no esperar.
+async function revisarRebotesWebinar(){
+  const btn = document.getElementById('btnWebReb');
+  if(btn){ btn.disabled = true; btn.textContent = 'Revisando la bandeja…'; }
+  const r = await fetchAPI('crm_webinar_rebotes', null, { solicitante: USUARIO });
+  if(btn){ btn.disabled = false; btn.textContent = 'Revisar rebotes ahora'; }
+  if(!r.ok){ alert('No se pudo revisar: ' + (r.error || '')); return; }
+  const m = r.marcados || [];
+  if(!m.length){
+    alert('Revisé la bandeja: no hay rebotes nuevos que marcar.');
+    return;
+  }
+  alert('Marqué ' + m.length + ' correo(s) que rebotaron:\n\n' +
+    m.map(x => '• ' + (x.nombre || x.email) + ' — ' + x.email).join('\n'));
+  cargarWebinars();
 }
 
 async function sincronizarWebinars(){

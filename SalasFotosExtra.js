@@ -21,5 +21,12 @@ window.SALAS_FOTOS_EXTRA = {
   "WEB-18": "SalasMultisensoriales_Imagenes/web-set-n-19-6-piezas-espuma.jpg",
   "WEB-19": "SalasMultisensoriales_Imagenes/web-suelo-sensorial-en-gel.jpg",
   "WEB-20": "SalasMultisensoriales_Imagenes/web-tunel-de-espuma-gigante.jpg",
-  "WEB-21": "SalasMultisensoriales_Imagenes/web-adaptador-para-control-domotico-de-electrodomesticos.jpg"
+  "WEB-21": "SalasMultisensoriales_Imagenes/web-adaptador-para-control-domotico-de-electrodomesticos.jpg",
+  /* Accesorios BJ-* que no tenian foto. Conseguidas de la tienda de Qinera (qinera.com/es/tienda/)
+     cruzando por el "Ref:" del producto, 2026-08-18. Las dos ultimas salieron de una copia
+     archivada de la web antigua de Qinera, por eso van escaladas sobre lienzo blanco. */
+  "BJ-EEGR150": "SalasMultisensoriales_Imagenes/bj-eegr150-espejo-conjunto-99-100-bajo.jpg",
+  "BJ-134311":  "SalasMultisensoriales_Imagenes/bj-134311-soporte-silla-ruedas-hybrid-3d-largo.jpg",
+  "BJ-E50908":  "SalasMultisensoriales_Imagenes/bj-e50908-tubo-burbujas-peces-de-colores.jpg",
+  "BJ-SD12009": "SalasMultisensoriales_Imagenes/bj-sd12009-peso-regazo-mariquita-grande.jpg"
 };

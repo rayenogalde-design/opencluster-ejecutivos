@@ -8660,6 +8660,16 @@ function gestionContactoBar(c){
     '</div>' +
   '</div>';
 }
+// El aviso de "este correo no funciona" lo pone solo el CRM cuando rebota. Esto lo saca
+// cuando ya consiguieron la dirección buena. (Si editan el correo, se borra sola.)
+async function quitarMarcaCorreoRebotado(id){
+  const r = await fetchAPI('crm_editar_contacto', null, { id: id, email_rebotado: '', solicitante: USUARIO });
+  if(!r || !r.ok){ alert('No se pudo quitar el aviso: ' + ((r && r.error) || '')); return; }
+  _gestBustCaches(id);
+  if(typeof toastCfg === 'function') toastCfg('Listo, saqué el aviso del correo');
+  if(typeof abrirFichaModal === 'function') abrirFichaModal(id, true);
+}
+
 async function cambiarOrigenFicha(id, origen){
   const r = await fetchAPI('crm_editar_contacto', null, { id, origen, solicitante: USUARIO });
   if(!r || !r.ok){ alert('No se pudo cambiar el camino de entrada: ' + ((r&&r.error)||'')); return; }
@@ -12900,6 +12910,10 @@ function renderFicha(container, data){
   const pillsDatos =
     '<div class="v2-block" style="margin-bottom:22px;">' +
       '<div class="v2-block-head">' + icoUser + '<span class="v2-block-label">DATOS DE CONTACTO</span><span class="v2-block-aside">toca para contactar</span></div>' +
+      (c.email_rebotado ? '<div style="background:#fef3c7;border:1px solid #fcd34d;color:#92400e;border-radius:10px;padding:10px 13px;margin:10px 0 4px;max-width:460px;font-size:13px;line-height:1.45;">' +
+        '<b>Este correo no funciona</b> — ' + esc(c.email_rebotado) + '. Le rebotó, no le llega nada: mejor llamar por teléfono.' +
+        (editable ? '<div style="margin-top:8px;"><button class="btn" onclick="quitarMarcaCorreoRebotado(\'' + esc(c.id) + '\')">Ya lo corregí, quitar el aviso</button></div>' : '') +
+      '</div>' : '') +
       '<div class="v2-cpills" style="max-width:460px;">' +
         (LF.hasTelInst ? '<a href="' + LF.telInstLink + '" class="v2-cpill phone"><span class="v2-cpill-icon">' + icoPhone + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">Llamar (institución)</span><span class="v2-cpill-value">' + esc(LF.telInstDisplay) + '</span></span><button type="button" class="v2-cpill-copy" title="Copiar número" onclick="event.preventDefault();event.stopPropagation();_copiarConIcono(\'' + esc(LF.telInstDisplay) + '\',this)">' + V2_SVG.copy + '</button></a>' : '') +
         (LF.hasTelPers && LF.telPersDisplay !== LF.telInstDisplay ? '<a href="' + LF.telPersLink + '" class="v2-cpill phone" style="background:#0891B2;"><span class="v2-cpill-icon">' + icoPhone + '</span><span class="v2-cpill-text"><span class="v2-cpill-label">Llamar (celular)</span><span class="v2-cpill-value">' + esc(LF.telPersDisplay) + '</span></span><button type="button" class="v2-cpill-copy" title="Copiar número" onclick="event.preventDefault();event.stopPropagation();_copiarConIcono(\'' + esc(LF.telPersDisplay) + '\',this)">' + V2_SVG.copy + '</button></a>' : '') +

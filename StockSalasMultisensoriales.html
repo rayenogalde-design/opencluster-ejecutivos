@@ -4408,30 +4408,52 @@
   });
 
   async function cargarPropuestasExistentes() {
-    const r = await apiGet('listar_propuestas_sala');
-    if (!(r && r.ok)) return;
-    r.propuestas.forEach(p => {
-      if (p.estado !== 'definitiva') return;
-      // reconstruir la clave de nivel a partir de segmento/tipoSala/nivel
-      const match = segmentosConIncluidos.find(s => s.seg === p.segmento && s.nombre.split('→')[1].trim() === p.tipoSala);
-      if (!match) return;
-      const nivelObj = NIVELES.find(n => n.nombre === p.nivel);
-      if (!nivelObj) return;
-      const nivelKey = match.key + '-' + nivelObj.key;
-      // marcar checkboxes segun lo guardado
-      (p.productos || []).forEach(prod => {
-        const chk = document.querySelector('input.inc[data-sala="' + nivelKey + '"][data-sku="' + prod.sku + '"]');
-        if (chk) {
+    const cont = document.getElementById('propuestas-recibidas');
+    let r = null;
+    try { r = await apiGet('listar_propuestas_sala'); } catch (e) {}
+    if (!(r && r.ok)) {
+      if (cont) cont.innerHTML = '<p class="incluidos-vacio">No se pudo conectar para traer las salas guardadas. Revisa la conexión y recarga.</p>';
+      return;
+    }
+    const definitivas = (r.propuestas || []).filter(p => p.estado === 'definitiva');
+    // Lo primero es MOSTRARLAS. Antes se intentaba primero re-marcar las casillas usando dos
+    // variables que en esta página NO existen (segmentosConIncluidos y NIVELES, que son del
+    // Armador): eso reventaba con ReferenceError en la primera propuesta definitiva y nunca se
+    // llegaba a renderPropuestasRecibidas.
+    renderPropuestasRecibidas(definitivas);
+    // Y después, aparte y protegido, se dejan marcadas las casillas del nivel de origen. En la
+    // página de Stock no hay paneles de sala, así que _claveDeNivel devuelve '' y no hace nada.
+    definitivas.forEach(p => {
+      try {
+        const nivelKey = _claveDeNivel(p);
+        if (!nivelKey) return;
+        (p.productos || []).forEach(prod => {
+          const chk = document.querySelector('input.inc[data-sala="' + nivelKey + '"][data-sku="' + prod.sku + '"]');
+          if (!chk) return;
           chk.checked = true;
           const qtyEl = qtyInputDe(chk);
           qtyEl.value = prod.cantidad;
           qtyEl.disabled = false;
-        }
-      });
-      recalcular(nivelKey);
-      pintarEstadoNivel(nivelKey, p);
+        });
+        recalcular(nivelKey);
+        pintarEstadoNivel(nivelKey, p);
+      } catch (e) {}
     });
-    renderPropuestasRecibidas(r.propuestas.filter(p => p.estado === 'definitiva'));
+  }
+  // Reconstruye a qué pestaña pertenece una propuesta guardada, buscando el panel cuyo título
+  // coincide con el segmento. Devuelve '' si no calza.
+  function _claveDeNivel(p) {
+    const NIV = { 'Presupuesto Bajo': 'bajo', 'Presupuesto Alto': 'alto', 'Proyección a Futuro': 'proyeccion' };
+    const suf = NIV[p.nivel];
+    if (!suf || !p.segmento) return '';
+    const paneles = document.querySelectorAll('section.panel[id^="panel-seg-"]');
+    for (let i = 0; i < paneles.length; i++) {
+      const h2 = paneles[i].querySelector('h2');
+      if (h2 && h2.textContent.trim() === String(p.segmento).trim()) {
+        return paneles[i].id.replace(/^panel-/, '') + '-' + suf;
+      }
+    }
+    return '';
   }
   cargarPropuestasExistentes();
 

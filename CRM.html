@@ -18746,6 +18746,7 @@ function _webCoincide(i){
   if(WEB_FILTRO === 'asistieron' && !_webSi(i.asistio)) return false;
   if(WEB_FILTRO === 'soloregistro' && (_webSi(i.asistio) || _webSi(i.confirmado))) return false;
   if(WEB_FILTRO === 'rebotados' && !i.correo_rebotado) return false;
+  if(WEB_FILTRO === 'ganadores' && !i.premio) return false;
   if(WEB_BUSCA){
     const txt = [i.nombre, i.establecimiento, i.comuna, i.email, i.cargo].join(' ').toLowerCase();
     if(txt.indexOf(WEB_BUSCA) < 0) return false;
@@ -18776,7 +18777,8 @@ function renderWebinarInscritos(soloLista){
     ['soloregistro', 'Solo se registraron', WEB_INSCRITOS.filter(i => !_webSi(i.asistio) && !_webSi(i.confirmado)).length],
     ['interesados', 'Quieren capacitación', WEB_INSCRITOS.filter(i => String(i.interes_capacitacion || '').toLowerCase().indexOf('s') === 0).length],
     ['concomentarios', 'Dejaron comentarios', WEB_INSCRITOS.filter(_webTieneVoz).length],
-    ['rebotados', 'Les rebotó el correo', WEB_INSCRITOS.filter(i => i.correo_rebotado).length]
+    ['rebotados', 'Les rebotó el correo', WEB_INSCRITOS.filter(i => i.correo_rebotado).length],
+    ['ganadores', 'Ganaron el sorteo', WEB_INSCRITOS.filter(i => i.premio).length]
   ];
 
   cont.innerHTML =
@@ -18810,6 +18812,7 @@ function _webFilasHTML(lista){
     const interes = String(i.interes_capacitacion || '').toLowerCase();
     const tel = String(i.telefono || '').replace(/[^\d+]/g, '');
     const chips =
+      (i.premio ? '<span style="background:#fde68a;color:#78350f;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:800;" title="' + esc(i.premio) + '">' + esc(i.premio) + '</span> ' : '') +
       (_webSi(i.asistio) ? '<span style="background:#d1fae5;color:#065f46;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;">Asistió</span> ' : '') +
       (_webSi(i.confirmado) && !_webSi(i.asistio) ? '<span style="background:#dbeafe;color:#1e40af;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;">Confirmó</span> ' : '') +
       // Se inscribió pero nunca confirmó ni asistió: se dice claro, no se deja en blanco.
@@ -18857,6 +18860,7 @@ function _webFilasHTML(lista){
           _webBloqueVoz(i) +
           (i.temas ? '<div style="margin-bottom:7px;"><b style="color:var(--mist);">Le interesa:</b> ' + esc(i.temas) + '</div>' : '') +
           (i.sala_sensorial ? '<div style="margin-bottom:7px;"><b style="color:var(--mist);">Sala sensorial:</b> ' + esc(i.sala_sensorial) + '</div>' : '') +
+          (i.premio ? '<div style="background:#fef9c3;border:1px solid #fde68a;color:#78350f;border-radius:8px;padding:7px 10px;margin-bottom:7px;font-weight:700;">Sorteo: ' + esc(i.premio) + '</div>' : '') +
           (i.baja_motivo ? '<div style="background:#fee2e2;color:#991b1b;border-radius:8px;padding:7px 10px;margin-bottom:7px;font-weight:700;">Pidió no recibir más correos: ' + esc(i.baja_motivo) + '</div>' : '') +
           (i.correo_rebotado ? '<div style="background:#fef3c7;color:#92400e;border-radius:8px;padding:7px 10px;margin-bottom:7px;font-weight:700;">El correo rebotó (' + esc(i.correo_rebotado) + ') — mejor llamarla por teléfono</div>' : '') +
           '<button class="btn" style="margin:2px 0 8px;' + (i.correo_rebotado ? '' : 'color:#92400e;border-color:#fcd34d;') + '" onclick="webMarcarRebote(\'' + esc(i.id) + '\',' + (i.correo_rebotado ? 'false' : 'true') + ')">' +

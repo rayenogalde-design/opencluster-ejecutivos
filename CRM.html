@@ -18798,7 +18798,7 @@ function renderWebinarInscritos(soloLista){
     ['soloregistro', 'Solo se registraron', WEB_INSCRITOS.filter(i => !_webSi(i.asistio) && !_webSi(i.confirmado)).length],
     ['interesados', 'Quieren capacitación', WEB_INSCRITOS.filter(i => String(i.interes_capacitacion || '').toLowerCase().indexOf('s') === 0).length],
     ['concomentarios', 'Dejaron comentarios', WEB_INSCRITOS.filter(_webTieneVoz).length],
-    ['conescrito', 'Ya les escribí', WEB_INSCRITOS.filter(_webYaEscrito).length],
+    ['conescrito', 'Contactadas por email', WEB_INSCRITOS.filter(_webYaEscrito).length],
     ['rebotados', 'Les rebotó el correo', WEB_INSCRITOS.filter(i => i.correo_rebotado).length],
     ['ganadores', 'Ganaron el sorteo', WEB_INSCRITOS.filter(i => i.premio).length]
   ];
@@ -18841,7 +18841,7 @@ function _webFilasHTML(lista){
       // Se inscribió pero nunca confirmó ni asistió: se dice claro, no se deja en blanco.
       (!_webSi(i.confirmado) && !_webSi(i.asistio) ? '<span style="background:#f1f5f9;color:#475569;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;">Se registró</span> ' : '') +
       (_webSi(i.llamado) ? '<span style="background:#ede9fe;color:#5b21b6;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;">Llamado ' + esc(String(i.fecha_llamado || '').substring(0, 10)) + '</span> ' : '<span style="background:#fce7f3;color:#9d174d;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;">Por llamar</span> ') +
-      (_webYaEscrito(i) ? '<span style="background:#e0f2fe;color:#075985;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;">Correo enviado</span> ' : '') +
+      (_webYaEscrito(i) ? '<span style="background:#e0f2fe;color:#075985;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;">Contactada por email' + (_webFechaCorreo(i) ? ' ' + _webFechaCorreo(i) : '') + '</span> ' : '') +
       (String(i.interes_capacitacion || '').toLowerCase().indexOf('s') === 0 ? '<span style="background:#d1fae5;color:#065f46;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;">Quiere capacitación</span> ' : '') +
       (i.correo_rebotado ? '<span style="background:#fef3c7;color:#92400e;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;" title="' + esc(i.correo_rebotado) + '">Correo rebotado</span> ' : '') +
       (i.baja_motivo ? '<span style="background:#fee2e2;color:#991b1b;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;">No quiere correos</span> ' : '');
@@ -18882,12 +18882,14 @@ function _webFilasHTML(lista){
             (tel ? '<span>' + esc(i.telefono) + '</span>' : '<span style="color:var(--mist);">Sin teléfono</span>') +
           '</div>' +
 
-          '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:11px;">' +
+          // Todo en una sola fila: llamar y WhatsApp van con su símbolo y la ficha con una
+          // sola palabra, así la columna no se estira (pedido de Rayen 20-ago).
+          '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:11px;align-items:center;">' +
             (i.email ? '<button class="btn" style="border-color:var(--purple-dk);color:var(--purple-dk);font-weight:700;" onclick="webEscribirCorreo(\'' + esc(i.id) + '\')">✉ Escribir correo</button>' : '') +
-            (tel ? '<a class="btn" href="tel:' + esc(tel) + '" style="text-decoration:none;">Llamar</a>' : '') +
-            (tel ? '<a class="btn" href="https://wa.me/' + esc(tel.replace(/\+/g, '')) + '" target="_blank" style="text-decoration:none;color:#059669;border-color:#a7f3d0;">WhatsApp</a>' : '') +
+            (tel ? '<a class="btn" href="tel:' + esc(tel) + '" title="Llamar por teléfono" aria-label="Llamar por teléfono" style="text-decoration:none;padding:7px 10px;display:inline-flex;align-items:center;">' + V2_SVG.phone + '</a>' : '') +
+            (tel ? '<a class="btn" href="https://wa.me/' + esc(tel.replace(/\+/g, '')) + '" target="_blank" title="Escribir por WhatsApp" aria-label="Escribir por WhatsApp" style="text-decoration:none;color:#059669;border-color:#a7f3d0;padding:7px 10px;display:inline-flex;align-items:center;">' + V2_SVG.wa + '</a>' : '') +
+            (i.contacto_id ? '<button class="btn" title="Ver su ficha y todo el historial" onclick="abrirFichaModal(\'' + esc(i.contacto_id) + '\')">Ficha</button>' : '') +
           '</div>' +
-          (i.contacto_id ? '<button class="btn" style="margin-top:6px;" onclick="abrirFichaModal(\'' + esc(i.contacto_id) + '\')">Ver su ficha y todo el historial</button>' : '') +
 
           (i.correo_rebotado ? '<div style="background:#fef3c7;color:#92400e;border-radius:8px;padding:7px 10px;margin-top:10px;font-size:12px;font-weight:700;">El correo rebotó (' + esc(i.correo_rebotado) + ') — mejor llamarla por teléfono</div>' : '') +
           (i.baja_motivo ? '<div style="background:#fee2e2;color:#991b1b;border-radius:8px;padding:7px 10px;margin-top:10px;font-size:12px;font-weight:700;">Pidió no recibir más correos: ' + esc(i.baja_motivo) + '</div>' : '') +
@@ -18908,9 +18910,13 @@ function _webFilasHTML(lista){
         '<div>' +
           _webRotulo('El seguimiento') +
           '<div style="font-size:11px;color:var(--mist);margin:0 0 5px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;">Cómo la contactaste</div>' +
-          '<div style="display:flex;gap:6px;margin-bottom:10px;" id="webcanal-' + esc(i.id) + '" data-llamada="0" data-correo="0">' +
-            _webBtnCanal(i.id, 'llamada', 'La llamé') +
-            _webBtnCanal(i.id, 'correo', 'Le escribí') +
+          // Los dos botones arrancan encendidos si ya está registrado, y lo que se marca se
+          // graba al instante: no depende de que después apriete Guardar.
+          '<div style="display:flex;gap:6px;margin-bottom:10px;" id="webcanal-' + esc(i.id) + '"' +
+            ' data-llamada="' + (_webSi(i.llamado) ? '1' : '0') + '" data-correo="' + (_webYaEscrito(i) ? '1' : '0') + '"' +
+            ' data-guard-llamada="' + (_webSi(i.llamado) ? '1' : '0') + '" data-guard-correo="' + (_webYaEscrito(i) ? '1' : '0') + '">' +
+            _webBtnCanal(i.id, 'llamada', 'La llamé', _webSi(i.llamado)) +
+            _webBtnCanal(i.id, 'correo', 'Le escribí', _webYaEscrito(i)) +
           '</div>' +
           '<textarea id="webcom-' + esc(i.id) + '" rows="4" placeholder="Qué te dijo — podés dictarlo con Windows + H" ' +
             'style="width:100%;padding:9px 11px;border:1px solid var(--purple-lt);border-radius:9px;font-size:13px;font-family:var(--font-sans);resize:vertical;"></textarea>' +
@@ -19073,25 +19079,78 @@ function webVerDatos(id){
 
 // "La llamé" / "Le escribí": se pueden marcar los dos, ninguno o uno. Lo que se marca queda
 // escrito en el historial de la persona, y solo "La llamé" la saca de "Por llamar".
-function _webBtnCanal(id, clave, texto){
+function _webBtnCanal(id, clave, texto, activo){
   return '<button type="button" id="webcanal-' + id + '-' + clave + '" onclick="webToggleCanal(\'' + id + '\',\'' + clave + '\')" ' +
-    'style="flex:1;padding:7px 4px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--purple-lt);background:white;color:var(--subtle);">' + texto + '</button>';
+    'style="flex:1;padding:7px 4px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid ' +
+    (activo ? 'var(--purple-dk);background:var(--purple-dk);color:white;' : 'var(--purple-lt);background:white;color:var(--subtle);') + '">' + texto + '</button>';
 }
 
-function webToggleCanal(id, clave){
+function _webPintarCanal(btn, activo){
+  if(!btn) return;
+  btn.style.border = '1px solid ' + (activo ? 'var(--purple-dk)' : 'var(--purple-lt)');
+  btn.style.background = activo ? 'var(--purple-dk)' : 'white';
+  btn.style.color = activo ? 'white' : 'var(--subtle)';
+}
+
+// Marcar "La llamé" o "Le escribí" GRABA al instante: antes se perdía si cambiaba de
+// persona sin apretar Guardar, y al volver a abrir la ficha el botón salía apagado.
+async function webToggleCanal(id, clave){
   const cont = document.getElementById('webcanal-' + id);
   const btn = document.getElementById('webcanal-' + id + '-' + clave);
   if(!cont || !btn) return;
+
+  // Lo que ya quedó escrito en el historial no se puede borrar desde acá.
+  if(cont.getAttribute('data-guard-' + clave) === '1'){
+    alert(clave === 'correo'
+      ? 'Ya está registrado que le escribiste. Si te equivocaste, se corrige en su ficha, en el historial.'
+      : 'Ya está registrado que la llamaste. Si te equivocaste, se corrige en su ficha, en el historial.');
+    return;
+  }
+
   const activo = cont.getAttribute('data-' + clave) === '1';
   cont.setAttribute('data-' + clave, activo ? '0' : '1');
-  btn.style.border = '1px solid ' + (activo ? 'var(--purple-lt)' : 'var(--purple-dk)');
-  btn.style.background = activo ? 'white' : 'var(--purple-dk)';
-  btn.style.color = activo ? 'var(--subtle)' : 'white';
+  _webPintarCanal(btn, !activo);
+  if(activo) return;                     // lo apagó antes de grabarse: no hay nada que guardar
+
+  const rotulo = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Guardando…';
+  const ok = await _webGuardarCanal(id, clave);
+  btn.disabled = false;
+  btn.textContent = rotulo;
+  if(!ok){ cont.setAttribute('data-' + clave, '0'); _webPintarCanal(btn, false); }
+}
+
+// Graba la marca en el historial. Lo que haya dictado en el cuadro se manda junto, así no
+// se le pierde. Nunca baja "la llamé" a no llamada: marcar el correo no borra la llamada.
+async function _webGuardarCanal(id, clave){
+  const i = WEB_INSCRITOS.find(x => String(x.id) === String(id));
+  const ta = document.getElementById('webcom-' + id);
+  const comentario = ta ? ta.value.trim() : '';
+  const lineas = [clave === 'llamada' ? 'La llamé por teléfono.' : ('Le escribí un correo el ' + _webHoyCorto() + '.')];
+  if(comentario) lineas.push(comentario);
+
+  const r = await fetchAPI('crm_webinar_seguimiento', null, {
+    solicitante: USUARIO, id: id, comentario: lineas.join('\n'),
+    llamado: clave === 'llamada' ? true : _webSi(i && i.llamado)
+  });
+  if(!r || !r.ok){ alert('No se pudo guardar: ' + ((r && r.error) || '')); return false; }
+
+  const idx = WEB_INSCRITOS.findIndex(x => String(x.id) === String(id));
+  if(idx >= 0) WEB_INSCRITOS[idx] = r.inscrito;
+  renderWebinarInscritos(true);
+  return true;
 }
 
 // ¿Ya le escribí un correo? Se lee del historial, que es donde queda la marca.
 function _webYaEscrito(i){
   return /le escrib[íi] un correo/i.test(String((i && i.comentario) || ''));
+}
+
+// El día en que le escribió, para mostrarlo al lado del estado: "Contactada por email 20-08".
+function _webFechaCorreo(i){
+  const m = String((i && i.comentario) || '').match(/le escrib[íi] un correo el (\d{2}-\d{2})-\d{4}/i);
+  return m ? m[1] : '';
 }
 
 function _webBtnInteres(id, texto, activo){
@@ -19124,8 +19183,11 @@ async function guardarSeguimientoWebinar(id){
   const canal = document.getElementById('webcanal-' + id);
   const comentario = ta ? ta.value.trim() : '';
   const interes = cont ? (cont.getAttribute('data-elegido') || '') : '';
-  const hizoLlamada = !!canal && canal.getAttribute('data-llamada') === '1';
-  const hizoCorreo  = !!canal && canal.getAttribute('data-correo')  === '1';
+  // Lo que ya se grabó al marcarlo no se vuelve a escribir en el historial.
+  const yaLlamada = !!canal && canal.getAttribute('data-guard-llamada') === '1';
+  const yaCorreo  = !!canal && canal.getAttribute('data-guard-correo')  === '1';
+  const hizoLlamada = !!canal && canal.getAttribute('data-llamada') === '1' && !yaLlamada;
+  const hizoCorreo  = !!canal && canal.getAttribute('data-correo')  === '1' && !yaCorreo;
   if(!comentario && !interes && !hizoLlamada && !hizoCorreo){
     alert('Marcá si la llamaste o si le escribiste, escribí un comentario, o marcá si le interesa la capacitación.');
     return;
@@ -19142,7 +19204,7 @@ async function guardarSeguimientoWebinar(id){
   if(hizoCorreo)  lineas.push('Le escribí un correo el ' + _webHoyCorto() + '.');
   if(comentario)  lineas.push(comentario);
 
-  const payload = { solicitante: USUARIO, id: id, comentario: lineas.join('\n'), llamado: hizoLlamada };
+  const payload = { solicitante: USUARIO, id: id, comentario: lineas.join('\n'), llamado: hizoLlamada || yaLlamada };
   if(interes) payload.interes_capacitacion = interes;
   const r = await fetchAPI('crm_webinar_seguimiento', null, payload);
 

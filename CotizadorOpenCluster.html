@@ -4860,6 +4860,31 @@ window.addEventListener("DOMContentLoaded", () => {
           sv("eCNombre",c.nombre); sv("eCInstitucion",c.institucion); sv("eCRut",c.rut);
           sv("eCCiudad",c.ciudad); sv("eCDireccion",c.direccion); sv("eCTel",c.tel); sv("eCEmail",c.email);
         }
+        // Condiciones que vengan armadas desde la precotización (garantía, validez, plazo,
+        // forma de pago y la nota). Rayen 20-ago-2026: "las cotizaciones no tienen las
+        // condiciones, quiero que ya esté todo listo, no quiero hacerlo todo de nuevo".
+        // Es el mismo bloque que usa cargarCotizacion; el upd() de más abajo se encarga de
+        // mostrar los campos "otro" que correspondan.
+        if (_d.condiciones) {
+          const cn = _d.condiciones;
+          const setRadio = (name, val) => {
+            if (!val) return;
+            const r = document.querySelector('input[name="' + name + '"][value="' + val + '"]');
+            if (r) r.checked = true;
+          };
+          setRadio("validez",  cn.validez);
+          setRadio("garantia", cn.garantia);
+          setRadio("pago",     cn.pago);
+          setRadio("condpago", cn.condpago);
+          setRadio("plazo",    cn.plazo);
+          const sc = (id,v)=>{ const el=document.getElementById(id); if(el&&v) el.value=v; };
+          sc("otroValidez",  cn.validez_otro);
+          sc("otroGarantia", cn.garantia_otro);
+          sc("otroPagoMetodo", cn.pago_otro);
+          sc("otroPago",     cn.condpago_otro);
+          sc("otroPlazo",    cn.plazo_otro);
+          sc("condNotaAdicional", cn.nota);
+        }
         // Si los productos vienen de Salas, la cotización ES de sala: se marca sola la casilla
         // "¿Estás cotizando salas multisensoriales?" para que el número salga -SM y no -AT.
         // Rayen 2026-08-18: las -AT no entran al CRM como sala y quedan fuera de las

@@ -68,9 +68,30 @@ a.sec:hover,button.sec:hover{transform:translateY(-1px);box-shadow:0 4px 12px rg
 .lista-prep a{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--linea);
    border-radius:10px;text-decoration:none;color:var(--navy);font-weight:700;background:#fff;transition:.15s}
 .lista-prep a:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,26,96,.08);background:var(--hover)}
+.barra-clave{display:flex;gap:14px;align-items:center;flex-wrap:wrap;justify-content:space-between;
+   background:var(--info-bg);color:var(--info-tx);border-radius:10px;padding:11px 14px;margin-bottom:14px}
+.barra-clave .bc-txt{font-size:13px;font-weight:700}
+.barra-clave .bc-pie{display:block;font-size:12px;font-weight:400;opacity:.85;margin-top:2px}
+.barra-clave form{display:flex;gap:8px;align-items:center}
+.barra-clave input{padding:9px 12px;font-size:13px;font-family:inherit;border:1px solid var(--linea);
+   border-radius:8px;background:#fff;color:var(--texto);width:170px}
+.barra-clave.abierta{background:var(--ok-bg);color:var(--ok-tx)}
+.barra-clave.mala input{border-color:#C0392B}
+.margen-in{width:72px;padding:6px 8px;font-size:13px;font-family:inherit;text-align:right;
+   border:1px solid var(--linea);border-radius:7px;background:#fff;color:var(--texto);
+   font-variant-numeric:tabular-nums}
+.margen-in:disabled{background:#F5F7FA;color:#5B6472}
+.margen-cell{white-space:nowrap;text-align:right}
+.margen-cell .pc{font-size:12px;color:#5B6472;margin-left:3px}
+.col-costo{display:none}
+.web-si{font-weight:700;color:var(--navy);text-decoration:none;border-bottom:1px dotted var(--sky)}
+.web-no{font-size:11.5px;color:#98A2B3}
+.web-var{display:block;font-size:11px;color:#5B6472;font-weight:400}
+.cod{font-size:11.5px;font-weight:800;color:var(--sky);letter-spacing:.3px}
 @media (max-width:700px){
-  th:nth-child(6),td:nth-child(6){display:none}
+  th:nth-child(2),td:nth-child(2){display:none}
   .totales div{min-width:0;width:100%}
+  .barra-clave input{width:130px}
 }
 </style>
 </head>
@@ -97,6 +118,18 @@ a.sec:hover,button.sec:hover{transform:translateY(-1px);box-shadow:0 4px 12px rg
 
   <div class="card" id="cardTabla" style="display:none">
     <h2>Productos, en el orden pedido</h2>
+
+    <div class="barra-clave" id="barraClave">
+      <div class="bc-txt">
+        <span id="bcTitulo">Los precios salen con el margen del 20%.</span>
+        <span class="bc-pie" id="bcPie">Para mover el margen a mano necesito tu clave, la misma de tu lista de administradora.</span>
+      </div>
+      <form id="formClave" autocomplete="off">
+        <input id="inClave" type="password" placeholder="Tu clave" autocomplete="current-password">
+        <button class="sec" type="submit" id="btnClave">Desbloquear</button>
+      </form>
+    </div>
+
     <div style="overflow-x:auto">
       <table>
         <thead>
@@ -105,9 +138,12 @@ a.sec:hover,button.sec:hover{transform:translateY(-1px);box-shadow:0 4px 12px rg
             <th style="width:64px">Imagen</th>
             <th>Producto</th>
             <th style="width:56px">Cant.</th>
+            <th style="width:104px">Margen</th>
+            <th style="width:110px" class="col-costo">Costo neto</th>
             <th style="width:120px">Neto un.</th>
             <th style="width:120px">Total neto</th>
             <th style="width:130px">Total IVA inc.</th>
+            <th style="width:130px">Precio web OCT</th>
           </tr>
         </thead>
         <tbody id="tbody"></tbody>
@@ -181,51 +217,152 @@ function nombreArchivo(v){
 }
 
 var FILAS = [], CLIENTE = null;
+var DATOS = null;        // el archivo de la cotización, tal como vino
+var LINEAS = [];         // una por producto, con su margen elegido
+var COSTOS = null;       // costos netos por código; llega solo al escribir la clave
+var MARGEN_DEF = 0.20;   // Rayen 19-ago-2026: si no digo otra cosa, cotizo al 20%
+
+// ── El margen y el precio ──────────────────────────────────────────────────
+// Regla de Rayen: si el margen elegido es el que ese producto YA tiene en una lista
+// publicada, se usa el precio de esa lista TAL CUAL, no uno recalculado (recalcular
+// movía cientos de precios en $1). Si el margen es libre, se calcula desde el costo,
+// y para eso hace falta la clave.
+// De un precio CON IVA saca el neto entero que hay que mandarle al Cotizador. Como el
+// Cotizador rehace el total desde el neto, hay precios de lista que ningún neto entero
+// devuelve al peso exacto: en esos casos queda $1 más barato, nunca más caro.
+function netoDesde(precioIva){
+  var base = Math.floor(precioIva / 1.19);
+  return (Math.round((base + 1) * 1.19) <= precioIva) ? base + 1 : base;
+}
+
+// Devuelve { neto, iva } o null si no se puede calcular (margen libre sin la clave).
+function precioCon(p, m){
+  var lp = p.lp || [];
+  for (var i = 0; i < lp.length; i++){
+    if (Math.abs(Number(lp[i].m) - m) < 0.0005){
+      var pl = Math.round(lp[i].p);
+      var n  = netoDesde(pl);
+      return { neto:n, iva:Math.round(n * 1.19) };
+    }
+  }
+  var costo = COSTOS ? Number(COSTOS[p.codigo] || 0) : 0;
+  if (!costo || m >= 0.95) return null;
+  var neto = Math.round(costo / (1 - m));
+  return { neto:neto, iva:Math.round(neto * 1.19) };
+}
+
+function margenDe(p){
+  // El margen que se muestra al abrir: el pedido por defecto si ese producto lo tiene
+  // en alguna lista; si no, el más cercano que sí exista.
+  var lp = p.lp || [];
+  if (lp.some(function(x){ return Math.abs(x.m - MARGEN_DEF) < 0.0005; })) return MARGEN_DEF;
+  if (!lp.length) return MARGEN_DEF;
+  return lp.reduce(function(a, b){
+    return Math.abs(b.m - MARGEN_DEF) < Math.abs(a.m - MARGEN_DEF) ? b : a;
+  }).m;
+}
+
+function nombreCompleto(p){
+  // Rayen 19-ago-2026: el código de NUESTRA lista va delante del nombre, para poder
+  // encontrar el producto después. No es el del proveedor ni el SKU.
+  return (p.codigo ? p.codigo + " — " : "") + p.nombre;
+}
 
 function pintar(datos){
   var cat = window.SALAS_CATALOGO || {};
-  var tb  = document.getElementById("tbody");
+  DATOS = datos;
+  MARGEN_DEF = Number(datos.margen != null ? datos.margen : 0.20);
+  LINEAS = (datos.productos || []).map(function(p){
+    var c = cat[p.sku] || null;
+    var linea = {
+      codigo: p.codigo || "",
+      nombre: p.nombre || (c && c.n) || "(producto sin nombre)",
+      desc:   p.desc || "",
+      cant:   Number(p.cant || 1),
+      img:    p.img || (c && c.img) || "",
+      web:    p.web || null,
+      lp:     p.lp || (p.precio ? [] : []),
+      precioFijo: (p.precio != null && p.precio !== "") ? Number(p.precio)
+                : (c ? Number(c.p || 0) : 0),
+      esSala: !!c
+    };
+    linea.margen = (p.lp && p.lp.length) ? margenDe(p) : null;
+    return linea;
+  });
+  refrescar();
+}
+
+function refrescar(){
+  var tb = document.getElementById("tbody");
   var sinPrecio = [], sinFoto = [], desconocidos = [];
   var subNeto = 0;
   FILAS = [];
   tb.innerHTML = "";
 
-  (datos.productos || []).forEach(function(p, i){
-    var c       = cat[p.sku] || null;
-    // Solo avisa si el producto no está en el catálogo de salas Y tampoco trae su propio
-    // precio en el archivo. Las cotizaciones de ayudas técnicas traen precio y foto propios:
-    // no están en SALAS_CATALOGO y eso no es un error.
-    if (!c && (p.precio == null || p.precio === "")) desconocidos.push(p.nombre || p.sku);
-    var nombre  = p.nombre || (c && c.n) || "(producto sin nombre)";
-    var cant    = Number(p.cant || 1);
-    var precioIva = (p.precio != null && p.precio !== "") ? Number(p.precio) : (c ? Number(c.p || 0) : 0);
-    var img     = p.img || (c && c.img) || "";
-    if (!precioIva) sinPrecio.push(nombre);
-    if (!img) sinFoto.push(nombre);
-
-    // El catálogo guarda el precio CON IVA; al Cotizador se le manda el NETO ya calculado.
+  LINEAS.forEach(function(L, i){
+    // Precio de la línea: por margen si el producto trae listas; si no, el precio fijo
+    // que venga en el archivo (las salas y las cotizaciones antiguas funcionan igual).
+    // El precio se guarda CON IVA; al Cotizador se le manda el NETO ya calculado.
     // Se manda neto a propósito: es el modo por defecto del Cotizador, así que aunque el
     // campo "modo" se perdiera por el camino, el número sigue siendo el correcto.
-    var netoUn = Math.round(precioIva / 1.19);
-    subNeto += netoUn * cant;
+    var pr = (L.margen != null && L.lp.length)
+           ? precioCon(L, L.margen)
+           : (L.precioFijo ? { neto:netoDesde(L.precioFijo), iva:0 } : null);
+    if (pr && !pr.iva) pr.iva = Math.round(pr.neto * 1.19);
+    var netoUn = pr ? pr.neto : 0;
+    if (!L.esSala && !L.precioFijo && !L.lp.length) desconocidos.push(L.nombre);
+    if (!netoUn) sinPrecio.push(L.nombre);
+    if (!L.img) sinFoto.push(L.nombre);
+    subNeto += netoUn * L.cant;
+
+    var costo = COSTOS ? Number(COSTOS[L.codigo] || 0) : 0;
+    var puedeMover = !!COSTOS && L.lp.length > 0;
+
+    var celdaMargen = (L.margen == null)
+      ? '<td class="margen-cell">—</td>'
+      : '<td class="margen-cell">' +
+          '<input class="margen-in" type="number" step="0.5" min="0" max="90" ' +
+                 'data-i="' + i + '" value="' + (Math.round(L.margen * 1000) / 10) + '"' +
+                 (puedeMover ? '' : ' disabled title="Escribe tu clave para mover el margen"') + '>' +
+          '<span class="pc">%</span></td>';
+
+    var celdaWeb = L.web
+      ? '<td class="n"><a class="web-si" href="' + L.web.url + '" target="_blank" rel="noopener">' +
+          CLP(L.web.precio) + '</a>' +
+          (L.web.variante ? '<span class="web-var">' + L.web.variante + '</span>' : '') + '</td>'
+      : '<td class="n"><span class="web-no">no está en la web</span></td>';
 
     var tr = document.createElement("tr");
     tr.innerHTML =
       '<td class="c">' + (i + 1) + '</td>' +
-      '<td>' + (img
-          ? '<img class="foto" src="' + img + '" alt="">'
+      '<td>' + (L.img
+          ? '<img class="foto" src="' + L.img + '" alt="">'
           : '<div class="sinfoto">sin foto</div>') + '</td>' +
-      // Sin código de proveedor: regla de Rayen, ni en el documento ni en pantalla.
-      '<td><div class="nom">' + nombre + '</div>' +
-          (p.desc ? '<div class="desc">' + p.desc + '</div>' : '') + '</td>' +
-      '<td class="c">' + cant + '</td>' +
-      '<td class="n">' + (precioIva ? CLP(netoUn) : '—') + '</td>' +
-      '<td class="n">' + (precioIva ? CLP(netoUn * cant) : '—') + '</td>' +
-      '<td class="n">' + (precioIva ? CLP(netoUn * cant * 1.19) : '—') + '</td>';
+      // El código que va aquí es el NUESTRO (OC-####), nunca el del proveedor.
+      '<td>' + (L.codigo ? '<div class="cod">' + L.codigo + '</div>' : '') +
+          '<div class="nom">' + L.nombre + '</div>' +
+          (L.desc ? '<div class="desc">' + L.desc + '</div>' : '') + '</td>' +
+      '<td class="c">' + L.cant + '</td>' +
+      celdaMargen +
+      '<td class="n col-costo">' + (costo ? CLP(costo) : '—') + '</td>' +
+      '<td class="n">' + (netoUn ? CLP(netoUn) : '—') + '</td>' +
+      '<td class="n">' + (netoUn ? CLP(netoUn * L.cant) : '—') + '</td>' +
+      '<td class="n">' + (netoUn ? CLP(netoUn * L.cant * 1.19) : '—') + '</td>' +
+      celdaWeb;
     tb.appendChild(tr);
 
-    FILAS.push({ nombre:nombre, desc:p.desc || "", cant:String(cant),
-                 precio:String(netoUn), modo:"neto", img:img });
+    FILAS.push({ nombre:nombreCompleto(L), desc:L.desc, cant:String(L.cant),
+                 precio:String(netoUn), modo:"neto", img:L.img });
+  });
+
+  [].forEach.call(document.querySelectorAll(".margen-in"), function(inp){
+    inp.addEventListener("change", function(){
+      var i = Number(inp.getAttribute("data-i"));
+      var v = Number(inp.value);
+      if (!isFinite(v) || v < 0 || v > 90) { refrescar(); return; }
+      LINEAS[i].margen = Math.round(v * 10) / 1000;
+      refrescar();
+    });
   });
 
   document.getElementById("tNeto").textContent  = CLP(subNeto);
@@ -252,10 +389,72 @@ function pintar(datos){
 
   var alertas = [];
   if (desconocidos.length) alertas.push("Productos que no están en el catálogo de salas: " + desconocidos.join(", "));
-  if (sinPrecio.length)    alertas.push("Sin precio en la lista: " + sinPrecio.join(", "));
+  if (sinPrecio.length)    alertas.push("Sin precio: " + sinPrecio.join(", "));
   if (sinFoto.length)      alertas.push("Sin foto: " + sinFoto.join(", "));
   if (alertas.length) msg("aviso-am", alertas.join("<br>"));
-  else if (datos.nota)  msg("info", datos.nota);
+  else if (DATOS && DATOS.nota) msg("info", DATOS.nota);
+}
+
+// ── La clave: solo sirve para VER el costo y mover el margen ───────────────
+// Los costos viajan cifrados dentro del archivo de la cotización (AES-256-GCM, la
+// misma receta de la vista de administradora). Sin la clave no hay forma de leerlos,
+// ni mirando el código de la página. Ver la nota de costos en la memoria del proyecto.
+var RECUERDO_ADM = "oct_clave_MisCostosYMargenes_PRIVADA.html";
+
+function b64(s){
+  var t = atob(s), a = new Uint8Array(t.length);
+  for (var i = 0; i < t.length; i++) a[i] = t.charCodeAt(i);
+  return a;
+}
+
+async function abrirCostos(clave){
+  var s = DATOS && DATOS.secreto;
+  if (!s) throw new Error("sin costos");
+  var mat = await crypto.subtle.importKey("raw", new TextEncoder().encode(clave), "PBKDF2", false, ["deriveKey"]);
+  var llave = await crypto.subtle.deriveKey(
+    { name:"PBKDF2", salt:b64(s.sal), iterations:s.iter, hash:"SHA-256" },
+    mat, { name:"AES-GCM", length:256 }, false, ["decrypt"]);
+  var plano = await crypto.subtle.decrypt({ name:"AES-GCM", iv:b64(s.iv) }, llave, b64(s.datos));
+  COSTOS = JSON.parse(new TextDecoder().decode(plano));
+  document.getElementById("barraClave").classList.add("abierta");
+  document.getElementById("bcTitulo").textContent = "Listo: puedes cambiar el margen de cada producto.";
+  document.getElementById("bcPie").textContent =
+    "Si el margen que eliges es el de una lista publicada, se usa ese precio tal cual; si no, se calcula desde el costo.";
+  document.getElementById("formClave").style.display = "none";
+  [].forEach.call(document.querySelectorAll(".col-costo"), function(el){ el.style.display = "table-cell"; });
+  refrescar();
+}
+
+function prepararClave(){
+  var barra = document.getElementById("barraClave");
+  var form  = document.getElementById("formClave");
+  if (!DATOS || !DATOS.secreto) { barra.style.display = "none"; return; }
+
+  form.addEventListener("submit", async function(e){
+    e.preventDefault();
+    var inp = document.getElementById("inClave");
+    var btn = document.getElementById("btnClave");
+    if (!inp.value) return;
+    btn.disabled = true; btn.textContent = "Abriendo...";
+    try {
+      await abrirCostos(inp.value);
+      try { localStorage.setItem(RECUERDO_ADM, inp.value); } catch(e2){}
+    } catch(err){
+      barra.classList.add("mala");
+      document.getElementById("bcPie").textContent = "Esa clave no es. Es la misma de tu lista de administradora.";
+      btn.disabled = false; btn.textContent = "Desbloquear";
+      inp.value = ""; inp.focus();
+    }
+  });
+
+  // Si ya abrió su lista de administradora en este computador, la clave está guardada
+  // y no hay que volver a pedírsela.
+  (async function(){
+    var g = null;
+    try { g = localStorage.getItem(RECUERDO_ADM); } catch(e){}
+    if (!g) return;
+    try { await abrirCostos(g); } catch(e){}
+  })();
 }
 
 function abrirEnCotizador(){
@@ -300,6 +499,7 @@ document.addEventListener("DOMContentLoaded", function(){
         n + " productos, en el orden pedido. Revísalos antes de abrir el cotizador.";
       if (datos.cliente) CLIENTE = datos.cliente;
       pintar(datos);
+      prepararClave();
     })
     .catch(function(e){
       msg("error", "No se encontró la cotización preparada <strong>" + d + "</strong>. (" + e.message + ")");

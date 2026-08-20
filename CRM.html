@@ -18765,6 +18765,7 @@ function _webCoincide(i){
   if(WEB_FILTRO === 'interesados' && String(i.interes_capacitacion || '').toLowerCase() !== 'sí' && String(i.interes_capacitacion || '').toLowerCase() !== 'si') return false;
   if(WEB_FILTRO === 'asistieron' && !_webSi(i.asistio)) return false;
   if(WEB_FILTRO === 'soloregistro' && (_webSi(i.asistio) || _webSi(i.confirmado))) return false;
+  if(WEB_FILTRO === 'conescrito' && !_webYaEscrito(i)) return false;
   if(WEB_FILTRO === 'rebotados' && !i.correo_rebotado) return false;
   if(WEB_FILTRO === 'ganadores' && !i.premio) return false;
   if(WEB_BUSCA){
@@ -18797,6 +18798,7 @@ function renderWebinarInscritos(soloLista){
     ['soloregistro', 'Solo se registraron', WEB_INSCRITOS.filter(i => !_webSi(i.asistio) && !_webSi(i.confirmado)).length],
     ['interesados', 'Quieren capacitación', WEB_INSCRITOS.filter(i => String(i.interes_capacitacion || '').toLowerCase().indexOf('s') === 0).length],
     ['concomentarios', 'Dejaron comentarios', WEB_INSCRITOS.filter(_webTieneVoz).length],
+    ['conescrito', 'Ya les escribí', WEB_INSCRITOS.filter(_webYaEscrito).length],
     ['rebotados', 'Les rebotó el correo', WEB_INSCRITOS.filter(i => i.correo_rebotado).length],
     ['ganadores', 'Ganaron el sorteo', WEB_INSCRITOS.filter(i => i.premio).length]
   ];
@@ -18839,6 +18841,7 @@ function _webFilasHTML(lista){
       // Se inscribió pero nunca confirmó ni asistió: se dice claro, no se deja en blanco.
       (!_webSi(i.confirmado) && !_webSi(i.asistio) ? '<span style="background:#f1f5f9;color:#475569;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;">Se registró</span> ' : '') +
       (_webSi(i.llamado) ? '<span style="background:#ede9fe;color:#5b21b6;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;">Llamado ' + esc(String(i.fecha_llamado || '').substring(0, 10)) + '</span> ' : '<span style="background:#fce7f3;color:#9d174d;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;">Por llamar</span> ') +
+      (_webYaEscrito(i) ? '<span style="background:#e0f2fe;color:#075985;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;">Correo enviado</span> ' : '') +
       (String(i.interes_capacitacion || '').toLowerCase().indexOf('s') === 0 ? '<span style="background:#d1fae5;color:#065f46;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;">Quiere capacitación</span> ' : '') +
       (i.correo_rebotado ? '<span style="background:#fef3c7;color:#92400e;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;" title="' + esc(i.correo_rebotado) + '">Correo rebotado</span> ' : '') +
       (i.baja_motivo ? '<span style="background:#fee2e2;color:#991b1b;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;">No quiere correos</span> ' : '');
@@ -18901,10 +18904,15 @@ function _webFilasHTML(lista){
           (i.comentario ? '<div style="background:#ede9fe;border-radius:8px;padding:9px 11px;white-space:pre-line;color:var(--ink);margin-top:10px;font-size:12.5px;"><b style="color:#5b21b6;font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Llamadas anteriores</b><br>' + esc(_webComentarioLimpio(i.comentario)) + '</div>' : '') +
         '</div>' +
 
-        // ── 3. La llamada de ahora ──
+        // ── 3. El seguimiento: cómo la contactó y qué salió ──
         '<div>' +
-          _webRotulo('La llamada') +
-          '<textarea id="webcom-' + esc(i.id) + '" rows="4" placeholder="Comentario de la llamada — podés dictarlo con Windows + H" ' +
+          _webRotulo('El seguimiento') +
+          '<div style="font-size:11px;color:var(--mist);margin:0 0 5px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;">Cómo la contactaste</div>' +
+          '<div style="display:flex;gap:6px;margin-bottom:10px;" id="webcanal-' + esc(i.id) + '" data-llamada="0" data-correo="0">' +
+            _webBtnCanal(i.id, 'llamada', 'La llamé') +
+            _webBtnCanal(i.id, 'correo', 'Le escribí') +
+          '</div>' +
+          '<textarea id="webcom-' + esc(i.id) + '" rows="4" placeholder="Qué te dijo — podés dictarlo con Windows + H" ' +
             'style="width:100%;padding:9px 11px;border:1px solid var(--purple-lt);border-radius:9px;font-size:13px;font-family:var(--font-sans);resize:vertical;"></textarea>' +
           '<div style="font-size:11px;color:var(--mist);margin:9px 0 5px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;">Capacitación gratuita</div>' +
           '<div style="display:flex;gap:6px;margin-bottom:10px;" id="webint-' + esc(i.id) + '">' +
@@ -18912,7 +18920,7 @@ function _webFilasHTML(lista){
             _webBtnInteres(i.id, 'No', interes === 'no') +
             _webBtnInteres(i.id, 'Pendiente', interes.indexOf('pend') === 0) +
           '</div>' +
-          '<button class="btn primary" style="width:100%;" onclick="guardarSeguimientoWebinar(\'' + esc(i.id) + '\')">Guardar y marcar llamado</button>' +
+          '<button class="btn primary" style="width:100%;" onclick="guardarSeguimientoWebinar(\'' + esc(i.id) + '\')">Guardar</button>' +
         '</div>' +
 
         // ── Pie: lo que casi no se usa, fuera del camino ──
@@ -18948,6 +18956,40 @@ function _webFechaLarga(f){
   return Number(m[3]) + ' de ' + meses[Number(m[2]) - 1];
 }
 
+// Las plantillas del correo. Están escritas con las palabras de Rayen — para cambiar el
+// texto se edita ACÁ, no se toca nada más. {NOMBRE} es el primer nombre de la persona,
+// {PREMIO} lo que ganó en el sorteo, {WEBINAR} el nombre del webinar y {FECHA} su fecha.
+const WEB_PLANTILLA_GANADORAS = {
+  asunto: 'Activación de tu {PREMIO} y capacitación',
+  cuerpo:
+    'Estimada {NOMBRE},\n\n' +
+    '¡Espero que te encuentres muy bien!\n' +
+    'Es un placer saludarte. Mi nombre es Rayen Ogalde y soy responsable de todos los Webinars que estamos realizando con instituciones de Educación en OpenCluster-Tech.\n\n' +
+    'Agradezco tu paciencia en la espera de nuestro contacto para poder activar tu {PREMIO} y coordinar la capacitación. ¡Muchas felicidades por ser una de las ganadoras! =)\n\n' +
+    'Estoy pensando en que podamos reunirnos el día lunes {NOMBRE} vía Google Meet, en ese momento te explicaremos sobre el uso de la licencia, la activación y te daremos una capacitación para que puedan sacarle el máximo de provecho.\n\n' +
+    'Podrías indicarme si el día te acomoda por favor y de ser así, en qué horarios estarías disponible? Si puedes darme dos opciones como mínimo es excelente, así tengo más opciones para nuestra terapeuta.\n\n' +
+    'Quedo muy pendiente a tus comentarios,\n\n' +
+    'Saludos Cordiales,\n'
+};
+
+const WEB_PLANTILLA_GENERAL = {
+  asunto: '{WEBINAR}',
+  cuerpo:
+    'Hola {NOMBRE},\n\n' +
+    'Te escribo a propósito del {WEBINAR}, del {FECHA}.\n\n\n'
+};
+
+function _webRellenar(txt, datos){
+  let t = String(txt || '');
+  // Si el webinar no tiene fecha cargada, la frase de la fecha se cae sola.
+  if(!datos.fecha) t = t.split(', del {FECHA}').join('');
+  return t
+    .split('{NOMBRE}').join(datos.nombre)
+    .split('{PREMIO}').join(datos.premio)
+    .split('{WEBINAR}').join(datos.webinar)
+    .split('{FECHA}').join(datos.fecha);
+}
+
 function webEscribirCorreo(id){
   const i = WEB_INSCRITOS.find(x => String(x.id) === String(id));
   if(!i || !i.email){ alert('Esta persona no tiene correo en la lista.'); return; }
@@ -18955,24 +18997,22 @@ function webEscribirCorreo(id){
   if(i.baja_motivo && !confirm('Esta persona pidió no recibir más correos:\n\n' + i.baja_motivo + '\n\n¿Abrir Gmail igual?')) return;
   if(i.correo_rebotado && !confirm('A esta persona le rebotó el correo (' + i.correo_rebotado + ').\n\n¿Abrir Gmail igual?')) return;
 
-  const primerNombre = String(i.nombre || '').trim().split(/\s+/)[0] || '';
-  const webinar = String((WEB_ACTUAL && WEB_ACTUAL.nombre) || '').trim();
-  const fecha = (WEB_ACTUAL && WEB_ACTUAL.fecha_evento) ? _webFechaLarga(WEB_ACTUAL.fecha_evento) : '';
-  const premio = String(i.premio || '').replace(/^gan[óo]\s+/i, '').trim();
+  const datos = {
+    nombre: String(i.nombre || '').trim().split(/\s+/)[0] || '',
+    premio: String(i.premio || '').replace(/^gan[óo]\s+/i, '').trim(),
+    webinar: String((WEB_ACTUAL && WEB_ACTUAL.nombre) || 'webinar').trim(),
+    fecha: (WEB_ACTUAL && WEB_ACTUAL.fecha_evento) ? _webFechaLarga(WEB_ACTUAL.fecha_evento) : ''
+  };
 
-  let asunto = webinar || 'Webinar OpenCluster';
-  if(premio) asunto = asunto + ' — ' + premio;
-
-  let cuerpo = 'Hola ' + primerNombre + ',\n\n';
-  cuerpo += 'Te escribo a propósito del ' + (webinar || 'webinar') + (fecha ? ', del ' + fecha : '') + '.';
-  if(premio) cuerpo += ' Ganaste ' + premio + ' en el sorteo.';
-  cuerpo += '\n\n\n';
+  // Quien ganó el sorteo recibe la plantilla larga (activación + capacitación); el resto,
+  // el saludo corto para escribirle a mano.
+  const p = datos.premio ? WEB_PLANTILLA_GANADORAS : WEB_PLANTILLA_GENERAL;
 
   const url = 'https://mail.google.com/mail/?view=cm&fs=1&tf=1' +
     '&authuser=' + encodeURIComponent(WEB_CUENTA_CORREO) +
     '&to=' + encodeURIComponent(i.email) +
-    '&su=' + encodeURIComponent(asunto) +
-    '&body=' + encodeURIComponent(cuerpo);
+    '&su=' + encodeURIComponent(_webRellenar(p.asunto, datos)) +
+    '&body=' + encodeURIComponent(_webRellenar(p.cuerpo, datos));
   window.open(url, '_blank');
 }
 
@@ -19031,6 +19071,29 @@ function webVerDatos(id){
   d.style.display = (d.style.display === 'none' || !d.style.display) ? 'block' : 'none';
 }
 
+// "La llamé" / "Le escribí": se pueden marcar los dos, ninguno o uno. Lo que se marca queda
+// escrito en el historial de la persona, y solo "La llamé" la saca de "Por llamar".
+function _webBtnCanal(id, clave, texto){
+  return '<button type="button" id="webcanal-' + id + '-' + clave + '" onclick="webToggleCanal(\'' + id + '\',\'' + clave + '\')" ' +
+    'style="flex:1;padding:7px 4px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--purple-lt);background:white;color:var(--subtle);">' + texto + '</button>';
+}
+
+function webToggleCanal(id, clave){
+  const cont = document.getElementById('webcanal-' + id);
+  const btn = document.getElementById('webcanal-' + id + '-' + clave);
+  if(!cont || !btn) return;
+  const activo = cont.getAttribute('data-' + clave) === '1';
+  cont.setAttribute('data-' + clave, activo ? '0' : '1');
+  btn.style.border = '1px solid ' + (activo ? 'var(--purple-lt)' : 'var(--purple-dk)');
+  btn.style.background = activo ? 'white' : 'var(--purple-dk)';
+  btn.style.color = activo ? 'var(--subtle)' : 'white';
+}
+
+// ¿Ya le escribí un correo? Se lee del historial, que es donde queda la marca.
+function _webYaEscrito(i){
+  return /le escrib[íi] un correo/i.test(String((i && i.comentario) || ''));
+}
+
 function _webBtnInteres(id, texto, activo){
   return '<button type="button" data-val="' + texto + '" onclick="webSetInteres(\'' + id + '\',\'' + texto + '\')" ' +
     'style="flex:1;padding:7px 4px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid ' +
@@ -19052,22 +19115,31 @@ function webSetInteres(id, valor){
 async function guardarSeguimientoWebinar(id){
   const ta = document.getElementById('webcom-' + id);
   const cont = document.getElementById('webint-' + id);
+  const canal = document.getElementById('webcanal-' + id);
   const comentario = ta ? ta.value.trim() : '';
   const interes = cont ? (cont.getAttribute('data-elegido') || '') : '';
-  if(!comentario && !interes){
-    alert('Escribí o dictá un comentario, o marcá si le interesa la capacitación.');
+  const hizoLlamada = !!canal && canal.getAttribute('data-llamada') === '1';
+  const hizoCorreo  = !!canal && canal.getAttribute('data-correo')  === '1';
+  if(!comentario && !interes && !hizoLlamada && !hizoCorreo){
+    alert('Marcá si la llamaste o si le escribiste, escribí un comentario, o marcá si le interesa la capacitación.');
     return;
   }
   const fila = document.getElementById('webrow-' + id);
   const btn = fila ? fila.querySelector('button.primary') : null;
   if(btn){ btn.disabled = true; btn.textContent = 'Guardando…'; }
 
-  const payload = { solicitante: USUARIO, id: id, comentario: comentario, llamado: true };
+  // La fecha la pone el CRM al guardar; acá solo va lo que hizo, en sus palabras.
+  const lineas = [];
+  if(hizoLlamada) lineas.push('La llamé por teléfono.');
+  if(hizoCorreo)  lineas.push('Le escribí un correo.');
+  if(comentario)  lineas.push(comentario);
+
+  const payload = { solicitante: USUARIO, id: id, comentario: lineas.join('\n'), llamado: hizoLlamada };
   if(interes) payload.interes_capacitacion = interes;
   const r = await fetchAPI('crm_webinar_seguimiento', null, payload);
 
   if(!r.ok){
-    if(btn){ btn.disabled = false; btn.textContent = 'Guardar y marcar llamado'; }
+    if(btn){ btn.disabled = false; btn.textContent = 'Guardar'; }
     alert('No se pudo guardar: ' + (r.error || ''));
     return;
   }

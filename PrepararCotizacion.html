@@ -208,6 +208,29 @@ body.con-costos .col-costo{display:table-cell}
 // fotos salen de SALAS_CATALOGO (SalasACotizacion.js), la misma fuente que usa el Armador.
 // Sin ?d= muestra el índice de las preparadas conocidas.
 
+// ── Para que nunca más se quede pegada una versión vieja ───────────────────
+// GitHub Pages le dice al navegador que guarde el HTML por un rato, así que Rayen
+// recargaba y seguía viendo lo de antes. Esta página pregunta por su propia versión
+// a un archivo chico que se pide SIN caché; si no calza con la que trae adentro, se
+// recarga sola con una dirección nueva y esa sí llega fresca.
+// AL PUBLICAR UN CAMBIO: subir VERSION acá Y en version.json (el mismo número).
+var VERSION = "2026-08-19-7";
+
+(function comprobarVersion(){
+  fetch("version.json?t=" + Date.now(), { cache:"no-store" })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(v){
+      if (!v) return;
+      var ultima = v.PrepararCotizacion;
+      if (!ultima || ultima === VERSION) return;
+      var u = new URL(location.href);
+      if (u.searchParams.get("_v") === ultima) return;   // ya se recargó: no insistir
+      u.searchParams.set("_v", ultima);
+      location.replace(u.toString());
+    })
+    .catch(function(){});
+})();
+
 var PREPARADAS = [
   { id:"almendros-rauco", titulo:"Escuela Los Almendros — Rauco" },
   { id:"udd-rampas",      titulo:"Universidad del Desarrollo — Rampa portátil plegable" }

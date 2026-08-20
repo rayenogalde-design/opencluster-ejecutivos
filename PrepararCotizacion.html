@@ -247,7 +247,7 @@ tr:hover td.col-destacado{background:#FFF1DE}
 // a un archivo chico que se pide SIN caché; si no calza con la que trae adentro, se
 // recarga sola con una dirección nueva y esa sí llega fresca.
 // AL PUBLICAR UN CAMBIO: subir VERSION acá Y en version.json (el mismo número).
-var VERSION = "2026-08-20-18";
+var VERSION = "2026-08-20-19";
 
 (function comprobarVersion(){
   fetch("version.json?t=" + Date.now(), { cache:"no-store" })
@@ -297,6 +297,9 @@ var FILAS = [], CLIENTE = null;
 var DATOS = null;        // el archivo de la cotización, tal como vino
 var LINEAS = [];         // una por producto, con su margen elegido
 var COSTOS = null;       // costos netos por código; llega solo al escribir la clave
+// Cuando la selección viene de la lista de un EJECUTIVO, el costo no viaja: se deduce
+// del precio publicado y del margen con el que está publicado, y NUNCA se muestra.
+var MOSTRAR_COSTO = true;
 var MARGEN_DEF = 0.20;   // Rayen 19-ago-2026: si no digo otra cosa, cotizo al 20%
 
 // ── El margen y el precio ──────────────────────────────────────────────────
@@ -431,7 +434,7 @@ function refrescar(){
     var celdaMargen = (mMostrar == null)
       // Sin la clave no hay costo, y sin costo no se puede saber el margen. Se dice, en vez
       // de dejar un guión que no explica nada (Rayen, 19-ago: "veo que dejaste fuera los márgenes").
-      ? '<td class="margen-cell"><span class="candado">con tu clave</span></td>'
+      ? '<td class="margen-cell"><span class="candado">' + (MOSTRAR_COSTO ? 'con tu clave' : '—') + '</span></td>'
       : '<td class="margen-cell">' +
           // Si el precio escrito a mano queda bajo el costo, el margen sale negativo y en rojo.
           '<input class="margen-in' + (L.precioManual != null ? ' calculado' : '') +
@@ -469,7 +472,7 @@ function refrescar(){
     // Debajo del precio unitario van, chiquitos, el neto y —solo con la clave— el costo.
     // Antes eran tres columnas propias y la tabla no cabía en la pantalla.
     var bajoPrecio = netoUn
-      ? '<span class="dato-sub">neto ' + CLP(netoUn) + '</span>' + (costo ? '<span class="dato-sub">costo ' + CLP(costo) + '</span>' : '')
+      ? '<span class="dato-sub">neto ' + CLP(netoUn) + '</span>' + ((costo && MOSTRAR_COSTO) ? '<span class="dato-sub">costo ' + CLP(costo) + '</span>' : '')
       : '';
 
     var tr = document.createElement("tr");
@@ -633,16 +636,35 @@ function cargarSeleccion(){
   document.getElementById("subtitulo").textContent =
     datos.productos.length + " productos, en el orden en que los marcaste.";
 
-  // Los costos vienen dentro de la selección: se muestran de una, sin pedir clave.
   COSTOS = {};
-  datos.productos.forEach(function(p){ if (p.costo) COSTOS[p.codigo] = Number(p.costo); });
+  MOSTRAR_COSTO = true;
+  if (datos.sin_costos) {
+    // Viene de la lista de un ejecutivo: esa página es pública, así que no trae ningún
+    // costo. Lo que sí trae, por producto, es el precio con el que está publicado y el
+    // margen que lleva ese precio. Con esos dos números se saca aquí, en el navegador,
+    // lo que hace falta para poder mover el margen. El costo no se muestra nunca.
+    MOSTRAR_COSTO = false;
+    datos.productos.forEach(function(p){
+      var base = (p.lp && p.lp.length) ? p.lp[0] : null;
+      if (!base || !base.p) return;
+      var m = (p.mc != null) ? Number(p.mc) : Number(base.m);
+      if (!isFinite(m) || m <= 0 || m >= 0.95) return;
+      var c = Math.round(netoDesde(Math.round(base.p)) * (1 - m));
+      if (c > 0) COSTOS[p.codigo] = c;
+    });
+  } else {
+    // Selección de la vista de administradora: ahí el costo sí viaja, en claro, y está
+    // bien: nunca sale de su navegador, es un traspaso de una pestaña a otra.
+    datos.productos.forEach(function(p){ if (p.costo) COSTOS[p.codigo] = Number(p.costo); });
+  }
   document.body.classList.add("con-costos");
   var barra = document.getElementById("barraClave");
   barra.classList.add("abierta");
   document.getElementById("formClave").style.display = "none";
   document.getElementById("bcTitulo").textContent = "Puedes cambiar el margen y la cantidad de cada producto.";
-  document.getElementById("bcPie").textContent =
-    "Si el margen que eliges es el de una lista publicada, se usa ese precio tal cual; si no, se calcula desde el costo.";
+  document.getElementById("bcPie").textContent = datos.sin_costos
+    ? "Si dejas el margen como viene, es el precio de tu lista tal cual. Si lo cambias, el precio se recalcula solo. También puedes escribir el precio final con IVA."
+    : "Si el margen que eliges es el de una lista publicada, se usa ese precio tal cual; si no, se calcula desde el costo.";
 
   pintar(datos);
 }

@@ -93,6 +93,11 @@ body.con-costos .col-costo{display:table-cell}
 .web-no{font-size:11.5px;color:#98A2B3}
 .web-var{display:block;font-size:11px;color:#5B6472;font-weight:400}
 .cod{font-size:11.5px;font-weight:800;color:var(--sky);letter-spacing:.3px}
+/* La columna del precio que ella le dice al cliente: una unidad, con IVA. Va con otro
+   color para no confundirla con los netos ni con el precio de la tienda. */
+.col-destacado{background:#FFF4E5}
+td.col-destacado{font-weight:800;color:#8A4B00}
+th.col-destacado{color:#8A4B00}
 .stock-si{font-weight:700;color:#0F7B4F}
 .stock-poco{font-weight:700;color:#9A5B00}
 .stock-cero{font-weight:700;color:#B3261E}
@@ -150,9 +155,10 @@ body.con-costos .col-costo{display:table-cell}
             <th style="width:104px">Margen</th>
             <th style="width:110px" class="col-costo">Costo neto</th>
             <th style="width:120px">Neto un.</th>
+            <th style="width:130px" class="col-destacado">Precio un. c/IVA</th>
             <th style="width:120px">Total neto</th>
             <th style="width:130px">Total IVA inc.</th>
-            <th style="width:130px">Precio web OCT</th>
+            <th style="width:150px">Precio web unidad</th>
             <th style="width:120px">Stock</th>
           </tr>
         </thead>
@@ -214,7 +220,7 @@ body.con-costos .col-costo{display:table-cell}
 // a un archivo chico que se pide SIN caché; si no calza con la que trae adentro, se
 // recarga sola con una dirección nueva y esa sí llega fresca.
 // AL PUBLICAR UN CAMBIO: subir VERSION acá Y en version.json (el mismo número).
-var VERSION = "2026-08-19-7";
+var VERSION = "2026-08-19-8";
 
 (function comprobarVersion(){
   fetch("version.json?t=" + Date.now(), { cache:"no-store" })
@@ -315,6 +321,7 @@ function pintar(datos){
       cant:   Number(p.cant || 1),
       img:    p.img || (c && c.img) || "",
       web:    p.web || null,
+      stock:  p.stock || null,
       lp:     p.lp || (p.precio ? [] : []),
       precioFijo: (p.precio != null && p.precio !== "") ? Number(p.precio)
                 : (c ? Number(c.p || 0) : 0),
@@ -370,11 +377,19 @@ function refrescar(){
                                                     '<span class="web-var">pides ' + L.cant + '</span></td>';
     else                              celdaStock = '<td class="n"><span class="stock-si">' + L.stock.n + ' en bodega</span></td>';
 
-    var celdaWeb = L.web
-      ? '<td class="n"><a class="web-si" href="' + L.web.url + '" target="_blank" rel="noopener">' +
-          CLP(L.web.precio) + '</a>' +
-          (L.web.variante ? '<span class="web-var">' + L.web.variante + '</span>' : '') + '</td>'
-      : '<td class="n"><span class="web-no">no está en la web</span></td>';
+    // Precio de la tienda: arriba el de TRANSFERENCIA, que es el que se le da al cliente
+    // (Rayen: "todos pagan con transferencia y eso implica un 5% de descuento sobre el
+    // valor web"), y abajo el precio de vitrina. Se redondea hacia abajo: nunca más caro.
+    var celdaWeb;
+    if (L.web) {
+      var transf = Math.floor(L.web.precio * 0.95);
+      celdaWeb = '<td class="n">' +
+        '<a class="web-si" href="' + L.web.url + '" target="_blank" rel="noopener">' + CLP(transf) + '</a>' +
+        '<span class="web-var">transferencia · vitrina ' + CLP(L.web.precio) + '</span>' +
+        (L.web.variante ? '<span class="web-var">' + L.web.variante + '</span>' : '') + '</td>';
+    } else {
+      celdaWeb = '<td class="n"><span class="web-no">no está en la web</span></td>';
+    }
 
     var tr = document.createElement("tr");
     tr.innerHTML =
@@ -392,6 +407,9 @@ function refrescar(){
       celdaMargen +
       '<td class="n col-costo">' + (costo ? CLP(costo) : '—') + '</td>' +
       '<td class="n">' + (netoUn ? CLP(netoUn) : '—') + '</td>' +
+      // Destacado: es el precio de una unidad con IVA, el mismo número que ella ve en su
+      // lista de precios. Es el que le dice al cliente.
+      '<td class="n col-destacado">' + (netoUn ? CLP(pr.iva) : '—') + '</td>' +
       '<td class="n">' + (netoUn ? CLP(netoUn * L.cant) : '—') + '</td>' +
       '<td class="n">' + (netoUn ? CLP(netoUn * L.cant * 1.19) : '—') + '</td>' +
       celdaWeb +

@@ -232,7 +232,7 @@ tr:hover td.col-destacado{background:#FFF1DE}
 // a un archivo chico que se pide SIN caché; si no calza con la que trae adentro, se
 // recarga sola con una dirección nueva y esa sí llega fresca.
 // AL PUBLICAR UN CAMBIO: subir VERSION acá Y en version.json (el mismo número).
-var VERSION = "2026-08-19-10";
+var VERSION = "2026-08-19-11";
 
 (function comprobarVersion(){
   fetch("version.json?t=" + Date.now(), { cache:"no-store" })
@@ -339,7 +339,10 @@ function pintar(datos){
                 : (c ? Number(c.p || 0) : 0),
       esSala: !!c
     };
-    linea.margen = (p.lp && p.lp.length) ? margenDe(p) : null;
+    // El margen puede venir dado por producto (la selección de la lista de administradora
+    // trae el que ella dejó puesto ahí); si no, se usa el del pedido.
+    linea.margen = (p.margen != null) ? Number(p.margen)
+                 : ((p.lp && p.lp.length) ? margenDe(p) : null);
     return linea;
   });
   refrescar();
@@ -519,6 +522,38 @@ async function abrirCostos(clave){
   refrescar();
 }
 
+// ── La selección que ella marcó en su lista de administradora ──────────────
+function cargarSeleccion(){
+  var crudo = null;
+  try { crudo = localStorage.getItem("oc_precotizacion"); } catch(e){}
+  if (!crudo) {
+    msg("error", "No encontré ninguna selección. Vuelve a tu lista de precios, marca los " +
+                 "productos y aprieta <strong>Revisar y cotizar</strong>.");
+    return;
+  }
+  var datos;
+  try { datos = JSON.parse(crudo); } catch(e){ msg("error", "La selección llegó dañada."); return; }
+  if (!datos.productos || !datos.productos.length) { msg("error", "La selección llegó vacía."); return; }
+
+  document.getElementById("titulo").textContent = datos.titulo || "Mi selección";
+  document.title = (datos.titulo || "Mi selección") + " — Cotización preparada";
+  document.getElementById("subtitulo").textContent =
+    datos.productos.length + " productos, en el orden en que los marcaste.";
+
+  // Los costos vienen dentro de la selección: se muestran de una, sin pedir clave.
+  COSTOS = {};
+  datos.productos.forEach(function(p){ if (p.costo) COSTOS[p.codigo] = Number(p.costo); });
+  document.body.classList.add("con-costos");
+  var barra = document.getElementById("barraClave");
+  barra.classList.add("abierta");
+  document.getElementById("formClave").style.display = "none";
+  document.getElementById("bcTitulo").textContent = "Puedes cambiar el margen y la cantidad de cada producto.";
+  document.getElementById("bcPie").textContent =
+    "Si el margen que eliges es el de una lista publicada, se usa ese precio tal cual; si no, se calcula desde el costo.";
+
+  pintar(datos);
+}
+
 function prepararClave(){
   var barra = document.getElementById("barraClave");
   var form  = document.getElementById("formClave");
@@ -579,6 +614,12 @@ document.addEventListener("DOMContentLoaded", function(){
   document.getElementById("btnAbrir").addEventListener("click", abrirEnCotizador);
 
   var d = nombreArchivo(new URLSearchParams(location.search).get("d"));
+
+  // ?d=seleccion → no hay archivo: la cotización la acaba de armar ella marcando productos
+  // en su lista de administradora, y viene por localStorage. Ahí el COSTO llega en claro
+  // (nunca salió de su navegador), así que no hay clave que pedir.
+  if (d === "seleccion") { cargarSeleccion(); return; }
+
   if (!d) { pintarIndice(); return; }
 
   fetch("CotizacionesPreparadas/" + d + ".json", { cache:"no-store" })

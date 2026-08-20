@@ -83,11 +83,20 @@ a.sec:hover,button.sec:hover{transform:translateY(-1px);box-shadow:0 4px 12px rg
 .margen-in:disabled{background:#F5F7FA;color:#5B6472}
 .margen-cell{white-space:nowrap;text-align:right}
 .margen-cell .pc{font-size:12px;color:#5B6472;margin-left:3px}
+/* La columna de costo aparece recién cuando ella escribe su clave. Se prende con una
+   clase en el <body> y no celda por celda: la tabla se redibuja al cambiar un margen y
+   las celdas nuevas volvían a nacer ocultas, con lo que la fila quedaba corrida y el
+   precio de la web se salía de la tabla. */
 .col-costo{display:none}
+body.con-costos .col-costo{display:table-cell}
 .web-si{font-weight:700;color:var(--navy);text-decoration:none;border-bottom:1px dotted var(--sky)}
 .web-no{font-size:11.5px;color:#98A2B3}
 .web-var{display:block;font-size:11px;color:#5B6472;font-weight:400}
 .cod{font-size:11.5px;font-weight:800;color:var(--sky);letter-spacing:.3px}
+.stock-si{font-weight:700;color:#0F7B4F}
+.stock-poco{font-weight:700;color:#9A5B00}
+.stock-cero{font-weight:700;color:#B3261E}
+.stock-no{font-size:11.5px;font-weight:700;color:#9A5B00}
 @media (max-width:700px){
   th:nth-child(2),td:nth-child(2){display:none}
   .totales div{min-width:0;width:100%}
@@ -144,6 +153,7 @@ a.sec:hover,button.sec:hover{transform:translateY(-1px);box-shadow:0 4px 12px rg
             <th style="width:120px">Total neto</th>
             <th style="width:130px">Total IVA inc.</th>
             <th style="width:130px">Precio web OCT</th>
+            <th style="width:120px">Stock</th>
           </tr>
         </thead>
         <tbody id="tbody"></tbody>
@@ -327,6 +337,16 @@ function refrescar(){
                  (puedeMover ? '' : ' disabled title="Escribe tu clave para mover el margen"') + '>' +
           '<span class="pc">%</span></td>';
 
+    // Stock: viene cruzado contra la planilla INVENTARIO al preparar la cotización.
+    // "confirmar stock" quiere decir que ese producto NO está en esa planilla, no que
+    // esté agotado: hay que preguntar en bodega. Ver [[stock-en-la-precotizacion]].
+    var celdaStock;
+    if (!L.stock)                     celdaStock = '<td class="n"><span class="stock-no">confirmar stock</span></td>';
+    else if (L.stock.n === 0)         celdaStock = '<td class="n"><span class="stock-cero">sin stock</span></td>';
+    else if (L.stock.n < L.cant)      celdaStock = '<td class="n"><span class="stock-poco">' + L.stock.n + ' en bodega</span>' +
+                                                    '<span class="web-var">pides ' + L.cant + '</span></td>';
+    else                              celdaStock = '<td class="n"><span class="stock-si">' + L.stock.n + ' en bodega</span></td>';
+
     var celdaWeb = L.web
       ? '<td class="n"><a class="web-si" href="' + L.web.url + '" target="_blank" rel="noopener">' +
           CLP(L.web.precio) + '</a>' +
@@ -349,7 +369,8 @@ function refrescar(){
       '<td class="n">' + (netoUn ? CLP(netoUn) : '—') + '</td>' +
       '<td class="n">' + (netoUn ? CLP(netoUn * L.cant) : '—') + '</td>' +
       '<td class="n">' + (netoUn ? CLP(netoUn * L.cant * 1.19) : '—') + '</td>' +
-      celdaWeb;
+      celdaWeb +
+      celdaStock;
     tb.appendChild(tr);
 
     FILAS.push({ nombre:nombreCompleto(L), desc:L.desc, cant:String(L.cant),
@@ -422,7 +443,7 @@ async function abrirCostos(clave){
   document.getElementById("bcPie").textContent =
     "Si el margen que eliges es el de una lista publicada, se usa ese precio tal cual; si no, se calcula desde el costo.";
   document.getElementById("formClave").style.display = "none";
-  [].forEach.call(document.querySelectorAll(".col-costo"), function(el){ el.style.display = "table-cell"; });
+  document.body.classList.add("con-costos");
   refrescar();
 }
 

@@ -114,6 +114,18 @@ td.col-destacado{font-size:15.5px;font-weight:800;color:#8A4B00}
 td.col-destacado .dato-sub{color:#9A7B52}
 th.col-destacado{color:#8A4B00}
 tr:hover td.col-destacado{background:#FFF1DE}
+/* Rayen 19-ago-2026: a veces el precio exacto es difícil de alcanzar moviendo el margen,
+   así que este es un campo donde escribe el precio de venta con IVA y el margen se acomoda. */
+.precio-in{width:100%;padding:5px 7px;font-family:inherit;font-size:15.5px;font-weight:800;
+   text-align:right;color:#8A4B00;background:#fff;border:1px solid #E8D5B8;border-radius:7px;
+   font-variant-numeric:tabular-nums}
+.precio-in:focus{outline:2px solid var(--naranja);outline-offset:1px}
+.margen-in.calculado{color:#6B7684;background:#F7F8FA;font-weight:400}
+.usar-web{display:block;margin:5px 0 0 auto;padding:3px 8px;font-family:inherit;font-size:10.5px;
+   font-weight:800;color:var(--navy);background:#fff;border:1px solid var(--linea);border-radius:6px;
+   cursor:pointer}
+.usar-web:hover{background:var(--hover)}
+.dato-sub.usando{color:#0F7B4F;font-weight:700}
 .stock-si{font-size:15px;font-weight:800;color:#0F7B4F}
 .stock-poco{font-size:15px;font-weight:800;color:#9A5B00}
 .stock-cero{font-size:12.5px;font-weight:800;color:#B3261E}
@@ -159,6 +171,7 @@ tr:hover td.col-destacado{background:#FFF1DE}
         <input id="inClave" type="password" placeholder="Tu clave" autocomplete="current-password">
         <button class="sec" type="submit" id="btnClave">Desbloquear</button>
       </form>
+      <button class="sec" type="button" id="btnTodoWeb" style="display:none">Cobrar el precio de la web en todo</button>
     </div>
 
     <div style="overflow-x:auto">
@@ -232,7 +245,7 @@ tr:hover td.col-destacado{background:#FFF1DE}
 // a un archivo chico que se pide SIN caché; si no calza con la que trae adentro, se
 // recarga sola con una dirección nueva y esa sí llega fresca.
 // AL PUBLICAR UN CAMBIO: subir VERSION acá Y en version.json (el mismo número).
-var VERSION = "2026-08-19-11";
+var VERSION = "2026-08-19-12";
 
 (function comprobarVersion(){
   fetch("version.json?t=" + Date.now(), { cache:"no-store" })
@@ -251,7 +264,14 @@ var VERSION = "2026-08-19-11";
 
 var PREPARADAS = [
   { id:"almendros-rauco", titulo:"Escuela Los Almendros — Rauco" },
-  { id:"udd-rampas",      titulo:"Universidad del Desarrollo — Rampa portátil plegable" }
+  { id:"udd-rampas",      titulo:"Universidad del Desarrollo — Rampa portátil plegable" },
+  // Tirúa pidió una cotización POR PRODUCTO, así que son seis documentos aparte.
+  { id:"tirua-notebook-chuwi",              titulo:"Tirúa — Notebook Chuwi AuBook Pro 14" },
+  { id:"tirua-td-snap",                     titulo:"Tirúa — Tablero de Comunicación Digital TD Snap" },
+  { id:"tirua-silla-therarider",            titulo:"Tirúa — Silla de Ruedas Eléctrica TheraRider TM2500" },
+  { id:"tirua-catre-electrico-sin-bateria", titulo:"Tirúa — Catre Clínico Eléctrico + Colchón, sin batería" },
+  { id:"tirua-catre-electrico-con-bateria", titulo:"Tirúa — Catre Clínico Eléctrico + Colchón, con batería" },
+  { id:"tirua-catre-manual",                titulo:"Tirúa — Catre Clínico Manual 3 Posiciones + Colchón" }
 ];
 
 var CLP = function(n){
@@ -302,6 +322,32 @@ function precioCon(p, m){
   return { neto:neto, iva:Math.round(neto * 1.19) };
 }
 
+// El precio de la línea. Rayen 19-ago-2026: *"hay veces en las que llegar a ese valor exacto
+// es difícil; si simplemente pudiera poner el valor de venta con IVA me lo hace mucho más
+// fácil"*. Así que el precio escrito a mano MANDA sobre el margen, y el margen pasa a
+// mostrarse calculado al revés (del costo contra ese precio).
+function calcula(L){
+  if (L.precioManual != null) {
+    var n = netoDesde(L.precioManual);
+    return { neto:n, iva:Math.round(n * 1.19) };
+  }
+  if (L.margen != null && (L.lp.length || (COSTOS && COSTOS[L.codigo]))) return precioCon(L, L.margen);
+  if (L.precioFijo) { var n2 = netoDesde(L.precioFijo); return { neto:n2, iva:Math.round(n2 * 1.19) }; }
+  return null;
+}
+
+// Margen que corresponde a un precio neto, sacado del costo. Sirve para mostrar en qué
+// margen quedó cuando ella escribe el precio a mano.
+function margenImplicito(L, neto){
+  var costo = COSTOS ? Number(COSTOS[L.codigo] || 0) : 0;
+  if (!costo || !neto) return null;
+  return Math.round((1 - costo / neto) * 1000) / 1000;
+}
+
+// El precio con IVA que se le cobra al cliente si paga por transferencia: la tienda
+// descuenta 5% sobre el precio publicado. Se redondea hacia abajo, igual que la tienda.
+function transferenciaDe(web){ return web ? Math.floor(web.precio * 0.95) : null; }
+
 function margenDe(p){
   // El margen que se muestra al abrir: el pedido por defecto si ese producto lo tiene
   // en alguna lista; si no, el más cercano que sí exista.
@@ -337,6 +383,9 @@ function pintar(datos){
       lp:     p.lp || (p.precio ? [] : []),
       precioFijo: (p.precio != null && p.precio !== "") ? Number(p.precio)
                 : (c ? Number(c.p || 0) : 0),
+      // Precio ya decidido en el pedido (por ejemplo, el de transferencia de la tienda):
+      // arranca escrito, y el margen se muestra calculado al revés.
+      precioManual: (p.precio_manual != null && p.precio_manual !== "") ? Number(p.precio_manual) : null,
       esSala: !!c
     };
     // El margen puede venir dado por producto (la selección de la lista de administradora
@@ -361,24 +410,24 @@ function refrescar(){
     // El precio se guarda CON IVA; al Cotizador se le manda el NETO ya calculado.
     // Se manda neto a propósito: es el modo por defecto del Cotizador, así que aunque el
     // campo "modo" se perdiera por el camino, el número sigue siendo el correcto.
-    var pr = (L.margen != null && L.lp.length)
-           ? precioCon(L, L.margen)
-           : (L.precioFijo ? { neto:netoDesde(L.precioFijo), iva:0 } : null);
-    if (pr && !pr.iva) pr.iva = Math.round(pr.neto * 1.19);
+    var pr = calcula(L);
     var netoUn = pr ? pr.neto : 0;
-    if (!L.esSala && !L.precioFijo && !L.lp.length) desconocidos.push(L.nombre);
+    if (!L.esSala && !L.precioFijo && !L.lp.length && L.precioManual == null) desconocidos.push(L.nombre);
     if (!netoUn) sinPrecio.push(L.nombre);
     if (!L.img) sinFoto.push(L.nombre);
     subNeto += netoUn * L.cant;
 
     var costo = COSTOS ? Number(COSTOS[L.codigo] || 0) : 0;
-    var puedeMover = !!COSTOS && L.lp.length > 0;
+    var puedeMover = !!COSTOS && (L.lp.length > 0 || costo > 0);
 
-    var celdaMargen = (L.margen == null)
-      ? '<td class="margen-cell">—</td>'
+    // Cuando el precio lo escribió ella, el margen se muestra sacado del costo, en gris.
+    var mMostrar = (L.precioManual != null) ? margenImplicito(L, netoUn) : L.margen;
+    var celdaMargen = (mMostrar == null)
+      ? '<td class="margen-cell"><span class="web-no">—</span></td>'
       : '<td class="margen-cell">' +
-          '<input class="margen-in" type="number" step="0.5" min="0" max="90" ' +
-                 'data-i="' + i + '" value="' + (Math.round(L.margen * 1000) / 10) + '"' +
+          '<input class="margen-in' + (L.precioManual != null ? ' calculado' : '') + '" ' +
+                 'type="number" step="0.5" min="0" max="90" ' +
+                 'data-i="' + i + '" value="' + (Math.round(mMostrar * 1000) / 10) + '"' +
                  (puedeMover ? '' : ' disabled title="Escribe tu clave para mover el margen"') + '>' +
           '<span class="pc">%</span></td>';
 
@@ -395,12 +444,14 @@ function refrescar(){
     // Precio de la tienda: arriba el de TRANSFERENCIA, que es el que se le da al cliente
     // (Rayen: "todos pagan con transferencia y eso implica un 5% de descuento sobre el
     // valor web"), y abajo el precio de vitrina. Se redondea hacia abajo: nunca más caro.
-    var celdaWeb;
+    var celdaWeb, transf = transferenciaDe(L.web);
     if (L.web) {
-      var transf = Math.floor(L.web.precio * 0.95);
+      var yaEsWeb = (netoUn && pr.iva === transf);
       celdaWeb = '<a class="web-si" href="' + L.web.url + '" target="_blank" rel="noopener">' + CLP(transf) + '</a>' +
                  '<span class="dato-sub">transferencia</span>' +
-                 '<span class="dato-sub">web ' + CLP(L.web.precio) + '</span>';
+                 '<span class="dato-sub">web ' + CLP(L.web.precio) + '</span>' +
+                 (yaEsWeb ? '<span class="dato-sub usando">es el que estás cobrando</span>'
+                          : '<button class="usar-web" data-usar="' + i + '">usar este precio</button>');
     } else {
       celdaWeb = '<span class="web-no">no está en la web</span>';
     }
@@ -431,7 +482,10 @@ function refrescar(){
       celdaMargen +
       // Destacado: el precio de UNA unidad con IVA, el mismo número que ella ve en su
       // lista de precios. Es el que le dice al cliente.
-      '<td class="n col-destacado">' + (netoUn ? CLP(pr.iva) : '—') + bajoPrecio + '</td>' +
+      '<td class="n col-destacado">' +
+        '<input class="precio-in" type="number" step="10" min="0" data-p="' + i + '" ' +
+               'value="' + (netoUn ? pr.iva : '') + '" placeholder="—">' +
+        bajoPrecio + '</td>' +
       '<td class="n">' + (netoUn ? CLP(netoUn * L.cant * 1.19) : '—') +
         (netoUn ? '<span class="dato-sub">neto ' + CLP(netoUn * L.cant) + '</span>' : '') + '</td>' +
       '<td class="n">' + celdaWeb + '</td>' +
@@ -447,7 +501,28 @@ function refrescar(){
       var i = Number(inp.getAttribute("data-i"));
       var v = Number(inp.value);
       if (!isFinite(v) || v < 0 || v > 90) { refrescar(); return; }
+      // Poner un margen deja sin efecto el precio escrito a mano: manda lo último que tocó.
+      LINEAS[i].precioManual = null;
       LINEAS[i].margen = Math.round(v * 10) / 1000;
+      refrescar();
+    });
+  });
+
+  // Escribir el precio de venta con IVA directamente. El margen se recalcula solo.
+  [].forEach.call(document.querySelectorAll(".precio-in"), function(inp){
+    inp.addEventListener("change", function(){
+      var i = Number(inp.getAttribute("data-p"));
+      var v = Math.round(Number(inp.value));
+      if (!isFinite(v) || v <= 0) { refrescar(); return; }
+      LINEAS[i].precioManual = v;
+      refrescar();
+    });
+  });
+
+  [].forEach.call(document.querySelectorAll(".usar-web"), function(b){
+    b.addEventListener("click", function(){
+      var i = Number(b.getAttribute("data-usar"));
+      LINEAS[i].precioManual = transferenciaDe(LINEAS[i].web);
       refrescar();
     });
   });
@@ -461,6 +536,10 @@ function refrescar(){
       refrescar();
     });
   });
+
+  // El botón de "todo al precio de la web" solo aparece si hay algo que esté en la web.
+  var btnTodo = document.getElementById("btnTodoWeb");
+  if (btnTodo) btnTodo.style.display = LINEAS.some(function(L){ return !!L.web; }) ? "inline-flex" : "none";
 
   document.getElementById("tNeto").textContent  = CLP(subNeto);
   document.getElementById("tIva").textContent   = CLP(subNeto * 0.19);
@@ -612,6 +691,10 @@ function pintarIndice(){
 
 document.addEventListener("DOMContentLoaded", function(){
   document.getElementById("btnAbrir").addEventListener("click", abrirEnCotizador);
+  document.getElementById("btnTodoWeb").addEventListener("click", function(){
+    LINEAS.forEach(function(L){ if (L.web) L.precioManual = transferenciaDe(L.web); });
+    refrescar();
+  });
 
   var d = nombreArchivo(new URLSearchParams(location.search).get("d"));
 

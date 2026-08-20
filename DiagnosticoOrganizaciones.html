@@ -153,10 +153,11 @@
     <h1>Formulario de Diagnóstico Institucional</h1>
     <p class="bajada">Organizaciones, escuelas y jardines que trabajan en discapacidad, neurodivergencia e inclusión</p>
     <div class="aviso">
-      <p>Estimado equipo: este cuestionario nos permite conocer la realidad legal, administrativa y técnica de su institución, y también el perfil de las familias que atienden.</p>
-      <p>Sirve tanto para organizaciones de familias como para <strong>colegios, liceos, escuelas especiales y jardines infantiles</strong>. La segunda pregunta define cuál es su caso, y de ahí en adelante el formulario muestra solo las preguntas que les corresponden.</p>
-      <p>No hay respuestas buenas ni malas. Si algo no lo saben, elijan «no sabemos»: esa respuesta también nos sirve, y es mejor que adivinar.</p>
-      <p><strong>Tiempo estimado: 15 a 20 minutos.</strong> Idealmente lo responde la dirección, la presidencia o quien lleve la parte administrativa. En un establecimiento, conviene que la coordinación del PIE aporte los datos de los estudiantes.</p>
+      <p>Estimado equipo: con estas respuestas vemos <strong>qué les falta para postular a un fondo y qué ya tienen listo</strong>. Sirve tanto para organizaciones de familias como para colegios, liceos, escuelas especiales y jardines infantiles: la segunda pregunta define cuál es su caso y de ahí en adelante el formulario muestra solo lo que les corresponde.</p>
+      <p><strong>No les pedimos datos de personas.</strong> Nada de nombres, fichas, informes clínicos ni los ingresos de las familias. Todo lo que preguntamos es del conjunto y aproximado.</p>
+      <p>No hay respuestas buenas ni malas, y no es una evaluación: nadie queda descartado por lo que responda aquí. Si algo no lo saben o prefieren no contestarlo, elijan «no sabemos» o déjenlo en blanco — el formulario se envía igual.</p>
+      <p>Esta información la usamos solo para preparar la postulación junto a ustedes. No la compartimos con terceros.</p>
+      <p><strong>Tiempo estimado: 12 a 18 minutos.</strong> Idealmente lo responde la dirección, la presidencia o quien lleve la parte administrativa. En un establecimiento, conviene que la coordinación del PIE aporte los datos de los estudiantes.</p>
     </div>
   </header>
 
@@ -179,8 +180,9 @@ const DESTINO = 'https://script.google.com/macros/s/AKfycbyaE3Bbd7h18joghjbD4886
 
 const BLOQUES = [
 { titulo: "Bloque 1 · Identificación", preguntas: [
-  {t:"Nombre legal completo de la organización o del establecimiento", tipo:"texto"},
-  {t:"¿Qué tipo de institución responde este formulario?", nota:"Según lo que elijan, el formulario ajusta las preguntas que siguen.", tipo:"unica", clave:"tipo", opciones:[
+  {t:"Resumen para revisión interna", tipo:"tablero"},
+  {t:"Nombre legal completo de la organización o del establecimiento", tipo:"texto", id:"nombre"},
+  {t:"¿Qué tipo de institución responde este formulario?", nota:"Según lo que elijan, el formulario ajusta las preguntas que siguen.", tipo:"unica", clave:"tipo", id:"tipoinst", opciones:[
     "Organización de familias, agrupación o fundación",
     "Establecimiento educacional (colegio, liceo, escuela especial o de lenguaje)",
     "Jardín infantil o sala cuna",
@@ -188,13 +190,13 @@ const BLOQUES = [
     "Municipalidad u otro servicio público"]},
   {t:"Nombre de fantasía o cómo se les conoce", nota:"Solo si es distinto del nombre legal. Opcional.", tipo:"texto"},
   {t:"RUT de la organización o del sostenedor", nota:"Si son un establecimiento municipal o de un SLEP, pongan el RUT del sostenedor.", tipo:"texto", extra:"No tenemos RUT propio todavía"},
-  {t:"RBD del establecimiento", nota:"El Rol Base de Datos que les asignó el Ministerio de Educación.", tipo:"texto", ver:"edu", extra:"No lo tenemos a mano"},
-  {t:"Región donde opera principalmente", tipo:"unica", opciones:[
+  {t:"RBD del establecimiento", nota:"El Rol Base de Datos que les asignó el Ministerio de Educación.", tipo:"texto", ver:"edu", id:"rbd", extra:"No lo tenemos a mano"},
+  {t:"Región donde opera principalmente", tipo:"unica", id:"region", opciones:[
     "Arica y Parinacota","Tarapacá","Antofagasta","Atacama","Coquimbo","Valparaíso",
     "Metropolitana de Santiago","Libertador General Bernardo O'Higgins","Maule","Ñuble",
     "Biobío","La Araucanía","Los Ríos","Los Lagos",
     "Aysén del General Carlos Ibáñez del Campo","Magallanes y de la Antártica Chilena"]},
-  {t:"Comuna donde está la sede o el establecimiento", tipo:"texto"},
+  {t:"Comuna donde está la sede o el establecimiento", tipo:"texto", id:"comuna"},
   {t:"Las personas que atienden vienen principalmente de:", tipo:"unica", opciones:[
     "Solo nuestra comuna","Nuestra comuna y comunas vecinas","Toda la provincia",
     "Toda la región","Más de una región"]},
@@ -210,14 +212,16 @@ const BLOQUES = [
     "Facebook","TikTok","Sitio web propio","Solo grupos de WhatsApp","Ninguno"]}
 ]},
 
-{ titulo: "Bloque 2 · Situación legal", preguntas: [
-  {t:"¿Qué tipo de organización son legalmente?", tipo:"unica", ver:"org", opciones:[
+{ titulo: "Bloque 2 · Situación legal",
+  intro: "Los fondos públicos piden estos documentos al momento de postular. Se los preguntamos para saber qué hay que tener listo y con cuánto tiempo, no para revisar su gestión. Si algo no lo saben, elijan «no sabemos».",
+  preguntas: [
+  {t:"¿Qué tipo de organización son legalmente?", tipo:"unica", ver:"org", id:"figura", opciones:[
     "Fundación","Corporación o asociación sin fines de lucro",
     "Organización comunitaria funcional (club, centro, agrupación)",
     "Junta de vecinos o unión comunal","Comunidad o asociación indígena","Cooperativa",
     "Somos un grupo organizado pero SIN personalidad jurídica",
     "No sabemos con exactitud qué figura tenemos"]},
-  {t:"¿De qué dependencia es el establecimiento?", tipo:"unica", ver:"edu", opciones:[
+  {t:"¿De qué dependencia es el establecimiento?", tipo:"unica", ver:"edu", id:"dependencia", opciones:[
     "Municipal (DAEM o corporación municipal)",
     "Servicio Local de Educación Pública (SLEP)",
     "Particular subvencionado","Particular pagado",
@@ -228,50 +232,47 @@ const BLOQUES = [
     "Sala cuna o educación parvularia","Educación básica","Educación media",
     "Escuela especial","Escuela de lenguaje","Educación de adultos",
     "Internado o residencia","Aula hospitalaria"]},
-  {t:"Fecha en que obtuvieron la personalidad jurídica", nota:"La fecha de inscripción que aparece en el certificado. Si no recuerdan el día exacto, pongan el primero del mes.", tipo:"fecha", ver:"org", extra:"No tenemos personalidad jurídica"},
-  {t:"Fecha de la resolución de reconocimiento oficial", nota:"La que aparece en la resolución del Ministerio de Educación. Si no recuerdan el día exacto, pongan el primero del mes.", tipo:"fecha", ver:"edu", extra:"No tenemos reconocimiento oficial"},
-  {t:"¿En qué estado está la directiva actual?", tipo:"unica", ver:"org", opciones:[
+  {t:"Fecha en que obtuvieron la personalidad jurídica", nota:"La fecha de inscripción que aparece en el certificado. Si no recuerdan el día exacto, pongan el primero del mes.", tipo:"fecha", ver:"org", id:"fechapj", extra:"No tenemos personalidad jurídica"},
+  {t:"Fecha de la resolución de reconocimiento oficial", nota:"La que aparece en la resolución del Ministerio de Educación. Si no recuerdan el día exacto, pongan el primero del mes.", tipo:"fecha", ver:"edu", id:"reconocimiento", extra:"No tenemos reconocimiento oficial"},
+  {t:"¿En qué estado está la directiva actual?", tipo:"unica", ver:"org", id:"directiva", opciones:[
     "Vigente","Vigente, pero vence dentro de los próximos 6 meses","Vencida",
     "Estamos en proceso de elección o cambio de directiva","No sabemos en qué estado está"]},
-  {t:"¿Tienen algún proceso o sanción pendiente con la Superintendencia de Educación?", tipo:"unica", ver:"edu", opciones:[
-    "No, ninguno","Sí, hay un proceso en curso",
-    "Tuvimos observaciones que ya resolvimos","No sabemos"]},
-  {t:"¿Qué documentos de la organización tienen hoy a mano?", nota:"Marquen los que podrían enviarnos esta semana sin tener que hacer un trámite.", tipo:"varias", ver:"org", opciones:[
+  {t:"¿Qué documentos de la organización tienen hoy a mano?", nota:"Marquen los que podrían enviarnos esta semana sin tener que hacer un trámite.", tipo:"varias", ver:"org", id:"docs", opciones:[
     "Certificado de vigencia de la personalidad jurídica","Certificado de directiva vigente",
     "Estatutos de la organización","Acta de la última elección de directiva",
     "Ninguno de estos","No sabemos cuáles tenemos"]},
-  {t:"¿Qué documentos del establecimiento tienen hoy a mano?", nota:"Marquen los que podrían enviarnos esta semana sin tener que hacer un trámite.", tipo:"varias", ver:"edu", opciones:[
+  {t:"¿Qué documentos del establecimiento tienen hoy a mano?", nota:"Marquen los que podrían enviarnos esta semana sin tener que hacer un trámite.", tipo:"varias", ver:"edu", id:"docsedu", opciones:[
     "Resolución de reconocimiento oficial","Certificado de RBD",
     "Decreto cooperador de la función educacional","Convenio de subvención",
     "Documento que acredita al representante legal del sostenedor",
     "Proyecto Educativo Institucional (PEI)","Plan de Mejoramiento Educativo (PME)",
     "Reglamento interno y de convivencia",
     "Ninguno de estos","No sabemos cuáles tenemos"]},
-  {t:"¿Están inscritos en el Registro Central de Colaboradores del Estado y Receptores de Fondos Públicos (Ley 19.862)?", nota:"Si los fondos los recibiría el sostenedor, respondan por él.", tipo:"unica", opciones:[
+  {t:"¿Están inscritos en el Registro Central de Colaboradores del Estado y Receptores de Fondos Públicos (Ley 19.862)?", nota:"Es el registro que hay que tener al día para recibir fondos públicos. Si los recibiría el sostenedor, respondan por él.", tipo:"unica", id:"registro", opciones:[
     "Sí, estamos inscritos y el registro está al día",
     "Estamos inscritos pero el registro está desactualizado",
     "No estamos inscritos","No conocíamos este registro"]},
-  {t:"¿Tienen rendiciones pendientes con algún organismo del Estado?", tipo:"unica", opciones:[
+  {t:"¿Tienen rendiciones pendientes con algún organismo del Estado?", nota:"Lo preguntamos porque una rendición sin cerrar suele frenar una postulación nueva, y si la hay conviene resolverla antes.", tipo:"unica", id:"rendiciones", opciones:[
     "No, estamos al día","Sí, tenemos una rendición pendiente",
     "Sí, tuvimos observaciones que aún no resolvemos","No sabemos"]}
 ]},
 
-{ titulo: "Bloque 3 · Capacidad administrativa y financiera", preguntas: [
-  {t:"¿Tienen cuenta bancaria a nombre de la institución?", nota:"Es decir, con el RUT institucional, no la de una persona.", tipo:"unica", opciones:[
+{ titulo: "Bloque 3 · Capacidad administrativa", preguntas: [
+  {t:"¿Tienen cuenta bancaria a nombre de la institución?", nota:"Es decir, con el RUT institucional, no la de una persona. Los fondos se transfieren ahí.", tipo:"unica", id:"cuenta", opciones:[
     "Sí, cuenta corriente","Sí, cuenta vista o chequera electrónica",
     "No, los recursos los administra el sostenedor (DAEM, SLEP, corporación o fundación)",
     "No, usamos la cuenta personal de un miembro de la directiva",
     "Está en trámite de apertura","No tenemos ninguna cuenta"]},
-  {t:"¿Podrían hacer un aporte propio a un proyecto, en dinero o en trabajo valorizado?", nota:"Algunos fondos lo piden, y define cómo armamos el presupuesto.", tipo:"unica", opciones:[
+  {t:"¿Podrían hacer un aporte propio a un proyecto, en dinero o en trabajo valorizado?", nota:"Algunos fondos lo piden, y define cómo armamos el presupuesto.", tipo:"unica", id:"aporte", opciones:[
     "Sí, con aporte en dinero",
     "Sí, con recursos que administra la institución o el sostenedor",
     "Sí, pero solo valorizado (horas de trabajo, uso del espacio, equipamiento propio)",
     "No podríamos aportar nada","No sabemos qué significa esto"]},
-  {t:"¿Pueden emitir o recibir boletas y facturas a nombre de la institución?", tipo:"unica", opciones:[
+  {t:"¿Pueden emitir o recibir boletas y facturas a nombre de la institución?", tipo:"unica", id:"facturas", opciones:[
     "Sí, sin problema","Solo podemos recibir facturas a nombre de la institución",
     "Las emite y recibe el sostenedor, no nosotros",
     "No, todo lo hacemos a nombre personal","No sabemos"]},
-  {t:"¿Quién decide y firma una postulación a fondos?", nota:"Nos dice con quién hay que conversar además de ustedes.", tipo:"unica", ver:"edu", opciones:[
+  {t:"¿Quién decide y firma una postulación a fondos?", nota:"Nos dice con quién hay que conversar además de ustedes.", tipo:"unica", ver:"edu", id:"firma", opciones:[
     "La dirección del establecimiento",
     "El sostenedor (DAEM, SLEP, corporación o fundación)",
     "La dirección, pero necesita autorización del sostenedor",
@@ -279,8 +280,10 @@ const BLOQUES = [
 ]},
 
 { titulo: "Bloque 4 · Equipo humano", preguntas: [
-  {t:"¿Cuántas personas trabajan o colaboran activamente?", nota:"Un número aproximado. En un establecimiento, cuenten docentes y asistentes de la educación.", tipo:"numero"},
-  {t:"De ellas, ¿cuántas reciben algún pago?", nota:"Honorarios o sueldo. Si ninguna, pongan 0.", tipo:"numero"},
+  {t:"¿Cuántas personas trabajan o colaboran activamente?", nota:"Un número aproximado. En un establecimiento, cuenten docentes y asistentes de la educación.", tipo:"numero", id:"personas"},
+  {t:"¿Cómo se sostiene ese equipo?", tipo:"unica", id:"equipo", opciones:[
+    "Es todo voluntario","Una parte recibe pago, el resto es voluntaria",
+    "La mayoría recibe pago","Todos reciben pago"]},
   {t:"¿Con qué profesionales cuentan hoy, aunque sea por horas?", tipo:"varias", opciones:[
     "Psicólogo o psicóloga","Terapeuta ocupacional","Fonoaudiólogo o fonoaudióloga",
     "Kinesiólogo o kinesióloga","Educador o educadora diferencial",
@@ -290,10 +293,10 @@ const BLOQUES = [
     "Intérprete de lengua de señas",
     "Trabajador o trabajadora social","Psicopedagogo o psicopedagoga",
     "Monitores o técnicos capacitados","Ninguno por ahora"], otro:true},
-  {t:"¿El establecimiento tiene Programa de Integración Escolar (PIE)?", tipo:"unica", ver:"edu", opciones:[
+  {t:"¿El establecimiento tiene Programa de Integración Escolar (PIE)?", tipo:"unica", ver:"edu", id:"pie", opciones:[
     "Sí, en todos los niveles","Sí, en algunos niveles o cursos",
     "Está en trámite","No tenemos PIE","No sabemos"]},
-  {t:"¿Alguien del equipo tiene experiencia formulando proyectos?", tipo:"unica", opciones:[
+  {t:"¿Alguien del equipo tiene experiencia formulando proyectos?", tipo:"unica", id:"experiencia", opciones:[
     "Sí, tenemos a alguien con experiencia comprobada",
     "Alguien lo ha hecho, pero aprendiendo sobre la marcha","Nadie tiene experiencia",
     "Contratamos a alguien externo cuando postulamos"]}
@@ -307,26 +310,26 @@ const BLOQUES = [
     "Fondos de empresas privadas o fundaciones",
     "Nunca hemos postulado a ninguno",
     "Lo intentamos pero no alcanzamos a enviar la postulación"], otro:true},
-  {t:"¿Se han adjudicado alguno?", tipo:"unica", opciones:[
+  {t:"¿Se han adjudicado alguno?", tipo:"unica", id:"adjudicado", opciones:[
     "Sí, y lo ejecutamos y rendimos sin observaciones",
     "Sí, pero tuvimos dificultades en la rendición",
     "Sí, pero no alcanzamos a ejecutarlo completo",
     "Postulamos pero nunca nos hemos adjudicado","Nunca hemos postulado"]},
-  {t:"Si les rechazaron una postulación, ¿cuál fue el motivo?", tipo:"varias", opciones:[
+  {t:"Si les rechazaron una postulación, ¿cuál fue el motivo?", nota:"Nos sirve para no repetirlo. Si no aplica, sáltenla.", tipo:"varias", opciones:[
     "Faltaba un documento o estaba vencido","El proyecto estaba mal formulado o poco claro",
     "Problemas con el presupuesto o las cotizaciones",
     "Se nos pasó el plazo o falló la plataforma","Nos dijeron que el puntaje no alcanzó",
-    "Nunca nos dieron un motivo","No aplica"]},
-  {t:"¿Guardan el acta o resolución donde consta el rechazo?", tipo:"unica", opciones:[
-    "Sí, la tenemos","Creemos que sí, habría que buscarla","No la tenemos","No aplica"]}
+    "Nunca nos dieron un motivo","No aplica"]}
 ]},
 
-{ titulo: "Bloque 6 · A quiénes atienden", preguntas: [
-  {t:"¿Cuál es la matrícula total del establecimiento?", tipo:"numero", ver:"edu"},
-  {t:"De la matrícula, ¿cuántos estudiantes tienen necesidades educativas especiales?", nota:"Permanentes y transitorias juntas. Un número aproximado.", tipo:"numero", ver:"edu"},
-  {t:"¿A cuántas personas con discapacidad o neurodivergencia atienden hoy de manera directa?", nota:"Un número aproximado.", tipo:"numero"},
+{ titulo: "Bloque 6 · A quiénes atienden",
+  intro: "Aquí nos interesa el panorama general, no las personas una por una. No nos manden nombres, fichas ni diagnósticos individuales: todo es en total y aproximado.",
+  preguntas: [
+  {t:"¿Cuál es la matrícula total del establecimiento?", tipo:"numero", ver:"edu", id:"matricula"},
+  {t:"De la matrícula, ¿cuántos estudiantes tienen necesidades educativas especiales?", nota:"Permanentes y transitorias juntas. Un número aproximado.", tipo:"numero", ver:"edu", id:"nee"},
+  {t:"¿A cuántas personas con discapacidad o neurodivergencia atienden hoy de manera directa?", nota:"Un número aproximado.", tipo:"numero", id:"atendidos"},
   {t:"¿Cuántas familias en total participan?", tipo:"numero"},
-  {t:"¿Cuáles son los diagnósticos principales de las personas que atienden?", tipo:"varias", opciones:[
+  {t:"¿Cuáles son los diagnósticos principales de las personas que atienden?", nota:"En general, sin nombres.", tipo:"varias", opciones:[
     "Trastorno del espectro autista (TEA)","Síndrome de Down","TDAH",
     "Discapacidad intelectual","Funcionamiento intelectual limítrofe",
     "Parálisis cerebral","Discapacidad física o motora",
@@ -341,7 +344,7 @@ const BLOQUES = [
     "No manejamos esa clasificación","No atendemos personas con TEA"]},
   {t:"¿Qué edades tienen las personas que atienden?", tipo:"varias", opciones:[
     "0 a 5 años","6 a 12 años","13 a 17 años","18 a 29 años","30 a 59 años","60 años o más"]},
-  {t:"¿Qué proporción tiene credencial de discapacidad vigente?", tipo:"unica", opciones:[
+  {t:"¿Qué proporción tiene credencial de discapacidad vigente?", nota:"Aproximado. Varios fondos la piden como respaldo de los beneficiarios.", tipo:"unica", opciones:[
     "Menos del 25%","Entre 25% y 50%","Entre 51% y 75%","Más del 75%","No lo tenemos registrado"]},
   {t:"Nivel de dependencia predominante de las personas que atienden", tipo:"unica", opciones:[
     "Autónomas o con dependencia leve",
@@ -355,28 +358,19 @@ const BLOQUES = [
     "Inclusión escolar","Transición a la vida laboral",
     "Psicomotricidad y desarrollo físico",
     "Habilidades sociales","Apoyo emocional y salud mental"]},
-  {t:"¿Llevan un registro ordenado de las personas que atienden?", nota:"Nombre, diagnóstico, edad, comuna.", tipo:"unica", opciones:[
+  {t:"¿Tienen un listado propio de las personas que atienden?", nota:"Los fondos piden un listado de beneficiarios al postular. Solo queremos saber si existe, no verlo.", tipo:"unica", id:"listado", opciones:[
     "Sí, en planilla digital actualizada",
     "Sí, en la plataforma del establecimiento (SIGE, libro digital u otra)",
     "Sí, pero en papel o desordenado",
-    "Tenemos algunos datos sueltos","No llevamos registro"]}
-]},
-
-{ titulo: "Bloque 7 · Las familias y los cuidadores", preguntas: [
-  {t:"¿En qué tramo del Registro Social de Hogares está la mayoría de las familias?", nota:"Si no manejan ese dato, elijan la última opción.", tipo:"unica", opciones:[
-    "40% de mayor vulnerabilidad","Entre 41% y 60%","Entre 61% y 80%","Sobre 80%",
-    "No tenemos ese dato"]},
+    "Tenemos algunos datos sueltos","No tenemos listado"]},
+  {t:"En general, ¿en qué situación socioeconómica están las familias?", nota:"Aproximado, sin revisar caso a caso. Varios fondos dan puntaje por esto.", tipo:"unica", opciones:[
+    "La mayoría en el 40% de mayor vulnerabilidad del Registro Social de Hogares",
+    "La mayoría entre el 41% y el 60%",
+    "La mayoría sobre el 60%",
+    "Muy variado","No tenemos ese dato"]},
   {t:"¿Cuál es el Índice de Vulnerabilidad Escolar (IVE) del establecimiento?", tipo:"unica", ver:"edu", opciones:[
     "Menos del 40%","Entre 40% y 60%","Entre 61% y 80%","Más del 80%",
     "No lo tenemos a mano"]},
-  {t:"¿Qué proporción de los cuidadores está inscrita como cuidador o cuidadora en el Registro Social de Hogares?", tipo:"unica", opciones:[
-    "Menos del 10%","Entre 10% y 50%","Más del 50%","No lo sabemos"]},
-  {t:"Situación laboral predominante de los cuidadores principales", tipo:"unica", opciones:[
-    "Fuera del trabajo por dedicarse al cuidado a tiempo completo",
-    "Trabajos informales o por jornada parcial para poder compatibilizar",
-    "Trabajo formal con contrato y jornada completa","Muy variado","No lo tenemos medido"]},
-  {t:"¿Quién es mayoritariamente el cuidador principal?", tipo:"unica", opciones:[
-    "La madre","El padre","Abuelos o abuelas","Otro familiar","Muy variado"]},
   {t:"¿Cuál es la mayor dificultad que reportan las familias?", tipo:"varias", opciones:[
     "Costo de las terapias","Falta de terapias en la comuna",
     "Transporte para llegar a las atenciones",
@@ -386,14 +380,14 @@ const BLOQUES = [
     "Falta de espacios recreativos accesibles"]}
 ]},
 
-{ titulo: "Bloque 8 · Infraestructura y equipamiento", preguntas: [
-  {t:"¿Con qué espacio físico cuentan para funcionar?", tipo:"unica", opciones:[
+{ titulo: "Bloque 7 · Infraestructura y equipamiento", preguntas: [
+  {t:"¿Con qué espacio físico cuentan para funcionar?", tipo:"unica", id:"espacio", opciones:[
     "Inmueble propio de la institución",
     "Inmueble del sostenedor (municipalidad, SLEP, corporación o fundación)",
     "Sede en comodato de largo plazo","Espacio arrendado",
     "Espacio prestado o compartido por horas",
     "No tenemos espacio, trabajamos a domicilio o de manera virtual"]},
-  {t:"¿Qué documentación tienen del espacio?", tipo:"varias", opciones:[
+  {t:"¿Qué documentación tienen del espacio?", nota:"Si el proyecto incluye obras o equipamiento fijo, esto es lo que se pide.", tipo:"varias", opciones:[
     "Comodato o contrato de arriendo firmado y vigente","Recepción municipal del inmueble",
     "Resolución sanitaria","Informe de la Dirección de Obras Municipales",
     "Ninguno de estos","No sabemos cuáles tenemos","No aplica"]},
@@ -412,12 +406,12 @@ const BLOQUES = [
     "No tenemos ni la necesitamos"]}
 ]},
 
-{ titulo: "Bloque 9 · El proyecto que quieren financiar", preguntas: [
-  {t:"¿Tienen ya una idea de proyecto para 2027?", tipo:"unica", opciones:[
+{ titulo: "Bloque 8 · El proyecto que quieren financiar", preguntas: [
+  {t:"¿Tienen ya una idea de proyecto para 2027?", tipo:"unica", id:"idea", opciones:[
     "Sí, la tenemos clara y por escrito","Sí, la tenemos clara pero no escrita",
     "Tenemos varias ideas sin decidir",
     "No tenemos idea todavía, necesitamos ayuda para definirla"]},
-  {t:"Si tuvieran el financiamiento, ¿cuál sería la prioridad número uno?", tipo:"unica", opciones:[
+  {t:"Si tuvieran el financiamiento, ¿cuál sería la prioridad número uno?", tipo:"unica", id:"prioridad", opciones:[
     "Contratar profesionales para atender a las personas",
     "Comprar equipamiento o habilitar salas",
     "Habilitar o equipar el aula de recursos",
@@ -442,7 +436,7 @@ const BLOQUES = [
   {t:"¿El proyecto está incorporado al Plan de Mejoramiento Educativo (PME)?", tipo:"unica", ver:"edu", opciones:[
     "Sí, ya está en el PME","No, pero se puede incorporar",
     "No corresponde","No sabemos"]},
-  {t:"¿De cuánto dinero están hablando, aproximadamente?", tipo:"unica", opciones:[
+  {t:"¿De cuánto dinero están hablando, aproximadamente?", tipo:"unica", id:"monto", opciones:[
     "Menos de $3.000.000","Entre $3.000.000 y $10.000.000",
     "Entre $10.000.000 y $30.000.000","Más de $30.000.000","No tenemos idea del monto"]},
   {t:"¿Tienen cotizaciones de lo que necesitan comprar o contratar?", tipo:"unica", opciones:[
@@ -458,12 +452,12 @@ const BLOQUES = [
     "Consultorio, CESFAM u hospital",
     "Universidad o centro de formación","Empresas","Otras organizaciones sociales",
     "No tenemos ninguna"]},
-  {t:"¿Qué capacidad tienen de ejecutar un proyecto en plazo?", tipo:"unica", opciones:[
+  {t:"¿Qué capacidad tienen de ejecutar un proyecto en plazo?", tipo:"unica", id:"capacidad", opciones:[
     "Alta, tenemos gente disponible para hacerse cargo","Media, nos costaría pero podríamos",
     "Baja, todos trabajamos en otra cosa","No lo sabemos"]}
 ]},
 
-{ titulo: "Bloque 10 · Cierre", preguntas: [
+{ titulo: "Bloque 9 · Cierre", preguntas: [
   {t:"¿Hay algo más que debamos saber sobre la institución?", nota:"Opcional.", tipo:"largo"},
   {t:"¿Autorizan que usemos esta información para preparar postulaciones a fondos junto a ustedes?", tipo:"unica", opciones:[
     "Sí, autorizamos","Sí, pero queremos revisar antes cada documento","No por ahora"]},
@@ -481,6 +475,10 @@ const CLAVE = 'diagnostico2027';
 const TOTAL_PREGUNTAS = BLOQUES.reduce((a,b)=>a+b.preguntas.length,0);
 let paso = 0;
 let VISIBLES = TOTAL_PREGUNTAS;
+
+const PORID = {};
+BLOQUES.forEach(b => b.preguntas.forEach(p => { if(p.id) PORID[p.id] = p; }));
+function val(id){ const p = PORID[id]; return p ? respuestaDe(p) : ''; }
 
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 
@@ -513,8 +511,46 @@ function aplicarPerfil(){
   if(paso === BLOQUES.length) contadorPaso.textContent = VISIBLES + ' preguntas en total';
 }
 
+/* --- Resumen para revision interna -----------------------------------
+   NO se le muestra a quien responde: es una columna en la planilla que
+   junta, en una sola celda, lo que decide si la institucion puede
+   presentarse. Solo repite lo que ellos mismos respondieron, no agrega
+   ningun juicio ni afirma requisitos de ningun fondo.
+   -------------------------------------------------------------------- */
+function armarTablero(){
+  const edu = perfilActual() === 'edu';
+  const lineas = [
+    ['TIPO', val('tipoinst')],
+    ['DONDE', [val('comuna'), val('region')].filter(Boolean).join(', ')],
+    [edu ? 'DEPENDENCIA' : 'FIGURA LEGAL', edu ? val('dependencia') : val('figura')],
+    [edu ? 'RECONOCIMIENTO OFICIAL' : 'PERSONALIDAD JURIDICA',
+      edu ? val('reconocimiento') : val('fechapj')],
+    [edu ? 'RBD' : 'DIRECTIVA', edu ? val('rbd') : val('directiva')],
+    ['DOCUMENTOS A MANO', edu ? val('docsedu') : val('docs')],
+    ['REGISTRO 19.862', val('registro')],
+    ['RENDICIONES', val('rendiciones')],
+    ['CUENTA BANCARIA', val('cuenta')],
+    ['FACTURAS', val('facturas')],
+    ['APORTE PROPIO', val('aporte')],
+    ['QUIEN FIRMA', val('firma')],
+    ['EQUIPO', [val('personas'), val('equipo')].filter(Boolean).join(' · ')],
+    ['EXPERIENCIA', [val('experiencia'), val('adjudicado')].filter(Boolean).join(' · ')],
+    ['ATIENDEN', [val('atendidos'), edu ? val('nee') + ' con NEE de ' + val('matricula') : ''].filter(function(x){ return x && x.trim() && x !== ' con NEE de '; }).join(' · ')],
+    ['PIE', val('pie')],
+    ['LISTADO DE BENEFICIARIOS', val('listado')],
+    ['ESPACIO', val('espacio')],
+    ['PROYECTO', [val('idea'), val('prioridad'), val('monto')].filter(Boolean).join(' · ')],
+    ['CAPACIDAD DE EJECUTAR', val('capacidad')]
+  ];
+  return lineas.filter(l => l[1] && String(l[1]).trim())
+               .map(l => l[0] + ': ' + l[1]).join('\n');
+}
+
 function pintarPregunta(p){
   const id = 'p'+p.n;
+  if(p.tipo === 'tablero'){
+    return '<div class="pregunta" data-p="'+p.n+'" data-ver="__interno__" hidden></div>';
+  }
   let campo = '';
 
   if(p.tipo === 'texto')  campo = `<input type="text" name="${id}">`;
@@ -563,7 +599,9 @@ function pintarPregunta(p){
 BLOQUES.forEach((b,i)=>{
   const s = document.createElement('section');
   s.className = 'bloque'; s.dataset.paso = i;
-  s.innerHTML = `<h2>${esc(b.titulo)}</h2>` + b.preguntas.map(pintarPregunta).join('') + `
+  s.innerHTML = `<h2>${esc(b.titulo)}</h2>`
+    + (b.intro ? `<div class="aviso"><p>${esc(b.intro)}</p></div>` : '')
+    + b.preguntas.map(pintarPregunta).join('') + `
     <nav class="pasos">
       <button type="button" class="secundario" data-ir="-1" ${i===0?'disabled':''}>← Anterior</button>
       <button type="button" class="primario" data-ir="1">${i===BLOQUES.length-1?'Terminar →':'Siguiente →'}</button>
@@ -677,6 +715,7 @@ function recuperar(){
 
 /* --- Recolección de respuestas --- */
 function respuestaDe(p){
+  if(p.tipo === 'tablero') return armarTablero();
   if(!visible(p)) return '';
   const id = 'p'+p.n;
   let r = [];
@@ -786,7 +825,7 @@ btnEnviar.addEventListener('click', ()=>{
   btnEnviar.textContent = 'Enviando…';
   aviso.innerHTML = '';
 
-  const organizacion = (form.querySelector('[name="p1"]')||{}).value || '';
+  const organizacion = val('nombre');
   formEnvio.action = DESTINO;
   formEnvio.querySelector('[name="payload"]').value = JSON.stringify({
     organizacion: organizacion.trim(),

@@ -151,11 +151,12 @@
 
   <header class="tapa">
     <h1>Formulario de Diagnóstico Institucional</h1>
-    <p class="bajada">Organizaciones de discapacidad, neurodivergencia e inclusión</p>
+    <p class="bajada">Organizaciones, escuelas y jardines que trabajan en discapacidad, neurodivergencia e inclusión</p>
     <div class="aviso">
-      <p>Estimada directiva y equipo: este cuestionario nos permite conocer la realidad legal, administrativa y técnica de su organización, y también el perfil de las familias que atienden.</p>
+      <p>Estimado equipo: este cuestionario nos permite conocer la realidad legal, administrativa y técnica de su institución, y también el perfil de las familias que atienden.</p>
+      <p>Sirve tanto para organizaciones de familias como para <strong>colegios, liceos, escuelas especiales y jardines infantiles</strong>. La segunda pregunta define cuál es su caso, y de ahí en adelante el formulario muestra solo las preguntas que les corresponden.</p>
       <p>No hay respuestas buenas ni malas. Si algo no lo saben, elijan «no sabemos»: esa respuesta también nos sirve, y es mejor que adivinar.</p>
-      <p><strong>Tiempo estimado: 12 a 15 minutos.</strong> Idealmente lo responde la presidencia, la dirección o quien lleve la parte administrativa.</p>
+      <p><strong>Tiempo estimado: 15 a 20 minutos.</strong> Idealmente lo responde la dirección, la presidencia o quien lleve la parte administrativa. En un establecimiento, conviene que la coordinación del PIE aporte los datos de los estudiantes.</p>
     </div>
   </header>
 
@@ -177,23 +178,30 @@
 const DESTINO = 'https://script.google.com/macros/s/AKfycbyaE3Bbd7h18joghjbD4886H0K_I8AOn4XDjbKuvX-rza8RfJL12whxtaQ0-E4_CGPy/exec';
 
 const BLOQUES = [
-{ titulo: "Bloque 1 · Identificación de la organización", preguntas: [
-  {t:"Nombre legal completo de la organización", tipo:"texto"},
+{ titulo: "Bloque 1 · Identificación", preguntas: [
+  {t:"Nombre legal completo de la organización o del establecimiento", tipo:"texto"},
+  {t:"¿Qué tipo de institución responde este formulario?", nota:"Según lo que elijan, el formulario ajusta las preguntas que siguen.", tipo:"unica", clave:"tipo", opciones:[
+    "Organización de familias, agrupación o fundación",
+    "Establecimiento educacional (colegio, liceo, escuela especial o de lenguaje)",
+    "Jardín infantil o sala cuna",
+    "Centro de terapias, rehabilitación o atención",
+    "Municipalidad u otro servicio público"]},
   {t:"Nombre de fantasía o cómo se les conoce", nota:"Solo si es distinto del nombre legal. Opcional.", tipo:"texto"},
-  {t:"RUT de la organización", tipo:"texto", extra:"No tenemos RUT propio todavía"},
+  {t:"RUT de la organización o del sostenedor", nota:"Si son un establecimiento municipal o de un SLEP, pongan el RUT del sostenedor.", tipo:"texto", extra:"No tenemos RUT propio todavía"},
+  {t:"RBD del establecimiento", nota:"El Rol Base de Datos que les asignó el Ministerio de Educación.", tipo:"texto", ver:"edu", extra:"No lo tenemos a mano"},
   {t:"Región donde opera principalmente", tipo:"unica", opciones:[
     "Arica y Parinacota","Tarapacá","Antofagasta","Atacama","Coquimbo","Valparaíso",
     "Metropolitana de Santiago","Libertador General Bernardo O'Higgins","Maule","Ñuble",
     "Biobío","La Araucanía","Los Ríos","Los Lagos",
     "Aysén del General Carlos Ibáñez del Campo","Magallanes y de la Antártica Chilena"]},
-  {t:"Comuna donde está la sede o el lugar de atención principal", tipo:"texto"},
-  {t:"La organización atiende personas de:", tipo:"unica", opciones:[
+  {t:"Comuna donde está la sede o el establecimiento", tipo:"texto"},
+  {t:"Las personas que atienden vienen principalmente de:", tipo:"unica", opciones:[
     "Solo nuestra comuna","Nuestra comuna y comunas vecinas","Toda la provincia",
     "Toda la región","Más de una región"]},
   {t:"El territorio donde trabajan es principalmente:", tipo:"unica", opciones:[
     "Urbano","Rural","Mixto (urbano y rural)"]},
   {t:"Datos de la persona de contacto", tipo:"contacto", campos:[
-    {e:"Nombre completo", tipo:"text"},{e:"Cargo en la organización", tipo:"text"},
+    {e:"Nombre completo", tipo:"text"},{e:"Cargo o función", tipo:"text"},
     {e:"Correo electrónico", tipo:"email"},{e:"Teléfono o WhatsApp", tipo:"tel"}]},
   {t:"¿Por qué vía prefieren que los contactemos?", tipo:"unica", opciones:[
     "WhatsApp","Correo electrónico","Llamada telefónica"]},
@@ -203,51 +211,88 @@ const BLOQUES = [
 ]},
 
 { titulo: "Bloque 2 · Situación legal", preguntas: [
-  {t:"¿Qué tipo de organización son legalmente?", tipo:"unica", opciones:[
+  {t:"¿Qué tipo de organización son legalmente?", tipo:"unica", ver:"org", opciones:[
     "Fundación","Corporación o asociación sin fines de lucro",
     "Organización comunitaria funcional (club, centro, agrupación)",
     "Junta de vecinos o unión comunal","Comunidad o asociación indígena","Cooperativa",
     "Somos un grupo organizado pero SIN personalidad jurídica",
     "No sabemos con exactitud qué figura tenemos"]},
-  {t:"Fecha en que obtuvieron la personalidad jurídica", nota:"La fecha de inscripción que aparece en el certificado. Si no recuerdan el día exacto, pongan el primero del mes.", tipo:"fecha", extra:"No tenemos personalidad jurídica"},
-  {t:"¿En qué estado está la directiva actual?", tipo:"unica", opciones:[
+  {t:"¿De qué dependencia es el establecimiento?", tipo:"unica", ver:"edu", opciones:[
+    "Municipal (DAEM o corporación municipal)",
+    "Servicio Local de Educación Pública (SLEP)",
+    "Particular subvencionado","Particular pagado",
+    "Corporación de administración delegada",
+    "Jardín infantil JUNJI, Integra o VTF",
+    "No sabemos con exactitud"]},
+  {t:"¿Qué niveles o modalidades atienden?", tipo:"varias", ver:"edu", opciones:[
+    "Sala cuna o educación parvularia","Educación básica","Educación media",
+    "Escuela especial","Escuela de lenguaje","Educación de adultos",
+    "Internado o residencia","Aula hospitalaria"]},
+  {t:"Fecha en que obtuvieron la personalidad jurídica", nota:"La fecha de inscripción que aparece en el certificado. Si no recuerdan el día exacto, pongan el primero del mes.", tipo:"fecha", ver:"org", extra:"No tenemos personalidad jurídica"},
+  {t:"Fecha de la resolución de reconocimiento oficial", nota:"La que aparece en la resolución del Ministerio de Educación. Si no recuerdan el día exacto, pongan el primero del mes.", tipo:"fecha", ver:"edu", extra:"No tenemos reconocimiento oficial"},
+  {t:"¿En qué estado está la directiva actual?", tipo:"unica", ver:"org", opciones:[
     "Vigente","Vigente, pero vence dentro de los próximos 6 meses","Vencida",
     "Estamos en proceso de elección o cambio de directiva","No sabemos en qué estado está"]},
-  {t:"¿Qué documentos de la organización tienen hoy a mano?", nota:"Marquen los que podrían enviarnos esta semana sin tener que hacer un trámite.", tipo:"varias", opciones:[
+  {t:"¿Tienen algún proceso o sanción pendiente con la Superintendencia de Educación?", tipo:"unica", ver:"edu", opciones:[
+    "No, ninguno","Sí, hay un proceso en curso",
+    "Tuvimos observaciones que ya resolvimos","No sabemos"]},
+  {t:"¿Qué documentos de la organización tienen hoy a mano?", nota:"Marquen los que podrían enviarnos esta semana sin tener que hacer un trámite.", tipo:"varias", ver:"org", opciones:[
     "Certificado de vigencia de la personalidad jurídica","Certificado de directiva vigente",
     "Estatutos de la organización","Acta de la última elección de directiva",
     "Ninguno de estos","No sabemos cuáles tenemos"]},
-  {t:"¿Están inscritos en el Registro Central de Colaboradores del Estado y Receptores de Fondos Públicos (Ley 19.862)?", tipo:"unica", opciones:[
+  {t:"¿Qué documentos del establecimiento tienen hoy a mano?", nota:"Marquen los que podrían enviarnos esta semana sin tener que hacer un trámite.", tipo:"varias", ver:"edu", opciones:[
+    "Resolución de reconocimiento oficial","Certificado de RBD",
+    "Decreto cooperador de la función educacional","Convenio de subvención",
+    "Documento que acredita al representante legal del sostenedor",
+    "Proyecto Educativo Institucional (PEI)","Plan de Mejoramiento Educativo (PME)",
+    "Reglamento interno y de convivencia",
+    "Ninguno de estos","No sabemos cuáles tenemos"]},
+  {t:"¿Están inscritos en el Registro Central de Colaboradores del Estado y Receptores de Fondos Públicos (Ley 19.862)?", nota:"Si los fondos los recibiría el sostenedor, respondan por él.", tipo:"unica", opciones:[
     "Sí, estamos inscritos y el registro está al día",
     "Estamos inscritos pero el registro está desactualizado",
     "No estamos inscritos","No conocíamos este registro"]},
-  {t:"¿La organización tiene rendiciones pendientes con algún organismo del Estado?", tipo:"unica", opciones:[
+  {t:"¿Tienen rendiciones pendientes con algún organismo del Estado?", tipo:"unica", opciones:[
     "No, estamos al día","Sí, tenemos una rendición pendiente",
     "Sí, tuvimos observaciones que aún no resolvemos","No sabemos"]}
 ]},
 
 { titulo: "Bloque 3 · Capacidad administrativa y financiera", preguntas: [
-  {t:"¿La organización tiene cuenta bancaria a su propio nombre?", nota:"Es decir, con el RUT de la institución.", tipo:"unica", opciones:[
+  {t:"¿Tienen cuenta bancaria a nombre de la institución?", nota:"Es decir, con el RUT institucional, no la de una persona.", tipo:"unica", opciones:[
     "Sí, cuenta corriente","Sí, cuenta vista o chequera electrónica",
+    "No, los recursos los administra el sostenedor (DAEM, SLEP, corporación o fundación)",
     "No, usamos la cuenta personal de un miembro de la directiva",
     "Está en trámite de apertura","No tenemos ninguna cuenta"]},
   {t:"¿Podrían hacer un aporte propio a un proyecto, en dinero o en trabajo valorizado?", nota:"Algunos fondos lo piden, y define cómo armamos el presupuesto.", tipo:"unica", opciones:[
     "Sí, con aporte en dinero",
-    "Sí, pero solo valorizado (horas de voluntariado, uso de la sede, equipamiento propio)",
+    "Sí, con recursos que administra la institución o el sostenedor",
+    "Sí, pero solo valorizado (horas de trabajo, uso del espacio, equipamiento propio)",
     "No podríamos aportar nada","No sabemos qué significa esto"]},
-  {t:"¿Pueden emitir o recibir boletas y facturas a nombre de la organización?", tipo:"unica", opciones:[
-    "Sí, sin problema","Solo podemos recibir facturas a nombre de la organización",
-    "No, todo lo hacemos a nombre personal","No sabemos"]}
+  {t:"¿Pueden emitir o recibir boletas y facturas a nombre de la institución?", tipo:"unica", opciones:[
+    "Sí, sin problema","Solo podemos recibir facturas a nombre de la institución",
+    "Las emite y recibe el sostenedor, no nosotros",
+    "No, todo lo hacemos a nombre personal","No sabemos"]},
+  {t:"¿Quién decide y firma una postulación a fondos?", nota:"Nos dice con quién hay que conversar además de ustedes.", tipo:"unica", ver:"edu", opciones:[
+    "La dirección del establecimiento",
+    "El sostenedor (DAEM, SLEP, corporación o fundación)",
+    "La dirección, pero necesita autorización del sostenedor",
+    "No lo tenemos claro"]}
 ]},
 
 { titulo: "Bloque 4 · Equipo humano", preguntas: [
-  {t:"¿Cuántas personas trabajan o colaboran activamente en la organización?", nota:"Un número aproximado, contando voluntarios.", tipo:"numero"},
+  {t:"¿Cuántas personas trabajan o colaboran activamente?", nota:"Un número aproximado. En un establecimiento, cuenten docentes y asistentes de la educación.", tipo:"numero"},
   {t:"De ellas, ¿cuántas reciben algún pago?", nota:"Honorarios o sueldo. Si ninguna, pongan 0.", tipo:"numero"},
   {t:"¿Con qué profesionales cuentan hoy, aunque sea por horas?", tipo:"varias", opciones:[
     "Psicólogo o psicóloga","Terapeuta ocupacional","Fonoaudiólogo o fonoaudióloga",
     "Kinesiólogo o kinesióloga","Educador o educadora diferencial",
+    "Educador o educadora de párvulos","Docentes de aula regular",
+    "Coordinador o coordinadora del PIE",
+    "Asistente de aula o técnico en educación especial",
+    "Intérprete de lengua de señas",
     "Trabajador o trabajadora social","Psicopedagogo o psicopedagoga",
     "Monitores o técnicos capacitados","Ninguno por ahora"], otro:true},
+  {t:"¿El establecimiento tiene Programa de Integración Escolar (PIE)?", tipo:"unica", ver:"edu", opciones:[
+    "Sí, en todos los niveles","Sí, en algunos niveles o cursos",
+    "Está en trámite","No tenemos PIE","No sabemos"]},
   {t:"¿Alguien del equipo tiene experiencia formulando proyectos?", tipo:"unica", opciones:[
     "Sí, tenemos a alguien con experiencia comprobada",
     "Alguien lo ha hecho, pero aprendiendo sobre la marcha","Nadie tiene experiencia",
@@ -255,9 +300,11 @@ const BLOQUES = [
 ]},
 
 { titulo: "Bloque 5 · Experiencia en postulaciones", preguntas: [
-  {t:"¿A qué fondos ha postulado la organización?", nota:"Aunque no se los hayan adjudicado.", tipo:"varias", opciones:[
+  {t:"¿A qué fondos han postulado?", nota:"Aunque no se los hayan adjudicado.", tipo:"varias", opciones:[
     "Fondos del Gobierno Regional","SENADIS","Fondos municipales","FOSIS","SENAMA",
-    "Ministerio de Desarrollo Social","Fondos de empresas privadas o fundaciones",
+    "Ministerio de Desarrollo Social","Ministerio de Educación",
+    "Fondo de Apoyo a la Educación Pública (FAEP)","JUNAEB","JUNJI","Explora o ANID",
+    "Fondos de empresas privadas o fundaciones",
     "Nunca hemos postulado a ninguno",
     "Lo intentamos pero no alcanzamos a enviar la postulación"], otro:true},
   {t:"¿Se han adjudicado alguno?", tipo:"unica", opciones:[
@@ -275,13 +322,17 @@ const BLOQUES = [
 ]},
 
 { titulo: "Bloque 6 · A quiénes atienden", preguntas: [
+  {t:"¿Cuál es la matrícula total del establecimiento?", tipo:"numero", ver:"edu"},
+  {t:"De la matrícula, ¿cuántos estudiantes tienen necesidades educativas especiales?", nota:"Permanentes y transitorias juntas. Un número aproximado.", tipo:"numero", ver:"edu"},
   {t:"¿A cuántas personas con discapacidad o neurodivergencia atienden hoy de manera directa?", nota:"Un número aproximado.", tipo:"numero"},
-  {t:"¿Cuántas familias en total participan de la organización?", tipo:"numero"},
+  {t:"¿Cuántas familias en total participan?", tipo:"numero"},
   {t:"¿Cuáles son los diagnósticos principales de las personas que atienden?", tipo:"varias", opciones:[
     "Trastorno del espectro autista (TEA)","Síndrome de Down","TDAH",
-    "Discapacidad intelectual","Parálisis cerebral","Discapacidad física o motora",
+    "Discapacidad intelectual","Funcionamiento intelectual limítrofe",
+    "Parálisis cerebral","Discapacidad física o motora",
     "Discapacidad visual","Discapacidad auditiva","Retraso global del desarrollo",
-    "Trastornos del lenguaje","Salud mental (depresión, ansiedad, otros)","Multidéficit"], otro:true},
+    "Trastornos del lenguaje","Dificultades específicas del aprendizaje (dislexia, discalculia)",
+    "Salud mental (depresión, ansiedad, otros)","Multidéficit"], otro:true},
   {t:"Si atienden personas con TEA, ¿qué grados de apoyo predominan?", tipo:"unica", opciones:[
     "Mayoritariamente grado 1 (requiere apoyo)",
     "Mayoritariamente grado 2 (requiere apoyo sustancial)",
@@ -290,7 +341,7 @@ const BLOQUES = [
     "No manejamos esa clasificación","No atendemos personas con TEA"]},
   {t:"¿Qué edades tienen las personas que atienden?", tipo:"varias", opciones:[
     "0 a 5 años","6 a 12 años","13 a 17 años","18 a 29 años","30 a 59 años","60 años o más"]},
-  {t:"¿Qué proporción de sus usuarios tiene credencial de discapacidad vigente?", tipo:"unica", opciones:[
+  {t:"¿Qué proporción tiene credencial de discapacidad vigente?", tipo:"unica", opciones:[
     "Menos del 25%","Entre 25% y 50%","Entre 51% y 75%","Más del 75%","No lo tenemos registrado"]},
   {t:"Nivel de dependencia predominante de las personas que atienden", tipo:"unica", opciones:[
     "Autónomas o con dependencia leve",
@@ -299,18 +350,25 @@ const BLOQUES = [
     "Muy variado, tenemos de todo"]},
   {t:"¿En qué áreas necesitan más apoyo las personas que atienden?", tipo:"varias", opciones:[
     "Comunicación y lenguaje","Regulación conductual y sensorial",
-    "Autonomía e higiene básica","Movilidad y desplazamiento","Inclusión escolar",
-    "Transición a la vida laboral","Psicomotricidad y desarrollo físico",
+    "Autonomía e higiene básica","Movilidad y desplazamiento",
+    "Acceso y adecuaciones del currículum","Lectoescritura y matemáticas",
+    "Inclusión escolar","Transición a la vida laboral",
+    "Psicomotricidad y desarrollo físico",
     "Habilidades sociales","Apoyo emocional y salud mental"]},
-  {t:"¿Llevan un registro ordenado de sus usuarios?", nota:"Nombre, diagnóstico, edad, comuna.", tipo:"unica", opciones:[
-    "Sí, en planilla digital actualizada","Sí, pero en papel o desordenado",
+  {t:"¿Llevan un registro ordenado de las personas que atienden?", nota:"Nombre, diagnóstico, edad, comuna.", tipo:"unica", opciones:[
+    "Sí, en planilla digital actualizada",
+    "Sí, en la plataforma del establecimiento (SIGE, libro digital u otra)",
+    "Sí, pero en papel o desordenado",
     "Tenemos algunos datos sueltos","No llevamos registro"]}
 ]},
 
 { titulo: "Bloque 7 · Las familias y los cuidadores", preguntas: [
-  {t:"¿En qué tramo del Registro Social de Hogares está la mayoría de las familias?", tipo:"unica", opciones:[
+  {t:"¿En qué tramo del Registro Social de Hogares está la mayoría de las familias?", nota:"Si no manejan ese dato, elijan la última opción.", tipo:"unica", opciones:[
     "40% de mayor vulnerabilidad","Entre 41% y 60%","Entre 61% y 80%","Sobre 80%",
-    "No les pedimos el Registro Social de Hogares"]},
+    "No tenemos ese dato"]},
+  {t:"¿Cuál es el Índice de Vulnerabilidad Escolar (IVE) del establecimiento?", tipo:"unica", ver:"edu", opciones:[
+    "Menos del 40%","Entre 40% y 60%","Entre 61% y 80%","Más del 80%",
+    "No lo tenemos a mano"]},
   {t:"¿Qué proporción de los cuidadores está inscrita como cuidador o cuidadora en el Registro Social de Hogares?", tipo:"unica", opciones:[
     "Menos del 10%","Entre 10% y 50%","Más del 50%","No lo sabemos"]},
   {t:"Situación laboral predominante de los cuidadores principales", tipo:"unica", opciones:[
@@ -321,7 +379,8 @@ const BLOQUES = [
     "La madre","El padre","Abuelos o abuelas","Otro familiar","Muy variado"]},
   {t:"¿Cuál es la mayor dificultad que reportan las familias?", tipo:"varias", opciones:[
     "Costo de las terapias","Falta de terapias en la comuna",
-    "Transporte para llegar a las atenciones","Falta de apoyo en el colegio",
+    "Transporte para llegar a las atenciones",
+    "Falta de apoyos en el colegio o jardín",
     "Agotamiento y salud mental del cuidador","Falta de tiempo o de red de apoyo",
     "Discriminación o falta de comprensión del entorno",
     "Falta de espacios recreativos accesibles"]}
@@ -329,18 +388,23 @@ const BLOQUES = [
 
 { titulo: "Bloque 8 · Infraestructura y equipamiento", preguntas: [
   {t:"¿Con qué espacio físico cuentan para funcionar?", tipo:"unica", opciones:[
-    "Sede propia","Sede en comodato de largo plazo","Espacio arrendado",
+    "Inmueble propio de la institución",
+    "Inmueble del sostenedor (municipalidad, SLEP, corporación o fundación)",
+    "Sede en comodato de largo plazo","Espacio arrendado",
     "Espacio prestado o compartido por horas",
     "No tenemos espacio, trabajamos a domicilio o de manera virtual"]},
-  {t:"Si tienen un espacio, ¿qué documentación tienen de él?", tipo:"varias", opciones:[
+  {t:"¿Qué documentación tienen del espacio?", tipo:"varias", opciones:[
     "Comodato o contrato de arriendo firmado y vigente","Recepción municipal del inmueble",
-    "Resolución sanitaria","Ninguno de estos","No sabemos cuáles tenemos","No aplica"]},
+    "Resolución sanitaria","Informe de la Dirección de Obras Municipales",
+    "Ninguno de estos","No sabemos cuáles tenemos","No aplica"]},
   {t:"¿El espacio es accesible para personas con discapacidad?", tipo:"unica", opciones:[
     "Sí, completamente accesible","Parcialmente accesible","No es accesible","No aplica"]},
   {t:"¿Con qué equipamiento cuentan hoy?", tipo:"varias", opciones:[
     "Sala de estimulación multisensorial","Box o sala de atención individual",
-    "Gimnasio o sala de psicomotricidad","Material didáctico especializado",
+    "Aula de recursos","Gimnasio o sala de psicomotricidad",
+    "Biblioteca o CRA","Material didáctico especializado",
     "Equipos tecnológicos (computadores, tablets, proyector)","Mobiliario adecuado",
+    "Patio o espacio deportivo accesible",
     "Vehículo o transporte","Nada de lo anterior"]},
   {t:"Si tienen sala sensorial, ¿en qué estado está?", tipo:"unica", opciones:[
     "Equipada y funcionando bien","Funciona pero necesita mejoras o reposición",
@@ -354,19 +418,30 @@ const BLOQUES = [
     "Tenemos varias ideas sin decidir",
     "No tenemos idea todavía, necesitamos ayuda para definirla"]},
   {t:"Si tuvieran el financiamiento, ¿cuál sería la prioridad número uno?", tipo:"unica", opciones:[
-    "Contratar profesionales para atender a los usuarios",
-    "Comprar equipamiento o habilitar salas","Mejorar o construir infraestructura",
+    "Contratar profesionales para atender a las personas",
+    "Comprar equipamiento o habilitar salas",
+    "Habilitar o equipar el aula de recursos",
+    "Tecnología y material para el acceso al currículum y la comunicación",
+    "Mejorar la accesibilidad del edificio",
+    "Mejorar o construir infraestructura",
     "Talleres de respiro y salud mental para cuidadores",
     "Capacitación y formación del equipo",
     "Actividades recreativas, culturales o deportivas","Transporte adaptado",
     "Difusión y sensibilización en la comunidad"]},
   {t:"¿Cuál sería la segunda prioridad?", tipo:"unica", opciones:[
-    "Contratar profesionales para atender a los usuarios",
-    "Comprar equipamiento o habilitar salas","Mejorar o construir infraestructura",
+    "Contratar profesionales para atender a las personas",
+    "Comprar equipamiento o habilitar salas",
+    "Habilitar o equipar el aula de recursos",
+    "Tecnología y material para el acceso al currículum y la comunicación",
+    "Mejorar la accesibilidad del edificio",
+    "Mejorar o construir infraestructura",
     "Talleres de respiro y salud mental para cuidadores",
     "Capacitación y formación del equipo",
     "Actividades recreativas, culturales o deportivas","Transporte adaptado",
     "Difusión y sensibilización en la comunidad"]},
+  {t:"¿El proyecto está incorporado al Plan de Mejoramiento Educativo (PME)?", tipo:"unica", ver:"edu", opciones:[
+    "Sí, ya está en el PME","No, pero se puede incorporar",
+    "No corresponde","No sabemos"]},
   {t:"¿De cuánto dinero están hablando, aproximadamente?", tipo:"unica", opciones:[
     "Menos de $3.000.000","Entre $3.000.000 y $10.000.000",
     "Entre $10.000.000 y $30.000.000","Más de $30.000.000","No tenemos idea del monto"]},
@@ -378,7 +453,9 @@ const BLOQUES = [
     "Sí, ya conversamos con ellos y aceptarían","Los conocemos pero no hemos conversado",
     "No tenemos a nadie identificado","No aplica"]},
   {t:"¿Tienen convenios o cartas de apoyo de otras instituciones?", tipo:"varias", opciones:[
-    "Municipalidad","Escuelas o jardines infantiles","Consultorio, CESFAM u hospital",
+    "Sostenedor (DAEM, SLEP, corporación o fundación)","Municipalidad",
+    "Escuelas, liceos o jardines infantiles","Centro de padres y apoderados",
+    "Consultorio, CESFAM u hospital",
     "Universidad o centro de formación","Empresas","Otras organizaciones sociales",
     "No tenemos ninguna"]},
   {t:"¿Qué capacidad tienen de ejecutar un proyecto en plazo?", tipo:"unica", opciones:[
@@ -387,13 +464,12 @@ const BLOQUES = [
 ]},
 
 { titulo: "Bloque 10 · Cierre", preguntas: [
-  {t:"¿Hay algo más que debamos saber sobre la organización?", nota:"Opcional.", tipo:"largo"},
-  {t:"¿Autorizan que usemos esta información para preparar postulaciones a fondos junto a la organización?", tipo:"unica", opciones:[
+  {t:"¿Hay algo más que debamos saber sobre la institución?", nota:"Opcional.", tipo:"largo"},
+  {t:"¿Autorizan que usemos esta información para preparar postulaciones a fondos junto a ustedes?", tipo:"unica", opciones:[
     "Sí, autorizamos","Sí, pero queremos revisar antes cada documento","No por ahora"]},
   {t:"Nombre de quien responde este formulario", tipo:"texto"}
 ]}
 ];
-
 let __num = 0;
 BLOQUES.forEach(b => b.preguntas.forEach(p => p.n = ++__num));
 
@@ -404,8 +480,38 @@ const contadorPaso = document.getElementById('contadorPaso');
 const CLAVE = 'diagnostico2027';
 const TOTAL_PREGUNTAS = BLOQUES.reduce((a,b)=>a+b.preguntas.length,0);
 let paso = 0;
+let VISIBLES = TOTAL_PREGUNTAS;
 
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+
+/* --- Perfil: organización o establecimiento educacional --------------
+   La pregunta marcada con clave:"tipo" decide qué preguntas se ven.
+   Las que llevan ver:"org" o ver:"edu" solo aparecen en su perfil.
+   El numero de cada pregunta (p.n) NUNCA cambia: es el que identifica
+   la columna en la planilla. Lo que se renumera es solo lo que se ve.
+   -------------------------------------------------------------------- */
+function perfilActual(){
+  const sel = form.querySelector('[data-clave="tipo"] select');
+  const v = sel ? sel.value : '';
+  return (/^Establecimiento educacional|^Jard/.test(v)) ? 'edu' : 'org';
+}
+function nodoDe(p){ return form.querySelector('.pregunta[data-p="'+p.n+'"]'); }
+function visible(p){ const n = nodoDe(p); return !!n && !n.hidden; }
+
+function aplicarPerfil(){
+  const perfil = perfilActual();
+  form.querySelectorAll('.pregunta[data-ver]').forEach(n=>{
+    n.hidden = (n.dataset.ver !== perfil);
+  });
+  let i = 0;
+  form.querySelectorAll('.pregunta').forEach(n=>{
+    if(n.hidden) return;
+    const num = n.querySelector('.num');
+    if(num) num.textContent = (++i) + '.';
+  });
+  VISIBLES = i;
+  if(paso === BLOQUES.length) contadorPaso.textContent = VISIBLES + ' preguntas en total';
+}
 
 function pintarPregunta(p){
   const id = 'p'+p.n;
@@ -447,8 +553,8 @@ function pintarPregunta(p){
       <input type="checkbox" name="${id}_extra" value="${esc(p.extra)}"><span>${esc(p.extra)}</span></label>`;
   }
 
-  return `<div class="pregunta">
-    <span class="enunciado"><span class="num">${p.n}.</span>${esc(p.t)}
+  return `<div class="pregunta" data-p="${p.n}"${p.clave?` data-clave="${p.clave}"`:''}${p.ver?` data-ver="${p.ver}"`:''}>
+    <span class="enunciado"><span class="num"></span>${esc(p.t)}
     ${p.nota ? `<span class="nota">${esc(p.nota)}</span>` : ''}</span>
     ${campo}
   </div>`;
@@ -524,7 +630,7 @@ function mostrar(n){
   relleno.style.width = Math.round((paso/total)*100) + '%';
   if(paso === total){
     tituloPaso.textContent = 'Completado';
-    contadorPaso.textContent = TOTAL_PREGUNTAS + ' preguntas respondidas';
+    contadorPaso.textContent = VISIBLES + ' preguntas en total';
     document.getElementById('resumen').textContent = armarTexto();
   } else {
     tituloPaso.textContent = BLOQUES[paso].titulo;
@@ -544,6 +650,7 @@ form.addEventListener('change', alCambiar);
 function alCambiar(e){
   const multi = e.target.closest && e.target.closest('.multi');
   if(multi) rotularMulti(multi);
+  if(e.target.closest && e.target.closest('[data-clave="tipo"]')) aplicarPerfil();
   guardar();
 }
 
@@ -570,6 +677,7 @@ function recuperar(){
 
 /* --- Recolección de respuestas --- */
 function respuestaDe(p){
+  if(!visible(p)) return '';
   const id = 'p'+p.n;
   let r = [];
   if(p.tipo === 'contacto'){
@@ -609,7 +717,9 @@ function armarTexto(){
   BLOQUES.forEach(b=>{
     lineas.push('', '===== ' + b.titulo.toUpperCase() + ' =====', '');
     b.preguntas.forEach(p=>{
-      lineas.push(`${p.n}. ${p.t}`);
+      if(!visible(p)) return;
+      const vn = (nodoDe(p).querySelector('.num')||{}).textContent || '';
+      lineas.push(`${vn} ${p.t}`.trim());
       lineas.push('   -> ' + (respuestaDe(p) || '(sin responder)'));
       lineas.push('');
     });
@@ -618,7 +728,11 @@ function armarTexto(){
 }
 
 function sinResponder(){
-  return recolectar().filter(f => !f.respuesta).length;
+  let n = 0;
+  BLOQUES.forEach(b => b.preguntas.forEach(p => {
+    if(visible(p) && !respuestaDe(p)) n++;
+  }));
+  return n;
 }
 
 /* --- Envío a la planilla --- */
@@ -693,6 +807,7 @@ btnEnviar.addEventListener('click', ()=>{
 });
 
 recuperar();
+aplicarPerfil();
 mostrar(0);
 </script>
 </body>

@@ -128,6 +128,11 @@ tr:hover td.col-destacado{background:#FFF1DE}
 .dato-sub.usando{color:#0F7B4F;font-weight:700}
 .candado{font-size:11px;font-weight:700;color:#9A5B00;white-space:nowrap}
 .margen-in.perdida{color:#B3261E;border-color:#E8B4B0;background:#FDF2F1;font-weight:800}
+/* Margen bajo el mínimo de esa lista. Rayen 20-ago-2026: "no le impidas poner el margen
+   inferior, sino pónselo en rojo... que les aparezca un mensaje en pantalla solicitando
+   autorización por margen inferior al 20%". No bloquea nada: avisa. */
+.margen-in.bajo-min{color:#B3261E;border-color:#E8B4B0;background:#FDF2F1;font-weight:800}
+.aviso.pide-ok{background:#FDECEA;color:#8C1D18;border:1.5px solid #E8B4B0;font-weight:600}
 .stock-si{font-size:15px;font-weight:800;color:#0F7B4F}
 .stock-poco{font-size:15px;font-weight:800;color:#9A5B00}
 .stock-cero{font-size:12.5px;font-weight:800;color:#B3261E}
@@ -176,6 +181,8 @@ tr:hover td.col-destacado{background:#FFF1DE}
       <button class="sec" type="button" id="btnTodoWeb" style="display:none">Cobrar el precio de la web en todo</button>
     </div>
 
+    <div class="aviso pide-ok" id="avisoMin" style="display:none"></div>
+
     <div style="overflow-x:auto">
       <table>
         <thead>
@@ -211,6 +218,7 @@ tr:hover td.col-destacado{background:#FFF1DE}
       <li>Registra la cotización: el número <strong>OC26-XXXX-SM</strong> lo asigna el sistema, no se escribe a mano.</li>
       <li>Recién ahí, <strong>Guardar como PDF</strong>.</li>
     </ol>
+    <div class="aviso pide-ok" id="avisoMinPie" style="display:none"></div>
     <div class="acciones" style="margin-top:14px">
       <button class="primario" id="btnAbrir" type="button">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
@@ -247,7 +255,7 @@ tr:hover td.col-destacado{background:#FFF1DE}
 // a un archivo chico que se pide SIN caché; si no calza con la que trae adentro, se
 // recarga sola con una dirección nueva y esa sí llega fresca.
 // AL PUBLICAR UN CAMBIO: subir VERSION acá Y en version.json (el mismo número).
-var VERSION = "2026-08-20-19";
+var VERSION = "2026-08-20-20";
 
 (function comprobarVersion(){
   fetch("version.json?t=" + Date.now(), { cache:"no-store" })
@@ -277,6 +285,10 @@ var PREPARADAS = [
   { id:"puren-tablet-caa",                  titulo:"Purén — Tablet TD Snap (alternativa económica)" },
   { id:"puren-l-communicator",             titulo:"Purén — ComuniQa Surface L con Communicator 5" },
   { id:"puren-eye-communicator",           titulo:"Purén — ComuniQa Surface Eye por mirada, Communicator 5" },
+  // Coronel: las mismas tres opciones que Purén, para Jocelyn Escares.
+  { id:"coronel-tablet-caa",               titulo:"Coronel — Tablet TD Snap (alternativa económica)" },
+  { id:"coronel-l-communicator",           titulo:"Coronel — ComuniQa Surface L con Communicator 5" },
+  { id:"coronel-eye-communicator",         titulo:"Coronel — ComuniQa Surface Eye por mirada, Communicator 5" },
   { id:"luepaut-sala-sensorial",            titulo:"Agrupación Luepaut — Sala sensorial" }
 ];
 
@@ -300,6 +312,10 @@ var COSTOS = null;       // costos netos por código; llega solo al escribir la 
 // Cuando la selección viene de la lista de un EJECUTIVO, el costo no viaja: se deduce
 // del precio publicado y del margen con el que está publicado, y NUNCA se muestra.
 var MOSTRAR_COSTO = true;
+// Margen mínimo de la lista de ese ejecutivo (0,20 = 20%). Solo llega desde las listas de los
+// ejecutivos; en las cotizaciones de Rayen queda en null y no aparece ningún aviso.
+// NO BLOQUEA NADA: el precio se calcula igual, solo se marca en rojo y se pide autorización.
+var MARGEN_MIN = null;
 var MARGEN_DEF = 0.20;   // Rayen 19-ago-2026: si no digo otra cosa, cotizo al 20%
 
 // ── El margen y el precio ──────────────────────────────────────────────────
@@ -408,7 +424,7 @@ function pintar(datos){
 
 function refrescar(){
   var tb = document.getElementById("tbody");
-  var sinPrecio = [], sinFoto = [], desconocidos = [];
+  var sinPrecio = [], sinFoto = [], desconocidos = [], bajoElMinimo = 0;
   var subNeto = 0;
   FILAS = [];
   tb.innerHTML = "";
@@ -431,6 +447,13 @@ function refrescar(){
 
     // Cuando el precio lo escribió ella, el margen se muestra sacado del costo, en gris.
     var mMostrar = (L.precioManual != null) ? margenImplicito(L, netoUn) : L.margen;
+    // Bajo el mínimo cuenta igual si el margen lo escribió él o si quedó así por haber
+    // escrito el precio final a mano: es el mismo caso visto por el otro lado.
+    // Se compara con el número que se VE en la casilla (un decimal): así nunca pasa que la
+    // casilla diga 13,5% y salga en rojo por un resto de decimales que nadie puede ver.
+    var bajoMin = (MARGEN_MIN != null && mMostrar != null &&
+                   Math.round(mMostrar * 1000) < Math.round(MARGEN_MIN * 1000));
+    if (bajoMin) bajoElMinimo++;
     var celdaMargen = (mMostrar == null)
       // Sin la clave no hay costo, y sin costo no se puede saber el margen. Se dice, en vez
       // de dejar un guión que no explica nada (Rayen, 19-ago: "veo que dejaste fuera los márgenes").
@@ -438,7 +461,7 @@ function refrescar(){
       : '<td class="margen-cell">' +
           // Si el precio escrito a mano queda bajo el costo, el margen sale negativo y en rojo.
           '<input class="margen-in' + (L.precioManual != null ? ' calculado' : '') +
-                 (mMostrar < 0 ? ' perdida' : '') + '" ' +
+                 (mMostrar < 0 ? ' perdida' : '') + (bajoMin ? ' bajo-min' : '') + '" ' +
                  'type="number" step="0.5" min="0" max="90" ' +
                  'data-i="' + i + '" value="' + (Math.round(mMostrar * 1000) / 10) + '"' +
                  (puedeMover ? '' : ' disabled title="Escribe tu clave para mover el margen"') + '>' +
@@ -554,6 +577,23 @@ function refrescar(){
   var btnTodo = document.getElementById("btnTodoWeb");
   if (btnTodo) btnTodo.style.display = LINEAS.some(function(L){ return !!L.web; }) ? "inline-flex" : "none";
 
+  // Rayen, 20-ago-2026: si algún producto va bajo el margen mínimo de esa lista, el aviso
+  // queda a la vista arriba de la tabla Y pegado al botón que abre el cotizador. No se
+  // bloquea el envío, pero no se puede pasar por alto.
+  var avisoMin = "";
+  if (MARGEN_MIN != null && bajoElMinimo > 0) {
+    avisoMin = (bajoElMinimo === 1 ? "Hay 1 producto bajo el margen mínimo de "
+                                   : "Hay " + bajoElMinimo + " productos bajo el margen mínimo de ") +
+               (Math.round(MARGEN_MIN * 1000) / 10).toString().replace(".", ",") + "%. " +
+               "Necesitas la autorización de Rayen antes de enviar esta cotización.";
+  }
+  ["avisoMin", "avisoMinPie"].forEach(function(id){
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = avisoMin;
+    el.style.display = avisoMin ? "block" : "none";
+  });
+
   document.getElementById("tNeto").textContent  = CLP(subNeto);
   document.getElementById("tIva").textContent   = CLP(subNeto * 0.19);
   document.getElementById("tTotal").textContent = CLP(subNeto * 1.19);
@@ -638,6 +678,8 @@ function cargarSeleccion(){
 
   COSTOS = {};
   MOSTRAR_COSTO = true;
+  MARGEN_MIN = (datos.margen_min != null && isFinite(Number(datos.margen_min)))
+             ? Number(datos.margen_min) : null;
   if (datos.sin_costos) {
     // Viene de la lista de un ejecutivo: esa página es pública, así que no trae ningún
     // costo. Lo que sí trae, por producto, es el precio con el que está publicado y el

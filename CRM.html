@@ -4119,8 +4119,16 @@ const PIPELINE_BUCKETS = [
   { key:'gan',     label:'Ganado',        cls:'f-gan' },
   { key:'perd',    label:'Perdido',       cls:'f-perd' }
 ];
+// Estado que manda en la vista. Normalmente vale el derivado de las interacciones
+// (ultimo_estado), pero si el contacto está explícitamente en "No contactado" ese estado
+// manda: haber asistido a un webinar no significa que ya se lo llamó.
+function estadoVigente(c){
+  if(!c) return '';
+  if(String(c.pipeline_estado || '').trim().toLowerCase() === 'no contactado') return c.pipeline_estado;
+  return c.ultimo_estado || c.pipeline_estado || '';
+}
 function _bucketDeContacto(c){
-  return _bucketKeyDeEstado(c.ultimo_estado || c.pipeline_estado || '');
+  return _bucketKeyDeEstado(estadoVigente(c));
 }
 
 // Embudo del dashboard: mismas etapas de PIPELINE_ETAPAS, EXCLUYENDO Perdido (no es progreso)
@@ -4534,6 +4542,16 @@ function detectarRol(usuario){
 
 function initApp(user){
   USUARIO = user;
+// Los estados de los contactos de webinar se corrigieron por fuera del navegador
+// (quedaron en "No contactado"), y el cache local de contactos dura 24 horas: se limpia
+// una sola vez por navegador para que se vean los estados nuevos.
+  try {
+    const MARCA = 'crm_refresco_pendientes_webinar_ago2026';
+    if (!localStorage.getItem(MARCA)) {
+      localStorage.removeItem('crm_cache_contactos_v2_' + USUARIO);
+      localStorage.setItem(MARCA, '1');
+    }
+  } catch(e){}
   ROL = detectarRol(user);
   // Mario no usa el CRM: su vista vive en el Portal del Ejecutivo
   if (ROL === 'direccion') {
@@ -5852,7 +5870,7 @@ async function pintarBannerListaPartida(){
   const mios = (lista || []).filter(c => esOwnerDe(c, ejecActivo));
   const campana = mios.filter(c => parsearEtiquetas(c.etiquetas).some(t => /campa.?a mayo 2026/i.test(t)));
   const sinTrabajar = campana.filter(c => {
-    const est = String(c.ultimo_estado || c.pipeline_estado || '').toLowerCase();
+    const est = String(estadoVigente(c)).toLowerCase();
     return est === '' || est === 'lead' || est.indexOf('por contactar') >= 0;
   });
   const totalSin = sinTrabajar.length;
@@ -7289,7 +7307,7 @@ async function cargarFunnelDashboard(){
   window.__FUNNEL_DATA = {};
   buckets.forEach(b => { window.__FUNNEL_DATA[b.key] = []; });
   propios.forEach(c => {
-    const k = grupoPipeline(c.ultimo_estado || c.pipeline_estado || '').key;
+    const k = grupoPipeline(estadoVigente(c)).key;
     if(counts[k] === undefined) return; // 'perdido' u otros fuera de las 11 etapas no se grafican
     counts[k]++; window.__FUNNEL_DATA[k].push(c);
   });
@@ -7324,7 +7342,7 @@ function verDetalleFunnel(bucketKey, label){
         lista.map(c => {
           const ownerNm = String(c.ejecutivo_asignado || '').trim() || 'Sin asignar';
           const initials = ownerNm.split(' ').map(p => p.charAt(0).toUpperCase()).slice(0,2).join('') || '?';
-          const estadoTxt = c.ultimo_estado || c.pipeline_estado || 'Sin estado';
+          const estadoTxt = estadoVigente(c) || 'Sin estado';
           return '<div onclick="cerrarModalDiagnostico(); abrirFichaModal(\'' + esc(c.id) + '\')" ' +
             'style="background:white;border:1.5px solid #2a1a4f;border-radius:9px;padding:12px 14px;cursor:pointer;transition:border-color .12s,box-shadow .12s;display:flex;flex-direction:column;gap:6px;" ' +
             'onmouseover="this.style.borderColor=\'#5b21b6\';this.style.boxShadow=\'0 2px 8px rgba(91,33,182,.18)\'" ' +
@@ -7383,7 +7401,7 @@ async function cargarReunionesDashboard(){
       propios = lista.filter(esOwner);
     }
     reuniones = propios
-      .filter(c => String(c.ultimo_estado || c.pipeline_estado || '').toLowerCase().indexOf('reuni') >= 0)
+      .filter(c => String(estadoVigente(c)).toLowerCase().indexOf('reuni') >= 0)
       .slice(0, 10)
       .map(c => ({
         contacto_id: c.id,
@@ -7936,8 +7954,10 @@ function grupoPipeline(estadoRaw){
     if(e.indexOf('2')>=0) return _etapaResult('seguimiento-2');
     return _etapaResult('seguimiento-1');
   }
+  // OJO con el orden: 'No contactado' contiene la palabra 'contactad', así que se pregunta
+  // primero por el 'no' — si no, un contacto pendiente aparecía como ya contactado.
+  if(e==='' || e==='lead' || e.indexOf('por contactar')>=0 || e.indexOf('no contactad')>=0 || e.indexOf('sin contactar')>=0) return _etapaResult('no-contactado');
   if(e.indexOf('contactad')>=0) return _etapaResult('contactado');
-  if(e==='' || e==='lead' || e.indexOf('por contactar')>=0 || e.indexOf('no contactad')>=0) return _etapaResult('no-contactado');
   return _etapaResult('contactado');
 }
 
@@ -8070,7 +8090,7 @@ async function abrirSelectorMensaje(contactoId, canal, etapaForzada){
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;';
   ov.onclick = function(e){ if(e.target === ov) ov.remove(); };
   document.body.appendChild(ov);
-  var etapaActual = etapaForzada || grupoPipeline(c.ultimo_estado || c.pipeline_estado || '').key;
+  var etapaActual = etapaForzada || grupoPipeline(estadoVigente(c)).key;
   var opts = CFG_ETAPAS.map(function(et){ return '<option value="'+et[0]+'"'+(et[0]===etapaActual?' selected':'')+'>'+esc(et[1])+'</option>'; }).join('');
   var esWa = canal === 'whatsapp';
   ov.innerHTML =
@@ -8632,7 +8652,7 @@ function gestionContactoBar(c){
   const n = s => String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
   const selStyle = 'padding:7px 10px;border:1px solid var(--v2-divider,#d8dbe6);border-radius:8px;font-size:13px;font-weight:600;color:var(--v2-navy,#001A60);background:#fff;cursor:pointer;font-family:inherit;min-width:170px;';
   const lblStyle = 'display:block;font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--v2-text-soft,#5A6478);text-transform:uppercase;margin-bottom:4px;';
-  const curOpt = _gestEstadoOpcion(c.ultimo_estado || c.pipeline_estado || '');
+  const curOpt = _gestEstadoOpcion(estadoVigente(c));
   const estSel = '<select onchange="cambiarEstadoFicha(\''+id+'\', this.value)" style="'+selStyle+'">' +
     _GEST_ESTADOS.map(e => '<option'+(e===curOpt?' selected':'')+'>'+esc(e)+'</option>').join('') + '</select>';
   // Camino de entrada (origen) — control discreto: corrige la clasificación si quedó mal. Define qué cadencia corre.
@@ -8710,7 +8730,7 @@ async function trabajarComoMio(id){
 
 function renderTarjetaV2(c, view){
   view = view || 'vTodos';
-  var estadoRaw = c.ultimo_estado || c.pipeline_estado || 'Contactado';
+  var estadoRaw = estadoVigente(c) || 'Contactado';
   var g = grupoPipeline(estadoRaw);
   var nombre = c.nombre || c.institucion || '(sin nombre)';
   var sub = (c.nombre && c.institucion) ? esc(c.institucion) + (c.cargo ? ' · ' + esc(c.cargo) : '') : (c.cargo ? esc(c.cargo) : esc(c.ciudad || ''));
@@ -9524,7 +9544,7 @@ async function cargarPorCerrar(){
   const filtroEstado = document.getElementById('filtroCerrarEstado').value.toLowerCase();
   const estadosActivos = ['cotizad','seguim','llamad','reuni','gesti'];
   lista = lista.filter(c => {
-    const pe = String(c.ultimo_estado || c.pipeline_estado || '').toLowerCase();
+    const pe = String(estadoVigente(c)).toLowerCase();
     if(pe.indexOf('ganad') >= 0 || pe.indexOf('perdid') >= 0 || pe.indexOf('cerrad') >= 0) return false;
     if(filtroEstado){ return pe.indexOf(filtroEstado) >= 0; }
     return estadosActivos.some(e => pe.indexOf(e) >= 0);
@@ -12675,7 +12695,7 @@ async function cargarOlvidados(){
   const umbral = parseInt(document.getElementById('filtroOlvidadosDias').value || '30', 10);
   // Excluir ganados/perdidos (no son "oportunidades dormidas")
   lista = lista.filter(c => {
-    const pe = String(c.ultimo_estado || c.pipeline_estado || '').toLowerCase();
+    const pe = String(estadoVigente(c)).toLowerCase();
     if(pe.indexOf('ganad') >= 0 || pe.indexOf('perdid') >= 0) return false;
     c._diasInactivo = _diasDesde(_ultimaFecha(c));
     return c._diasInactivo >= umbral && c._diasInactivo < 9999;
@@ -12744,7 +12764,7 @@ async function cargarKanban(){
   KANBAN_DATA = {};
   KANBAN_COLS.forEach(col => KANBAN_DATA[col.key] = []);
   lista.forEach(c => {
-    const bk = _bucketKeyDeEstado(c.ultimo_estado || c.pipeline_estado || '');
+    const bk = _bucketKeyDeEstado(estadoVigente(c));
     const col = KANBAN_COLS.find(cc => cc.bucket === bk) || KANBAN_COLS[0];
     KANBAN_DATA[col.key].push(c);
   });
@@ -12770,7 +12790,7 @@ function renderKanban(){
       '<div class="kanban-col-hd">' + esc(col.label) + '<span class="col-count">' + cards.length + '</span></div>' +
       '<div class="kanban-col-body">' +
         cards.map(c => {
-          const estado = String(c.ultimo_estado || c.pipeline_estado || '').toLowerCase();
+          const estado = String(estadoVigente(c)).toLowerCase();
           const hayCot = estado.indexOf('cotizad') >= 0 || estado.indexOf('seguim') >= 0 || estado.indexOf('gesti') >= 0 || estado.indexOf('ganad') >= 0;
           return '<div class="kanban-card" draggable="true" data-id="' + esc(c.id) + '" data-col="' + esc(col.key) + '" ' +
             'ondragstart="this.classList.add(\'dragging\'); event.dataTransfer.setData(\'text/plain\', \'' + esc(c.id) + '\');" ' +
@@ -12858,7 +12878,7 @@ function renderFicha(container, data){
   const tooltipBloqueo = 'Este contacto está asignado a ' + ownerName + '. Pídele a Rayen que te lo reasigne si quieres trabajarlo.';
 
   // Pipeline v2: grupo del embudo + links nativos con plantilla/ejecutivo
-  const gF = grupoPipeline(c.ultimo_estado || c.pipeline_estado || 'Contactado');
+  const gF = grupoPipeline(estadoVigente(c) || 'Contactado');
   const LF = construirLinksContacto(c, gF);
   const dir = [c.direccion, c.ciudad, c.region].filter(Boolean).join(', ');
   // Iconos para las pills de contacto (16-18px) — phone, whatsapp filled, gmail multicolor, pin
@@ -15452,7 +15472,7 @@ function renderSpotlightResults(){
   }
   cont.innerHTML = SPOT_RESULTS.map((c, i) => {
     const sel = i === SPOT_INDEX;
-    const estado = c.ultimo_estado || c.pipeline_estado || c.pipeline || '';
+    const estado = estadoVigente(c) || c.pipeline || '';
     return '<div class="spot-row' + (sel ? ' sel' : '') + '" data-idx="' + i + '" onclick="abrirSpotlightItem(' + i + ')" onmouseenter="setSpotIndex(' + i + ')" ' +
       'style="padding:11px 18px;cursor:pointer;display:flex;align-items:center;gap:12px;border-left:3px solid ' + (sel ? 'var(--violet, var(--purple))' : 'transparent') + ';background:' + (sel ? 'var(--surface-selected, #f7f3ee)' : 'transparent') + ';">' +
       '<div style="flex:1;min-width:0;">' +
@@ -18800,6 +18820,7 @@ function renderWebinarInscritos(soloLista){
     '</div>' +
     '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#f5f2fb;border-radius:10px;padding:11px 14px;font-size:12.5px;color:var(--subtle);margin-bottom:16px;">' +
       '<span style="flex:1;min-width:280px;">Toca a la persona para abrir su ficha completa. Para dictar el comentario: clic en el cuadro y apretá <b>Windows + H</b>.</span>' +
+      '<button class="btn" id="btnWebPend" onclick="webDejarPendientes()">Dejarlos como pendientes de contactar</button>' +
       '<button class="btn" onclick="webAbrirTodos(true)">Abrir todas</button>' +
       '<button class="btn" onclick="webAbrirTodos(false)">Cerrar todas</button>' +
     '</div>' +
@@ -18843,35 +18864,47 @@ function _webFilasHTML(lista){
         '<div style="white-space:nowrap;">' + chips + '</div>' +
       '</div>' +
 
-      // ── Todo el detalle, plegado ──
-      '<div id="webdet-' + esc(i.id) + '" style="display:' + (abierto ? 'grid' : 'none') + ';grid-template-columns:1.3fr 1fr 300px;gap:16px;align-items:start;padding:16px;border-top:1px solid var(--purple-lt);">' +
+      // ── Todo el detalle, plegado. Tres bloques: quién es · lo que dijo · la llamada ──
+      '<div id="webdet-' + esc(i.id) + '" style="display:' + (abierto ? 'grid' : 'none') + ';grid-template-columns:1.05fr 1.25fr 300px;gap:18px;align-items:start;padding:16px;border-top:1px solid var(--purple-lt);">' +
 
+        // ── 1. Quién es y cómo contactarla ──
         '<div>' +
-          '<div style="font-size:12.5px;color:var(--subtle);margin:0 0 6px;">' + esc(i.cargo || '') + (i.cargo && i.establecimiento ? ' · ' : '') + esc(i.establecimiento || '') + '</div>' +
-          '<div style="font-size:12px;color:var(--mist);margin-bottom:8px;">' + esc(i.comuna || '') + (i.comuna && i.region ? ' · ' : '') + esc(i.region || '') + '</div>' +
-          '<div style="font-size:12.5px;display:flex;flex-direction:column;gap:3px;">' +
-            (i.email ? '<a href="mailto:' + esc(i.email) + '" style="color:var(--purple-dk);">' + esc(i.email) + '</a>' : '') +
-            (tel ? '<span>' + esc(i.telefono) + ' · <a href="tel:' + esc(tel) + '" style="color:var(--purple-dk);">Llamar</a> · <a href="https://wa.me/' + esc(tel.replace(/\+/g, '')) + '" target="_blank" style="color:#059669;">WhatsApp</a></span>' : '') +
+          _webRotulo('Quién es') +
+          '<div style="font-size:13px;color:var(--ink);font-weight:600;">' + esc(i.cargo || '') + '</div>' +
+          (i.establecimiento ? '<div style="font-size:12.5px;color:var(--subtle);margin-top:2px;">' + esc(i.establecimiento) + '</div>' : '') +
+          '<div style="font-size:12px;color:var(--mist);margin-top:2px;">' + esc(i.comuna || '') + (i.comuna && i.region ? ' · ' : '') + esc(i.region || '') + '</div>' +
+
+          '<div style="font-size:12.5px;display:flex;flex-direction:column;gap:3px;margin-top:10px;">' +
+            (i.email ? '<a href="mailto:' + esc(i.email) + '" style="color:var(--purple-dk);word-break:break-all;">' + esc(i.email) + '</a>' : '<span style="color:var(--mist);">Sin correo</span>') +
+            (tel ? '<span>' + esc(i.telefono) + '</span>' : '<span style="color:var(--mist);">Sin teléfono</span>') +
           '</div>' +
-          (i.contacto_id ? '<button class="btn" style="margin-top:9px;" onclick="abrirFichaModal(\'' + esc(i.contacto_id) + '\')">Ver su ficha y todo el historial</button>' : '') +
+
+          '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:11px;">' +
+            (i.email ? '<button class="btn" style="border-color:var(--purple-dk);color:var(--purple-dk);font-weight:700;" onclick="webEscribirCorreo(\'' + esc(i.id) + '\')">✉ Escribir correo</button>' : '') +
+            (tel ? '<a class="btn" href="tel:' + esc(tel) + '" style="text-decoration:none;">Llamar</a>' : '') +
+            (tel ? '<a class="btn" href="https://wa.me/' + esc(tel.replace(/\+/g, '')) + '" target="_blank" style="text-decoration:none;color:#059669;border-color:#a7f3d0;">WhatsApp</a>' : '') +
+          '</div>' +
+          (i.contacto_id ? '<button class="btn" style="margin-top:6px;" onclick="abrirFichaModal(\'' + esc(i.contacto_id) + '\')">Ver su ficha y todo el historial</button>' : '') +
+
+          (i.correo_rebotado ? '<div style="background:#fef3c7;color:#92400e;border-radius:8px;padding:7px 10px;margin-top:10px;font-size:12px;font-weight:700;">El correo rebotó (' + esc(i.correo_rebotado) + ') — mejor llamarla por teléfono</div>' : '') +
+          (i.baja_motivo ? '<div style="background:#fee2e2;color:#991b1b;border-radius:8px;padding:7px 10px;margin-top:10px;font-size:12px;font-weight:700;">Pidió no recibir más correos: ' + esc(i.baja_motivo) + '</div>' : '') +
         '</div>' +
 
+        // ── 2. Lo que dijo y qué le interesa ──
         '<div style="font-size:12px;color:var(--subtle);">' +
+          _webRotulo('Lo que dijo') +
           _webBloqueVoz(i) +
-          (i.temas ? '<div style="margin-bottom:7px;"><b style="color:var(--mist);">Le interesa:</b> ' + esc(i.temas) + '</div>' : '') +
-          (i.sala_sensorial ? '<div style="margin-bottom:7px;"><b style="color:var(--mist);">Sala sensorial:</b> ' + esc(i.sala_sensorial) + '</div>' : '') +
-          (i.premio ? '<div style="background:#fef9c3;border:1px solid #fde68a;color:#78350f;border-radius:8px;padding:7px 10px;margin-bottom:7px;font-weight:700;">Sorteo: ' + esc(i.premio) + '</div>' : '') +
-          (i.baja_motivo ? '<div style="background:#fee2e2;color:#991b1b;border-radius:8px;padding:7px 10px;margin-bottom:7px;font-weight:700;">Pidió no recibir más correos: ' + esc(i.baja_motivo) + '</div>' : '') +
-          (i.correo_rebotado ? '<div style="background:#fef3c7;color:#92400e;border-radius:8px;padding:7px 10px;margin-bottom:7px;font-weight:700;">El correo rebotó (' + esc(i.correo_rebotado) + ') — mejor llamarla por teléfono</div>' : '') +
-          '<button class="btn" style="margin:2px 0 8px;' + (i.correo_rebotado ? '' : 'color:#92400e;border-color:#fcd34d;') + '" onclick="webMarcarRebote(\'' + esc(i.id) + '\',' + (i.correo_rebotado ? 'false' : 'true') + ')">' +
-            (i.correo_rebotado ? 'Su correo sí funciona: quitar la marca' : 'Marcar: su correo rebotó') + '</button>' +
-          '<button class="btn" style="margin:2px 0 8px;" onclick="webVerDatos(\'' + esc(i.id) + '\')">Ver todos sus datos del formulario</button>' +
-          '<div id="webdatos-' + esc(i.id) + '" style="display:none;background:var(--paper);border-radius:8px;padding:10px 12px;white-space:pre-line;color:var(--ink);margin-bottom:8px;">' + esc(i.datos_form || 'Sin datos adicionales') + '</div>' +
-          (i.comentario ? '<div style="background:#ede9fe;border-radius:8px;padding:9px 11px;white-space:pre-line;color:var(--ink);margin-top:8px;"><b style="color:#5b21b6;font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Llamadas</b><br>' + esc(_webComentarioLimpio(i.comentario)) + '</div>' : '') +
+          (i.temas ? '<div style="margin-bottom:7px;font-size:12.5px;"><b style="color:var(--mist);">Le interesa:</b> ' + esc(i.temas) + '</div>' : '') +
+          (i.sala_sensorial ? '<div style="margin-bottom:7px;font-size:12.5px;"><b style="color:var(--mist);">Sala sensorial:</b> ' + esc(i.sala_sensorial) + '</div>' : '') +
+          (i.premio ? '<div style="background:#fef9c3;border:1px solid #fde68a;color:#78350f;border-radius:8px;padding:7px 10px;margin-bottom:7px;font-weight:700;font-size:12.5px;">Sorteo: ' + esc(i.premio) + '</div>' : '') +
+          (!_webTieneVoz(i) && !i.temas && !i.sala_sensorial && !i.premio ? '<div style="color:var(--mist);">No dejó comentarios al inscribirse.</div>' : '') +
+          (i.comentario ? '<div style="background:#ede9fe;border-radius:8px;padding:9px 11px;white-space:pre-line;color:var(--ink);margin-top:10px;font-size:12.5px;"><b style="color:#5b21b6;font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Llamadas anteriores</b><br>' + esc(_webComentarioLimpio(i.comentario)) + '</div>' : '') +
         '</div>' +
 
+        // ── 3. La llamada de ahora ──
         '<div>' +
-          '<textarea id="webcom-' + esc(i.id) + '" rows="3" placeholder="Comentario de la llamada — podés dictarlo con Windows + H" ' +
+          _webRotulo('La llamada') +
+          '<textarea id="webcom-' + esc(i.id) + '" rows="4" placeholder="Comentario de la llamada — podés dictarlo con Windows + H" ' +
             'style="width:100%;padding:9px 11px;border:1px solid var(--purple-lt);border-radius:9px;font-size:13px;font-family:var(--font-sans);resize:vertical;"></textarea>' +
           '<div style="font-size:11px;color:var(--mist);margin:9px 0 5px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;">Capacitación gratuita</div>' +
           '<div style="display:flex;gap:6px;margin-bottom:10px;" id="webint-' + esc(i.id) + '">' +
@@ -18882,9 +18915,65 @@ function _webFilasHTML(lista){
           '<button class="btn primary" style="width:100%;" onclick="guardarSeguimientoWebinar(\'' + esc(i.id) + '\')">Guardar y marcar llamado</button>' +
         '</div>' +
 
+        // ── Pie: lo que casi no se usa, fuera del camino ──
+        '<div style="grid-column:1/-1;border-top:1px solid var(--purple-lt);padding-top:10px;display:flex;gap:14px;flex-wrap:wrap;align-items:center;">' +
+          '<button class="btn" style="font-size:12px;" onclick="webVerDatos(\'' + esc(i.id) + '\')">Ver todos sus datos del formulario</button>' +
+          '<button class="btn" style="font-size:12px;' + (i.correo_rebotado ? '' : 'color:#92400e;border-color:#fcd34d;') + '" onclick="webMarcarRebote(\'' + esc(i.id) + '\',' + (i.correo_rebotado ? 'false' : 'true') + ')">' +
+            (i.correo_rebotado ? 'Su correo sí funciona: quitar la marca' : 'Marcar: su correo rebotó') + '</button>' +
+        '</div>' +
+        '<div id="webdatos-' + esc(i.id) + '" style="grid-column:1/-1;display:none;background:var(--paper);border-radius:8px;padding:10px 12px;white-space:pre-line;color:var(--ink);font-size:12.5px;">' + esc(i.datos_form || 'Sin datos adicionales') + '</div>' +
+
       '</div>' +
     '</div>';
   }).join('');
+}
+
+// Rótulo chico de cada bloque del detalle, para ver de un ojo qué es cada columna.
+function _webRotulo(texto){
+  return '<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--mist);margin-bottom:7px;">' + texto + '</div>';
+}
+
+// ── Escribir un correo a la persona ──────────────────────────────────────────
+// Abre Gmail en otra pestaña con el destinatario, el asunto y un texto de partida ya
+// puestos. El correo NO se manda solo: Rayen lo revisa y aprieta Enviar, así sale de su
+// cuenta, con su firma de Gmail, y queda guardado en Enviados.
+const WEB_CUENTA_CORREO = 'rayen.ogalde@opencluster-tech.cl';
+
+// Fecha para escribir dentro del correo: "14 de agosto", con el mes entero.
+function _webFechaLarga(f){
+  const s = String(f || '').substring(0, 10);
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!m) return _webFechaCorta(f);
+  const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  return Number(m[3]) + ' de ' + meses[Number(m[2]) - 1];
+}
+
+function webEscribirCorreo(id){
+  const i = WEB_INSCRITOS.find(x => String(x.id) === String(id));
+  if(!i || !i.email){ alert('Esta persona no tiene correo en la lista.'); return; }
+
+  if(i.baja_motivo && !confirm('Esta persona pidió no recibir más correos:\n\n' + i.baja_motivo + '\n\n¿Abrir Gmail igual?')) return;
+  if(i.correo_rebotado && !confirm('A esta persona le rebotó el correo (' + i.correo_rebotado + ').\n\n¿Abrir Gmail igual?')) return;
+
+  const primerNombre = String(i.nombre || '').trim().split(/\s+/)[0] || '';
+  const webinar = String((WEB_ACTUAL && WEB_ACTUAL.nombre) || '').trim();
+  const fecha = (WEB_ACTUAL && WEB_ACTUAL.fecha_evento) ? _webFechaLarga(WEB_ACTUAL.fecha_evento) : '';
+  const premio = String(i.premio || '').replace(/^gan[óo]\s+/i, '').trim();
+
+  let asunto = webinar || 'Webinar OpenCluster';
+  if(premio) asunto = asunto + ' — ' + premio;
+
+  let cuerpo = 'Hola ' + primerNombre + ',\n\n';
+  cuerpo += 'Te escribo a propósito del ' + (webinar || 'webinar') + (fecha ? ', del ' + fecha : '') + '.';
+  if(premio) cuerpo += ' Ganaste ' + premio + ' en el sorteo.';
+  cuerpo += '\n\n\n';
+
+  const url = 'https://mail.google.com/mail/?view=cm&fs=1&tf=1' +
+    '&authuser=' + encodeURIComponent(WEB_CUENTA_CORREO) +
+    '&to=' + encodeURIComponent(i.email) +
+    '&su=' + encodeURIComponent(asunto) +
+    '&body=' + encodeURIComponent(cuerpo);
+  window.open(url, '_blank');
 }
 
 // Historial de llamadas legible: sin líneas repetidas y sin el ":" suelto de cuando el
@@ -18985,6 +19074,55 @@ async function guardarSeguimientoWebinar(id){
   const idx = WEB_INSCRITOS.findIndex(x => String(x.id) === String(id));
   if(idx >= 0) WEB_INSCRITOS[idx] = r.inscrito;
   renderWebinarInscritos(true);
+}
+
+// Deja los contactos de este webinar como "No contactado", o sea pendientes de llamar.
+// Asistir a un webinar no es haber sido contactado: los inscritos entran al CRM como
+// "Contactado" y así no aparecen en lo que queda por hacer. NO toca a los que ya tienen
+// cotización o venta, para no hacerlos retroceder.
+async function webDejarPendientes(){
+  if(!WEB_ACTUAL || !WEB_INSCRITOS.length) return;
+  const btn = document.getElementById('btnWebPend');
+  const ids = WEB_INSCRITOS.filter(i => i.contacto_id).map(i => String(i.contacto_id));
+  if(!ids.length){ alert('Los inscritos de este webinar todavía no tienen ficha en el CRM.'); return; }
+
+  if(btn){ btn.disabled = true; btn.textContent = 'Revisando…'; }
+  let contactos = [];
+  try { contactos = await _cargarContactosBase(); } catch(e){}
+  const porId = {};
+  contactos.forEach(c => { porId[String(c.id)] = c; });
+
+  const aCambiar = [], conNegocio = [];
+  ids.forEach(id => {
+    const c = porId[id];
+    if(!c) return;
+    const estados = String(c.pipeline_estado || '') + ' ' + String(c.ultimo_estado || '');
+    if(c.tiene_cotizacion || Number(c.cant_cotizaciones || 0) > 0 || /cotiza|ganad|perdid/i.test(estados)){ conNegocio.push(c.nombre || ''); return; }
+    if(String(c.pipeline_estado || '').trim().toLowerCase() === 'no contactado') return;
+    aCambiar.push(c);
+  });
+
+  const nota = conNegocio.length ? '\n\nNo toco a ' + conNegocio.length + ' que ya tienen cotización o venta:\n' + conNegocio.map(n => '• ' + n).join('\n') : '';
+  if(!aCambiar.length){
+    if(btn){ btn.disabled = false; btn.textContent = 'Dejarlos como pendientes de contactar'; }
+    alert('Ya están todos como pendientes de contactar.' + nota);
+    return;
+  }
+  if(!confirm('Voy a dejar ' + aCambiar.length + ' contacto(s) de este webinar como "No contactado", así te aparecen en lo que queda por llamar.' + nota + '\n\nDemora un rato — no cierres esta pestaña.')){
+    if(btn){ btn.disabled = false; btn.textContent = 'Dejarlos como pendientes de contactar'; }
+    return;
+  }
+
+  let ok = 0;
+  for(let n = 0; n < aCambiar.length; n++){
+    if(btn) btn.textContent = 'Cambiando ' + (n + 1) + ' de ' + aCambiar.length + '…';
+    const r = await fetchAPI('crm_set_pipeline', null, { id: aCambiar[n].id, pipeline_estado: 'No contactado', solicitante: USUARIO });
+    if(r && r.ok){ ok++; aCambiar[n].pipeline_estado = 'No contactado'; }
+  }
+  try { localStorage.removeItem('crm_cache_contactos_v2_' + USUARIO); CACHE.vMis = null; CACHE.vTodos = null; CACHE.vCerrar = null; CACHE.vOlvidados = null; } catch(e){}
+  if(btn){ btn.disabled = false; btn.textContent = 'Dejarlos como pendientes de contactar'; }
+  alert('Listo: ' + ok + ' de ' + aCambiar.length + ' quedaron como pendientes de contactar.' +
+        (ok < aCambiar.length ? '\n\n' + (aCambiar.length - ok) + ' no se pudieron cambiar — probá de nuevo.' : ''));
 }
 
 // Marca (o borra) "a esta persona le rebotó el correo". Queda guardado en la lista del

@@ -19112,6 +19112,12 @@ function webSetInteres(id, valor){
   cont.setAttribute('data-elegido', valor);
 }
 
+function _webHoyCorto(){
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return p(d.getDate()) + '-' + p(d.getMonth() + 1) + '-' + d.getFullYear();
+}
+
 async function guardarSeguimientoWebinar(id){
   const ta = document.getElementById('webcom-' + id);
   const cont = document.getElementById('webint-' + id);
@@ -19131,7 +19137,9 @@ async function guardarSeguimientoWebinar(id){
   // La fecha la pone el CRM al guardar; acá solo va lo que hizo, en sus palabras.
   const lineas = [];
   if(hizoLlamada) lineas.push('La llamé por teléfono.');
-  if(hizoCorreo)  lineas.push('Le escribí un correo.');
+  // A la línea del correo le pongo la fecha yo: el CRM solo fecha el comentario cuando se
+  // marca la llamada, así que si no, el historial quedaría sin fecha.
+  if(hizoCorreo)  lineas.push('Le escribí un correo el ' + _webHoyCorto() + '.');
   if(comentario)  lineas.push(comentario);
 
   const payload = { solicitante: USUARIO, id: id, comentario: lineas.join('\n'), llamado: hizoLlamada };

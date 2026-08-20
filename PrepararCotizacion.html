@@ -126,6 +126,8 @@ tr:hover td.col-destacado{background:#FFF1DE}
    cursor:pointer}
 .usar-web:hover{background:var(--hover)}
 .dato-sub.usando{color:#0F7B4F;font-weight:700}
+.candado{font-size:11px;font-weight:700;color:#9A5B00;white-space:nowrap}
+.margen-in.perdida{color:#B3261E;border-color:#E8B4B0;background:#FDF2F1;font-weight:800}
 .stock-si{font-size:15px;font-weight:800;color:#0F7B4F}
 .stock-poco{font-size:15px;font-weight:800;color:#9A5B00}
 .stock-cero{font-size:12.5px;font-weight:800;color:#B3261E}
@@ -164,11 +166,11 @@ tr:hover td.col-destacado{background:#FFF1DE}
 
     <div class="barra-clave" id="barraClave">
       <div class="bc-txt">
-        <span id="bcTitulo">Los precios salen con el margen del 20%.</span>
-        <span class="bc-pie" id="bcPie">Para mover el margen a mano necesito tu clave, la misma de tu lista de administradora.</span>
+        <span id="bcTitulo">Escribe tu clave para ver el costo y el margen.</span>
+        <span class="bc-pie" id="bcPie">Es la misma de tu lista de administradora. Queda guardada en este computador y no te la vuelvo a pedir.</span>
       </div>
       <form id="formClave" autocomplete="off">
-        <input id="inClave" type="password" placeholder="Tu clave" autocomplete="current-password">
+        <input id="inClave" type="password" placeholder="Tu clave" autocomplete="current-password" autofocus>
         <button class="sec" type="submit" id="btnClave">Desbloquear</button>
       </form>
       <button class="sec" type="button" id="btnTodoWeb" style="display:none">Cobrar el precio de la web en todo</button>
@@ -245,7 +247,7 @@ tr:hover td.col-destacado{background:#FFF1DE}
 // a un archivo chico que se pide SIN caché; si no calza con la que trae adentro, se
 // recarga sola con una dirección nueva y esa sí llega fresca.
 // AL PUBLICAR UN CAMBIO: subir VERSION acá Y en version.json (el mismo número).
-var VERSION = "2026-08-19-12";
+var VERSION = "2026-08-19-13";
 
 (function comprobarVersion(){
   fetch("version.json?t=" + Date.now(), { cache:"no-store" })
@@ -423,9 +425,13 @@ function refrescar(){
     // Cuando el precio lo escribió ella, el margen se muestra sacado del costo, en gris.
     var mMostrar = (L.precioManual != null) ? margenImplicito(L, netoUn) : L.margen;
     var celdaMargen = (mMostrar == null)
-      ? '<td class="margen-cell"><span class="web-no">—</span></td>'
+      // Sin la clave no hay costo, y sin costo no se puede saber el margen. Se dice, en vez
+      // de dejar un guión que no explica nada (Rayen, 19-ago: "veo que dejaste fuera los márgenes").
+      ? '<td class="margen-cell"><span class="candado">con tu clave</span></td>'
       : '<td class="margen-cell">' +
-          '<input class="margen-in' + (L.precioManual != null ? ' calculado' : '') + '" ' +
+          // Si el precio escrito a mano queda bajo el costo, el margen sale negativo y en rojo.
+          '<input class="margen-in' + (L.precioManual != null ? ' calculado' : '') +
+                 (mMostrar < 0 ? ' perdida' : '') + '" ' +
                  'type="number" step="0.5" min="0" max="90" ' +
                  'data-i="' + i + '" value="' + (Math.round(mMostrar * 1000) / 10) + '"' +
                  (puedeMover ? '' : ' disabled title="Escribe tu clave para mover el margen"') + '>' +

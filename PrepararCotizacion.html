@@ -255,7 +255,7 @@ tr:hover td.col-destacado{background:#FFF1DE}
 // a un archivo chico que se pide SIN caché; si no calza con la que trae adentro, se
 // recarga sola con una dirección nueva y esa sí llega fresca.
 // AL PUBLICAR UN CAMBIO: subir VERSION acá Y en version.json (el mismo número).
-var VERSION = "2026-08-20-40";
+var VERSION = "2026-08-21-01";
 
 (function comprobarVersion(){
   fetch("version.json?t=" + Date.now(), { cache:"no-store" })
@@ -342,7 +342,7 @@ function precioCon(p, m){
       return { neto:n, iva:Math.round(n * 1.19) };
     }
   }
-  var costo = COSTOS ? Number(COSTOS[p.codigo] || 0) : 0;
+  var costo = costoDe(p);
   if (!costo || m >= 0.95) return null;
   var neto = Math.round(costo / (1 - m));
   return { neto:neto, iva:Math.round(neto * 1.19) };
@@ -357,15 +357,19 @@ function calcula(L){
     var n = netoDesde(L.precioManual);
     return { neto:n, iva:Math.round(n * 1.19) };
   }
-  if (L.margen != null && (L.lp.length || (COSTOS && COSTOS[L.codigo]))) return precioCon(L, L.margen);
+  if (L.margen != null && (L.lp.length || costoDe(L))) return precioCon(L, L.margen);
   if (L.precioFijo) { var n2 = netoDesde(L.precioFijo); return { neto:n2, iva:Math.round(n2 * 1.19) }; }
   return null;
 }
 
 // Margen que corresponde a un precio neto, sacado del costo. Sirve para mostrar en qué
 // margen quedó cuando ella escribe el precio a mano.
+// El costo de una linea. Los productos nuestros van por su codigo; lo que se compra afuera
+// no tiene codigo y viaja bajo una clave propia (#1, #2...). Ver [[precotizador-preparar-cotizacion]].
+function costoDe(L){ return COSTOS ? Number(COSTOS[L.ck || L.codigo] || 0) : 0; }
+
 function margenImplicito(L, neto){
-  var costo = COSTOS ? Number(COSTOS[L.codigo] || 0) : 0;
+  var costo = costoDe(L);
   if (!costo || !neto) return null;
   return Math.round((1 - costo / neto) * 1000) / 1000;
 }
@@ -400,6 +404,7 @@ function pintar(datos){
     var c = cat[p.sku] || null;
     var linea = {
       codigo: p.codigo || "",
+      ck:     p.ck || "",
       nombre: p.nombre || (c && c.n) || "(producto sin nombre)",
       desc:   p.desc || "",
       cant:   Number(p.cant || 1),
@@ -443,7 +448,7 @@ function refrescar(){
     if (!L.img) sinFoto.push(L.nombre);
     subNeto += netoUn * L.cant;
 
-    var costo = COSTOS ? Number(COSTOS[L.codigo] || 0) : 0;
+    var costo = costoDe(L);
     var puedeMover = !!COSTOS && (L.lp.length > 0 || costo > 0);
 
     // Cuando el precio lo escribió ella, el margen se muestra sacado del costo, en gris.

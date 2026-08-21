@@ -459,6 +459,20 @@ const BLOQUES = [
   {t:"¿Autorizan que usemos esta información para preparar postulaciones a fondos junto a ustedes?", tipo:"unica", opciones:[
     "Sí, autorizamos","Sí, pero queremos revisar antes cada documento","No por ahora"]},
   {t:"Nombre de quien responde este formulario", tipo:"texto"}
+]},
+
+// Agregado el 21-ago-2026 a pedido de Rayen. Va AL FINAL del arreglo a propósito: la planilla
+// titula cada columna con el número de la pregunta, y meterlas al medio renumeraría todo lo que
+// viene después. Solo lo ven los colegios (ver:"edu").
+{ titulo: "Bloque 10 · Centro de padres y apoderados", preguntas: [
+  {t:"¿El centro de padres y apoderados está constituido con personalidad jurídica?", tipo:"unica", ver:"edu", id:"cpa", opciones:[
+    "Sí, vigente","Sí, pero la directiva está vencida",
+    "Existe, pero sin personalidad jurídica","No hay centro de padres","No sabemos"]},
+  {t:"¿Tiene cuenta bancaria a nombre del centro de padres?", tipo:"unica", ver:"edu", id:"cpa_cuenta", opciones:[
+    "Sí","No","No sabemos"]},
+  {t:"¿El centro de padres estaría dispuesto a participar en una postulación?", tipo:"unica", ver:"edu", id:"cpa_dispuesto", opciones:[
+    "Sí, ya lo conversamos y aceptarían","Creemos que sí, pero no lo hemos conversado",
+    "No lo sabemos","No"]}
 ]}
 ];
 let __num = 0;
@@ -537,7 +551,9 @@ function armarTablero(){
     ['LISTADO DE BENEFICIARIOS', val('listado')],
     ['ESPACIO', val('espacio')],
     ['PROYECTO', [val('idea'), val('prioridad'), val('monto')].filter(Boolean).join(' · ')],
-    ['CAPACIDAD DE EJECUTAR', val('capacidad')]
+    ['CAPACIDAD DE EJECUTAR', val('capacidad')],
+    ['CENTRO DE PADRES', [val('cpa'), val('cpa_cuenta') ? 'cuenta bancaria: ' + val('cpa_cuenta') : '',
+      val('cpa_dispuesto')].filter(Boolean).join(' · ')]
   ];
   return lineas.filter(l => l[1] && String(l[1]).trim())
                .map(l => l[0] + ': ' + l[1]).join('\n');

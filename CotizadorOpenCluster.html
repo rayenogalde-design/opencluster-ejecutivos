@@ -411,6 +411,12 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
 
 /* Product name cell — special layout */
 .prod-cell { padding:0 !important; }
+/* El codigo de NUESTRA lista, arriba del nombre y en su propia linea. */
+.prod-cell-cod {
+  padding:0 6px 1px;
+  font-family:'Open Sans',sans-serif; font-size:7.5pt; font-weight:700; letter-spacing:.3px;
+  color:#5B6472;
+}
 .prod-cell-top {
   background:var(--ltblue);
   padding:3px 6px;
@@ -2878,6 +2884,9 @@ function syncEnvioVal() {
 }
 const zoomStore = {};
 const descStore = {};
+// Rayen 20-ago-2026: el codigo OC-#### va ARRIBA del nombre, en su propia linea, igual que en
+// la pantalla de precotizacion. Antes iba pegado al final del nombre y en el PDF se partia en dos.
+const codStore = {};
 
 const initData = [
   ["Catre clínico eléctrico", "Según ficha técnica adjunta", 1, 693000],
@@ -3133,6 +3142,7 @@ function getProds() {
               desc:  txts[1]?.value || "",
               cant:  parseFloat(cantEl?.value)  || 0,
               price: id !== null ? getPrecioNeto(id) : (parseFloat(priceEl?.value) || 0),
+              codigo: id !== null ? (codStore[id] || "") : "",
               img:   id !== null ? (imgStore[id]  || null) : null,
               zoom:  id !== null ? (zoomStore[id] || 100)  : 100 };
   }).filter(r => r.name || r.cant || r.price);
@@ -3238,6 +3248,7 @@ function upd() {
     return `<tr>
       <td class="img-cell">${imgHTML}</td>
       <td class="prod-cell">
+        ${r.codigo ? `<div class="prod-cell-cod">${r.codigo}</div>` : ""}
         <div class="prod-cell-top">${r.name}</div>
         ${(()=>{
           if(!r.desc) return "";
@@ -4613,6 +4624,7 @@ function cargarCotizacion(input) {
           addProd(p.nombre, p.desc, p.cant, p.precio);
           const newId = pid - 1;
           if(p.modo && p.modo !== "neto") setPriceModo(newId, p.modo);
+          if(p.codigo) codStore[newId] = p.codigo;
           if(p.zoom && p.zoom !== 100)   { zoomStore[newId] = p.zoom; const sl = document.getElementById("zoom"+newId); if(sl) sl.value = p.zoom; }
           if(p.img) {
             imgStore[newId] = p.img;
@@ -4844,6 +4856,8 @@ window.addEventListener("DOMContentLoaded", () => {
         _d.productos.forEach(p => {
           addProd(p.nombre, p.desc || "", p.cant, p.precio);
           const nid = pid - 1;
+          // El código de NUESTRA lista viaja aparte y se dibuja arriba del nombre.
+          if (p.codigo) codStore[nid] = p.codigo;
           if (p.modo && p.modo !== "neto") setPriceModo(nid, p.modo);
           if (p.img) {
             imgStore[nid] = p.img;

@@ -3960,6 +3960,58 @@ function getSufijoCot() {
   return salaActiva ? "SM" : "AT";
 }
 
+// ── Lectura del registro con reintentos ──────────────────────────────────
+// get_datos NO escribe nada, asi que repetirla es seguro. Sirve para el correlativo y para
+// verificar un registro cuya respuesta se perdio.
+async function _ocLeerDatos(equipo, intentos) {
+  const max = intentos || 3;
+  let ultimoError = null;
+  for (let i = 1; i <= max; i++) {
+    try {
+      const resp = await fetch(SHEET_URL, {
+        method: "POST",
+        headers: {"Content-Type": "text/plain;charset=utf-8"},
+        body: JSON.stringify({ accion: "get_datos", equipo: equipo })
+      });
+      if (!resp.ok) throw new Error("HTTP " + resp.status);
+      return await resp.json();
+    } catch (e) {
+      ultimoError = e;
+      if (i < max) await new Promise(r => setTimeout(r, i * 1200));
+    }
+  }
+  throw ultimoError;
+}
+
+// ── Verificar un registro cuya respuesta se perdio ───────────────────────
+// 24-ago-2026: Google devolvio 404 al ENTREGAR la respuesta del POST, pero el motor YA habia
+// escrito la fila. La pantalla dijo "NO se pudo registrar la cotizacion ." — sin numero, porque
+// fetchYAsignarNumero tambien habia fallado — cuando en realidad quedo como OC26-3820-AT.
+// Afirmar que no quedo es peor que no saber: invita a registrarla otra vez y duplicarla.
+// Devuelve el numero real si la encuentra, o null si no puede confirmarlo.
+async function _ocVerificarRegistro(equipo, institucion, fecha) {
+  const norm = v => String(v == null ? "" : v).trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const nInst = norm(institucion), nFecha = norm(fecha);
+  if (!nInst || !nFecha) return null;   // sin institucion Y fecha no adivinamos
+  let data;
+  try { data = await _ocLeerDatos(equipo, 4); } catch (e) { return null; }
+  const filas = (data && Array.isArray(data.cotizaciones)) ? data.cotizaciones : [];
+  let mejorNum = null, mejorCorr = -1;
+  for (let i = 0; i < filas.length; i++) {
+    const fila = filas[i];
+    if (!Array.isArray(fila)) continue;
+    const celdas = fila.map(norm);
+    // Exigimos institucion Y fecha: con una sola habria falsos positivos.
+    if (celdas.indexOf(nInst) < 0) continue;
+    if (celdas.indexOf(nFecha) < 0) continue;
+    const numFila = String(fila[0] || "").trim();
+    const corr = parseInt(String(numFila).split("-")[1], 10) || 0;
+    // Entre varias de la misma institucion el mismo dia, la de correlativo mas alto es la nueva.
+    if (corr > mejorCorr && corr < 100000) { mejorCorr = corr; mejorNum = numFila; }
+  }
+  return mejorNum;
+}
+
 async function fetchYAsignarNumero() {
   const equipo = getEquipo();
   const esDifusion = equipo !== "mercadopublico";
@@ -3973,12 +4025,11 @@ async function fetchYAsignarNumero() {
     // (ej. OC26-35001851) son residuo de un bug viejo del fallback ("OC26-"+3500+HHMM).
     // Antes pedíamos ?equipo= al servidor, pero ese endpoint hace Math.max SIN filtro y
     // quedaba envenenado contando desde los 35 millones. Esto lo evita sin tocar el servidor.
-    const resp = await fetch(SHEET_URL, {
-      method: "POST",
-      headers: {"Content-Type": "text/plain;charset=utf-8"},
-      body: JSON.stringify({ accion: "get_datos", equipo: equipo })
-    });
-    const data = await resp.json();
+    // REINTENTOS (24-ago-2026): Google devuelve 404 al azar al ENTREGAR la respuesta de la
+    // web app — medido ese dia en ~1 de cada 2 llamadas, en el motor del CRM y en este.
+    // get_datos es una LECTURA: repetirla no escribe nada. Sin reintento el numero queda en
+    // blanco y la cotizacion se manda sin correlativo (fue el caso de Tirua, OC26-3820-AT).
+    const data = await _ocLeerDatos(equipo, 3);
     const filas = (data && Array.isArray(data.cotizaciones)) ? data.cotizaciones : [];
     let maxCorr = INICIO - 1;
     for(let i = 0; i < filas.length; i++) {
@@ -4317,9 +4368,19 @@ async function registrarCotizacion() {
     if(!resp.ok) throw new Error("Servidor respondió HTTP " + resp.status);
     respData = await resp.json();
   } catch(netErr) {
-    alert("❌ NO se pudo registrar la cotización " + num + ".\n\nMotivo: " + (netErr && netErr.message ? netErr.message : "fallo de red") + "\n\nLa cotización NO quedó en el registro. Reintentá cuando tengas conexión.\n\nIMPORTANTE: no descargues el PDF hasta que el registro se confirme.");
-    restaurarBotonError();
-    return;
+    // La respuesta se perdio. Eso NO significa que no se haya registrado: el motor pudo
+    // escribir la fila y fallar solo al devolver el "listo". Antes de afirmar nada, verificamos.
+    btn.textContent = "Verificando registro...";
+    const numVerificado = await _ocVerificarRegistro(getEquipo(), inst, fecha);
+    if (numVerificado) {
+      // SI quedo registrada: seguimos por el camino normal de exito, con el numero real.
+      respData = { ok: true, num: numVerificado, verificado_tras_fallo: true };
+      showToast("✅ Se perdió la respuesta del servidor, pero la cotización SÍ quedó registrada como " + numVerificado + " (verificado en el registro).", "warning");
+    } else {
+      alert("⚠️ NO se pudo CONFIRMAR el registro de la cotización " + (num || "(el número lo asigna el servidor)") + ".\n\nMotivo: " + (netErr && netErr.message ? netErr.message : "fallo de red") + "\n\nOJO: puede haber quedado registrada IGUAL. Se perdió la respuesta del servidor, que no es lo mismo que perderse el registro. Tampoco pude leer el registro para comprobarlo.\n\nANTES DE REINTENTAR: abre el registro de cotizaciones y busca esta institución con la fecha de hoy. Si ya está ahí, NO la registres de nuevo — quedaría duplicada.\n\nNo descargues el PDF hasta saber el número definitivo.");
+      restaurarBotonError();
+      return;
+    }
   }
 
   if(!respData || respData.ok !== true) {

@@ -61004,8 +61004,25 @@
     const cont = document.getElementById('cotiz-lista');
     if (!cont) return;
     try {
-      const r = await fetch(CRM_API_URL + '?accion=crm_sm_publico');
-      const j = await r.json();
+      // REINTENTOS (24-ago-2026): antes era UN solo fetch sin mirar r.ok. Con Google fallando
+      // la entrega en ~3 de cada 4 llamadas, la pantalla mostraba "Error al conectar con el CRM"
+      // casi siempre. Es una LECTURA: repetirla no escribe nada.
+      let j = null, ultimoError = null;
+      for (let i = 1; i <= 5; i++) {
+        try {
+          const r = await fetch(CRM_API_URL + '?accion=crm_sm_publico');
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          j = await r.json();
+          break;
+        } catch (e) {
+          ultimoError = e;
+          if (i < 5) {
+            cont.innerHTML = '<p class="incluidos-vacio">Cargando cotizaciones… (intento ' + (i + 1) + ' de 5)</p>';
+            await new Promise(r2 => setTimeout(r2, i * 1200));
+          }
+        }
+      }
+      if (j === null) throw (ultimoError || new Error('sin respuesta'));
       if(!j || !j.ok){ cont.innerHTML = '<p class="incluidos-vacio">No se pudieron cargar las cotizaciones.</p>'; return; }
       COTIZ_SM_TODAS = j.cotizaciones || [];
       renderListaCotizaciones('');
@@ -62659,12 +62676,25 @@
       return await r.json();
     } catch (e) { console.error('Error guardando en el Sheet compartido:', e); return null; }
   }
-  async function apiGet(accion) {
+  // REINTENTOS (24-ago-2026): Google devuelve 404 al azar al ENTREGAR la respuesta de las web
+  // apps de Apps Script — medido ese dia entre el 50% y el 75% de las llamadas. Antes esta
+  // funcion hacia UN intento, no miraba r.ok, y devolvia null: la pantalla se quedaba sin
+  // comentarios, confirmaciones ni propuestas sin decir por que. Son LECTURAS: repetirlas no
+  // escribe nada.
+  async function apiGet(accion, intentos) {
     if (!SALAS_API_URL) return null;
-    try {
-      const r = await fetch(SALAS_API_URL + '?accion=' + accion);
-      return await r.json();
-    } catch (e) { console.error('Error leyendo el Sheet compartido:', e); return null; }
+    const max = intentos || 4;
+    for (let i = 1; i <= max; i++) {
+      try {
+        const r = await fetch(SALAS_API_URL + '?accion=' + accion);
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return await r.json();
+      } catch (e) {
+        if (i === max) { console.error('Error leyendo el Sheet compartido (' + max + ' intentos):', e); return null; }
+        await new Promise(r2 => setTimeout(r2, i * 1200));
+      }
+    }
+    return null;
   }
 
   function renderComentarios(pestana, lista) {

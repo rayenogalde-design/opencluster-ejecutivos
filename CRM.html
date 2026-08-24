@@ -4447,11 +4447,28 @@ async function fetchAPI(accion, params, body){
       if(!resp.ok) throw new Error('HTTP ' + resp.status);
       return await resp.json();
     } else {
-      // GET con query params
+      // GET con query params.
+      // REINTENTOS (24-ago-2026): Google devuelve 404 de forma intermitente al entregar la
+      // respuesta de una web app de Apps Script — medido ese dia en ~1 de cada 4 llamadas, y
+      // la mitad de las veces en crm_mis_cotizaciones (302 KB). El script se ejecuta y COMPLETA
+      // en 2 s (visto en el historial de Ejecuciones); lo que falla es la entrega. Con 3 intentos
+      // la probabilidad de fallar las tres baja de 1/4 a ~1/64.
+      // Solo se reintentan los GET: son lecturas y repetirlas no cambia nada. Los POST NO se
+      // reintentan nunca, porque repetir una escritura puede duplicar una cotizacion o un
+      // seguimiento en la hoja.
       const qs = new URLSearchParams(Object.assign({ accion: accion }, params || {})).toString();
-      const resp = await fetch(CRM_API + '?' + qs);
-      if(!resp.ok) throw new Error('HTTP ' + resp.status);
-      return await resp.json();
+      let ultimoError = null;
+      for(let intento = 1; intento <= 3; intento++){
+        try {
+          const resp = await fetch(CRM_API + '?' + qs);
+          if(!resp.ok) throw new Error('HTTP ' + resp.status);
+          return await resp.json();
+        } catch(e){
+          ultimoError = e;
+          if(intento < 3) await new Promise(r => setTimeout(r, intento * 1200));
+        }
+      }
+      throw ultimoError;
     }
   } catch(err){
     return { ok: false, error: String(err && err.message || err) };

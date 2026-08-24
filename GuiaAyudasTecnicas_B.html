@@ -1295,7 +1295,7 @@ function justificacion(prod, R, datosBenef) {
 
 
 /* ====================== APLICACIÓN ====================== */
-const BACKEND = ''; // ← pegar aquí la URL del Apps Script cuando esté publicado
+const BACKEND = 'https://script.google.com/macros/s/AKfycbxFV6FBqvGns7QJ3WO0FlaOI8HswoQGWyfEiy1B16tknbttoocNSuFrqJajp1hbzFlb/exec';
 
 const R = {};              // todas las respuestas
 let paso = 0;
@@ -1733,10 +1733,15 @@ function guardar() {
     return;
   }
   if (est) est.textContent = 'Guardando…';
-  fetch(BACKEND, { method: 'POST', body: JSON.stringify(fila), headers: { 'Content-Type': 'text/plain;charset=utf-8' } })
-    .then(r => r.json())
-    .then(d => { if (est) est.textContent = d && d.ok ? 'Guardado.' : 'No se pudo guardar en la planilla; quedó en este computador.'; if (!(d && d.ok)) local(); })
-    .catch(() => { local(); if (est) est.textContent = 'Sin conexión con la planilla: quedó guardado en este computador.'; });
+  try {
+    fetch(BACKEND, { method: 'POST', body: JSON.stringify(fila), headers: { 'Content-Type': 'text/plain;charset=utf-8' } })
+      .then(r => r.json())
+      .then(d => { if (est) est.textContent = d && d.ok ? 'Guardado.' : 'No se pudo guardar en la planilla; quedó en este computador.'; if (!(d && d.ok)) local(); })
+      .catch(() => { local(); if (est) est.textContent = 'Sin conexión con la planilla: quedó guardado en este computador.'; });
+  } catch (e) {
+    local();
+    if (est) est.textContent = 'Sin conexión con la planilla: quedó guardado en este computador.';
+  }
 }
 
 /* ---------------------- navegación ---------------------- */

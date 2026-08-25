@@ -1266,6 +1266,13 @@ countEl.textContent = DATA.length + ' productos en total';
       .catch(function(){ bajando = false; cola.splice(0).forEach(function(f){ f(null); }); });
   }
 
+  /* Lo justo para que el precotizador pueda poner la descripción del producto en la
+     cotización: el "que_es" de la ficha. Ver _motor/precotizador_listas.js. */
+  window.__FICHAS = { pide: pide,
+                      que_es: function(cod){
+                        return (mapa && mapa[cod] && mapa[cod].que_es) ? mapa[cod].que_es : "";
+                      } };
+
   /* precarga: no se le pide al navegador mientras todavía está dibujando la lista */
   function precarga(){ pide(function(){}); }
   if (typeof requestIdleCallback === "function") requestIdleCallback(precarga, { timeout: 4000 });
@@ -1327,3 +1334,159 @@ countEl.textContent = DATA.length + ' productos en total';
        OC-1922   (ya estaba)  ->       $54.140   (tienda $56.990)   Telescopio Monocular Stoemi 8 x 21
 -->
 <!--__TOPE_WEB_FIN__-->
+<!--__PRECOTCLI_INI__-->
+<!-- El pedido del cliente, derecho al precotizador — puesto por
+     _motor/precotizador_cliente.js. Rayen, 25-ago-2026. Aca NO hay ningun
+     costo, ningun margen ni ningun dato de cliente: es codigo, nada mas. -->
+<script>
+/*__PRECOTCLI_INI__*/
+/* ============================================================================
+   LA LISTA QUE VE EL CLIENTE: EL PEDIDO SALE DERECHO AL PRECOTIZADOR
+   ----------------------------------------------------------------------------
+   NO ES UN PASO DEL MOTOR. Es la PLANTILLA que inyecta
+   _motor/precotizador_cliente.js en las listas de CLIENTE (las que el ejecutivo
+   comparte). Los __MARCADORES__ los reemplaza ese script.
+
+   Rayen, 25-ago-2026: "cuando el ejecutivo recibe una lista de productos de un
+   cliente, que apretando un boton pueda enviar todos esos productos al
+   precotizador... y arriba de su lista de precios un boton que sea
+   precotizador, que le aparezca solo a el, no a sus clientes".
+
+   DOS COSAS, Y NINGUNA LE MUESTRA NADA AL CLIENTE
+   1) EL CORREO QUE LLEGA AL EJECUTIVO trae al final un boton "Abrir esta lista
+      en el precotizador". Ese correo lo recibe SOLO el ejecutivo (con copia
+      oculta a Rayen): el cliente nunca lo ve. El enlace lleva los codigos, las
+      cantidades y los datos de contacto; los precios y el margen salen de la
+      lista privada, no del enlace.
+   2) UN BOTON ARRIBA, SOLO PARA EL EJECUTIVO. Aparece unicamente si en ESE
+      computador se abrio una vez la lista con ?ej=<clave>. El cliente que
+      recibe el enlace normal no ve nada.
+
+   AQUI NO HAY NINGUN COSTO NI NINGUN MARGEN: esta pagina es publica y la ve el
+   cliente. Ver [[listas-cliente-vs-ejecutivo]], [[costos-nunca-publicos]].
+============================================================================ */
+(function () {
+  var QUIEN   = 'Germán';
+  var PRIVADA = 'PreciosProductosGermanPrivado.html';
+  var BASE    = 'https://rayenogalde-design.github.io/opencluster-ejecutivos/';
+  var K_EJ    = 'oc_ej_precot_german';
+  var CLAVE   = 'german-2965';
+
+  /* ── el paquete que viaja en el enlace ─────────────────────────────────── */
+  function aB64(s) {
+    var u = new TextEncoder().encode(s), bin = '';
+    for (var i = 0; i < u.length; i++) bin += String.fromCharCode(u[i]);
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  /* OC-1878 -> "1878"   ·   dos unidades -> "1878x2" */
+  function corto(codigo, qty) {
+    var m = String(codigo || '').match(/^OC-0*(\d{1,4})$/);
+    var c = m ? m[1] : encodeURIComponent(String(codigo || ''));
+    return c + (qty > 1 ? 'x' + qty : '');
+  }
+
+  function enlace(items, cl) {
+    var d = {
+      v: 1,
+      n: 'Lista de precios · ' + QUIEN,
+      cl: { i: (cl && cl.distribuidora) || '', n: (cl && cl.contacto) || '',
+            e: (cl && cl.correo) || '', t: (cl && cl.telefono) || '',
+            d: (cl && cl.direccion) || '' },
+      i: items.map(function (it) { return corto(it.codigo, it.qty); }).join(',')
+    };
+    return BASE + PRIVADA + '#precot=' + aB64(JSON.stringify(d));
+  }
+
+  /* ── 1) el boton dentro del correo que le llega al ejecutivo ───────────── */
+  if (typeof quoteEmailHtml === 'function') {
+    var _viejo = quoteEmailHtml;
+    quoteEmailHtml = function (items, total) {
+      var html = _viejo.apply(this, arguments);
+      var url;
+      try { url = enlace(items, (typeof quoteClient !== 'undefined') ? quoteClient : {}); }
+      catch (e) { return html; }
+      var caja =
+        '<div style="margin-top:20px;padding:16px 18px;background:#fff6ee;' +
+          'border:1px solid #ffd7b3;border-radius:12px;font-family:Arial,sans-serif;">' +
+          '<p style="margin:0 0 4px;font-size:11px;font-weight:bold;letter-spacing:.06em;' +
+            'color:#b4600f;text-transform:uppercase;">Solo para ti</p>' +
+          '<p style="margin:0 0 12px;font-size:13px;color:#5b4632;">' +
+            'Este pedido ya viene armado: ábrelo en tu precotizador con los productos, ' +
+            'las cantidades, las fotos y tus márgenes puestos, revísalo y de ahí pásalo ' +
+            'al cotizador. No tienes que copiar nada.</p>' +
+          '<a href="' + url + '" style="display:inline-block;background:#ff7a1a;color:#ffffff;' +
+            'font-weight:bold;font-size:14px;padding:13px 20px;border-radius:9px;' +
+            'text-decoration:none;">Abrir esta lista en el precotizador</a>' +
+          '<p style="margin:12px 0 0;font-size:11px;color:#8b96a5;">' +
+            'El cliente no recibe este correo: llega solo a ti (y con copia oculta a Rayen).</p>' +
+        '</div>';
+      /* va justo antes de cerrar el bloque del correo */
+      var i = html.lastIndexOf('</div>');
+      return (i < 0) ? (html + caja) : (html.slice(0, i) + caja + html.slice(i));
+    };
+  }
+
+  /* ── 2) el boton de arriba, solo para el ejecutivo ─────────────────────── */
+  var q = new URLSearchParams(location.search);
+  var ej = q.get('ej');
+  try {
+    if (ej === CLAVE) localStorage.setItem(K_EJ, '1');
+    else if (ej === '0' || ej === 'no') localStorage.removeItem(K_EJ);
+  } catch (e) {}
+  var soyElEjecutivo = false;
+  try { soyElEjecutivo = localStorage.getItem(K_EJ) === '1'; } catch (e) {}
+  if (!soyElEjecutivo) return;
+
+  var css = document.createElement('style');
+  css.textContent =
+    '.pcc-barra{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 14px;' +
+      'padding:12px 15px;border-radius:12px;background:#fff6ee;border:1px solid #ffd7b3}' +
+    '.pcc-barra .pcc-tit{flex:1;min-width:180px;font-size:12.5px;color:#8a5a22;line-height:1.35}' +
+    '.pcc-barra .pcc-tit b{color:#b4600f}' +
+    '.pcc-btn{padding:11px 16px;border:none;border-radius:10px;background:#ff7a1a;color:#fff;' +
+      'font-weight:800;font-size:13px;cursor:pointer;text-decoration:none;display:inline-block}' +
+    '.pcc-btn.gris{background:#fff;color:#8a5a22;border:1px solid #ffd7b3}';
+  document.head.appendChild(css);
+
+  function abrePrivada(hash) { window.open(BASE + PRIVADA + hash, '_blank'); }
+
+  function conLoQueMarque() {
+    var items = [];
+    try {
+      Object.keys(quoteItems).forEach(function (c) {
+        var p = productByCodigo(c);
+        if (p) items.push({ codigo: p.codigo, qty: Math.max(1, Number(quoteItems[c]) || 1) });
+      });
+    } catch (e) {}
+    if (!items.length) { abrePrivada('#pegar'); return; }
+    var cl = (typeof quoteClient !== 'undefined') ? quoteClient : {};
+    abrePrivada('#precot=' + aB64(JSON.stringify({
+      v: 1, n: 'Lista de precios · ' + QUIEN,
+      cl: { i: cl.distribuidora || '', n: cl.contacto || '', e: cl.correo || '',
+            t: cl.telefono || '', d: cl.direccion || '' },
+      i: items.map(function (it) { return corto(it.codigo, it.qty); }).join(',')
+    })));
+  }
+
+  function barra() {
+    var w = document.querySelector('.wrap');
+    if (!w || document.getElementById('pccBarra')) return;
+    var d = document.createElement('div');
+    d.className = 'pcc-barra'; d.id = 'pccBarra';
+    d.innerHTML =
+      '<div class="pcc-tit"><b>Vista del ejecutivo</b> — esto lo ves solo tú en este ' +
+      'computador. Tus clientes no lo ven.</div>' +
+      '<button class="pcc-btn" id="pccIr" type="button">Precotizador</button>' +
+      '<button class="pcc-btn gris" id="pccPegar" type="button">Pegar la lista de un cliente</button>';
+    w.insertBefore(d, w.firstChild);
+    document.getElementById('pccIr').addEventListener('click', conLoQueMarque);
+    document.getElementById('pccPegar').addEventListener('click', function () { abrePrivada('#pegar'); });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', barra);
+  else barra();
+})();
+/*__PRECOTCLI_FIN__*/
+</script>
+<!--__PRECOTCLI_FIN__-->

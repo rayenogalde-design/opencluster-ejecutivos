@@ -1347,7 +1347,7 @@ countEl.textContent = DATA.length + ' productos en total';
   /* SE REFRESCA SOLA. 25-ago-2026: en el computador de un ejecutivo esta pagina
      estaba guardada de semanas antes y le faltaba el boton "Revisar y cotizar".
      El sello sale del contenido de la pagina; version.json se pide sin cache. */
-  var VERSION_LISTA = "55cd0a89c1";
+  var VERSION_LISTA = "bc5a0c91ed";
   (function(){
     if (location.search.indexOf("_v=") >= 0) return;   // ya se recargo una vez
     fetch("version.json", { cache: "no-store" })
@@ -1374,7 +1374,14 @@ countEl.textContent = DATA.length + ' productos en total';
     + ".pc-barra .pc-tit{flex:1;min-width:190px;font-size:12.5px;line-height:1.35;color:var(--ink-dim)}"
     + ".pc-barra .pc-tit b{color:var(--ink)}"
     + ".pc-bt{padding:11px 16px;border:none;border-radius:10px;background:var(--orange,#ff7a1a);color:#fff;font-weight:800;font-size:13px;cursor:pointer}"
-    + ".pc-bt.claro{background:transparent;color:var(--ink-dim);border:1px solid rgba(255,122,26,.45)}";
+    + ".pc-bt.claro{background:transparent;color:var(--ink-dim);border:1px solid rgba(255,122,26,.45)}"
+    + ".pc-bt:disabled{opacity:.45;cursor:default}"
+    /* el globo del carrito y su panel son de la lista que se le manda al cliente */
+    + ".quote-fab,.quote-panel,.quote-overlay{display:none !important}"
+    + ".pc-abajo{position:fixed;left:0;right:0;bottom:0;z-index:120;display:none;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 18px;background:var(--surface,#fff);border-top:1px solid var(--border,#e5e9f0);box-shadow:0 -10px 26px -14px rgba(0,0,0,.4)}"
+    + ".pc-abajo.si{display:flex}"
+    + ".pc-abajo .cuenta{flex:1;min-width:150px;font-size:13.5px;font-weight:700;color:var(--ink)}"
+    + ".pc-abajo .vaciar{background:none;border:none;color:var(--ink-faint);font-size:12px;text-decoration:underline;cursor:pointer}";
   document.head.appendChild(css);
 
   /* el boton vive en el pie del panel del carrito, arriba de "Solicitar cotizacion" */
@@ -1395,12 +1402,14 @@ countEl.textContent = DATA.length + ' productos en total';
     }
     return b;
   }
+  /* El boton dentro del panel del carrito se deja puesto (por si alguna vez se
+     vuelve a mostrar el panel), pero el camino de verdad son las dos barras. */
   function actualiza(){
     var b = crea();
     if (!b) return;
     var n = Object.keys(quoteItems).length;
     b.disabled = !n;
-    b.textContent = n ? ("Revisar y cotizar (" + n + ")") : "Revisar y cotizar";
+    b.textContent = n ? ("Enviar al precotizador (" + n + ")") : "Enviar al precotizador";
   }
 
   /* UNA FILA del traspaso, a partir de nuestro codigo y la cantidad.
@@ -1524,14 +1533,12 @@ countEl.textContent = DATA.length + ' productos en total';
     d.className = "pc-barra"; d.id = "pcBarra";
     var tit = document.createElement("div");
     tit.className = "pc-tit";
-    tit.innerHTML = "<b>Tu lista de precios, " + QUIEN + "</b> — marca los productos que quieras y apértale a Precotizador: ahí cambias el margen o el precio final, ves el de la página web y el stock, y de ahí pasa al cotizador. Esta lista no la ve ningún cliente.";
+    tit.innerHTML = "<b>Tu lista de precios, " + QUIEN + "</b> — aprieta <b>Seleccionar</b> en los productos que quieras y después <b>Enviar al precotizador</b>: ahí cambias el margen o el precio final, ves el de la página web y el stock, y de ahí pasa al cotizador. Esta lista no la ve ningún cliente.";
     var b = document.createElement("button");
     b.type = "button"; b.id = "pcBarraIr"; b.className = "pc-bt";
-    b.textContent = "Precotizador";
-    b.addEventListener("click", function(){
-      if (Object.keys(quoteItems).length) vamos();
-      else if (typeof quoteOpen === "function") quoteOpen();
-    });
+    b.textContent = "Enviar al precotizador";
+    b.disabled = true;
+    b.addEventListener("click", function(){ if (Object.keys(quoteItems).length) vamos(); });
     var p = document.createElement("button");
     p.type = "button"; p.className = "pc-bt claro";
     p.textContent = "Pegar la lista de un cliente";
@@ -1542,11 +1549,61 @@ countEl.textContent = DATA.length + ' productos en total';
     d.appendChild(tit); d.appendChild(b); d.appendChild(p);
     w.insertBefore(d, w.firstChild);
   }
+  /* El boton de cada tarjeta: "Seleccionar" / "Seleccionado". La pagina lo dibuja
+     con quoteRenderAddBtn; se envuelve para dejarle el texto de esta lista. */
+  if (typeof quoteRenderAddBtn === "function") {
+    var _rab = quoteRenderAddBtn;
+    quoteRenderAddBtn = function(btn, codigo){
+      var r = _rab.apply(this, arguments);
+      try {
+        var on = !!quoteItems[codigo];
+        var sp = btn.querySelector("span");
+        if (sp) sp.textContent = on ? "Seleccionado" : "Seleccionar";
+        else btn.textContent = on ? "Seleccionado" : "Seleccionar";
+      } catch(e) {}
+      return r;
+    };
+  }
+
+  /* LA BARRA DE ABAJO: aparece en cuanto hay algo seleccionado. */
+  function abajo(){
+    var d = document.getElementById("pcAbajo");
+    if (!d) {
+      d = document.createElement("div");
+      d.className = "pc-abajo"; d.id = "pcAbajo";
+      var c = document.createElement("div"); c.className = "cuenta"; c.id = "pcAbajoCuenta";
+      var v = document.createElement("button");
+      v.type = "button"; v.className = "vaciar"; v.textContent = "vaciar la selección";
+      v.addEventListener("click", function(){
+        Object.keys(quoteItems).forEach(function(k){ quoteToggle(k); });
+      });
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "pc-bt"; b.id = "pcAbajoIr";
+      b.textContent = "Enviar al precotizador";
+      b.addEventListener("click", vamos);
+      d.appendChild(c); d.appendChild(v); d.appendChild(b);
+      document.body.appendChild(d);
+    }
+    return d;
+  }
   function barraCuenta(){
-    var b = document.getElementById("pcBarraIr");
-    if (!b) return;
     var n = Object.keys(quoteItems).length;
-    b.textContent = n ? ("Precotizador (" + n + ")") : "Precotizador";
+    var b = document.getElementById("pcBarraIr");
+    if (b) {
+      b.textContent = n ? ("Enviar al precotizador (" + n + ")") : "Enviar al precotizador";
+      b.disabled = !n;
+    }
+    var d = abajo();
+    d.classList.toggle("si", n > 0);
+    document.body.style.paddingBottom = n > 0 ? "84px" : "";
+    var c = document.getElementById("pcAbajoCuenta");
+    if (c) c.textContent = n + (n === 1 ? " producto seleccionado" : " productos seleccionados");
+  }
+  /* marcar o desmarcar un producto no redibuja el panel (que ya no se usa),
+     asi que las cuentas se refrescan desde aca. */
+  if (typeof quoteUpdateFab === "function") {
+    var _fab = quoteUpdateFab;
+    quoteUpdateFab = function(){ var r = _fab.apply(this, arguments); barraCuenta(); return r; };
   }
 
   /* el panel se redibuja al abrirlo y al cambiar cantidades: ahi se refresca el boton */

@@ -1346,7 +1346,12 @@ countEl.textContent = DATA.length + ' productos en total';
   var css = document.createElement("style");
   css.textContent = ".pc-ir{width:100%;padding:12px;margin-bottom:8px;border-radius:10px;border:none;background:var(--orange,#ff7a1a);color:#fff;font-weight:800;font-size:13.5px;cursor:pointer}"
     + ".pc-ir:disabled{opacity:.5;cursor:default}"
-    + ".pc-pie{font-size:11px;color:var(--ink-faint);text-align:center;margin-bottom:10px;line-height:1.35}";
+    + ".pc-pie{font-size:11px;color:var(--ink-faint);text-align:center;margin-bottom:10px;line-height:1.35}"
+    + ".pc-web{margin:6px 0 0;padding:7px 9px;border-radius:8px;background:rgba(6,179,253,.07);border:1px solid rgba(6,179,253,.25);font-size:11.5px;line-height:1.35;color:var(--ink-dim)}"
+    + ".pc-web b{font-size:12.5px;color:var(--ink)}"
+    + ".pc-web-caro{background:rgba(220,60,60,.07);border-color:rgba(220,60,60,.35)}"
+    + ".pc-web-caro b{color:#c0392b}"
+    + ".pc-web a{color:var(--blue,#0a78d6);text-decoration:none;font-weight:700}";
   document.head.appendChild(css);
 
   /* el boton vive en el pie del panel del carrito, arriba de "Solicitar cotizacion" */
@@ -1439,6 +1444,51 @@ countEl.textContent = DATA.length + ' productos en total';
       if (msg) { msg.style.color = ""; msg.textContent = "Fue sin fotos: eran demasiado pesadas para pasarlas."; }
     }
     window.open(PRECOT, "_blank");
+  }
+
+  /* EL PRECIO DE LA TIENDA EN CADA TARJETA — Rayen, 25-ago-2026.
+     Arriba el de TRANSFERENCIA (la tienda menos 5%), que es el que se le da al
+     cliente, y debajo el de la tienda. Si el precio de esta lista quedo MAS CARO que
+     el de transferencia, la caja se pone roja: no se puede cotizar mas caro que la
+     pagina web. Esta pagina es solo del ejecutivo. */
+  function plata(n){ return "$" + Math.round(Number(n)||0).toLocaleString("es-CL"); }
+  function ponWeb(card, p){
+    var w = PC_W[p.codigo];
+    if (!card || !w || !w[0]) return;
+    var caja = card.querySelector(".pcard-price-block");
+    if (!caja || card.querySelector(".pc-web")) return;
+    var tienda = Math.round(w[0]), transf = Math.floor(tienda * 0.95);
+    var mio = Math.round(p.venta1_9 || 0);
+    var caro = !!(mio && transf && mio > transf);
+    var d = document.createElement("div");
+    d.className = "pc-web" + (caro ? " pc-web-caro" : "");
+    var dif = "";
+    if (mio && transf) {
+      var pct = Math.round(Math.abs(mio - transf) / transf * 100);
+      dif = caro
+          ? ("<div>OJO: tu precio está " + pct + "% MÁS CARO que la web</div>")
+          : ("<div>tu precio está " + pct + "% más barato</div>");
+    }
+    var url = w[1] ? ("https://opencluster-tech.cl/products/" + w[1]) : "";
+    d.innerHTML = "En la web <b>" + plata(transf) + "</b> con transferencia"
+      + "<div>en la tienda " + plata(tienda) + (w[2] ? (" · " + w[2]) : "") + "</div>"
+      + dif;
+    if (url) {
+      var a = document.createElement("a");
+      a.href = url; a.target = "_blank"; a.rel = "noopener";
+      a.textContent = "ver en la tienda";
+      var cont = document.createElement("div");
+      cont.appendChild(a); d.appendChild(cont);
+    }
+    caja.insertAdjacentElement("afterend", d);
+  }
+  if (typeof buildCard === "function") {
+    var _bc = buildCard;
+    buildCard = function(p){
+      var card = _bc.apply(this, arguments);
+      try { ponWeb(card, p); } catch(e) {}
+      return card;
+    };
   }
 
   /* el panel se redibuja al abrirlo y al cambiar cantidades: ahi se refresca el boton */

@@ -55,6 +55,13 @@ td.c{text-align:center;font-size:14px;font-weight:700;padding-top:13px}
    display:flex;align-items:center;justify-content:center;font-size:9px;color:#98A2B3;text-align:center}
 .nom{font-weight:700;color:var(--navy);font-size:13.5px;line-height:1.35}
 .desc{font-size:12px;color:#5B6472;margin-top:2px}
+/* Cuando la precotizacion viene de la lista de un ejecutivo, la pantalla se deja en
+   lo justo: los productos, su precio, el margen y el de la tienda. Los totales de
+   abajo, el control contra el PDF y el atajo al stock de salas son cosas de Rayen y
+   la confunden a el. Rayen, 25-ago-2026. */
+body.solo-ejecutivo #bloqueTotales,
+body.solo-ejecutivo #bloqueControl,
+body.solo-ejecutivo #linkSalas{display:none !important}
 .totales{margin-top:14px;display:flex;flex-direction:column;gap:6px;align-items:flex-end;font-size:14px}
 .totales div{display:flex;gap:16px;min-width:320px;justify-content:space-between}
 .totales .big{font-size:17px;font-weight:800;color:var(--navy);border-top:1px solid var(--linea);padding-top:8px}
@@ -207,7 +214,7 @@ tr:hover td.col-destacado{background:#FFF1DE}
         <tbody id="tbody"></tbody>
       </table>
     </div>
-    <div class="totales">
+    <div class="totales" id="bloqueTotales">
       <div><span>Neto productos</span><span id="tNeto">—</span></div>
       <div><span>IVA 19%</span><span id="tIva">—</span></div>
       <div class="big"><span>Total con IVA</span><span id="tTotal">—</span></div>
@@ -215,9 +222,11 @@ tr:hover td.col-destacado{background:#FFF1DE}
   </div>
 
   <div class="card" id="cardAcciones" style="display:none">
-    <h2>Control antes de enviar</h2>
-    <p class="sub" style="margin:0 0 10px">Compara estos tres números con el PDF antes de mandarlo. Si alguno no calza, el PDF está mal: no lo envíes.</p>
-    <div id="control" class="control"></div>
+    <div id="bloqueControl">
+      <h2>Control antes de enviar</h2>
+      <p class="sub" style="margin:0 0 10px">Compara estos tres números con el PDF antes de mandarlo. Si alguno no calza, el PDF está mal: no lo envíes.</p>
+      <div id="control" class="control"></div>
+    </div>
 
     <h2 style="margin-top:22px">Cómo sigue</h2>
     <ol class="pasos">
@@ -236,7 +245,7 @@ tr:hover td.col-destacado{background:#FFF1DE}
         </svg>
         Abrir en el cotizador
       </button>
-      <a class="sec" href="StockSalasMultisensoriales.html">Ir al stock de salas</a>
+      <a class="sec" id="linkSalas" href="StockSalasMultisensoriales.html">Ir al stock de salas</a>
       <a class="sec" href="index.html">Volver a la Central</a>
     </div>
   </div>
@@ -264,7 +273,7 @@ tr:hover td.col-destacado{background:#FFF1DE}
 // a un archivo chico que se pide SIN caché; si no calza con la que trae adentro, se
 // recarga sola con una dirección nueva y esa sí llega fresca.
 // AL PUBLICAR UN CAMBIO: subir VERSION acá Y en version.json (el mismo número).
-var VERSION = "2026-08-25-01";
+var VERSION = "2026-08-25-02";
 
 (function comprobarVersion(){
   fetch("version.json?t=" + Date.now(), { cache:"no-store" })
@@ -716,6 +725,9 @@ function cargarSeleccion(){
   MOSTRAR_COSTO = true;
   MARGEN_MIN = (datos.margen_min != null && isFinite(Number(datos.margen_min)))
              ? Number(datos.margen_min) : null;
+  /* sin_costos = viene de la lista de un ejecutivo (o del pedido de un cliente que
+     cayo en su lista): pantalla corta. */
+  if (datos.sin_costos) document.body.classList.add("solo-ejecutivo");
   if (datos.sin_costos) {
     // Viene de la lista de un ejecutivo: esa página es pública, así que no trae ningún
     // costo. Lo que sí trae, por producto, es el precio con el que está publicado y el

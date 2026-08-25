@@ -1330,6 +1330,7 @@ countEl.textContent = DATA.length + ' productos en total';
 /*__PRECOT_INI__*/
 (function(){
   var TITULO   = "Mi selección — lista de William";
+  var QUIEN    = "William";
   var MIN      = 0.2;   // margen minimo de esta lista; no bloquea, avisa
   var PRECOT   = "PrepararCotizacion.html?d=seleccion";
   var K_PRECOT = "oc_precotizacion";   // lo que lee la pantalla de precotizacion
@@ -1346,7 +1347,7 @@ countEl.textContent = DATA.length + ' productos en total';
   /* SE REFRESCA SOLA. 25-ago-2026: en el computador de un ejecutivo esta pagina
      estaba guardada de semanas antes y le faltaba el boton "Revisar y cotizar".
      El sello sale del contenido de la pagina; version.json se pide sin cache. */
-  var VERSION_LISTA = "4ba9566fcc";
+  var VERSION_LISTA = "55cd0a89c1";
   (function(){
     if (location.search.indexOf("_v=") >= 0) return;   // ya se recargo una vez
     fetch("version.json", { cache: "no-store" })
@@ -1368,7 +1369,12 @@ countEl.textContent = DATA.length + ' productos en total';
     + ".pc-web b{font-size:12.5px;color:var(--ink)}"
     + ".pc-web-caro{background:rgba(220,60,60,.07);border-color:rgba(220,60,60,.35)}"
     + ".pc-web-caro b{color:#c0392b}"
-    + ".pc-web a{color:var(--blue,#0a78d6);text-decoration:none;font-weight:700}";
+    + ".pc-web a{color:var(--blue,#0a78d6);text-decoration:none;font-weight:700}"
+    + ".pc-barra{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 14px;padding:12px 15px;border-radius:12px;background:rgba(255,122,26,.08);border:1px solid rgba(255,122,26,.35)}"
+    + ".pc-barra .pc-tit{flex:1;min-width:190px;font-size:12.5px;line-height:1.35;color:var(--ink-dim)}"
+    + ".pc-barra .pc-tit b{color:var(--ink)}"
+    + ".pc-bt{padding:11px 16px;border:none;border-radius:10px;background:var(--orange,#ff7a1a);color:#fff;font-weight:800;font-size:13px;cursor:pointer}"
+    + ".pc-bt.claro{background:transparent;color:var(--ink-dim);border:1px solid rgba(255,122,26,.45)}";
   document.head.appendChild(css);
 
   /* el boton vive en el pie del panel del carrito, arriba de "Solicitar cotizacion" */
@@ -1508,13 +1514,49 @@ countEl.textContent = DATA.length + ' productos en total';
     };
   }
 
+  /* LA BARRA DE ARRIBA. El boton de "Revisar y cotizar" vive dentro del panel del
+     carrito y por eso no se encontraba: esta barra lo pone a la vista al abrir la
+     pagina, dice de quien es la lista y explica en una linea que hacer. */
+  function barra(){
+    var w = document.querySelector(".wrap");
+    if (!w || document.getElementById("pcBarra")) return;
+    var d = document.createElement("div");
+    d.className = "pc-barra"; d.id = "pcBarra";
+    var tit = document.createElement("div");
+    tit.className = "pc-tit";
+    tit.innerHTML = "<b>Tu lista de precios, " + QUIEN + "</b> — marca los productos que quieras y apértale a Precotizador: ahí cambias el margen o el precio final, ves el de la página web y el stock, y de ahí pasa al cotizador. Esta lista no la ve ningún cliente.";
+    var b = document.createElement("button");
+    b.type = "button"; b.id = "pcBarraIr"; b.className = "pc-bt";
+    b.textContent = "Precotizador";
+    b.addEventListener("click", function(){
+      if (Object.keys(quoteItems).length) vamos();
+      else if (typeof quoteOpen === "function") quoteOpen();
+    });
+    var p = document.createElement("button");
+    p.type = "button"; p.className = "pc-bt claro";
+    p.textContent = "Pegar la lista de un cliente";
+    p.addEventListener("click", function(){
+      if (window.__PCPEGAR) window.__PCPEGAR();
+      else location.hash = "pegar";
+    });
+    d.appendChild(tit); d.appendChild(b); d.appendChild(p);
+    w.insertBefore(d, w.firstChild);
+  }
+  function barraCuenta(){
+    var b = document.getElementById("pcBarraIr");
+    if (!b) return;
+    var n = Object.keys(quoteItems).length;
+    b.textContent = n ? ("Precotizador (" + n + ")") : "Precotizador";
+  }
+
   /* el panel se redibuja al abrirlo y al cambiar cantidades: ahi se refresca el boton */
   if (typeof quoteRenderPanel === "function") {
     var _qrp = quoteRenderPanel;
-    quoteRenderPanel = function(){ var r = _qrp.apply(this, arguments); actualiza(); return r; };
+    quoteRenderPanel = function(){ var r = _qrp.apply(this, arguments); actualiza(); barraCuenta(); return r; };
   }
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", actualiza);
-  else actualiza();
+  function arranca(){ actualiza(); barra(); barraCuenta(); }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", arranca);
+  else arranca();
 })();
 /*__PRECOT_FIN__*/
 </script>
@@ -1881,6 +1923,8 @@ countEl.textContent = DATA.length + ' productos en total';
     b.addEventListener('click', panelPegar);
     pie.appendChild(b);
   }
+
+  window.__PCPEGAR = panelPegar;   /* la barra de arriba lo abre por aca */
 
   function arranca() {
     ponBoton();

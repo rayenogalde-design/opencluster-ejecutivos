@@ -3167,9 +3167,20 @@
       const ps = _prodPorSku(par.suelto);
       const libresSuelto = Math.max(0, (ps ? (ps.total || 0) : 0) - (demanda[_claveNombre(impSuelto.n)] || 0));
       const armables = Math.min(it.falta, libresSuelto, en.libres);
-      it.avisoEnabler = armables > 0
-        ? 'SE PUEDEN ARMAR ' + armables + ': tienes ' + libresSuelto + ' ' + impSuelto.n + ' libre(s) y ' + en.libres + ' Enabler Socket+ libre(s). Quedan ' + (it.falta - armables) + ' por pedir, y te quedarian ' + (en.libres - armables) + ' Enabler.'
-        : 'No alcanza para armar ninguno: ' + libresSuelto + ' ' + impSuelto.n + ' libre(s) y ' + en.libres + ' Enabler Socket+. Hay que pedir los ' + it.falta + '.';
+      // Rayen 26-ago-2026: si no alcanzan los sueltos que ya tiene, la salida NO es pedir la
+      // version SHX: es pedir el aparato suelto (sale mas barato) y convertirlo con un Enabler,
+      // mientras queden Enabler libres. Sin cifras de costo: esta pagina es publica.
+      const porPedir = it.falta - armables;
+      const enablerDespues = en.libres - armables;
+      const convertibles = Math.min(porPedir, enablerDespues);
+      it.avisoEnabler = (armables > 0
+        ? 'SE PUEDEN ARMAR ' + armables + ' con lo que ya tienes: ' + libresSuelto + ' ' + impSuelto.n + ' libre(s) y ' + en.libres + ' Enabler Socket+ libre(s).'
+        : 'No tienes ' + impSuelto.n + ' libres para armar, pero te quedan ' + en.libres + ' Enabler Socket+.')
+        + (porPedir > 0
+            ? (convertibles > 0
+                ? ' Los otros ' + porPedir + ': conviene pedirlos como ' + impSuelto.n + ' (sale mas barato) y convertirlos con Enabler — alcanza para ' + convertibles + ', y te quedarian ' + (enablerDespues - convertibles) + ' Enabler.'
+                : ' Los otros ' + porPedir + ' hay que pedirlos como ' + impShx.n + ': ya no quedan Enabler libres.')
+            : '');
       it.armablesConEnabler = armables;
     });
     return items;

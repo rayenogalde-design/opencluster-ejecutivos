@@ -1,0 +1,21 @@
+#!/bin/sh
+# GUARDIAN DE CATALOGOS — se ejecuta solo, antes de cada commit.
+# Si algun catalogo abriria en blanco, detiene el commit.
+# Copia viva en .git/hooks/pre-commit (reinstalar con: node _guardianes/instalar.js)
+
+NODE="C:/Program Files/nodejs/node.exe"
+[ -x "$NODE" ] || NODE="node"
+
+# Solo revisa si el commit lleva alguna pagina .html
+if ! git diff --cached --name-only | grep -qi '\.html"\?$'; then
+  exit 0
+fi
+
+echo "Guardian de catalogos..."
+if ! "$NODE" "$(git rev-parse --show-toplevel)/_guardianes/verifica_catalogos.js"; then
+  echo ""
+  echo "  COMMIT DETENIDO. Arregla el catalogo y vuelve a intentar."
+  echo "  (Si sabes lo que haces y quieres saltarlo: git commit --no-verify)"
+  exit 1
+fi
+exit 0

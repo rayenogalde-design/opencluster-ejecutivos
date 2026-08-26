@@ -2923,7 +2923,7 @@
     items.sort((a, b) => (a.nombre || a.key).localeCompare(b.nombre || b.key, 'es'));
     // Los agregados a mano se suman DESPUÉS del cálculo contra stock: son unidades que ella
     // decidió pedir igual, no salen de ninguna cotización.
-    return _extraSumarAFaltantes(_rinconConOSinTablet(items, seleccionadas));
+    return _avisoEnablerSHX(_extraSumarAFaltantes(_rinconConOSinTablet(items, seleccionadas)), seleccionadas);
   }
   // ── Rincón Luminea: con tablet o sin tablet ────────────────────────────────
   // Rayen 2026-08-12: "todos los SHX, los Rack, traen tablet". Entonces en las salas que llevan un
@@ -2966,10 +2966,62 @@
     items.splice.apply(items, [i, 1].concat(nuevos));
     return items;
   }
+  // -- Convertir el aparato suelto en su version SHX con un Enabler Socket+ ---
+  // Rayen 2026-08-26: "voy a transformar los focos LED que tengo en SHX con los Enabler, asi me
+  // ahorro tener que pedir los otros, y eso va a seguir pasando". Los efectos especiales SHX son
+  // el aparato suelto MAS el receptor de radiofrecuencia Enabler Socket+ (BJ-234): un Foco de luz
+  // UV LED + 1 Enabler = un Foco de luz UV LED SHX. Asi que cuando falta la version SHX, el aviso
+  // dice cuantos sueltos y cuantos Enabler quedan libres, y cuantos se pueden armar sin pedir.
+  // El aviso vive SOLO en pantalla: no entra al Excel ni al correo a Mario (por eso es un campo
+  // aparte, avisoEnabler, y no la "nota", que si viaja al correo).
+  const _SKU_ENABLER = 'BJ-234';
+  const _PARES_SHX = [
+    { shx: 'BJ-EIFUVLX', suelto: 'BJ-EIFUVL' },   // Foco de luz UV LED SHX / Foco de luz UV LED
+    { shx: 'BJ-EIBLUVX', suelto: 'BJ-EIBLUV' }    // Barra LED UV SHX       / Barra LED UV
+  ];
+  function _prodPorSku(sku){
+    return STOCK_COMBINADO[sku] || Object.values(STOCK_COMBINADO).find(function(p){ return p.sku === sku; }) || null;
+  }
+  function _saldoEnabler(seleccionadas){
+    const p = _prodPorSku(_SKU_ENABLER);
+    const total = p ? (p.total || 0) : 0;
+    const pedidos = _demandaPorKey(seleccionadas || [])[_claveNombre('Enabler Socket +')] || 0;
+    return { total: total, pedidos: pedidos, libres: Math.max(0, total - pedidos), nota: p ? (p.notaBodega || '') : '', hay: !!p };
+  }
+  function _avisoEnablerSHX(items, seleccionadas){
+    const en = _saldoEnabler(seleccionadas);
+    const demanda = _demandaPorKey(seleccionadas || []);
+    _PARES_SHX.forEach(function(par){
+      const impShx = IMPORTABLE[par.shx], impSuelto = IMPORTABLE[par.suelto];
+      if (!impShx || !impSuelto) return;
+      const it = items.find(function(x){ return x.key === _claveNombre(impShx.n); });
+      if (!it || !(it.falta > 0)) return;
+      const ps = _prodPorSku(par.suelto);
+      const libresSuelto = Math.max(0, (ps ? (ps.total || 0) : 0) - (demanda[_claveNombre(impSuelto.n)] || 0));
+      const armables = Math.min(it.falta, libresSuelto, en.libres);
+      it.avisoEnabler = armables > 0
+        ? 'SE PUEDEN ARMAR ' + armables + ': tienes ' + libresSuelto + ' ' + impSuelto.n + ' libre(s) y ' + en.libres + ' Enabler Socket+ libre(s). Quedan ' + (it.falta - armables) + ' por pedir, y te quedarian ' + (en.libres - armables) + ' Enabler.'
+        : 'No alcanza para armar ninguno: ' + libresSuelto + ' ' + impSuelto.n + ' libre(s) y ' + en.libres + ' Enabler Socket+. Hay que pedir los ' + it.falta + '.';
+      it.armablesConEnabler = armables;
+    });
+    return items;
+  }
+  // Recordatorio al final de los faltantes (Rayen 2026-08-26: "siempre quiero que me hagas
+  // referencia a la cantidad de Enabler Socket que quedan cuando falten focos").
+  function _cajaEnabler(seleccionadas){
+    const en = _saldoEnabler(seleccionadas);
+    if (!en.hay) return '';
+    return '<div class="costos-caja" style="margin-top:0.9rem;">' +
+      '<div class="costos-caja-t">Enabler Socket+ (BJ-234): quedan ' + en.libres + ' libre(s) de ' + en.total + '</div>' +
+      '<p class="costos-caja-p">Con un Enabler Socket+ el aparato suelto queda integrado al sistema: <strong>1 Foco de luz UV LED + 1 Enabler = 1 Foco de luz UV LED SHX</strong> (lo mismo con la Barra LED UV). Antes de pedir una version SHX, mira si te alcanza con lo que ya tienes.' +
+      (en.pedidos ? ' Estas cotizaciones ya piden ' + en.pedidos + '.' : '') +
+      (en.nota ? '<br>En bodega: ' + escapeHtmlSafe(en.nota) + '.' : '') +
+      '</p></div>';
+  }
   function _faltantesGrid(seleccionadas){
     const items = _faltantesLista(seleccionadas);
     if (!items.length) return '<p class="incluidos-vacio">No falta stock para ninguno de los productos pedidos en estas cotizaciones.</p>';
-    return '<div class="stock-disp-grid" id="stock-disp-grid-faltantes">' + items.map(({ key, s, nombre, pedido, stockTotal, falta, nota, skuForzado }) => {
+    return '<div class="stock-disp-grid" id="stock-disp-grid-faltantes">' + items.map(({ key, s, nombre, pedido, stockTotal, falta, nota, skuForzado, avisoEnabler }) => {
       const f = (s && s.claveFicha) ? FICHAS[s.claveFicha] : null;
       const _imgCat = ((window.SALAS_CATALOGO && (SALAS_CATALOGO[(s && s.sku)] || SALAS_CATALOGO[(s && s.claveFicha)])) || {}).img || '';
       const _img = (f && f.imagen) || _imgCat;
@@ -2987,6 +3039,7 @@
         // Aviso en la propia tarjeta: hoy solo lo usa el rincón (con tablet / sin tablet), para que
         // el código correcto se vea al momento de armar el pedido y no haya que acordarse.
         (nota ? '<div class="falta-aviso">' + escapeHtmlSafe((skuForzado ? skuForzado + ' — ' : '') + nota) + '</div>' : '') +
+        (avisoEnabler ? '<div class="falta-aviso">' + escapeHtmlSafe(avisoEnabler) + '</div>' : '') +
         '<div class="stock-disp-falta-badge">Faltan ' + falta + '</div>' +
       '</div>';
     }).join('') + '</div>';
@@ -3448,7 +3501,7 @@
         '<div id="extra-lista-agregados" class="costos-estado"></div>' +
       '</div>' +
       '<input type="text" class="search" id="faltantes-buscar" placeholder="Buscar producto o SKU…" style="margin-bottom:0.7rem;" />' +
-      faltantesGrid;
+      faltantesGrid + _cajaEnabler(seleccionadas);
     _wireDragPrioridad();
     _wireCargarCostos();
     _wireExtras(seleccionadas);

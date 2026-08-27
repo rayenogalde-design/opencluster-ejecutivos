@@ -1334,6 +1334,7 @@ countEl.textContent = DATA.length + ' productos en total';
   var MIN      = 0.2;   // margen minimo de esta lista; no bloquea, avisa
   var PRECOT   = "PrepararCotizacion.html?d=seleccion";
   var K_PRECOT = "oc_precotizacion";   // lo que lee la pantalla de precotizacion
+  var K_BASE = "oc_cotizacion_base";   // la cotizacion que se esta siguiendo
   var TOPE_FOTO = 300000;              // una foto incrustada mas pesada que esto no viaja
   /* margen con el que cada producto esta publicado en ESTA lista.
      un numero, o [para mostrar, mas fino] cuando el fino cambia la cuenta. */
@@ -1347,7 +1348,7 @@ countEl.textContent = DATA.length + ' productos en total';
   /* SE REFRESCA SOLA. 25-ago-2026: en el computador de un ejecutivo esta pagina
      estaba guardada de semanas antes y le faltaba el boton "Revisar y cotizar".
      El sello sale del contenido de la pagina; version.json se pide sin cache. */
-  var VERSION_LISTA = "71402b996c";
+  var VERSION_LISTA = "a650de03a1";
   (function(){
     if (location.search.indexOf("_v=") >= 0) return;   // ya se recargo una vez
     fetch("version.json", { cache: "no-store" })
@@ -1373,6 +1374,10 @@ countEl.textContent = DATA.length + ' productos en total';
     + ".pc-barra{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 14px;padding:12px 15px;border-radius:12px;background:rgba(255,122,26,.08);border:1px solid rgba(255,122,26,.35)}"
     + ".pc-barra .pc-tit{flex:1;min-width:190px;font-size:12.5px;line-height:1.35;color:var(--ink-dim)}"
     + ".pc-barra .pc-tit b{color:var(--ink)}"
+    + ".pc-base{flex:1 0 100%;display:flex;align-items:center;gap:10px;flex-wrap:wrap;"
+    + "margin-top:4px;padding:8px 12px;border-radius:10px;background:#eef7ff;"
+    + "color:#0b6bb3;font-size:12.5px;line-height:1.35}"
+    + ".pc-base span{flex:1;min-width:180px}"
     + ".pc-bt{padding:11px 16px;border:none;border-radius:10px;background:var(--orange,#ff7a1a);color:#fff;font-weight:800;font-size:13px;cursor:pointer}"
     + ".pc-bt.claro{background:transparent;color:var(--ink-dim);border:1px solid rgba(255,122,26,.45)}"
     + ".pc-bt:disabled{opacity:.45;cursor:default}"
@@ -1444,6 +1449,59 @@ countEl.textContent = DATA.length + ' productos en total';
     return f;
   }
 
+  /* SEGUIR UNA COTIZACION YA HECHA (Rayen, 27-ago-2026).
+     Se carga el .json que guarda el Cotizador; sus productos NO se tocan aqui: viajan
+     al precotizador junto con lo que se marque, y alli se les puede cambiar la
+     cantidad y el precio igual que a los nuevos. */
+  function baseLee(){
+    try { var c = localStorage.getItem(K_BASE); return c ? JSON.parse(c) : null; }
+    catch(e){ return null; }
+  }
+  function baseBorra(){ try { localStorage.removeItem(K_BASE); } catch(e){} basePinta(); }
+  function baseGuarda(j){
+    try { localStorage.setItem(K_BASE, JSON.stringify(j)); }
+    catch(e){
+      /* casi siempre son las fotos en base64: se sueltan y se guarda igual */
+      try {
+        j.productos = (j.productos || []).map(function(p){ p.img = ""; return p; });
+        localStorage.setItem(K_BASE, JSON.stringify(j));
+      } catch(e2){ alert("No se pudo guardar la cotizaci\u00f3n: es demasiado pesada."); return false; }
+    }
+    basePinta(); return true;
+  }
+  function baseAbre(inp){
+    var f = inp.files && inp.files[0]; if (!f) return;
+    var r = new FileReader();
+    r.onload = function(e){
+      var j = null;
+      try { j = JSON.parse(e.target.result); } catch(x){}
+      if (!j || !j.productos || !j.productos.length) {
+        alert("Ese archivo no es una cotizaci\u00f3n del Cotizador, o no tiene productos.");
+      } else { baseGuarda(j); }
+      inp.value = "";
+    };
+    r.readAsText(f);
+  }
+  /* el renglon que dice que cotizacion se esta siguiendo */
+  function basePinta(){
+    var caja = document.getElementById("pcBase"); if (!caja) return;
+    var j = baseLee();
+    if (!j) { caja.style.display = "none"; caja.innerHTML = ""; }
+    else {
+      var quien = (j.cliente && (j.cliente.institucion || j.cliente.nombre)) || "";
+      caja.style.display = "flex";
+      caja.innerHTML = "<span>Siguiendo la cotizaci\u00f3n <b>" + (j.num || "sin n\u00famero") + "</b>" +
+        (quien ? " de <b>" + quien + "</b>" : "") + " \u00b7 " + j.productos.length +
+        " producto" + (j.productos.length === 1 ? "" : "s") + " que ya trae.</span>";
+      var q = document.createElement("button");
+      q.type = "button"; q.className = "pc-bt claro"; q.textContent = "Dejar de seguirla";
+      q.addEventListener("click", baseBorra);
+      caja.appendChild(q);
+    }
+    var ir = document.getElementById("pcBarraIr");
+    if (ir) ir.disabled = !(Object.keys(quoteItems).length || baseLee());
+  }
+
   /* el puente (el pedido que llega de un cliente) arma sus filas con esto mismo */
   window.__PC = { filaDe: filaDe, MIN: MIN, TITULO: TITULO, SINFO: PC_SINFO,
                   K: K_PRECOT, PRECOT: PRECOT };
@@ -1458,11 +1516,15 @@ countEl.textContent = DATA.length + ' productos en total';
       var f = filaDe(c, quoteItems[c]);
       if (f) filas.push(f);
     });
-    if (!filas.length) return;
+    var base = baseLee();
+    if (!filas.length && !base) return;
     /* sin_costos avisa a la pantalla de precotizacion de que aca no viaja ningun costo:
        lo deduce del precio publicado y del margen, y no lo muestra nunca. */
     var pedido = { titulo: TITULO, origen: "lista-ejecutivo", sin_costos: true,
                    margen_min: MIN, stock_fuente: PC_SINFO, productos: filas };
+    /* la cotizacion que se esta siguiendo viaja entera: el precotizador deja sus
+       productos arriba, editables, y la devuelve completa al Cotizador */
+    if (base) { pedido.base = base; try { localStorage.removeItem(K_BASE); } catch(e){} }
     try {
       localStorage.setItem(K_PRECOT, JSON.stringify(pedido));
     } catch(e) {
@@ -1546,7 +1608,19 @@ countEl.textContent = DATA.length + ' productos en total';
       if (window.__PCPEGAR) window.__PCPEGAR();
       else location.hash = "pegar";
     });
-    d.appendChild(tit); d.appendChild(b); d.appendChild(p);
+    var g = document.createElement("button");
+    g.type = "button"; g.className = "pc-bt claro";
+    g.textContent = "Seguir una cotizaci\u00f3n";
+    g.title = "Carga el archivo .json que guardaste en el Cotizador y agr\u00e9gale productos";
+    var inp = document.createElement("input");
+    inp.type = "file"; inp.accept = ".json,application/json";
+    inp.id = "pcCargarCot"; inp.style.display = "none";
+    inp.addEventListener("change", function(){ baseAbre(inp); });
+    g.addEventListener("click", function(){ inp.click(); });
+    var caja = document.createElement("div");
+    caja.id = "pcBase"; caja.className = "pc-base"; caja.style.display = "none";
+    d.appendChild(tit); d.appendChild(b); d.appendChild(p); d.appendChild(g); d.appendChild(inp);
+    d.appendChild(caja);
     w.insertBefore(d, w.firstChild);
   }
   /* El boton de cada tarjeta: "Seleccionar" / "Seleccionado". La pagina lo dibuja
@@ -1611,7 +1685,7 @@ countEl.textContent = DATA.length + ' productos en total';
     var _qrp = quoteRenderPanel;
     quoteRenderPanel = function(){ var r = _qrp.apply(this, arguments); actualiza(); barraCuenta(); return r; };
   }
-  function arranca(){ actualiza(); barra(); barraCuenta(); }
+  function arranca(){ actualiza(); barra(); barraCuenta(); basePinta(); }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", arranca);
   else arranca();
 })();

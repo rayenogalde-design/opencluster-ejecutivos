@@ -158,6 +158,7 @@ tr:hover td.col-destacado{background:#FFF1DE}
   .barra-clave input{width:130px}
   table{table-layout:auto}
 }
+.ya-venia{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:#eef7ff;color:#0b6bb3;font-size:10px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;vertical-align:middle}
 </style>
 </head>
 <body>
@@ -452,7 +453,8 @@ function pintar(datos){
       // Precio ya decidido en el pedido (por ejemplo, el de transferencia de la tienda):
       // arranca escrito, y el margen se muestra calculado al revés.
       precioManual: (p.precio_manual != null && p.precio_manual !== "") ? Number(p.precio_manual) : null,
-      esSala: !!c
+      esSala: !!c,
+      deCotizacion: !!p.deCotizacion
     };
     // El margen puede venir dado por producto (la selección de la lista de administradora
     // trae el que ella dejó puesto ahí); si no, se usa el del pedido.
@@ -549,7 +551,8 @@ function refrescar(){
                : '<div class="sinfoto">sin foto</div>') +
         '<div class="prod-txt">' +
           '<div class="linea-cod"><span class="num">' + (i + 1) + '</span>' +
-            (L.codigo ? '<span class="cod">' + L.codigo + '</span>' : '') + '</div>' +
+            (L.codigo ? '<span class="cod">' + L.codigo + '</span>' : '') +
+            (L.deCotizacion ? '<span class="ya-venia">ya estaba en la cotizaci\u00f3n</span>' : '') + '</div>' +
           '<div class="nom">' + L.nombre + '</div>' +
           (L.desc ? '<div class="desc">' + L.desc + '</div>' : '') +
         '</div></div></td>' +
@@ -664,6 +667,13 @@ function refrescar(){
   // La nota es lo que YO le dejo escrito y casi siempre es lo más importante: se muestra
   // siempre, y las alertas van encima. Antes las alertas la tapaban.
   var html = "";
+  if (BASE) {
+    var quien = (BASE.cliente && (BASE.cliente.institucion || BASE.cliente.nombre)) || "";
+    html += '<div class="aviso info"><b>Est\u00e1s siguiendo una cotizaci\u00f3n que ya exist\u00eda' +
+            (BASE.num ? " (N\u00b0 " + BASE.num + ")" : "") + (quien ? " de " + quien : "") + '.</b><br>' +
+            'Sus productos est\u00e1n arriba y tambi\u00e9n puedes cambiarles la cantidad y el precio. ' +
+            'Los datos del cliente, el n\u00famero, el env\u00edo y las condiciones vuelven tal cual al Cotizador.</div>';
+  }
   if (alertas.length) html += '<div class="aviso aviso-am">' + alertas.join("<br>") + '</div>';
   if (DATOS && DATOS.nota) html += '<div class="aviso info">' + DATOS.nota + '</div>';
   document.getElementById("mensaje").innerHTML = html;
@@ -673,6 +683,11 @@ function refrescar(){
 // Los costos viajan cifrados dentro del archivo de la cotización (AES-256-GCM, la
 // misma receta de la vista de administradora). Sin la clave no hay forma de leerlos,
 // ni mirando el código de la página. Ver la nota de costos en la memoria del proyecto.
+/* La cotizacion que ella cargo desde su lista para seguir trabajandola. Viene entera
+   (cliente, numero, envio, condiciones) y vuelve entera al Cotizador; lo unico que
+   cambia en el camino son los productos, que aqui se pueden editar todos. */
+var BASE = null;
+
 var RECUERDO_ADM = "oct_clave_MisCostosYMargenes_PRIVADA.html";
 
 function b64(s){
@@ -720,6 +735,22 @@ function cargarSeleccion(){
   // cliente (en la lista de precios o en un catálogo) llegan su empresa, su nombre,
   // su correo y su teléfono, y de aquí pasan solos al Cotizador.
   if (datos.cliente) CLIENTE = datos.cliente;
+
+  /* Cotizacion cargada: sus productos entran PRIMERO y son editables igual que los
+     nuevos (cantidad y precio). El precio del Cotizador puede venir neto o con IVA;
+     aqui todo se trabaja con IVA. */
+  BASE = datos.base || null;
+  if (BASE && BASE.productos && BASE.productos.length) {
+    var previos = BASE.productos.map(function(p){
+      var iva = Math.round(Number(p.precio) || 0);
+      if ((p.modo || "neto") === "neto") iva = Math.round(iva * 1.19);
+      return { codigo: p.codigo || "", nombre: p.nombre || "(producto sin nombre)",
+               desc: p.desc || "", cant: Number(p.cant || 1), img: p.img || "",
+               precio: iva, deCotizacion: true };
+    });
+    datos.productos = previos.concat(datos.productos || []);
+    if (BASE.cliente && !CLIENTE) CLIENTE = BASE.cliente;
+  }
 
   COSTOS = {};
   MOSTRAR_COSTO = true;
@@ -798,6 +829,17 @@ function abrirEnCotizador(){
   // Las condiciones (garantía, validez, plazo, forma de pago y la nota) viajan armadas:
   // el Cotizador las deja puestas y ella no tiene que volver a escribirlas.
   if (DATOS && DATOS.condiciones) payload.condiciones = DATOS.condiciones;
+  /* Si se esta siguiendo una cotizacion, vuelve entera: el numero, la fecha, la ciudad,
+     las opciones, el envio, la sala y los items adicionales. Lo unico que se reemplaza
+     son los productos, que son los que ella acaba de revisar aqui. */
+  if (BASE) {
+    ["num","fecha","ciudad","opciones","envio","sala","itemsAdicionales"].forEach(function(k){
+      if (BASE[k] != null) payload[k] = BASE[k];
+    });
+    if (BASE.condiciones && !payload.condiciones) payload.condiciones = BASE.condiciones;
+    if (BASE.cliente && !payload.cliente) payload.cliente = BASE.cliente;
+    payload._sigue = true;
+  }
   try {
     localStorage.setItem("oc_sala_pendiente", JSON.stringify(payload));
   } catch(e) {

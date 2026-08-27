@@ -4613,7 +4613,20 @@ function cargarCotizacion(input) {
   const reader = new FileReader();
   reader.onload = e => {
     try {
-      const d = JSON.parse(e.target.result);
+      aplicarCotizacion(JSON.parse(e.target.result));
+    } catch(err) {
+      showToast("❌ Error al cargar el archivo. Asegúrate de que sea un archivo JSON de cotización válido.", "error");
+    }
+    input.value = ""; // reset para poder cargar el mismo archivo de nuevo
+  };
+  reader.readAsText(file);
+}
+
+/* Aplica una cotizacion YA LEIDA. La usa el boton de cargar un .json y tambien el
+   precotizador, cuando ella carga una cotizacion en su lista, le agrega productos y
+   la manda de vuelta entera (Rayen, 27-ago-2026). */
+function aplicarCotizacion(d) {
+    try {
 
       // ── Limpiar stores antes de cargar ──────────────────────────────
       // Si no se limpian, datos de productos anteriores contaminan los nuevos IDs
@@ -4751,10 +4764,8 @@ function cargarCotizacion(input) {
     } catch(err) {
       showToast("❌ Error al cargar el archivo. Asegúrate de que sea un archivo JSON de cotización válido.", "error");
     }
-    input.value = ""; // reset para poder cargar el mismo archivo de nuevo
-  };
-  reader.readAsText(file);
 }
+/*__FIN_APLICAR_COTIZACION__*/
 
 // ── Crear nueva cotización desde una cargada ─────────────────────────────
 async function crearNuevaDesdeCargada() {
@@ -4905,6 +4916,10 @@ window.addEventListener("DOMContentLoaded", () => {
     if (_salaPend) {
       localStorage.removeItem("oc_sala_pendiente"); // consumir una sola vez
       const _d = JSON.parse(_salaPend);
+      /* Cotizacion que se esta SIGUIENDO: llega entera desde el precotizador y se aplica
+         con la misma funcion que usa el boton de cargar un .json, al final del arranque. */
+      if (_d && _d._sigue) { window._ocSigueCot = _d; }
+      else
       if (_d && Array.isArray(_d.productos) && _d.productos.length) {
         // Limpiar stores antes de cargar (igual que cargarCotizacion) para no
         // arrastrar datos de los productos por defecto a los nuevos IDs.
@@ -5008,6 +5023,13 @@ window.addEventListener("DOMContentLoaded", () => {
   // PrepararCotización), se pide el correlativo real al registro para que el PDF no salga sin
   // número. El número definitivo lo confirma igual el servidor al registrar.
   if (window._ocPrecargarNumero) { window._ocPrecargarNumero = false; fetchYAsignarNumero(); }
+
+  /* La cotizacion que llego entera del precotizador se aplica AQUI, despues de que la
+     pagina limpia el numero: asi el numero de la cotizacion original no se pierde. */
+  if (window._ocSigueCot) {
+    const _sig = window._ocSigueCot; window._ocSigueCot = null;
+    try { aplicarCotizacion(_sig); } catch(_e2) { console.warn("No se pudo seguir la cotizacion:", _e2); }
+  }
 
   // Guardar perfil automáticamente cuando el ejecutivo escribe
   EXEC_FIELDS.forEach(id => {

@@ -198,6 +198,25 @@
   .cotiz-detalle-label { flex:0 0 130px; color:var(--mist); font-weight:600; }
   .cotiz-detalle-valor { flex:1 1 auto; color:var(--ink); font-weight:600; }
   .cotiz-detalle-prod-fila { display:flex; justify-content:space-between; padding:0.3rem 0; border-bottom:1px solid var(--line); font-size:0.85rem; }
+  /* Margen de la venta (2026-08-28) — solo se dibuja si Rayen cargo su archivo de costos.
+     En el codigo publicado no hay ni un costo: los numeros se calculan en su navegador. */
+  .mg-caja { border:1px solid var(--line); border-radius:12px; padding:0.7rem 0.9rem; margin:0.9rem 0; background:var(--paper); }
+  .mg-tit { font-size:0.85rem; font-weight:800; color:var(--navy); margin-bottom:0.4rem; }
+  .mg-fila { display:flex; justify-content:space-between; gap:0.5rem; font-size:0.85rem; padding:0.25rem 0; }
+  .mg-fila .num { font-variant-numeric:tabular-nums; font-weight:700; }
+  .mg-fila.total { border-top:1px solid var(--line); margin-top:0.25rem; padding-top:0.4rem; }
+  .mg-fila.total .num, .mg-fila.total span:first-child { font-weight:800; color:#166534; }
+  .mg-nota { font-size:0.75rem; color:var(--mist); line-height:1.45; margin-top:0.45rem; }
+  .mg-alerta { font-size:0.76rem; color:#B3261E; font-weight:700; line-height:1.45; margin-top:0.45rem; }
+  .mg-btn { display:block; width:100%; margin-top:0.6rem; padding:0.5rem 0.9rem; border:1px solid var(--line); border-radius:10px;
+            background:var(--card); color:var(--ink); font-size:0.8rem; font-weight:700; cursor:pointer; font-family:inherit; }
+  .mg-btn:hover { background:var(--paper); }
+  .mg-tabla { margin-top:0.6rem; }
+  .mg-prod { display:grid; grid-template-columns:1fr 2rem 5.2rem 5.2rem 5.6rem; gap:0.35rem; font-size:0.75rem;
+             padding:0.3rem 0; border-bottom:1px solid var(--line); align-items:baseline; }
+  .mg-prod.cab { font-weight:800; color:var(--mist); text-transform:uppercase; letter-spacing:0.03em; font-size:0.64rem; }
+  .mg-prod .num { text-align:right; font-variant-numeric:tabular-nums; }
+  .mg-prod .sinc { color:#B3261E; font-weight:700; }
   .cotiz-detalle-seg { padding:0.5rem 0.6rem; margin-bottom:0.4rem; background:var(--paper); border-radius:8px; font-size:0.82rem; }
   .cotiz-detalle-seg-meta { font-size:0.7rem; font-weight:700; color:var(--mist); text-transform:uppercase; letter-spacing:0.03em; margin-bottom:0.2rem; }
   .cotiz-detalle-seg-texto { color:var(--ink); white-space:pre-wrap; }
@@ -2349,7 +2368,7 @@
     const totalIva = Number(c.total_iva) || 0;
     if (neto > 0 || totalIva > 0) {
       return fila('Neto productos', _clp(neto))
-        + fila('Transporte', transporte > 0 ? _clp(transporte) : 'No incluido')
+        + fila('Transporte, instalación<br>y capacitación', transporte > 0 ? _clp(transporte) : 'No incluido')
         + fila('Total con IVA', _clp(totalIva), true);
     }
     const est = _montoEstCotizDetalle(c);
@@ -2358,7 +2377,7 @@
       ? '<div class="cotiz-detalle-campo"><span class="cotiz-detalle-label"></span><span class="cotiz-detalle-valor" style="font-size:0.78rem;color:var(--mist);">No incluye ' + est.sinPrecio.length + ' producto' + (est.sinPrecio.length === 1 ? '' : 's') + ' sin precio en la lista.</span></div>'
       : '';
     return fila('Neto productos (estimado)', _clp(Math.round(est.total / 1.19)))
-      + fila('Transporte', 'No informado')
+      + fila('Transporte, instalación<br>y capacitación', 'No informado')
       + fila('Total con IVA (estimado)', _clp(est.total), true)
       + nota;
   }
@@ -2693,6 +2712,140 @@
     }
   }
 
+  // ── MARGEN DE LA VENTA (Rayen 2026-08-28) ─────────────────────────────────
+  // "si tengo 10 productos que cuestan 100 y el valor de venta es 350, mi margen es 250, sin
+  // importar si un ejecutivo hizo descuento": el margen sale de la RESTA entre el neto que quedó
+  // registrado en la cotización y lo que nos costaron los productos. Así el descuento del
+  // ejecutivo ya viene descontado solo, sin tener que saber de cuánto fue.
+  //
+  // El precio de venta POR PRODUCTO no se guarda en ninguna parte — el CRM registra el neto
+  // total, el transporte y la lista de nombres con cantidades, nada más. Por eso el detalle
+  // producto por producto reparte ese neto según lo que pesa cada uno en la lista de precios.
+  // Los totales de arriba NO son estimados: son el neto registrado menos el costo real.
+  //
+  // Los costos salen del archivo que Rayen carga desde su computador (MIS_COSTOS). En esta
+  // página, que es pública, no hay ni un costo escrito: si no cargó el archivo, el bloque
+  // no se dibuja. Ver el bloque "MIS COSTOS" más arriba.
+  function _margenCotiz(c){
+    const filas = [], sinCosto = [], sinPrecio = [];
+    let costoTot = 0, listaTot = 0, listaSinCosto = 0, costoSinPrecio = 0;
+    _smExtraerProductos(c.productos).forEach(p => {
+      const s   = STOCK_SM[p.key];
+      const sku = s && s.sku;
+      const cat = (sku && window.SALAS_CATALOGO) ? window.SALAS_CATALOGO[sku] : null;
+      // El catálogo guarda el precio CON IVA; el costo del archivo es neto. Se comparan netos.
+      let pIva = (cat && cat.p) ? Number(cat.p) : 0;
+      if (!pIva) pIva = _precioPorNombre(p.display);
+      const info   = _costoDe(sku, p.display);
+      // Respaldo: la venta neta del archivo de costos, que sale de la misma lista y cruza por
+      // nombre con alias donde el catálogo por SKU no llega.
+      let unit = pIva ? Math.round(pIva / 1.19) : 0;
+      if (!unit && info && Number(info.ventaNeto)) unit = Math.round(Number(info.ventaNeto));
+      const lista  = unit * p.qty;
+      const costoU = info ? Math.round(Number(info.costoPuesto) || 0) : 0;
+      const costoL = costoU * p.qty;
+      listaTot += lista;
+      if (costoU) costoTot += costoL;
+      else { sinCosto.push(p.display); listaSinCosto += lista; }
+      // Sin precio en el catalogo no se le puede repartir venta, pero su costo SI salio de la
+      // caja: el margen queda mas bajo que el real. Se avisa en pantalla en vez de inventarle
+      // un precio. Caso visto el 28-ago en Pica (Tubo de Burbujas Pequeno).
+      if (!lista) { sinPrecio.push(p.display); costoSinPrecio += costoL; }
+      filas.push({ display: p.display, qty: p.qty, lista: lista, costo: costoL,
+                   sinCosto: !costoU, sinPrecio: !lista });
+    });
+    const netoReg  = Number(c.neto) || 0;
+    const ventaTot = netoReg || listaTot;
+    // Reparto del neto real: cada producto se lleva la parte que le toca según su precio de
+    // lista. Si hubo descuento, queda repartido entre todos en la misma proporción.
+    filas.forEach(f => {
+      f.venta  = listaTot ? Math.round(ventaTot * (f.lista / listaTot)) : 0;
+      f.margen = (f.sinCosto || f.sinPrecio) ? null : (f.venta - f.costo);
+    });
+    filas.sort((a, b) => (b.margen || 0) - (a.margen || 0));
+    return {
+      filas: filas, sinCosto: sinCosto, listaSinCosto: listaSinCosto,
+      sinPrecio: sinPrecio, costoSinPrecio: costoSinPrecio,
+      costoTot: costoTot, listaTot: listaTot, ventaTot: ventaTot, netoReg: netoReg,
+      transporte: Number(c.transporte) || 0,
+      margen: ventaTot - costoTot,
+      estimado: !netoReg
+    };
+  }
+
+  function _bloqueMargenHTML(c){
+    if (!Object.keys(MIS_COSTOS).length) {
+      return '<div class="mg-caja"><div class="mg-tit">Margen de la venta</div>' +
+        '<p class="mg-nota">Para verlo hay que cargar tus costos una vez en este computador: pestaña ' +
+        '<strong>Pedido / faltantes</strong>, botón <strong>Cargar mis costos</strong>. Los costos no viven ' +
+        'en esta página (está publicada en internet): se leen de tu archivo del Drive y se quedan solo ' +
+        'en este navegador.</p></div>';
+    }
+    const m = _margenCotiz(c);
+    if (!m.filas.length) return '';
+    const pct = m.ventaTot ? (m.margen / m.ventaTot * 100) : 0;
+    const pctTxt = n => n.toFixed(1).replace('.', ',');
+    const fila = (et, val, clase) => '<div class="mg-fila' + (clase ? ' ' + clase : '') + '"><span>' + et +
+      '</span><span class="num">' + val + '</span></div>';
+
+    const alerta = m.sinCosto.length
+      ? '<p class="mg-alerta">Ojo: ' + m.sinCosto.length + ' producto' + (m.sinCosto.length === 1 ? '' : 's') +
+        ' sin costo en tu archivo, así que el margen de arriba está más alto que el real. Son: ' +
+        m.sinCosto.map(escapeHtmlSafe).join(', ') + '.</p>'
+      : '';
+    const avisoSinPrecio = m.sinPrecio.length
+      ? '<p class="mg-alerta">' + m.sinPrecio.length + ' producto' + (m.sinPrecio.length === 1 ? '' : 's') +
+        ' sin precio en el catálogo: su costo (' + _clp(m.costoSinPrecio) + ') sí está restado, pero no se le ' +
+        'pudo asignar venta, así que el margen de arriba sale <strong>más bajo</strong> que el real. ' +
+        (m.sinPrecio.length === 1 ? 'Es' : 'Son') + ': ' + m.sinPrecio.map(escapeHtmlSafe).join(', ') + '.</p>'
+      : '';
+    const notaEstimado = m.estimado
+      ? '<p class="mg-alerta">Esta cotización no tiene neto registrado en el CRM: la venta de arriba es la ' +
+        'suma de los precios de lista, no lo que realmente se cobró.</p>'
+      : '';
+    // Cuánto se apartó lo cotizado del precio de lista (descuento o recargo del ejecutivo).
+    const dif = (!m.estimado && m.listaTot) ? (m.netoReg - m.listaTot) : 0;
+    const notaDif = dif
+      ? '<p class="mg-nota">Se cotizó ' + (dif < 0
+            ? '<strong>' + _clp(-dif) + ' por debajo</strong>'
+            : '<strong>' + _clp(dif) + ' por encima</strong>') +
+        ' de la lista de precios (' + pctTxt(Math.abs(dif) / m.listaTot * 100) + '%). ' +
+        'Eso ya está descontado en el margen.</p>'
+      : '';
+
+    const filasProd = m.filas.map(f =>
+      '<div class="mg-prod"><span>' + escapeHtmlSafe(f.display) + '</span>' +
+      '<span class="num">x' + f.qty + '</span>' +
+      '<span class="num">' + (f.sinPrecio ? '<span class="sinc">sin precio</span>' : _clp(f.venta)) + '</span>' +
+      '<span class="num">' + (f.sinCosto ? '<span class="sinc">sin costo</span>' : _clp(f.costo)) + '</span>' +
+      '<span class="num">' + (f.margen === null ? '—' : _clp(f.margen) +
+          ' <span style="color:var(--mist);font-weight:600;">' +
+          (f.venta ? Math.round(f.margen / f.venta * 100) : 0) + '%</span>') + '</span></div>'
+    ).join('');
+
+    return '<div class="mg-caja">' +
+      '<div class="mg-tit">Margen de la venta</div>' +
+      fila(m.estimado ? 'Venta de productos (estimada)' : 'Venta de productos (neto cotizado)', _clp(m.ventaTot)) +
+      fila('Costo de los productos', _clp(m.costoTot)) +
+      fila('Margen', _clp(m.margen) + ' · ' + pctTxt(pct) + '%', 'total') +
+      (m.transporte
+        ? '<p class="mg-nota">Aparte, el cliente pagó <strong>' + _clp(m.transporte) + '</strong> por transporte, ' +
+          'instalación y capacitación. No entra en el margen de arriba: no tenemos registrado lo que cuesta ' +
+          'ese viaje ni los días de instalación.</p>'
+        : '<p class="mg-nota">Esta cotización no cobró transporte, instalación ni capacitación.</p>') +
+      notaDif + notaEstimado + alerta + avisoSinPrecio +
+      '<button type="button" class="mg-btn" id="mg-ver">Ver el margen de cada producto</button>' +
+      '<div class="mg-tabla" id="mg-tabla" style="display:none;">' +
+        '<div class="mg-prod cab"><span>Producto</span><span class="num">Cant</span>' +
+        '<span class="num">Venta</span><span class="num">Costo</span><span class="num">Margen</span></div>' +
+        filasProd +
+        '<p class="mg-nota">La venta de cada producto es su parte del neto cotizado, repartida según lo que ' +
+        'pesa en la lista de precios: el precio con que se cotizó cada producto no queda guardado en ninguna ' +
+        'parte, solo el total. El costo sí es el real de tu archivo.</p>' +
+      '</div>' +
+    '</div>';
+  }
+
   function abrirDetalleCotizacion(num){
     const c = COTIZ_SM_TODAS.find(x => x.cotizacion === num);
     const modal = document.getElementById('cotiz-detalle-modal');
@@ -2721,12 +2874,21 @@
       '<div class="cotiz-detalle-campo"><span class="cotiz-detalle-label">Estado</span><span class="cotiz-detalle-valor">' + estadoTxt + '</span></div>' +
       '<div class="cotiz-detalle-campo"><span class="cotiz-detalle-label">Probabilidad</span><span class="cotiz-detalle-valor">' + (c.probabilidad || 0) + '%</span></div>' +
       _montosDetalleCotiz(c) +
+      _bloqueMargenHTML(c) +
       '<h4 style="margin:1rem 0 0.5rem;">Productos (' + prods.length + ')</h4>' +
       (filasProd || '<p class="incluidos-vacio">Sin productos detectados.</p>') +
       '<h4 style="margin:1rem 0 0.5rem;">Seguimientos (' + segs.length + ')</h4>' +
       (filasSegs || '<p class="incluidos-vacio">Sin seguimientos registrados todavía.</p>') +
       '<h4 style="margin:1rem 0 0.5rem;">Mensajes de cotización (' + msgs.length + ')</h4>' +
       (filasMsgs || '<p class="incluidos-vacio">Sin mensajes escritos todavía.</p>');
+    const btnMg = document.getElementById('mg-ver');
+    if (btnMg) btnMg.addEventListener('click', () => {
+      const tb = document.getElementById('mg-tabla');
+      if (!tb) return;
+      const abierta = tb.style.display !== 'none';
+      tb.style.display = abierta ? 'none' : 'block';
+      btnMg.textContent = abierta ? 'Ver el margen de cada producto' : 'Ocultar el margen de cada producto';
+    });
     _pintarBloqueVenta(c);
     modal.classList.add('open');
   }

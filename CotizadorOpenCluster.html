@@ -4259,6 +4259,15 @@ async function registrarCotizacion() {
   // Productos resumidos
   const prods = getProds().filter(p=>p.name).map(p=>`${p.name} x${p.cant}`).join(", ");
 
+  // Los códigos OC van a su PROPIA columna del registro ("Códigos OC"), en el mismo orden
+  // que los productos. Antes viajaban pegados al nombre y, desde que se separaron (20-ago-2026,
+  // para que no se partieran en dos en el PDF), dejaron de quedar registrados en ninguna parte:
+  // el CRM tenía que adivinar el costo por el nombre. En la venta OC26-3849 se equivocó en 4 de
+  // 11 productos — un catre de $160.900 quedó como una plantilla de $16.690. El código OC es la
+  // única llave 100% segura. Lo que el ejecutivo escribió a mano no tiene código y se marca.
+  const codigos = getProds().filter(p=>p.name)
+    .map(p=>`${p.codigo || "sin código"} x${p.cant}`).join(", ");
+
   // Envío / Transporte separado
   const envioTipo = document.querySelector('input[name="envioTipo"]:checked')?.value || "noincluido";
   const envioDesc = envioTipo === "propio" ? "Logística propia"
@@ -4340,7 +4349,7 @@ async function registrarCotizacion() {
       : costoTransporte > 0
         ? "$" + Math.round(costoTransporte).toLocaleString("es-CL") + " (" + transporteDesc + ")"
         : "No incluido",
-    productos: prods, sala: salaDesc, estado: "Enviada",
+    productos: prods, codigos: codigos, sala: salaDesc, estado: "Enviada",
     fndr: getFndrData().esFndr ? "Sí" : "No",
     fndr_region: getFndrData().region
   };

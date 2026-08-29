@@ -2733,14 +2733,17 @@
       const s   = STOCK_SM[p.key];
       const sku = s && s.sku;
       const cat = (sku && window.SALAS_CATALOGO) ? window.SALAS_CATALOGO[sku] : null;
-      // El catálogo guarda el precio CON IVA; el costo del archivo es neto. Se comparan netos.
-      let pIva = (cat && cat.p) ? Number(cat.p) : 0;
-      if (!pIva) pIva = _precioPorNombre(p.display);
+      // La venta NETA sale tal cual del archivo de costos: es la columna "Venta en pesos neto"
+      // de la planilla de Rayen, que ya viene calculada. No hay que dividir nada por 1,19.
       const info   = _costoDe(sku, p.display);
-      // Respaldo: la venta neta del archivo de costos, que sale de la misma lista y cruza por
-      // nombre con alias donde el catálogo por SKU no llega.
-      let unit = pIva ? Math.round(pIva / 1.19) : 0;
-      if (!unit && info && Number(info.ventaNeto)) unit = Math.round(Number(info.ventaNeto));
+      let unit = (info && Number(info.ventaNeto)) ? Math.round(Number(info.ventaNeto)) : 0;
+      // Respaldo, solo para lo que no está en la tarifa de Qinera (productos OCTECH y WEB- de
+      // OpenCluster): ahí el catálogo guarda el precio CON IVA y sí hay que pasarlo a neto.
+      if (!unit) {
+        let pIva = (cat && cat.p) ? Number(cat.p) : 0;
+        if (!pIva) pIva = _precioPorNombre(p.display);
+        unit = pIva ? Math.round(pIva / 1.19) : 0;
+      }
       const lista  = unit * p.qty;
       const costoU = info ? Math.round(Number(info.costoPuesto) || 0) : 0;
       const costoL = costoU * p.qty;

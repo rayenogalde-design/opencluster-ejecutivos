@@ -2741,11 +2741,14 @@
       // COSTO: siempre del archivo de Rayen. Es lo que le pagamos al proveedor por el producto
       // puesto en Chile; el catálogo NO sirve para esto.
       const info   = _costoDe(sku, p.display);
+      // La columna F del Excel ("Costo en Chile") viene CON IVA — confirmado por Rayen el
+      // 28-ago-2026. Se pasa a neto para poder restarlo del neto de venta.
+      const IVA_COSTO = 1.19;
       // Respaldo de la venta, solo si el catálogo no tiene ese nombre: la venta neta del mismo
       // archivo. Cruza por nombre con alias donde el catálogo por SKU no llega.
       if (!unit && info && Number(info.ventaNeto)) unit = Math.round(Number(info.ventaNeto));
       const lista  = unit * p.qty;
-      const costoU = info ? Math.round(Number(info.costoPuesto) || 0) : 0;
+      const costoU = info ? Math.round((Number(info.costoPuesto) || 0) / IVA_COSTO) : 0;
       const costoL = costoU * p.qty;
       listaTot += lista;
       if (costoU) costoTot += costoL;

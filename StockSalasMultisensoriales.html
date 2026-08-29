@@ -2080,6 +2080,27 @@
       if (k && !MIS_COSTOS_POR_NOMBRE[k]) MIS_COSTOS_POR_NOMBRE[k] = sku;
     });
   }
+  // ── El costo NETO de un producto ──────────────────────────────────────────
+  // La columna F del archivo ("Costo en Chile") NO significa lo mismo en las dos hojas:
+  //   · marítimo (172)            → es el EXW x 1,551, o sea con flete e internación, y viene
+  //                                 CON IVA (confirmado por Rayen el 28-ago-2026). Se divide.
+  //   · transporte incluido (162) → es el precio de Qinera TAL CUAL (F = EXW, factor 1,0) y es
+  //                                 NETO. El maestro lo trata así: el Enabler Socket+ (BJ-234)
+  //                                 tiene ahí "Costo Neto 164.160", el mismo numero de la
+  //                                 columna F, y con su margen del 30,6% da los $281.673 del
+  //                                 catálogo. Si se dividiera, daría 41,7% y no calzaría.
+  // Dividir los 334 por igual inflaba el margen de los 162 de transporte incluido.
+  function _costoNetoDe(info){
+    if (!info) return 0;
+    var bruto = Number(info.costoPuesto) || 0;
+    if (!bruto) return 0;
+    var exw = Number(info.costoQinera) || 0;
+    var esMaritimo = String(info.via || '').indexOf('maritimo') >= 0
+      // Sin la via (costos guardados por una versión anterior de la página): se deduce del dato.
+      // Marítimo es el único caso con recargo — el puesto en Chile es el EXW x 1,551.
+      || (!info.via && exw > 0 && (bruto / exw) > 1.2);
+    return Math.round(esMaritimo ? bruto / 1.19 : bruto);
+  }
   // Busca el costo por CODIGO y, si no está, por NOMBRE (rescata la "Máquina de burbujas",
   // que en bodega es MP-EX46-1 y en Qinera es BJ-EX46 "Pompas SHX").
   function _costoDe(sku, nombreOClave){
@@ -2178,7 +2199,8 @@
         costoQinera: num(c[2]),      // "Precio OTC container completo" de la tarifa oficial
         costoPuesto: num(c[3]),      // el anterior x 1,551 → puesto en Chile
         ventaNeto: num(c[4]),
-        ventaIva: num(c[5])
+        ventaIva: num(c[5]),
+        via: (c[6] || '').toLowerCase()   // "maritimo" o "transporte incluido" — decide el IVA
       };
     });
     return out;
@@ -2778,7 +2800,7 @@
     const out = [];
     Object.keys(MIS_COSTOS).forEach(sku => {
       const info = MIS_COSTOS[sku];
-      const costo = Math.round((Number(info.costoPuesto) || 0) / 1.19);
+      const costo = _costoNetoDe(info);
       if (!costo) return;
       const cat = window.SALAS_CATALOGO ? window.SALAS_CATALOGO[sku] : null;
       let venta = (cat && cat.p) ? Math.round(Number(cat.p) / 1.19) : 0;
@@ -2910,14 +2932,12 @@
       // COSTO: siempre del archivo de Rayen. Es lo que le pagamos al proveedor por el producto
       // puesto en Chile; el catálogo NO sirve para esto.
       const info   = _costoDe(sku, p.display);
-      // La columna F del Excel ("Costo en Chile") viene CON IVA — confirmado por Rayen el
-      // 28-ago-2026. Se pasa a neto para poder restarlo del neto de venta.
-      const IVA_COSTO = 1.19;
+      // El costo neto lo resuelve _costoNetoDe: divide por 1,19 solo los marítimos.
       // Respaldo de la venta, solo si el catálogo no tiene ese nombre: la venta neta del mismo
       // archivo. Cruza por nombre con alias donde el catálogo por SKU no llega.
       if (!unit && info && Number(info.ventaNeto)) unit = Math.round(Number(info.ventaNeto));
       const lista  = unit * p.qty;
-      const costoU = info ? Math.round((Number(info.costoPuesto) || 0) / IVA_COSTO) : 0;
+      const costoU = _costoNetoDe(info);
       const costoL = costoU * p.qty;
       listaTot += lista;
       if (costoU) costoTot += costoL;

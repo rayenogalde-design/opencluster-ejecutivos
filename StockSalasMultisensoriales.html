@@ -211,6 +211,27 @@
   .mg-btn { display:block; width:100%; margin-top:0.6rem; padding:0.5rem 0.9rem; border:1px solid var(--line); border-radius:10px;
             background:var(--card); color:var(--ink); font-size:0.8rem; font-weight:700; cursor:pointer; font-family:inherit; }
   .mg-btn:hover { background:var(--paper); }
+  /* Pestaña "Costo y margen" — la lista de todos los productos, uno a uno. */
+  .mgp-res { display:flex; flex-wrap:wrap; gap:1.6rem; padding:0.9rem 1.1rem; margin:0 0 0.9rem;
+             border:1px solid var(--line); border-radius:12px; background:var(--paper); }
+  .mgp-res > div { display:flex; flex-direction:column; gap:0.15rem; }
+  .mgp-res-et { font-size:0.66rem; font-weight:800; color:var(--mist); text-transform:uppercase; letter-spacing:0.05em; }
+  .mgp-res-v { font-size:1.05rem; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums; }
+  .mgp-verde { color:#166534; }
+  .mgp-pct { font-size:0.72rem; font-weight:700; color:var(--mist); }
+  .mgp-sku { font-size:0.68rem; font-weight:700; color:var(--mist); letter-spacing:0.03em; }
+  .mgp-fila { display:grid; grid-template-columns:1fr 6.4rem 6.4rem 6.4rem 7rem; gap:0.5rem;
+              padding:0.5rem 0.2rem; border-bottom:1px solid var(--line); font-size:0.8rem; align-items:center; }
+  .mgp-fila.cab { font-size:0.64rem; font-weight:800; color:var(--mist); text-transform:uppercase;
+                  letter-spacing:0.04em; border-bottom:2px solid var(--line); position:sticky; top:0;
+                  background:var(--card); z-index:2; }
+  .mgp-fila .num { text-align:right; font-variant-numeric:tabular-nums; }
+  .mgp-fila .sinc { color:#B3261E; font-weight:700; }
+  @media (max-width:720px){
+    .mgp-fila { grid-template-columns:1fr 5.2rem 5.6rem; }
+    .mgp-fila > :nth-child(4) { display:none; }
+    .mgp-fila > :nth-child(3) { display:none; }
+  }
   .mg-tabla { margin-top:0.6rem; }
   .mg-prod { display:grid; grid-template-columns:1fr 2rem 5.2rem 5.2rem 5.6rem; gap:0.35rem; font-size:0.75rem;
              padding:0.3rem 0; border-bottom:1px solid var(--line); align-items:baseline; }
@@ -567,7 +588,7 @@
       <div class="stock-hero-chip"><span class="stock-hero-dot dot-bodega"></span><b>57</b> en bodega</div>
       <div class="stock-hero-chip"><span class="stock-hero-dot dot-camino"></span><b>147</b> en camino</div>
     </div>
-  </div><button class="tabbtn grp-stock active" data-tab="stock-bodega">Bodega</button><button class="tabbtn grp-stock" data-tab="stock-camino">Contenedor (ya llegó)</button><button class="tabbtn grp-stock" data-tab="stock-combinado">Combinado</button><button class="tabbtn grp-stock" data-tab="stock-comparar">Comparar cotizaciones</button><button class="tabbtn grp-stock" data-tab="stock-importar">¿Qué puedo importar?</button></div></div>
+  </div><button class="tabbtn grp-stock active" data-tab="stock-bodega">Bodega</button><button class="tabbtn grp-stock" data-tab="stock-camino">Contenedor (ya llegó)</button><button class="tabbtn grp-stock" data-tab="stock-combinado">Combinado</button><button class="tabbtn grp-stock" data-tab="stock-comparar">Comparar cotizaciones</button><button class="tabbtn grp-stock" data-tab="stock-importar">¿Qué puedo importar?</button><button class="tabbtn grp-stock" data-tab="stock-margenes">Costo y margen</button></div></div>
 <main>
   <section class="panel grp-stock active" id="panel-stock-bodega">
     <div class="panelhead">
@@ -1732,7 +1753,37 @@
       <button type="button" class="imp-chip" data-imp-filtro="todos">Ver todo</button>
     </div>
     <div id="imp-grid"></div>
+  </section>
+  <section class="panel grp-stock" id="panel-stock-margenes">
+    <div class="panelhead">
+      <div>
+        <h2>Costo y margen</h2>
+        <p class="sug">Cada producto de la tarifa de Qinera con lo que te cuesta, a cuánto lo vendes y cuánto te queda. Los costos <strong>no están en esta página</strong>: se leen del archivo de tu computador y no salen de este navegador.</p>
+      </div>
+    </div>
+    <div id="mgp-sincostos" style="display:none;">
+      <div class="costos-caja">
+        <div class="costos-caja-t">Primero hay que cargar tus costos</div>
+        <p class="costos-caja-p">Se cargan una sola vez y quedan guardados en este computador. Están en la pestaña <strong>Comparar cotizaciones</strong>, botón <strong>Cargar mis costos</strong>.</p>
+        <button type="button" class="btn-secundario" id="mgp-ir-costos">Ir a cargar mis costos</button>
+      </div>
+    </div>
+    <div id="mgp-cuerpo" style="display:none;">
+      <div class="mgp-resumen" id="mgp-resumen"></div>
+      <div class="controls">
+        <input type="text" class="search" id="mgp-buscar" placeholder="Buscar producto o SKU…" />
+      </div>
+      <div class="imp-filtros">
+        <button type="button" class="imp-chip active" data-mgp-orden="margen">Los que más dejan</button>
+        <button type="button" class="imp-chip" data-mgp-orden="pct">Mejor porcentaje</button>
+        <button type="button" class="imp-chip" data-mgp-orden="nombre">Por nombre</button>
+        <button type="button" class="imp-chip" data-mgp-orden="caro">Más caros</button>
+      </div>
+      <div id="mgp-lista"></div>
+      <p id="mgp-vacio" class="incluidos-vacio" style="display:none;">Ningún producto calza con la búsqueda.</p>
+    </div>
   </section></main>
+
 <div id="lightbox"><img id="lightbox-img" src="" alt="" /></div>
 <div id="ficha-modal">
   <div class="ficha-modal-bg"></div>
@@ -2148,7 +2199,7 @@
     const q = document.getElementById('costos-quitar');
     if (q) q.onclick = function(){
       if (!confirm('¿Quitar los costos guardados en este computador? Podrás volver a cargarlos cuando quieras.')) return;
-      _costosBorrar(); _costosEstado();
+      _costosBorrar(); _costosEstado(); _mgpPintar();
     };
   }
   // Conecta el boton y el selector de archivo. Se llama en cada repintado del comparador.
@@ -2183,7 +2234,7 @@
       MIS_COSTOS = datos;
       _costosIndexar();
       const ok = _costosGuardar();
-      _costosEstado();
+      _costosEstado(); _mgpPintar();
       alert('Listo: ' + n + ' productos con costo.' +
         (ok ? '\n\nQuedaron guardados en este computador, así que no te los voy a pedir de nuevo.'
             : '\n\nOJO: no pude guardarlos en este navegador, así que habrá que cargarlos de nuevo la próxima vez.') +
@@ -2223,7 +2274,7 @@
         if (_costosAplicarTexto(await file.text(), true)) {
           COSTOS_HANDLE = handle;
           await _costosHandleGuardar(handle);
-          _costosEstado();
+          _costosEstado(); _mgpPintar();
         }
       } catch(e){ /* el usuario cerró el buscador de archivos */ }
     }
@@ -2248,10 +2299,11 @@
       inp.value = '';
     };
     // Mostrar en el estado si ya hay un archivo recordado.
-    _costosHandleLeer().then(function(h){ if (h) { COSTOS_HANDLE = h; _costosEstado(); } });
-    _costosEstado();
+    _costosHandleLeer().then(function(h){ if (h) { COSTOS_HANDLE = h; _costosEstado(); _mgpPintar(); } });
+    _costosEstado(); _mgpPintar();
   }
   _costosCargar();
+  _mgpWire();
 
   let COTIZ_SM_TODAS = [];
   // Array (no Set) porque el ORDEN importa: es la fila de prioridad que Rayen arma arrastrando
@@ -2710,6 +2762,123 @@
         });
       });
     }
+  }
+
+  // ── PESTAÑA "COSTO Y MARGEN" (Rayen 2026-08-28: "los quiero en salas", "uno a uno") ───────
+  // Cada producto de la tarifa de Qinera con su costo, su precio de venta y lo que deja.
+  // Mismas fuentes que el margen de una cotización, para que no puedan decir cosas distintas:
+  //   VENTA  → el catálogo publicado (`SALAS_CATALOGO.p`), que guarda CON IVA → se pasa a neto.
+  //            Respaldo: la venta neta del archivo, para lo que el catálogo no cruza por SKU.
+  //   COSTO  → `costoPuesto` del archivo, que viene CON IVA (columna F, confirmado por Rayen
+  //            el 28-ago-2026) → se pasa a neto dividiendo por IVA_COSTO.
+  // En el HTML publicado no hay ni un costo: sin el archivo cargado, la pestaña no muestra nada.
+  let MGP_ORDEN = 'margen';
+
+  function _mgpFilas(){
+    const out = [];
+    Object.keys(MIS_COSTOS).forEach(sku => {
+      const info = MIS_COSTOS[sku];
+      const costo = Math.round((Number(info.costoPuesto) || 0) / 1.19);
+      if (!costo) return;
+      const cat = window.SALAS_CATALOGO ? window.SALAS_CATALOGO[sku] : null;
+      let venta = (cat && cat.p) ? Math.round(Number(cat.p) / 1.19) : 0;
+      if (!venta) { const p = _precioPorNombre(info.nombre || ''); if (p) venta = Math.round(p / 1.19); }
+      if (!venta && Number(info.ventaNeto)) venta = Math.round(Number(info.ventaNeto));
+      out.push({
+        sku: sku,
+        nombre: info.nombre || sku,
+        costo: costo,
+        venta: venta,
+        margen: venta ? (venta - costo) : null,
+        pct: venta ? ((venta - costo) / venta * 100) : null
+      });
+    });
+    return out;
+  }
+
+  function _mgpOrdenar(filas){
+    const f = filas.slice();
+    if (MGP_ORDEN === 'nombre') f.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+    else if (MGP_ORDEN === 'pct')   f.sort((a, b) => (b.pct === null ? -1 : b.pct) - (a.pct === null ? -1 : a.pct));
+    else if (MGP_ORDEN === 'caro')  f.sort((a, b) => b.venta - a.venta);
+    else f.sort((a, b) => (b.margen === null ? -1 : b.margen) - (a.margen === null ? -1 : a.margen));
+    return f;
+  }
+
+  function _mgpPintar(){
+    const sin = document.getElementById('mgp-sincostos');
+    const cuerpo = document.getElementById('mgp-cuerpo');
+    if (!sin || !cuerpo) return;
+    const hay = Object.keys(MIS_COSTOS).length > 0;
+    sin.style.display = hay ? 'none' : 'block';
+    cuerpo.style.display = hay ? 'block' : 'none';
+    if (!hay) return;
+
+    const todas = _mgpFilas();
+    const _sinTilde = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const q = _sinTilde(document.getElementById('mgp-buscar')?.value || '').trim();
+    const filtradas = q
+      ? todas.filter(x => _sinTilde(x.nombre + ' ' + x.sku).indexOf(q) >= 0)
+      : todas;
+
+    // Resumen: solo sobre los que tienen precio de venta, para no mezclar.
+    const conVenta = filtradas.filter(x => x.venta);
+    const tCosto = conVenta.reduce((a, x) => a + x.costo, 0);
+    const tVenta = conVenta.reduce((a, x) => a + x.venta, 0);
+    const tMargen = tVenta - tCosto;
+    const sinVenta = filtradas.length - conVenta.length;
+    const res = document.getElementById('mgp-resumen');
+    if (res) res.innerHTML =
+      '<div class="mgp-res">' +
+        '<div><span class="mgp-res-et">Productos</span><span class="mgp-res-v">' + filtradas.length + '</span></div>' +
+        '<div><span class="mgp-res-et">Costo</span><span class="mgp-res-v">' + _clp(tCosto) + '</span></div>' +
+        '<div><span class="mgp-res-et">Venta</span><span class="mgp-res-v">' + _clp(tVenta) + '</span></div>' +
+        '<div><span class="mgp-res-et">Margen</span><span class="mgp-res-v mgp-verde">' + _clp(tMargen) +
+          (tVenta ? ' · ' + (tMargen / tVenta * 100).toFixed(1).replace('.', ',') + '%' : '') + '</span></div>' +
+      '</div>' +
+      (sinVenta ? '<p class="mg-nota">' + sinVenta + ' producto' + (sinVenta === 1 ? '' : 's') +
+        ' sin precio de venta publicado. Se listan al final y no entran en los totales.</p>' : '');
+
+    const lista = document.getElementById('mgp-lista');
+    const vacio = document.getElementById('mgp-vacio');
+    if (vacio) vacio.style.display = filtradas.length ? 'none' : 'block';
+    if (!lista) return;
+    lista.innerHTML = filtradas.length
+      ? '<div class="mgp-fila cab"><span>Producto</span><span class="num">Costo</span>' +
+        '<span class="num">Venta neta</span><span class="num">Venta c/IVA</span><span class="num">Margen</span></div>' +
+        _mgpOrdenar(filtradas).map(x =>
+          '<div class="mgp-fila">' +
+            '<span><strong>' + escapeHtmlSafe(x.nombre) + '</strong><br>' +
+              '<span class="mgp-sku">' + escapeHtmlSafe(x.sku) + '</span></span>' +
+            '<span class="num">' + _clp(x.costo) + '</span>' +
+            '<span class="num">' + (x.venta ? _clp(x.venta) : '<span class="sinc">sin precio</span>') + '</span>' +
+            '<span class="num">' + (x.venta ? _clp(Math.round(x.venta * 1.19)) : '—') + '</span>' +
+            '<span class="num">' + (x.margen === null ? '—' :
+               '<strong class="mgp-verde">' + _clp(x.margen) + '</strong><br>' +
+               '<span class="mgp-pct">' + x.pct.toFixed(1).replace('.', ',') + '%</span>') + '</span>' +
+          '</div>'
+        ).join('')
+      : '';
+  }
+
+  function _mgpWire(){
+    const b = document.getElementById('mgp-buscar');
+    if (b) b.addEventListener('input', _mgpPintar);
+    document.querySelectorAll('[data-mgp-orden]').forEach(ch => {
+      ch.addEventListener('click', () => {
+        document.querySelectorAll('[data-mgp-orden]').forEach(o => o.classList.remove('active'));
+        ch.classList.add('active');
+        MGP_ORDEN = ch.dataset.mgpOrden;
+        _mgpPintar();
+      });
+    });
+    const ir = document.getElementById('mgp-ir-costos');
+    if (ir) ir.addEventListener('click', () => {
+      const btn = document.querySelector('.tabbtn[data-tab="stock-comparar"]');
+      if (btn) btn.click();
+      const caja = document.getElementById('costos-cargar');
+      if (caja) caja.scrollIntoView({ behavior:'smooth', block:'center' });
+    });
   }
 
   // ── MARGEN DE LA VENTA (Rayen 2026-08-28) ─────────────────────────────────
@@ -3960,6 +4129,7 @@
       document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
       btn.classList.add('active');
       document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+      if (btn.dataset.tab === 'stock-margenes') _mgpPintar();
     });
   });
 

@@ -130,6 +130,8 @@
   .cotiz-filtro-prob { display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; margin:-0.4rem 0 0.8rem; }
   .cotiz-filtro-prob-label { font-size:0.78rem; font-weight:700; color:var(--mist); }
   .cotiz-filtro-prob-nota { font-size:0.72rem; color:var(--mist); }
+  .cotiz-gan-fila { display:flex; flex-wrap:wrap; align-items:center; gap:0.7rem; margin:0 0 0.9rem; }
+  .cotiz-gan-fila .cotiz-filtro-prob-nota { flex:1 1 16rem; line-height:1.4; }
   .cotiz-lista { border:1px solid var(--line); border-radius:14px; max-height:340px; overflow-y:auto; background:var(--card); }
   .cotiz-row { display:flex; align-items:center; gap:0.7rem; padding:0.55rem 0.8rem; border-bottom:1px solid var(--line); font-size:0.85rem; }
   .cotiz-row:last-child { border-bottom:none; }
@@ -1728,6 +1730,10 @@
       <button type="button" class="btn-secundario" id="cotiz-marcar-todas" style="margin-left:auto;">Marcar todas</button>
       <button type="button" class="btn-secundario" id="cotiz-limpiar-seleccion">Limpiar selección</button>
     </div>
+    <div class="cotiz-gan-fila">
+      <button type="button" class="btn-secundario" id="cotiz-excel-ganancias">Excel de ganancias</button>
+      <span class="cotiz-filtro-prob-nota">De las cotizaciones que tengas marcadas: venta, costo y margen de cada una, y el detalle producto por producto.</span>
+    </div>
     <div id="cotiz-lista" class="cotiz-lista"><p class="incluidos-vacio">Cargando cotizaciones…</p></div>
     <div id="cotiz-comparacion"></div>
   </section>
@@ -2326,6 +2332,13 @@
   }
   _costosCargar();
   _mgpWire();
+  const _btnGan = document.getElementById('cotiz-excel-ganancias');
+  if (_btnGan) _btnGan.addEventListener('click', () => {
+    const sel = cotizOrdenPrioridad
+      .map(num => COTIZ_SM_TODAS.find(c => c.cotizacion === num))
+      .filter(Boolean);
+    _excelGanancias(sel);
+  });
 
   let COTIZ_SM_TODAS = [];
   // Array (no Set) porque el ORDEN importa: es la fila de prioridad que Rayen arma arrastrando
@@ -2784,6 +2797,87 @@
         });
       });
     }
+  }
+
+  // ── EXCEL DE GANANCIAS (Rayen 2026-08-28) ─────────────────────────────────
+  // "necesito poder llevarlo a un excel si lo necesito, y si son varias las seleccionadas que
+  // aparezca la info de ganancias de cada una". Una hoja con dos bloques: arriba una fila por
+  // cotización con su margen, y abajo el detalle producto por producto de cada una.
+  // Sale de _margenCotiz, la misma cuenta que se ve en pantalla: no pueden decir cosas distintas.
+  function _excelGanancias(seleccionadas){
+    if (!window.OCT_excelTabla || !window.OCT_descargar) {
+      alert('No se pudo cargar el generador de Excel. Recarga la página con Ctrl+Shift+R.');
+      return;
+    }
+    if (!seleccionadas || !seleccionadas.length) { alert('Marca al menos una cotización.'); return; }
+    if (!Object.keys(MIS_COSTOS).length) {
+      alert('Primero hay que cargar tus costos en este computador: botón "Cargar mis costos", más abajo en esta misma pestaña.');
+      return;
+    }
+    const pct = n => Math.round(n * 10) / 10;
+    const cols = ['Cotización', 'Institución / Producto', 'Ejecutivo / Cant.', 'Prob.',
+                  'Venta neta', 'Costo', 'Margen $', 'Margen %', 'Instalación (aparte)'];
+    const filas = [];
+    let tVenta = 0, tCosto = 0, tInst = 0;
+
+    // Bloque 1: una fila por cotización.
+    seleccionadas.forEach(c => {
+      const m = _margenCotiz(c);
+      tVenta += m.ventaTot; tCosto += m.costoTot; tInst += m.transporte;
+      filas.push([
+        c.cotizacion,
+        c.institucion || '',
+        c.ejecutivo || '',
+        (c.probabilidad || 0) + '%',
+        { v: m.ventaTot, moneda: true },
+        { v: m.costoTot, moneda: true },
+        { v: m.margen, moneda: true },
+        m.ventaTot ? pct(m.margen / m.ventaTot * 100) : 0,
+        m.transporte ? { v: m.transporte, moneda: true } : ' '
+      ]);
+    });
+    if (seleccionadas.length > 1) {
+      filas.push(['TOTAL', seleccionadas.length + ' cotizaciones', ' ', ' ',
+        { v: tVenta, moneda: true }, { v: tCosto, moneda: true }, { v: tVenta - tCosto, moneda: true },
+        tVenta ? pct((tVenta - tCosto) / tVenta * 100) : 0,
+        tInst ? { v: tInst, moneda: true } : ' ']);
+    }
+
+    // Bloque 2: el detalle de cada una, producto por producto.
+    const _vacia = () => [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '];
+    filas.push(_vacia());
+    const _tit = _vacia(); _tit[0] = 'DETALLE POR PRODUCTO';
+    _tit[1] = 'la venta de cada producto es su parte del neto cotizado, repartida por su peso en la lista';
+    filas.push(_tit);
+    seleccionadas.forEach(c => {
+      const m = _margenCotiz(c);
+      m.filas.forEach(f => {
+        filas.push([
+          c.cotizacion,
+          f.display,
+          'x' + f.qty,
+          ' ',
+          f.sinPrecio ? 'sin precio' : { v: f.venta, moneda: true },
+          f.sinCosto ? 'sin costo' : { v: f.costo, moneda: true },
+          f.margen === null ? ' ' : { v: f.margen, moneda: true },
+          (f.margen === null || !f.venta) ? ' ' : pct(f.margen / f.venta * 100),
+          ' '
+        ]);
+      });
+    });
+
+    const fecha = new Date().toLocaleDateString('es-CL');
+    const blob = window.OCT_excelTabla({
+      titulo: 'Ganancias por cotización — Salas Multisensoriales',
+      subtitulo: fecha + '   ·   ' + seleccionadas.length + ' cotización' +
+        (seleccionadas.length === 1 ? '' : 'es') +
+        '   ·   la venta es el neto registrado y el costo el de tu archivo   ·   ' +
+        'la instalación/transporte/capacitación va aparte y NO entra en el margen' +
+        '   ·   uso interno, no compartir',
+      hoja: 'Ganancias',
+      anchos: [16, 46, 22, 8, 15, 15, 15, 10, 18]
+    }, cols, filas);
+    window.OCT_descargar(blob, 'Ganancias_Salas_' + fecha.replace(/\//g, '-') + '.xlsx');
   }
 
   // ── PESTAÑA "COSTO Y MARGEN" (Rayen 2026-08-28: "los quiero en salas", "uno a uno") ───────

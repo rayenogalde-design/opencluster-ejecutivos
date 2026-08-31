@@ -2,6 +2,11 @@
 // Lo que NO esta aqui es producto de la web de Qinera que HOY NO se puede traer.
 // via "M" = por contenedor maritimo (hoja "Tarifa no incluido transporte", 172 productos)
 // via "T" = con el transporte ya incluido (hoja "Tarifa incluido transporte", 162 productos)
+// ⚠️ NO RENOMBRAR NADA DE ESTE ARCHIVO. Los nombres son los de la tarifa del proveedor,
+// palabra por palabra, y son los que salen en el Excel del pedido a Mario. Los nombres
+// comerciales (los que ve el cliente) viven en SalasACotizacion.js y en StockSalas.js.
+// Rayen 2026-08-31: "cuando hago el pedido necesito que aparezca exactamente el mismo
+// nombre... tal como aparece en la informacion del proveedor".
 // SOLO SKU, nombre y via: los precios de esa tarifa NO se copian aca (este repo es publico).
 window.QINERA_IMPORTABLE = {
   "BJ-EDA": {"n":"Difusor de aromaterapia","v":"M"},
@@ -50,7 +55,7 @@ window.QINERA_IMPORTABLE = {
   "BJ-EI02": {"n":"Barra de luz LED","v":"M"},
   "BJ-EI03": {"n":"Foco de luz SHX","v":"M"},
   "BJ-LLAMP": {"n":"Lámpara Luminea","v":"M"},
-  "BJ-LLLT": {"n":"Línea LED Luminea Para Techo 5 Metros","v":"M"},
+  "BJ-LLLT": {"n":"Línea led de 5m Luminea","v":"M"},
   "BJ-LLLR": {"n":"Línea led de 5m Luminea para respaldo","v":"M"},
   "BJ-LPLNT": {"n":"Planeta Luminea","v":"M"},
   "BJ-LPLNTP": {"n":"Planeta Luminea pequeño","v":"M"},
@@ -145,9 +150,9 @@ window.QINERA_IMPORTABLE = {
   "BJ-EMSCP": {"n":"Sensory Cube pequeño","v":"M"},
   "BJ-SGSX": {"n":"Sensory Go SHX","v":"M"},
   "BJ-EMSST": {"n":"Sensory Step","v":"M"},
-  "BJ-EX04": {"n":"Sistema SHX Compact sin tablet","v":"M"},
-  "BJ-EX04-I": {"n":"Sistema SHX Compact","v":"M"},
-  "BJ-EX04-SP": {"n":"Sistema SHX Compact sin proyección","v":"M"},
+  "BJ-EX04": {"n":"SHX Compact","v":"M"},
+  "BJ-EX04-I": {"n":"SHX Compact con iPad","v":"M"},
+  "BJ-EX04-SP": {"n":"SHX Compact sin proyección","v":"M"},
   "BJ-EXPRX": {"n":"SHX Proximity","v":"M"},
   "BJ-EX02": {"n":"SHX Rack","v":"M"},
   "BJ-EX02-2P": {"n":"SHX Rack - doble proyección","v":"M"},

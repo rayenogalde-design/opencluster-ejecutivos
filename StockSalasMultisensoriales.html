@@ -269,6 +269,10 @@
   .stock-disp-thumb { width:100%; aspect-ratio:1/1; background:var(--paper); }
   .stock-disp-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
   .stock-disp-noimg { width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:var(--mist); font-size:0.65rem; text-align:center; padding:0.4rem; }
+  /* La etiqueta de la hoja (Marítimo/CAA) y los otros nombres van FUERA del nombre, porque el
+     nombre se corta con "..." y se los llevaba puestos. Rayen 2026-08-31. */
+  .stock-disp-marca { padding:0 0.65rem 0.25rem; }
+  .stock-disp-marca .imp-tag { margin-left:0; }
   .stock-disp-nombre { padding:0.55rem 0.65rem 0.25rem; font-size:0.78rem; font-weight:700; color:var(--ink); line-height:1.25; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .stock-disp-precio { padding:0 0.65rem 0.6rem; font-size:0.82rem; font-weight:800; color:var(--navy, #001a60); font-variant-numeric:tabular-nums; white-space:nowrap; }
   .stock-disp-precio span { font-size:0.66rem; font-weight:600; color:var(--mist); }
@@ -528,6 +532,13 @@
   .imp-filtros { display:flex; flex-wrap:wrap; gap:0.5rem; margin:0 0 1rem; }
   /* "Por pedir": cuando se incluye lo que ya hay, se dice cuanto hay. Rayen 2026-08-31 */
   .pp-tengo { font-size:0.7rem; font-weight:700; color:#166534; margin-top:0.25rem; }
+  /* Los dos bloques de "Por pedir": sensorial arriba, comunicación aumentativa abajo. */
+  .pp-bloque-tit { display:flex; align-items:baseline; gap:0.6rem; flex-wrap:wrap;
+                   margin:1.6rem 0 0.7rem; padding-bottom:0.4rem; border-bottom:2px solid var(--navy); }
+  .pp-bloque-tit:first-child { margin-top:0.2rem; }
+  .pp-bloque-tit h3 { margin:0; font-size:1.05rem; color:var(--navy); letter-spacing:-0.01em; }
+  .pp-bloque-n { font-size:0.78rem; font-weight:800; color:var(--mist); }
+  .pp-bloque-sub { flex:1 1 100%; font-size:0.76rem; color:var(--mist); line-height:1.45; margin:0.15rem 0 0; }
   @media (prefers-color-scheme: dark) { .pp-tengo { color:#86EFAC; } }
   .imp-chip { font-family:inherit; font-size:0.8rem; font-weight:700; padding:0.5rem 0.9rem; border-radius:999px;
               border:1.5px solid var(--line); background:var(--card); color:var(--ink); cursor:pointer; }
@@ -3423,7 +3434,8 @@
       return '<div class="stock-disp-card"' + fichaAttr + ' data-stock-extra="' + escapeHtmlSafe(stockExtra) + '" data-buscar="' + escapeHtmlSafe(buscable) + '">' +
         (skuPick ? '<label class="sala-pick-card" title="Marcar para cotización"><input type="checkbox" class="sala-pick" data-sku="' + skuPick + '"></label>' : '') +
         '<div class="stock-disp-thumb">' + thumb + '</div>' +
-        '<div class="stock-disp-nombre">' + escapeHtmlSafe(nombreMostrado) + _impTag(s.sku, key) + _htmlOtrosNombres(key, nombreMostrado) + '</div>' +
+        '<div class="stock-disp-nombre" title="' + escapeHtmlSafe(nombreMostrado) + '">' + escapeHtmlSafe(nombreMostrado) + '</div>' +
+        '<div class="stock-disp-marca">' + _impTag(s.sku, key) + _htmlOtrosNombres(key, nombreMostrado) + '</div>' +
         precioCard +
         '<div class="stock-disp-stk"><span class="stk">' +
           '<span class="stk-b' + (bodegaLibre ? '' : ' cero') + '"><i class="stk-dot bod"></i>' + bodegaLibre + ' en bodega</span>' +
@@ -3978,9 +3990,16 @@
         // me lo venden, así de sencillo, no hay que buscarlo" — esos no se piden, se consiguen en
         // otro lado, y van en una hoja aparte con lo que hay en stock y lo que falta.
         const _imp = _importableDe(sku, it.nombre);
+        // El pedido va con el nombre EXACTO de la tarifa del proveedor, no con el nombre
+        // comercial que ve el cliente. Rayen: "cuando hago el pedido necesito que aparezca
+        // exactamente el mismo nombre... tal como aparece en la informacion del proveedor".
+        // Si el producto no esta en la tarifa (via X) no hay nombre de proveedor y se usa el de
+        // siempre, que es lo unico que hay.
+        const nombreProveedor = (_imp && _imp.n) || it.nombre || '(sin nombre)';
         return {
           sku: sku,
-          nombre: it.nombre || '(sin nombre)',
+          nombre: nombreProveedor,
+          nombreComercial: it.nombre || '',
           via: _imp ? _imp.v : 'X',
           falta: it.falta, pedido: it.pedido, stock: it.stockTotal,
           costoQinera: c ? c.costoQinera : 0,
@@ -4351,6 +4370,17 @@
     var s2 = k ? IMPORTABLE_POR_NOMBRE[k] : '';
     return s2 || sku || '';
   }
+  // ¿Hay ficha para esta clave? Mismo orden de respaldos que abrirFicha(): si alguna la resuelve,
+  // la tarjeta debe poder abrirse. Sin esto, los productos de la tarifa que nunca se compraron
+  // no tenían data-ficha y no se podía hacer clic en ellos.
+  function _hayFicha(clave){
+    if (!clave) return false;
+    if (FICHAS[clave]) return true;
+    if (window.SALAS_FICHAS && window.SALAS_FICHAS[clave]) return true;
+    if (window.SALAS_CATALOGO && window.SALAS_CATALOGO[clave]) return true;
+    if (window.QINERA_IMPORTABLE && window.QINERA_IMPORTABLE[clave]) return true;
+    return false;
+  }
   function _impTag(sku, nombreOClave){
     const r = _importableDe(sku, nombreOClave);
     if (!r) return '<span class="imp-tag no" title="No está en la tarifa oficial de Qinera: hoy no se puede pedir.">NO se importa</span>';
@@ -4451,14 +4481,15 @@
       // la propagación al conectarla, más abajo).
       const _puedeCotizar = !!x.precio;
       return '<div class="stock-disp-card' + (x.importable ? '' : ' no-imp') + '"' +
-          (FICHAS[x.sku] ? ' data-ficha="' + escapeHtmlSafe(x.sku) + '"' : '') +
+          (_hayFicha(x.sku) ? ' data-ficha="' + escapeHtmlSafe(x.sku) + '"' : '') +
           ' data-stock-extra="' + escapeHtmlSafe(enCasa) + '"' +
           ' data-buscar="' + escapeHtmlSafe(buscable) + '">' +
         (_puedeCotizar
           ? '<label class="sala-pick-card" title="Marcar para cotización"><input type="checkbox" class="sala-pick" data-sku="' + escapeHtmlSafe(x.sku) + '"></label>'
           : '') +
         '<div class="stock-disp-thumb">' + thumb + '</div>' +
-        '<div class="stock-disp-nombre">' + escapeHtmlSafe(x.nombre) + _impTag(x.sku, x.nombre) + _htmlOtrosNombres(clave, x.nombre) + '</div>' +
+        '<div class="stock-disp-nombre" title="' + escapeHtmlSafe(x.nombre) + '">' + escapeHtmlSafe(x.nombre) + '</div>' +
+        '<div class="stock-disp-marca">' + _impTag(x.sku, x.nombre) + _htmlOtrosNombres(clave, x.nombre) + '</div>' +
         '<div class="imp-precio">' + escapeHtmlSafe(x.sku) + (x.precio ? '<br>' + escapeHtmlSafe(x.precio) : '') + '</div>' +
       '</div>';
     }).join('') + '</div>';
@@ -4509,8 +4540,15 @@
         if (!x.imagen) sinFoto++;
         if (!x.precio) sinPrecio++;
       });
+      let gSens = 0, gCaa = 0;
+      lista.forEach(x => {
+        const g = (window.SALAS_GRUPOS && window.SALAS_GRUPOS[x.sku]) || null;
+        if (!g || g.g === 'sensorial') gSens++; else gCaa++;
+      });
       res.innerHTML =
         '<div><span class="mgp-res-et">Hay que pedir</span><span class="mgp-res-v">' + lista.length + '</span></div>' +
+        '<div><span class="mgp-res-et">Sensorial</span><span class="mgp-res-v">' + gSens + '</span></div>' +
+        '<div><span class="mgp-res-et">Comunicación</span><span class="mgp-res-v">' + gCaa + '</span></div>' +
         '<div><span class="mgp-res-et">Marítimo</span><span class="mgp-res-v">' + mar + '</span></div>' +
         '<div><span class="mgp-res-et">CAA</span><span class="mgp-res-v">' + caa + '</span></div>' +
         '<div><span class="mgp-res-et">Sin foto</span><span class="mgp-res-v">' + sinFoto + '</span></div>' +
@@ -4522,7 +4560,12 @@
       : lista;
     if (vacio) vacio.style.display = filtrada.length ? 'none' : 'block';
 
-    grid.innerHTML = '<div class="stock-disp-grid" id="stock-disp-grid-porpedir">' + filtrada.map(x => {
+    // Grupo de cada producto (sensorial / comunicación aumentativa), de SalasGrupos.js.
+    const _grupoDe = (sku) => {
+      const g = (window.SALAS_GRUPOS && window.SALAS_GRUPOS[sku]) || null;
+      return g ? g.g : 'sensorial';   // sin dato se trata como sensorial: es una página de salas
+    };
+    const _tarjeta = (x) => {
       const thumb = x.imagen
         ? '<img src="' + x.imagen + '" alt="" loading="lazy" />'
         : '<div class="stock-disp-noimg">Sin foto</div>';
@@ -4533,17 +4576,30 @@
         ? '<div class="pp-tengo">' + x.bodega + ' en bodega · ' + x.camino + ' en camino</div>'
         : '';
       return '<div class="stock-disp-card"' +
-          (FICHAS[x.sku] ? ' data-ficha="' + escapeHtmlSafe(x.sku) + '"' : '') +
+          (_hayFicha(x.sku) ? ' data-ficha="' + escapeHtmlSafe(x.sku) + '"' : '') +
           ' data-buscar="' + escapeHtmlSafe(buscable) + '">' +
         (x.precio
           ? '<label class="sala-pick-card" title="Marcar para cotización"><input type="checkbox" class="sala-pick" data-sku="' + escapeHtmlSafe(x.sku) + '"></label>'
           : '') +
         '<div class="stock-disp-thumb">' + thumb + '</div>' +
-        '<div class="stock-disp-nombre">' + escapeHtmlSafe(x.nombre) + _impTag(x.sku, x.nombre) + _htmlOtrosNombres(clave, x.nombre) + '</div>' +
+        '<div class="stock-disp-nombre" title="' + escapeHtmlSafe(x.nombre) + '">' + escapeHtmlSafe(x.nombre) + '</div>' +
+        '<div class="stock-disp-marca">' + _impTag(x.sku, x.nombre) + _htmlOtrosNombres(clave, x.nombre) + '</div>' +
         '<div class="imp-precio">' + escapeHtmlSafe(x.sku) + (x.precio ? '<br>' + escapeHtmlSafe(x.precio) : '<br>sin precio') + '</div>' +
         tengo +
       '</div>';
-    }).join('') + '</div>';
+    };
+
+    const _sens = filtrada.filter(x => _grupoDe(x.sku) === 'sensorial');
+    const _caa  = filtrada.filter(x => _grupoDe(x.sku) !== 'sensorial');
+    const _bloque = (titulo, sub, items, id) => items.length
+      ? '<div class="pp-bloque-tit"><h3>' + titulo + '</h3>' +
+        '<span class="pp-bloque-n">' + items.length + ' producto' + (items.length === 1 ? '' : 's') + '</span>' +
+        '<p class="pp-bloque-sub">' + sub + '</p></div>' +
+        '<div class="stock-disp-grid" id="' + id + '">' + items.map(_tarjeta).join('') + '</div>'
+      : '';
+    grid.innerHTML =
+      _bloque('Sensorial', 'Todo lo del entorno multisensorial, más el material educativo y los juguetes de causa-efecto que están en la hoja de CAA pero son sensoriales.', _sens, 'stock-disp-grid-porpedir') +
+      _bloque('Comunicación aumentativa', 'Comunicadores, software (Grid, TD Snap), lectores oculares, conmutadores, soportes y control del entorno.', _caa, 'stock-disp-grid-porpedir-caa');
 
     grid.querySelectorAll('.sala-pick').forEach(cb => {
       cb.addEventListener('click', (ev) => ev.stopPropagation());
@@ -4553,6 +4609,7 @@
     });
     if (window.SALAS_actualizarContador) window.SALAS_actualizarContador();
     _wireBuscarGrid('pp-buscar', 'stock-disp-grid-porpedir');
+    _wireBuscarGrid('pp-buscar', 'stock-disp-grid-porpedir-caa');
   }
 
   document.querySelectorAll('#pp-filtros .imp-chip').forEach(chip => {
@@ -5063,6 +5120,15 @@
       const _c = SALAS_CATALOGO[clave];
       f = { nombre: _c.n || clave, imagen: _c.img || '', precio: '', sinFicha: true };
     }
+    // Respaldo 3: la tarifa de Qinera. No trae foto ni descripción, pero al menos se abre y se
+    // ve el nombre del proveedor y el código con que se pide. Rayen: "la mayoría de las tarjetas
+    // no las puedo abrir, solo veo lo que está fuera".
+    if (!f && window.QINERA_IMPORTABLE && window.QINERA_IMPORTABLE[clave]) {
+      const _qi = window.QINERA_IMPORTABLE[clave];
+      f = { nombre: _qi.n || clave, imagen: '', precio: '', sinFicha: true,
+            descripcion: 'Está en la tarifa de Qinera (' + (_qi.v === 'T' ? 'hoja CAA' : 'hoja de venta marítima') +
+                         ') pero todavía no tiene ficha ni foto. Se pide con el código ' + clave + '.' };
+    }
     if (!f) return;
     // Ficha sin texto: se completa con la descripción del producto en la tienda de OpenCluster
     // (los 21 productos "solo web" no están en las fichas de Qinera). Rayen, 2026-07-28.
@@ -5370,6 +5436,7 @@
 <script src="SalasFichas.js"></script>
 <script src="SalasFichasWeb.js"></script>
 <script src="SalasFotosExtra.js"></script>
+<script src="SalasGrupos.js"></script>
 <script src="SalasACotizacion.js"></script>
 <script>
 (function(){

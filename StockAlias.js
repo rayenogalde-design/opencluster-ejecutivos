@@ -4,6 +4,11 @@
 // La clave es el nombre normalizado: minusculas, sin tildes ni espacios.
 window.STOCK_ALIAS_SKU = {
   "linealedlumineaparatecho": "BJ-LLLT",
+  // El nombre con que Qinera lo lista en su tarifa. Rayen quiere que en pantalla diga siempre
+  // "Línea LED Luminea Para Techo 5 Metros", asi que este alias existe SOLO para el cruce
+  // (cotizaciones ya hechas y la tarifa) y esta en STOCK_ALIAS_OCULTOS para no mostrarse.
+  "linealedde5mluminea": "BJ-LLLT",
+  "linealedluminea": "BJ-LLLT",
   "linealedlumineaparatecho5metros": "BJ-LLLT",
   "linealedparatecho": "BJ-LLLT",
   "linealedlumineaparatecho5mts": "BJ-LLLT",
@@ -99,3 +104,17 @@ window.STOCK_SIN_BODEGA = [
 //   - "Kit de bolas de espejos" es el MEDIANO -> BJ-EKBE300.
 //   - "Columpio cuddle" y "Base cuadrada para tubo de burbujas": no los tienen,
 //     van a la lista de sin bodega.
+
+// Alias que sirven para CRUZAR pero que no se muestran en pantalla como "tambien se llama".
+// Rayen 2026-08-31: "no quiero el otro nombre en el cotizador".
+window.STOCK_ALIAS_OCULTOS = ["linealedde5mluminea", "linealedluminea"];
+
+// Productos que en pantalla llevan SOLO su nombre: nada de "también se llama".
+// Rayen 2026-08-31 los nombro uno por uno y no quiere ver el nombre viejo en el cotizador.
+// Son las CLAVES normalizadas (lo que devuelve _smProdNorm + alias), no los SKU.
+window.STOCK_SIN_OTROS_NOMBRES = [
+  "linea led luminea para techo",   // Línea LED Luminea Para Techo 5 Metros
+  "shx compact",                    // Sistema SHX Compact
+  "shx compact con ipad",           // Sistema SHX Compact con iPad
+  "shx compact sin proyeccion"      // Sistema SHX Compact sin proyección
+];

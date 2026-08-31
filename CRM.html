@@ -2292,6 +2292,7 @@ body{
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         Actividad del equipo
       </div>
+      <div class="side-section" id="secWebinars" style="display:none;">Webinars</div>
       <div class="side-tab admin" data-view="vWebinars" id="navWebinars" onclick="goView('vWebinars')" style="display:none;">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="15" height="14" rx="2"/><polygon points="17 9 22 6 22 16 17 13"/></svg>
         Webinars
@@ -4638,6 +4639,10 @@ async function preCargarTodoEnBackground(){
   } catch(e){}
 }
 
+// Ejecutivos (además de Rayen) que ven la pestaña Webinars. Nombre de pila normalizado
+// por _busqNorm: sin tildes y en minúscula. Para sumar a alguien, agregar su nombre acá.
+const WEB_EJECUTIVOS_VEN = ['german'];
+
 function aplicarVisibilidadPorRol(){
   const esAdmin = ROL === 'admin';
   // Cuando Rayen está en modo EJECUTIVA, debe ver EXACTAMENTE lo mismo que un ejecutivo común
@@ -4655,12 +4660,25 @@ function aplicarVisibilidadPorRol(){
 
   // Vistas admin (Territorios, Auditoría, Migración, Importar): visibles solo si Rayen está
   // en modo Admin. En modo Ejecutiva o para ejecutivos no admin, se ocultan.
-  ['navLeads', 'navCoaching', 'navActividad', 'navWebinars', 'navTerr', 'navSalaMS', 'navAyudasTecnicas', 'navConfig', 'secAdmin', 'secHerramientas', 'navVentasMes'].forEach(id => {
+  ['navLeads', 'navCoaching', 'navActividad', 'navTerr', 'navSalaMS', 'navAyudasTecnicas', 'navConfig', 'secAdmin', 'secHerramientas', 'navVentasMes'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.style.display = verComoEjecutivo ? 'none' : '';
   });
   // El grupo Herramientas se colapsa siempre que no se esté como admin.
   if(verComoEjecutivo){ const g = document.getElementById('grpHerramientas'); if(g) g.style.display='none'; const ch=document.getElementById('chevHerr'); if(ch) ch.textContent='▸'; }
+
+  // "Webinars": la ve Rayen en modo Admin y los ejecutivos de WEB_EJECUTIVOS_VEN
+  // (Germán hace el seguimiento de los inscritos, decisión de Rayen 31-ago-2026).
+  // Para el ejecutivo la pestaña aparece al final, con su propio encabezado "Webinars".
+  try {
+    const _wTab = document.getElementById('navWebinars');
+    const _wSec = document.getElementById('secWebinars');
+    const _wQuien = _busqNorm(String(USUARIO || '').split(' ')[0]);
+    const _wPuede = WEB_EJECUTIVOS_VEN.indexOf(_wQuien) >= 0;
+    const _wVer = !verComoEjecutivo || _wPuede;
+    if(_wTab) _wTab.style.display = _wVer ? '' : 'none';
+    if(_wSec) _wSec.style.display = (_wVer && verComoEjecutivo) ? '' : 'none';
+  } catch(e){}
 
   // "Contactos de Ximena": la ve Roberto (es su segmento) y Rayen para supervisar.
   try {
@@ -18969,6 +18987,23 @@ function _webRotulo(texto){
 // cuenta, con su firma de Gmail, y queda guardado en Enviados.
 const WEB_CUENTA_CORREO = 'rayen.ogalde@opencluster-tech.cl';
 
+// Correo de cada ejecutivo, para que Gmail se abra en SU cuenta y el correo salga de ella
+// (antes estaba fijo en la de Rayen: a otro ejecutivo le abría una cuenta que no es suya).
+const WEB_CORREOS_EJEC = {
+  'rayen':       'rayen.ogalde@opencluster-tech.cl',
+  'german':      'german.alvarado@opencluster-tech.cl',
+  'roberto':     'roberto.caceres@opencluster-tech.cl',
+  'william':     'william.marin@opencluster-tech.cl',
+  'maximiliano': 'maximiliano.astudillo@opencluster-tech.cl',
+  'ximena':      'ximena.romero@opencluster-tech.cl'
+};
+function _webCuentaCorreo(){
+  try {
+    const q = _busqNorm(String(USUARIO || '').split(' ')[0]);
+    return WEB_CORREOS_EJEC[q] || WEB_CUENTA_CORREO;
+  } catch(e){ return WEB_CUENTA_CORREO; }
+}
+
 // Fecha para escribir dentro del correo: "14 de agosto", con el mes entero.
 function _webFechaLarga(f){
   const s = String(f || '').substring(0, 10);
@@ -18986,7 +19021,7 @@ const WEB_PLANTILLA_GANADORAS = {
   cuerpo:
     'Estimada {NOMBRE},\n\n' +
     '¡Espero que te encuentres muy bien!\n' +
-    'Es un placer saludarte. Mi nombre es Rayen Ogalde y soy responsable de todos los Webinars que estamos realizando con instituciones de Educación en OpenCluster-Tech.\n\n' +
+    'Es un placer saludarte. Mi nombre es {YO} y soy responsable de todos los Webinars que estamos realizando con instituciones de Educación en OpenCluster-Tech.\n\n' +
     'Agradezco tu paciencia en la espera de nuestro contacto para poder activar tu {PREMIO} y coordinar la capacitación. ¡Muchas felicidades por ser una de las ganadoras! =)\n\n' +
     'Estoy pensando en que podamos reunirnos el día lunes {NOMBRE} vía Google Meet, en ese momento te explicaremos sobre el uso de la licencia, la activación y te daremos una capacitación para que puedan sacarle el máximo de provecho.\n\n' +
     'Podrías indicarme si el día te acomoda por favor y de ser así, en qué horarios estarías disponible? Si puedes darme dos opciones como mínimo es excelente, así tengo más opciones para nuestra terapeuta.\n\n' +
@@ -19006,6 +19041,7 @@ function _webRellenar(txt, datos){
   // Si el webinar no tiene fecha cargada, la frase de la fecha se cae sola.
   if(!datos.fecha) t = t.split(', del {FECHA}').join('');
   return t
+    .split('{YO}').join(datos.yo || 'Rayen Ogalde')
     .split('{NOMBRE}').join(datos.nombre)
     .split('{PREMIO}').join(datos.premio)
     .split('{WEBINAR}').join(datos.webinar)
@@ -19020,6 +19056,7 @@ function webEscribirCorreo(id){
   if(i.correo_rebotado && !confirm('A esta persona le rebotó el correo (' + i.correo_rebotado + ').\n\n¿Abrir Gmail igual?')) return;
 
   const datos = {
+    yo: String(USUARIO || 'Rayen Ogalde'),
     nombre: String(i.nombre || '').trim().split(/\s+/)[0] || '',
     premio: String(i.premio || '').replace(/^gan[óo]\s+/i, '').trim(),
     webinar: String((WEB_ACTUAL && WEB_ACTUAL.nombre) || 'webinar').trim(),
@@ -19031,7 +19068,7 @@ function webEscribirCorreo(id){
   const p = datos.premio ? WEB_PLANTILLA_GANADORAS : WEB_PLANTILLA_GENERAL;
 
   const url = 'https://mail.google.com/mail/?view=cm&fs=1&tf=1' +
-    '&authuser=' + encodeURIComponent(WEB_CUENTA_CORREO) +
+    '&authuser=' + encodeURIComponent(_webCuentaCorreo()) +
     '&to=' + encodeURIComponent(i.email) +
     '&su=' + encodeURIComponent(_webRellenar(p.asunto, datos)) +
     '&body=' + encodeURIComponent(_webRellenar(p.cuerpo, datos));

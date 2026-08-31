@@ -201,6 +201,18 @@
   .iva { display:block; font-size:0.66rem; color:var(--mist); }
   .tag { display:inline-block; background:rgba(6,179,253,0.12); color:var(--navy); border-radius:3px; padding:0.1rem 0.4rem; font-size:0.72rem; margin:0.08rem 0.15rem 0.08rem 0; }
   .tagsug { background:rgba(255,126,0,0.14); color:#a85400; }
+  /* De que listado de Qinera viene el producto (Rayen 2026-08-31) */
+  .tag-origen { float:right; display:inline-block; border-radius:999px; padding:0.1rem 0.55rem;
+                font-size:0.68rem; font-weight:800; letter-spacing:0.02em; white-space:nowrap;
+                margin:0.08rem 0 0.08rem 0.4rem; cursor:help; border:1px solid transparent; }
+  .ori-mar { background:rgba(0,26,96,0.10); color:#001a60; border-color:rgba(0,26,96,0.22); }
+  .ori-caa { background:rgba(124,58,237,0.12); color:#5b21b6; border-color:rgba(124,58,237,0.26); }
+  .ori-web { background:rgba(179,38,30,0.10); color:#B3261E; border-color:rgba(179,38,30,0.28); }
+  @media (prefers-color-scheme: dark) {
+    .ori-mar { background:rgba(120,170,255,0.16); color:#a9c8ff; border-color:rgba(120,170,255,0.32); }
+    .ori-caa { background:rgba(167,139,250,0.18); color:#d3c4fd; border-color:rgba(167,139,250,0.34); }
+    .ori-web { background:rgba(255,120,110,0.16); color:#ffb3ad; border-color:rgba(255,120,110,0.32); }
+  }
   tr.marked { background: rgba(255,126,0,0.07); }
   tr.hidden { display:none; }
   input.inc { width:16px; height:16px; cursor:pointer; }
@@ -63111,6 +63123,62 @@ window.OCT_VENTA_APARTE = {
   else mover();
   document.addEventListener('click', function(){ setTimeout(mover, 300); });
 })();
+
+  // ── DE QUÉ LISTADO DE QINERA VIENE CADA PRODUCTO (Rayen 2026-08-31) ───────
+  // "necesitamos identificar las dos pestañas del Excel: para mí una es venta marítima… y yo ya
+  // sé dónde encontrar cada uno cuando lo quiero ir a verificar al listado". Y sobre todo:
+  // "aunque esté en página web no me sirve, porque ellos me venden solo lo que tengo en los
+  // listados". Así que al final de cada fila, a la derecha, va una marca con su origen:
+  //   Venta marítima → hoja "Tarifa no incluido transporte" (172, los sensoriales, contenedor)
+  //   CAA            → hoja "Tarifa incluido transporte" (161, transporte en el precio)
+  //   Solo web       → no está en NINGUNA de las dos: hoy Qinera no lo vende
+  // El origen sale de QINERA_IMPORTABLE, que ya viene cargado y trae la vía de cada SKU.
+  window.marcarOrigenQinera = function(){
+    const imp = window.QINERA_IMPORTABLE || {};
+    if (!Object.keys(imp).length) return 0;
+    const norm = x => String(x || '').toLowerCase().normalize('NFD')
+      .replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
+    // Índice por nombre además de por código: en bodega y en las cotizaciones el mismo producto
+    // aparece con otro código (la "Máquina de burbujas" MP-EX46-1 es el "Pompas SHX" BJ-EX46).
+    const porNombre = {};
+    Object.keys(imp).forEach(sku => {
+      const k = norm(imp[sku].n || '');
+      if (k && !porNombre[k]) porNombre[k] = { sku: sku, v: imp[sku].v };
+    });
+    const ETIQ = {
+      M: { txt: 'Venta marítima', cls: 'ori-mar',
+           tip: 'Está en tu hoja "Tarifa no incluido transporte" — la de los sensoriales. Viaja en el contenedor.' },
+      T: { txt: 'CAA', cls: 'ori-caa',
+           tip: 'Está en tu hoja "Tarifa incluido transporte" — la de comunicación aumentativa. Qinera lo manda con el transporte ya incluido en el precio.' },
+      X: { txt: 'Solo web', cls: 'ori-web',
+           tip: 'No está en ninguno de los dos listados de Qinera: hoy NO te lo venden, aunque aparezca en su página web.' }
+    };
+    let n = 0;
+    document.querySelectorAll('tr[data-nombre]').forEach(tr => {
+      if (tr.querySelector('.tag-origen')) return;            // ya marcada
+      const chk = tr.querySelector('input.inc[data-sku]');
+      const sku = chk ? (chk.dataset.sku || '') : '';
+      const directo = imp[sku];
+      const o = directo || porNombre[norm(tr.dataset.nombre || '')];
+      const e = ETIQ[o ? (o.v === 'M' ? 'M' : 'T') : 'X'];
+      const td = tr.lastElementChild;
+      if (!td) return;
+      const sp = document.createElement('span');
+      sp.className = 'tag-origen ' + e.cls;
+      sp.textContent = e.txt;
+      // Si se encontro por NOMBRE, se dice con que codigo aparece en el listado: ese es el que
+      // hay que usar al pedirlo a Qinera.
+      sp.title = e.tip + ((!directo && o && o.sku) ? '\n(en el listado figura como ' + o.sku + ')' : '');
+      // Va como PRIMER hijo con float a la derecha: así se pega al borde derecho de la fila
+      // en la misma línea de los tipos de sala, sin empujarlos ni caerse abajo.
+      td.insertBefore(sp, td.firstChild);
+      n++;
+    });
+    return n;
+  };
+  // Los <script src> ya cargaron cuando corre esto, pero si algun dia se retrasan, se reintenta.
+  if (!window.marcarOrigenQinera()) setTimeout(window.marcarOrigenQinera, 400);
+
 </script>
 </body>
 </html>

@@ -521,6 +521,10 @@
              border-radius:999px; margin-left:0.4rem; vertical-align:middle; letter-spacing:0.01em; }
   .imp-tag.si { background:#DCFCE7; color:#166534; border:1px solid #86EFAC; }
   .imp-tag.no { background:#FEE2E2; color:#991B1B; border:1px solid #FCA5A5; }
+  /* Marítimo (contenedor) vs CAA (transporte incluido) — Rayen 2026-08-31. Van después de
+     .imp-tag.si para poder pisarle el color de fondo. */
+  .imp-tag.si.mar { background:#E3E9FF; color:#001a60; border-color:#B9C6F5; }
+  .imp-tag.si.caa { background:#EFE7FE; color:#5b21b6; border-color:#C9B6FA; }
   .imp-filtros { display:flex; flex-wrap:wrap; gap:0.5rem; margin:0 0 1rem; }
   .imp-chip { font-family:inherit; font-size:0.8rem; font-weight:700; padding:0.5rem 0.9rem; border-radius:999px;
               border:1.5px solid var(--line); background:var(--card); color:var(--ink); cursor:pointer; }
@@ -2680,7 +2684,10 @@
       var fila = cb.closest('tr');
       var tarjeta = cb.closest('.stock-disp-card');
       if (fila) { var nc = fila.querySelector('.name'); if (nc) nombre = (nc.childNodes[0] ? nc.childNodes[0].textContent : nc.textContent).trim(); }
-      else if (tarjeta) { var ne = tarjeta.querySelector('.stock-disp-nombre'); if (ne) nombre = ne.textContent.trim(); }
+      else if (tarjeta) {
+        var ne = tarjeta.querySelector('.stock-disp-nombre');
+        if (ne) nombre = ((ne.childNodes[0] && ne.childNodes[0].nodeType === 3) ? ne.childNodes[0].textContent : ne.textContent).trim();
+      }
       items.push({ sku: sku, nombre: nombre, cantidad: 1 });
     });
     if (!items.length) { alert('Marca al menos un producto (casilla ✓) para armar el documento.'); return; }
@@ -4312,9 +4319,10 @@
   function _impTag(sku, nombreOClave){
     const r = _importableDe(sku, nombreOClave);
     if (!r) return '<span class="imp-tag no" title="No está en la tarifa oficial de Qinera: hoy no se puede pedir.">NO se importa</span>';
+    // Se dice EN QUE HOJA está, que es lo que sirve para ir a verificarlo al Excel.
     return r.v === 'T'
-      ? '<span class="imp-tag si" title="Está en la tarifa de Qinera, en la lista con el transporte ya incluido.">Se importa</span>'
-      : '<span class="imp-tag si" title="Está en la tarifa de Qinera, en la lista marítima (contenedor). El transporte va aparte.">Se importa</span>';
+      ? '<span class="imp-tag si caa" title="Está en tu hoja &quot;Tarifa incluido transporte&quot; — la que llamas CAA. Qinera lo manda con el transporte ya incluido en el precio.">CAA</span>'
+      : '<span class="imp-tag si mar" title="Está en tu hoja &quot;Tarifa no incluido transporte&quot; — la de venta marítima, la de los sensoriales. Viaja en el contenedor y el transporte va aparte.">Marítimo</span>';
   }
   // Marca las filas de las tablas de Bodega / Contenedor / Combinado. Se llama una vez al cargar:
   // esas tablas son HTML fijo (las genera el script del maestro), así que la marca se agrega acá.
@@ -4346,11 +4354,21 @@
       vistos[sku] = 1;
       const f = FICHAS[sku] || {};
       const s = Object.values(STOCK_COMBINADO).find(p => p.sku === sku);
+      // La foto y el precio se buscan en TODAS las fuentes, no solo en la ficha: los productos
+      // de la tarifa de Qinera que nunca se compraron no tienen ficha, pero sí están en el
+      // catálogo con su foto y su precio. Sin esto salían 205 de 334 con "Sin foto".
+      const _c = (window.SALAS_CATALOGO && window.SALAS_CATALOGO[sku]) || null;
+      const _fx = (window.SALAS_FOTOS_EXTRA && window.SALAS_FOTOS_EXTRA[sku]) || null;
+      const _img = f.imagen
+        || (_c && _c.img ? _c.img : '')
+        || (typeof _fx === 'string' ? _fx : (_fx && (_fx.img || _fx.imagen)) || '');
+      const _pre = f.precio
+        || (_c && _c.p ? 'Neto: ' + _clp(Math.round(Number(_c.p) / 1.19)) + ' · IVA inc.: ' + _clp(_c.p) : '');
       out.push({
         sku: sku,
-        nombre: f.nombre || (IMPORTABLE[sku] && IMPORTABLE[sku].n) || sku,
-        imagen: f.imagen || '',
-        precio: f.precio || '',
+        nombre: f.nombre || (_c && _c.n) || (IMPORTABLE[sku] && IMPORTABLE[sku].n) || sku,
+        imagen: _img,
+        precio: _pre,
         bodega: s ? (Number(s.bodega) || 0) : 0,
         camino: s ? (Number(s.camino) || 0) : 0,
         importable: esImp
@@ -4393,15 +4411,29 @@
       let clave = _smProdNorm(x.nombre);
       if (_SM_PROD_ALIAS[clave]) clave = _SM_PROD_ALIAS[clave];
       const buscable = _buscablePorClave(clave, x.nombre, x.sku + (x.importable ? ' se importa' : ' no se importa'));
+      // Casilla para marcarlo y mandarlo a una cotización. Solo si tiene precio: sin precio no
+      // hay nada que cotizar. Tocar la foto sigue abriendo la ficha; la casilla no (se frena
+      // la propagación al conectarla, más abajo).
+      const _puedeCotizar = !!x.precio;
       return '<div class="stock-disp-card' + (x.importable ? '' : ' no-imp') + '"' +
           (FICHAS[x.sku] ? ' data-ficha="' + escapeHtmlSafe(x.sku) + '"' : '') +
           ' data-stock-extra="' + escapeHtmlSafe(enCasa) + '"' +
           ' data-buscar="' + escapeHtmlSafe(buscable) + '">' +
+        (_puedeCotizar
+          ? '<label class="sala-pick-card" title="Marcar para cotización"><input type="checkbox" class="sala-pick" data-sku="' + escapeHtmlSafe(x.sku) + '"></label>'
+          : '') +
         '<div class="stock-disp-thumb">' + thumb + '</div>' +
         '<div class="stock-disp-nombre">' + escapeHtmlSafe(x.nombre) + _impTag(x.sku, x.nombre) + _htmlOtrosNombres(clave, x.nombre) + '</div>' +
         '<div class="imp-precio">' + escapeHtmlSafe(x.sku) + (x.precio ? '<br>' + escapeHtmlSafe(x.precio) : '') + '</div>' +
       '</div>';
     }).join('') + '</div>';
+    grid.querySelectorAll('.sala-pick').forEach(cb => {
+      cb.addEventListener('click', (ev) => ev.stopPropagation());
+      cb.addEventListener('change', () => {
+        if (window.SALAS_actualizarContador) window.SALAS_actualizarContador();
+      });
+    });
+    if (window.SALAS_actualizarContador) window.SALAS_actualizarContador();
     _wireBuscarGrid('imp-buscar', 'stock-disp-grid-importar');
   }
   document.querySelectorAll('#imp-filtros .imp-chip').forEach(chip => {
@@ -5480,7 +5512,9 @@
       var card = cb.closest(".stock-disp-card");
       var row = cb.closest("tr");
       if(card){
-        var nEl = card.querySelector(".stock-disp-nombre"); if(nEl) nombre = nEl.textContent.trim();
+        // Solo el primer nodo de texto: lo que sigue es la etiqueta de la hoja y los otros nombres.
+        var nEl = card.querySelector(".stock-disp-nombre");
+        if(nEl) nombre = ((nEl.childNodes[0] && nEl.childNodes[0].nodeType === 3) ? nEl.childNodes[0].textContent : nEl.textContent).trim();
         var iEl = card.querySelector(".stock-disp-thumb img"); if(iEl) img = iEl.getAttribute("src")||"";
       } else if(row){
         var nc = row.querySelector(".name");

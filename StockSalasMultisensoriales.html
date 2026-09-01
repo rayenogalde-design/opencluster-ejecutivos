@@ -528,6 +528,9 @@
   /* Marítimo (contenedor) vs CAA (transporte incluido) — Rayen 2026-08-31. Van después de
      .imp-tag.si para poder pisarle el color de fondo. */
   .imp-tag.si.mar { background:#E3E9FF; color:#001a60; border-color:#B9C6F5; }
+  /* Columna "Planilla" de las tablas de stock: una etiqueta por fila, alineadas. Rayen 2026-08-31 */
+  td.col-planilla, th.col-planilla { white-space:nowrap; text-align:left; }
+  td.col-planilla .imp-tag { margin-left:0; }
   .imp-tag.si.caa { background:#EFE7FE; color:#5b21b6; border-color:#C9B6FA; }
   .imp-filtros { display:flex; flex-wrap:wrap; gap:0.5rem; margin:0 0 1rem; }
   /* "Por pedir": cuando se incluye lo que ya hay, se dice cuanto hay. Rayen 2026-08-31 */
@@ -4398,15 +4401,30 @@
   // esas tablas son HTML fijo (las genera el script del maestro), así que la marca se agrega acá.
   function _marcarImportablesEnTablas(){
     ['bodega', 'camino', 'combinado'].forEach(cual => {
+      // Título de la columna nueva, al final de la cabecera de esta tabla.
+      const _tb = document.getElementById('tbody-stock-' + cual);
+      const _thead = _tb && _tb.closest('table') ? _tb.closest('table').querySelector('thead tr') : null;
+      if (_thead && !_thead.querySelector('th.col-planilla')) {
+        const th = document.createElement('th');
+        th.className = 'col-planilla';
+        th.textContent = 'Planilla';
+        th.title = 'En qué hoja de la tarifa de Qinera está el producto: Marítimo (contenedor) o CAA (transporte incluido).';
+        _thead.appendChild(th);
+      }
       document.querySelectorAll('#tbody-stock-' + cual + ' tr').forEach(tr => {
         const celdaNombre = tr.querySelector('td.name');
-        if (!celdaNombre || celdaNombre.querySelector('.imp-tag')) return;
+        if (!celdaNombre || tr.querySelector('td.col-planilla')) return;
         const sku = celdaNombre.dataset.ficha || '';
         // El producto se busca ANTES de pintar la etiqueta: su nombre de bodega es lo que rescata a
         // los que tienen codigo distinto en Qinera (la "Maquina de burbujas" MP-EX46-1 es el
         // "Pompas SHX" BJ-EX46). Usarlo antes de declararlo dejaba la fila sin etiqueta.
         const prod = Object.values(STOCK_COMBINADO).find(p => p.sku === sku);
-        celdaNombre.insertAdjacentHTML('beforeend', ' ' + _impTag(sku, prod ? prod.item : ''));
+        // La etiqueta va en la ÚLTIMA columna, no pegada al nombre: en los nombres largos quedaba
+        // colgando en la segunda línea y se mezclaba con las demás.
+        const celdaPlanilla = document.createElement('td');
+        celdaPlanilla.className = 'col-planilla';
+        celdaPlanilla.innerHTML = _impTag(sku, prod ? prod.item : '');
+        tr.appendChild(celdaPlanilla);
         // Buscar por CUALQUIERA de los nombres del producto, no solo por el que se muestra.
         let clave = prod ? _smProdNorm(prod.item) : '';
         if (clave && _SM_PROD_ALIAS[clave]) clave = _SM_PROD_ALIAS[clave];
@@ -4596,7 +4614,16 @@
       '</div>';
     };
 
-    const _sens = filtrada.filter(x => _grupoDe(x.sku) === 'sensorial');
+    // La hoja de la que viene cada producto, para ordenar dentro del bloque.
+    const _hojaDe = (x) => { const r = _importableDe(x.sku, x.nombre); return r ? r.v : 'X'; };
+    // Rayen: dentro de lo sensorial, primero los de la hoja CAA (los que todavía no conoce) y
+    // después los marítimos, "para yo familiarizarme con lo que aún no he pedido".
+    const _ordenSensorial = (a, b) => {
+      const ha = _hojaDe(a) === 'T' ? 0 : 1, hb = _hojaDe(b) === 'T' ? 0 : 1;
+      if (ha !== hb) return ha - hb;
+      return String(a.nombre).localeCompare(String(b.nombre), 'es');
+    };
+    const _sens = filtrada.filter(x => _grupoDe(x.sku) === 'sensorial').sort(_ordenSensorial);
     const _caa  = filtrada.filter(x => _grupoDe(x.sku) !== 'sensorial');
     const _bloque = (titulo, sub, items, id) => items.length
       ? '<div class="pp-bloque-tit"><h3>' + titulo + '</h3>' +
@@ -4605,7 +4632,7 @@
         '<div class="stock-disp-grid" id="' + id + '">' + items.map(_tarjeta).join('') + '</div>'
       : '';
     grid.innerHTML =
-      _bloque('Sensorial', 'Todo lo del entorno multisensorial, más el material educativo y los juguetes de causa-efecto que están en la hoja de CAA pero son sensoriales.', _sens, 'stock-disp-grid-porpedir') +
+      _bloque('Sensorial', 'Primero los que están en la hoja <strong>CAA</strong> — material educativo y juguetes de causa-efecto, que son sensoriales igual — y después los de <strong>venta marítima</strong>.', _sens, 'stock-disp-grid-porpedir') +
       _bloque('Comunicación aumentativa', 'Comunicadores, software (Grid, TD Snap), lectores oculares, conmutadores, soportes y control del entorno.', _caa, 'stock-disp-grid-porpedir-caa');
 
     grid.querySelectorAll('.sala-pick').forEach(cb => {
@@ -5710,6 +5737,20 @@
 
   _agregarColumnaPrecio("tbody-stock-bodega", "Precio c/IVA", 1);   // queda antes de "Nota"
   _agregarColumnaPrecio("tbody-stock-combinado", "Precio c/IVA", 0); // al final
+  // La columna "Planilla" se agrega antes que la de precio, asi que en algunas tablas quedaba
+  // en medio. Se manda al final ahora que ya estan todas. Rayen: "me lo ibas a dejar al final,
+  // como en una ultima columna".
+  ['bodega', 'camino', 'combinado'].forEach(function(cual){
+    var tb = document.getElementById('tbody-stock-' + cual);
+    var tabla = tb && tb.closest('table');
+    if (!tabla) return;
+    var th = tabla.querySelector('thead tr th.col-planilla');
+    if (th) th.parentNode.appendChild(th);
+    tb.querySelectorAll('tr').forEach(function(tr){
+      var td = tr.querySelector('td.col-planilla');
+      if (td) tr.appendChild(td);
+    });
+  });
   // Se activa DESPUÉS de agregar la columna de precio: si no, esa columna no sería ordenable.
   ["tbody-stock-bodega", "tbody-stock-combinado", "tbody-stock-camino"].forEach(_hacerOrdenable);
   _ponerBotonExportar("tbody-stock-combinado", "Stock de Salas Multisensoriales — bodega y contenedor", "Stock Salas");

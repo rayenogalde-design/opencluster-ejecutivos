@@ -114,7 +114,7 @@ window.STOCK_ALIAS_OCULTOS = ["linealedde5mluminea", "linealedluminea"];
 // Son las CLAVES normalizadas (lo que devuelve _smProdNorm + alias), no los SKU.
 window.STOCK_SIN_OTROS_NOMBRES = [
   "linea led luminea para techo",   // Línea LED Luminea Para Techo 5 Metros
-  "shx compact",                    // Sistema SHX Compact  (BJ-EX04-I, el que se pide)
-  "shx compact sin tablet",         // Sistema SHX Compact sin tablet (BJ-EX04)
+  "shx compact",                    // Sistema SHX Compact (BJ-EX04, el que hay en bodega)
+  "shx compact con ipad",           // Sistema SHX Compact con iPad (BJ-EX04-I, el de la tarifa)
   "shx compact sin proyeccion"      // Sistema SHX Compact sin proyección (BJ-EX04-SP)
 ];

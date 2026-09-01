@@ -532,6 +532,10 @@
   .imp-filtros { display:flex; flex-wrap:wrap; gap:0.5rem; margin:0 0 1rem; }
   /* "Por pedir": cuando se incluye lo que ya hay, se dice cuanto hay. Rayen 2026-08-31 */
   .pp-tengo { font-size:0.7rem; font-weight:700; color:#166534; margin-top:0.25rem; }
+  /* Aviso de dato sin confirmar en la ficha (viene marcado desde SalasFichasQinera.js). */
+  .ficha-dudoso { display:block; margin:0.6rem 0; padding:0.6rem 0.8rem; border-radius:10px;
+                  background:rgba(179,38,30,0.08); border:1px solid rgba(179,38,30,0.28);
+                  color:#B3261E; font-size:0.8rem; font-weight:700; line-height:1.45; }
   /* Los dos bloques de "Por pedir": sensorial arriba, comunicación aumentativa abajo. */
   .pp-bloque-tit { display:flex; align-items:baseline; gap:0.6rem; flex-wrap:wrap;
                    margin:1.6rem 0 0.7rem; padding-bottom:0.4rem; border-bottom:2px solid var(--navy); }
@@ -4378,6 +4382,7 @@
     if (FICHAS[clave]) return true;
     if (window.SALAS_FICHAS && window.SALAS_FICHAS[clave]) return true;
     if (window.SALAS_CATALOGO && window.SALAS_CATALOGO[clave]) return true;
+    if (window.SALAS_FICHAS_QINERA && window.SALAS_FICHAS_QINERA[clave]) return true;
     if (window.QINERA_IMPORTABLE && window.QINERA_IMPORTABLE[clave]) return true;
     return false;
   }
@@ -4424,8 +4429,10 @@
       // catálogo con su foto y su precio. Sin esto salían 205 de 334 con "Sin foto".
       const _c = (window.SALAS_CATALOGO && window.SALAS_CATALOGO[sku]) || null;
       const _fx = (window.SALAS_FOTOS_EXTRA && window.SALAS_FOTOS_EXTRA[sku]) || null;
+      const _fq = (window.SALAS_FICHAS_QINERA && window.SALAS_FICHAS_QINERA[sku]) || null;
       const _img = f.imagen
         || (_c && _c.img ? _c.img : '')
+        || (_fq && _fq.imgs && _fq.imgs.length ? _fq.imgs[0] : '')
         || (typeof _fx === 'string' ? _fx : (_fx && (_fx.img || _fx.imagen)) || '');
       const _pre = f.precio
         || (_c && _c.p ? 'Neto: ' + _clp(Math.round(Number(_c.p) / 1.19)) + ' · IVA inc.: ' + _clp(_c.p) : '');
@@ -5130,6 +5137,19 @@
                          ') pero todavía no tiene ficha ni foto. Se pide con el código ' + clave + '.' };
     }
     if (!f) return;
+    // La ficha sacada de qinera.com completa lo que falte: descripción, características, usos y
+    // todas las fotos. No pisa lo que ya haya, solo rellena.
+    const _fq = (window.SALAS_FICHAS_QINERA && window.SALAS_FICHAS_QINERA[clave]) || null;
+    if (_fq) {
+      f = Object.assign({}, f, {
+        descripcion: f.descripcion || _fq.desc || '',
+        caracteristicas_tecnicas: f.caracteristicas_tecnicas || _fq.caract || '',
+        indicado_para: f.indicado_para || _fq.usos || '',
+        imagenes: (f.imagenes && f.imagenes.length) ? f.imagenes : (_fq.imgs || []),
+        sinFicha: f.sinFicha && !_fq.desc,
+        avisoDudoso: _fq.dudoso || ''
+      });
+    }
     // Ficha sin texto: se completa con la descripción del producto en la tienda de OpenCluster
     // (los 21 productos "solo web" no están en las fichas de Qinera). Rayen, 2026-07-28.
     if (!f.descripcion && window.SALAS_FICHAS_WEB && SALAS_FICHAS_WEB[clave]) {
@@ -5166,6 +5186,10 @@
       fichaModalThumbs.innerHTML = '<div class="ficha-modal-noimg">Sin foto disponible</div>';
     }
     let html = '';
+    // Si el dato no está confirmado, se dice ANTES que nada: nadie debe usarlo creyendo que sí.
+    if (f.avisoDudoso) {
+      html += '<span class="ficha-dudoso">Dato sin confirmar: ' + escapeHtmlSafe(f.avisoDudoso) + '</span>';
+    }
     if (extra.stockTexto) {
       // Desglose DINÁMICO (pedido de Rayen 2026-07-21: "sin considerar el stock que ya estamos
       // usando para las salas que marcamos, o sea, lo que queda") — viene ya calculado desde el
@@ -5437,6 +5461,7 @@
 <script src="SalasFichasWeb.js"></script>
 <script src="SalasFotosExtra.js"></script>
 <script src="SalasGrupos.js"></script>
+<script src="SalasFichasQinera.js"></script>
 <script src="SalasACotizacion.js"></script>
 <script>
 (function(){

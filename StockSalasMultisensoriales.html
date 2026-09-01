@@ -530,6 +530,12 @@
   .imp-tag.si.mar { background:#E3E9FF; color:#001a60; border-color:#B9C6F5; }
   /* Columna "Planilla" de las tablas de stock: una etiqueta por fila, alineadas. Rayen 2026-08-31 */
   td.col-planilla, th.col-planilla { white-space:nowrap; text-align:left; }
+  /* Version SHX que se ARMA con un Enabler: no hay stock fisico, se puede vender igual. */
+  tr.fila-armable { background:rgba(255,126,0,0.05); }
+  .tag-armable { display:inline-block; background:rgba(255,126,0,0.16); color:#a85400; border:1px solid rgba(255,126,0,0.35);
+                 border-radius:999px; padding:0.1rem 0.5rem; font-size:0.66rem; font-weight:800; margin-left:0.4rem;
+                 white-space:nowrap; vertical-align:middle; cursor:help; }
+  .nota-armable { display:block; font-size:0.7rem; color:#a85400; font-weight:700; margin-top:0.15rem; }
   td.col-planilla .imp-tag { margin-left:0; }
   .imp-tag.si.caa { background:#EFE7FE; color:#5b21b6; border-color:#C9B6FA; }
   .imp-filtros { display:flex; flex-wrap:wrap; gap:0.5rem; margin:0 0 1rem; }
@@ -4399,6 +4405,50 @@
   }
   // Marca las filas de las tablas de Bodega / Contenedor / Combinado. Se llama una vez al cargar:
   // esas tablas son HTML fijo (las genera el script del maestro), así que la marca se agrega acá.
+  // ── Las versiones SHX que se pueden ARMAR (Rayen 01-sep-2026) ─────────────
+  // El aparato suelto + 1 Enabler Socket+ = la version SHX. Como la SHX tiene 0 en bodega, no
+  // salia en las tablas y no se podia cotizar, aunque se puede vender perfectamente. Se agrega
+  // una fila por cada par, con cuantas se pueden armar y su precio, marcada para que quede claro
+  // que no es stock fisico.
+  function _agregarFilasArmables(){
+    const en = _saldoEnabler([]);
+    if (!en.hay || en.libres <= 0) return;
+    ['bodega', 'combinado'].forEach(function(cual){
+      const tb = document.getElementById('tbody-stock-' + cual);
+      if (!tb) return;
+      const nCols = tb.querySelector('tr') ? tb.querySelector('tr').children.length : 5;
+      _PARES_SHX.forEach(function(par){
+        if (tb.querySelector('tr[data-armable="' + par.shx + '"]')) return;   // ya está
+        const ps = _prodPorSku(par.suelto);
+        const sueltos = ps ? (ps.total || 0) : 0;
+        const armables = Math.min(sueltos, en.libres);
+        if (armables <= 0) return;
+        const cat = (window.SALAS_CATALOGO && window.SALAS_CATALOGO[par.shx]) || {};
+        const impShx = IMPORTABLE[par.shx] || {};
+        const impSuelto = IMPORTABLE[par.suelto] || {};
+        const nombre = cat.n || impShx.n || par.shx;
+        const nombreSuelto = impSuelto.n || par.suelto;
+        const img = cat.img || '';
+        const tr = document.createElement('tr');
+        tr.className = 'fila-armable';
+        tr.dataset.armable = par.shx;
+        tr.dataset.buscar = (nombre + ' ' + par.shx + ' ' + nombreSuelto + ' se arma enabler shx').toLowerCase();
+        const tit = 'No hay stock físico de este producto: se arma con ' + nombreSuelto +
+                    ' + 1 Enabler Socket+. Tienes ' + sueltos + ' suelto(s) y ' + en.libres + ' Enabler libre(s).';
+        tr.innerHTML =
+          '<td class="thumb">' + (img ? '<img class="zoomimg" src="' + img + '" alt="" loading="lazy" />' : '<div class="noimg">Sin foto</div>') + '</td>' +
+          '<td class="name" data-ficha="' + escapeHtmlSafe(par.shx) + '">' + escapeHtmlSafe(nombre) +
+            '<span class="tag-armable" title="' + escapeHtmlSafe(tit) + '">se arma con Enabler</span>' +
+            '<span class="nota-armable">' + armables + ' armable(s) con ' + sueltos + ' ' + escapeHtmlSafe(nombreSuelto) + ' + Enabler</span></td>' +
+          '<td>' + escapeHtmlSafe(par.shx) + '</td>' +
+          '<td><strong>' + armables + '</strong></td>' +
+          // Las celdas que falten hasta completar la tabla. La de Planilla NO se pone aca: la
+          // agrega _marcarImportablesEnTablas, igual que en el resto de las filas.
+          '<td></td>'.repeat(Math.max(0, nCols - 4));
+        tb.appendChild(tr);
+      });
+    });
+  }
   function _marcarImportablesEnTablas(){
     ['bodega', 'camino', 'combinado'].forEach(cual => {
       // Título de la columna nueva, al final de la cabecera de esta tabla.
@@ -4668,6 +4718,9 @@
       _pintarImportar();
     });
   });
+  // Las versiones SHX que se pueden ARMAR se crean ANTES de marcar: asi reciben la columna
+  // Planilla, la casilla para cotizar y el precio igual que las demas filas.
+  _agregarFilasArmables();
   _marcarImportablesEnTablas();
   _pintarImportar();
 

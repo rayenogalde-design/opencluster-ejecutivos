@@ -542,7 +542,7 @@
   /* "Por pedir": cuando se incluye lo que ya hay, se dice cuanto hay. Rayen 2026-08-31 */
   .pp-tengo { font-size:0.7rem; font-weight:700; color:#166534; margin-top:0.25rem; }
   /* Panel de la cotizacion en curso (Rayen 01-sep-2026) */
-  #cotiz-panel { position:fixed; right:0; top:0; bottom:0; width:min(430px,94vw); z-index:997;
+  #cotiz-panel { position:fixed; right:0; top:0; bottom:0; width:min(430px,94vw); z-index:100001;
                  background:var(--card,#fff); border-left:1px solid var(--line,#E3E7EC);
                  box-shadow:-18px 0 50px -24px rgba(0,0,0,0.35); display:flex; flex-direction:column;
                  transform:translateX(102%); transition:transform 0.18s ease; }
@@ -577,6 +577,17 @@
   .cp-aviso { font-size:0.74rem; color:#B3261E; font-weight:700; margin:0.4rem 0 0; line-height:1.4; }
   .cp-pie { display:flex; gap:0.5rem; padding:0.8rem 1rem; border-top:1px solid var(--line,#E3E7EC); }
   .cp-pie button { flex:1 1 auto; }
+  /* Con el panel abierto los botones flotantes se corren a su izquierda: antes quedaban encima
+     del total y de los botones de abajo. Rayen: "me tapa la info en varias cosas esto". */
+  body.cp-abierto #salaEnviarCotiz,
+  body.cp-abierto #salaSpecsBtn,
+  body.cp-abierto #salaVerPanel { right: calc(min(430px,94vw) + 18px) !important; transition:right 0.18s ease; }
+  @media (max-width:640px){
+    /* En pantalla chica el panel ocupa casi todo: los botones estorban, se esconden. */
+    body.cp-abierto #salaEnviarCotiz,
+    body.cp-abierto #salaSpecsBtn,
+    body.cp-abierto #salaVerPanel { display:none !important; }
+  }
   @media (prefers-color-scheme: dark) {
     #cotiz-panel { background:#111a2e; }
     .cp-ajuste, .cp-total { background:rgba(255,255,255,0.04); }
@@ -3086,7 +3097,23 @@
       pintar();
     });
     pctEl.addEventListener('input', function(){ setAjuste(Number(pctEl.value) || 0); pintar(); });
-    panel.querySelector('.cp-cerrar').addEventListener('click', function(){ panel.classList.remove('abierto'); });
+    function abrir(si){
+      panel.classList.toggle('abierto', si);
+      document.body.classList.toggle('cp-abierto', si);
+    }
+    panel.querySelector('.cp-cerrar').addEventListener('click', function(){ abrir(false); });
+    // Rayen: "si toco la pantalla quiero que se retraiga el detalle de la cotizacion".
+    // Se cierra al tocar fuera, pero NO al marcar una casilla (si no, se cerraria cada vez que
+    // agrega un producto) ni al tocar los botones flotantes.
+    document.addEventListener('mousedown', function(ev){
+      if (!panel.classList.contains('abierto')) return;
+      if (panel.contains(ev.target)) return;
+      var t = ev.target;
+      if (t.closest && (t.closest('.sala-pick') || t.closest('.sala-pick-card') ||
+                        t.closest('#salaVerPanel') || t.closest('#salaEnviarCotiz') || t.closest('#salaSpecsBtn'))) return;
+      abrir(false);
+    });
+    document.addEventListener('keydown', function(ev){ if (ev.key === 'Escape') abrir(false); });
     panel.querySelector('#cp-vaciar').addEventListener('click', function(){
       if (!confirm('¿Quitar todos los productos de la cotización?')) return;
       document.querySelectorAll('input.sala-pick:checked').forEach(function(cb){
@@ -3103,13 +3130,13 @@
     document.addEventListener('change', function(e){
       if (e.target && e.target.classList && e.target.classList.contains('sala-pick')) {
         pintar();
-        if (e.target.checked) panel.classList.add('abierto');
+        if (e.target.checked) abrir(true);
       }
     });
     // El botón de abajo abre y cierra el panel.
     document.addEventListener('click', function(e){
       var b = e.target.closest && e.target.closest('#salaVerPanel');
-      if (b) { panel.classList.toggle('abierto'); pintar(); }
+      if (b) { abrir(!panel.classList.contains('abierto')); pintar(); }
     });
     pintar();
   })();
@@ -6059,6 +6086,10 @@
     b.id = "salaVerPanel";
     b.type = "button";
     b.className = ref.className;
+    // El estilo vive en el style inline del boton de referencia, no en la clase.
+    b.style.cssText = ref.style.cssText;
+    b.style.bottom = "126px";
+    b.style.background = "#2f7d55";
     b.textContent = "🧮 Ver lo que llevo";
     b.title = "Ver los productos marcados, cambiar cantidades, quitar y ajustar el precio";
     ref.parentNode.insertBefore(b, ref);

@@ -943,6 +943,53 @@ document.addEventListener("DOMContentLoaded", function(){
       pintarIndice();
     });
 });
+
+/*__AVISO_CATRES_INI__*/
+/* Aviso de plazo de entrega de nuestros dos catres. 2-sep-2026, pedido de Rayen:
+   "que no se comprometan a una entrega inferior a ese periodo; pueden cotizar,
+   pero tienen que tener ese tiempo de entrega". Es para el ejecutivo: no viaja
+   a la cotizacion ni al correo del cliente. */
+(function(){
+  var CATRES = ["OC-2175","OC-2176","OC-2158","OC-2157","OC-2177","OC-2178","OC-2160","OC-2159","OC-2179","OC-2180","OC-2162","OC-2161","OC-2181","OC-2182","OC-2164","OC-2163","OC-2185","OC-2186","OC-2168","OC-2167","OC-2187","OC-2188","OC-2170","OC-2169","OC-2189","OC-2190","OC-2172","OC-2171","OC-2191","OC-2173","OC-0552","OC-0558","OC-0559","OC-0560","OC-0561","OC-0562","OC-0563","OC-0564","OC-0565","OC-0566","OC-0569","OC-0570","OC-0571","OC-0572","OC-0573","OC-0574","OC-0553","OC-0575","OC-0576","COMBO-CATRES"];
+  var DIAS = 30;
+  var css = document.createElement('style');
+  css.textContent = '.aviso-catres{border-radius:8px;padding:11px 14px;font-size:13px;margin-bottom:14px;'
+    + 'background:#FAEEDA;color:#412402;border-left:4px solid #E8891F;line-height:1.5}'
+    + '.aviso-catres b{font-weight:700}'
+    + '.aviso-catres .ac-t{display:block;font-weight:700;margin-bottom:2px}';
+  document.head.appendChild(css);
+
+  function hayCatre(){
+    if(typeof LINEAS === 'undefined' || !LINEAS) return 0;
+    var n = 0;
+    LINEAS.forEach(function(L){ if(CATRES.indexOf(L.codigo) >= 0) n++; });
+    return n;
+  }
+  function pinta(){
+    var card = document.getElementById('cardTabla');
+    if(!card) return;
+    var n = hayCatre();
+    var caja = document.getElementById('avisoCatres');
+    if(!n){ if(caja) caja.remove(); return; }
+    if(!caja){
+      caja = document.createElement('div');
+      caja.id = 'avisoCatres';
+      caja.className = 'aviso-catres';
+      card.parentNode.insertBefore(caja, card);
+    }
+    caja.innerHTML = '<span class="ac-t">Plazo de entrega: ' + DIAS + ' días aproximadamente</span>'
+      + 'El catre clínico que agregaste <b>no está disponible para entregar antes de ' + DIAS + ' días</b>. '
+      + 'Puedes cotizarlo, pero <b>no comprometas una entrega en menos de ese plazo</b>: déjalo escrito '
+      + 'en la cotización para que el cliente lo sepa desde el principio.';
+  }
+  /* se vuelve a mirar cada vez que la tabla se redibuja */
+  if(typeof refrescar === 'function'){
+    var base = refrescar;
+    refrescar = function(){ var r = base.apply(this, arguments); try{ pinta(); }catch(e){} return r; };
+  }
+  document.addEventListener('DOMContentLoaded', function(){ try{ pinta(); }catch(e){} });
+})();
+/*__AVISO_CATRES_FIN__*/
 </script>
 </body>
 </html>

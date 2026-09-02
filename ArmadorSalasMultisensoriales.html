@@ -228,6 +228,7 @@
                   background:rgba(6,179,253,0.16); border-radius:999px; padding:0.05rem 0.4rem; vertical-align:middle; }
   .hs-stock { font-size:0.72rem; font-weight:700; }
   .hs-hay { color:#166534; } .hs-nohay { color:#B3261E; }
+  .hs-arma { color:#a85400; font-size:0.66rem; font-weight:700; display:block; }
   .hs-precio { text-align:right; font-weight:800; font-variant-numeric:tabular-nums; }
   .hs-agregar { display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-top:1rem; padding:0.8rem 1rem;
                 border:1px dashed var(--line); border-radius:12px; }
@@ -63247,16 +63248,36 @@ window.OCT_VENTA_APARTE = {
     const extra = {};
     let salaActual = SALAS[0].id;
 
+    // Versiones SHX que NO hay que pedir porque se ARMAN: el aparato suelto + 1 Enabler Socket+.
+    // Rayen: "no hay que pedirlo". Mismos pares que usa la página de Stock.
+    const PARES_SHX = [
+      { shx: 'BJ-EIFUVLX', suelto: 'BJ-EIFUVL' },   // Foco de luz UV LED SHX / Foco de luz UV LED
+      { shx: 'BJ-EIBLUVX', suelto: 'BJ-EIBLUV' }    // Barra LED UV SHX       / Barra LED UV
+    ];
+    const SKU_ENABLER = 'BJ-234';
+    function hay(sku){
+      const s = (window.STOCK_SALAS && window.STOCK_SALAS[sku]) || null;
+      return s ? ((Number(s.bodega) || 0) + (Number(s.camino) || 0)) : 0;
+    }
+    function armablesDe(sku){
+      const par = PARES_SHX.find(function(p){ return p.shx === sku; });
+      if (!par) return 0;
+      return Math.min(hay(par.suelto), hay(SKU_ENABLER));
+    }
     function datos(sku){
       const c = (window.SALAS_CATALOGO && window.SALAS_CATALOGO[sku]) || {};
       const s = (window.STOCK_SALAS && window.STOCK_SALAS[sku]) || null;
+      const arm = armablesDe(sku);
+      const par = PARES_SHX.find(function(p){ return p.shx === sku; });
       return {
         sku: sku,
         nombre: c.n || sku,
         precio: Number(c.p) || 0,
         img: c.img || '',
         bodega: s ? (Number(s.bodega) || 0) : 0,
-        camino: s ? (Number(s.camino) || 0) : 0
+        camino: s ? (Number(s.camino) || 0) : 0,
+        armables: arm,
+        armaCon: par ? ((window.SALAS_CATALOGO && window.SALAS_CATALOGO[par.suelto] && window.SALAS_CATALOGO[par.suelto].n) || par.suelto) : ''
       };
     }
     function itemsDe(id){
@@ -63274,7 +63295,11 @@ window.OCT_VENTA_APARTE = {
       let total = 0, puestos = 0, faltan = 0;
       const filas = items.map(function(x){
         const quitado = !!sin[x.sku];
-        if (!quitado) { total += x.precio; puestos++; if (!(x.bodega + x.camino)) faltan++; }
+        if (!quitado) {
+          total += x.precio; puestos++;
+          // Lo que se arma con un Enabler NO cuenta como faltante: ya está en casa, en piezas.
+          if (!(x.bodega + x.camino) && !(x.armables > 0)) faltan++;
+        }
         return '<div class="hs-fila' + (quitado ? ' quitado' : '') + (x.agregado ? ' agregado' : '') + '">' +
           '<label class="hs-chk"><input type="checkbox" data-sku="' + escapeHtmlSafe(x.sku) + '" ' + (quitado ? '' : 'checked') + ' /></label>' +
           '<span class="hs-orden" title="Orden de importancia que le puso Hernán">' + x.orden + '</span>' +
@@ -63284,7 +63309,10 @@ window.OCT_VENTA_APARTE = {
             '<span class="hs-sku">' + escapeHtmlSafe(x.sku) + '</span></span>' +
           '<span class="hs-stock">' + ((x.bodega + x.camino) > 0
               ? '<span class="hs-hay">' + x.bodega + ' en bodega</span>'
-              : '<span class="hs-nohay">hay que pedirlo</span>') + '</span>' +
+              : (x.armables > 0
+                  ? '<span class="hs-hay" title="Los tienes: se arman con ' + escapeHtmlSafe(x.armaCon) + ' + 1 Enabler Socket+, y en bodega alcanza para ' + x.armables + '.">' +
+                    x.armables + ' en bodega<span class="hs-arma"> · se arman con Enabler</span></span>'
+                  : '<span class="hs-nohay">hay que pedirlo</span>')) + '</span>' +
           '<span class="hs-precio">' + (x.precio ? clp(x.precio) : '<span class="hs-nohay">sin precio</span>') + '</span>' +
         '</div>';
       }).join('');

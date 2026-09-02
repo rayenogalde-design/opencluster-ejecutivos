@@ -3588,7 +3588,28 @@
   // es muy confuso"). Verde = alcanza con lo que está en bodega. Naranjo = no alcanza la
   // bodega pero sí sumando el contenedor. Rojo = no alcanza ni con el contenedor.
   // Los números siguen ahí: aparecen al dejar el cursor encima (atributo title).
-  function _stockCelda(qty, stock){
+  // ¿Cuantas unidades de esta version SHX se pueden ARMAR con lo que hay? (aparato suelto +
+  // 1 Enabler Socket+). Rayen: "todos los focos los podemos convertir en SHX con el Enabler".
+  function _armablesDeSku(sku){
+    if (!sku || typeof _PARES_SHX === 'undefined') return 0;
+    const par = _PARES_SHX.find(function(p){ return p.shx === sku; });
+    if (!par) return 0;
+    const ps = _prodPorSku(par.suelto), pe = _prodPorSku(_SKU_ENABLER);
+    return Math.min(ps ? (ps.total || 0) : 0, pe ? (pe.total || 0) : 0);
+  }
+  function _stockCelda(qty, stock, sku){
+    // Antes de dar un producto por faltante: si es una version SHX que se arma con un Enabler y
+    // hay piezas, NO falta. Es la misma regla de las tablas y de las salas de Hernán.
+    const _arm = _armablesDeSku(sku || (stock && stock.sku) || '');
+    if (_arm > 0) {
+      const n0 = Number(qty) || 0;
+      const par = _PARES_SHX.find(function(p){ return p.shx === (sku || (stock && stock.sku)); });
+      const nomSuelto = par ? (((window.SALAS_CATALOGO || {})[par.suelto] || {}).n || par.suelto) : '';
+      if (_arm >= n0) {
+        return '<span class="stk-tag ok" title="No hay stock de esta versión, pero se arma con ' +
+               escapeHtmlSafe(nomSuelto) + ' + 1 Enabler Socket+. Alcanza para ' + _arm + '.">Se arma con Enabler</span>';
+      }
+    }
     const d = _stockPartido(qty, stock);
     // Rayen 2026-08-13: "sin dato no tiene sentido, debiera ser falta stock". Tiene razon: si el
     // producto no tiene ficha en el inventario es porque no lo tenemos, ni en bodega ni en el
@@ -3615,7 +3636,7 @@
     }
     const thumb = f && f.imagen ? '<img class="zoomimg" src="' + f.imagen + '" alt="" loading="lazy" />' : '<div class="noimg">Sin foto</div>';
     const nombreAttrs = f ? ' data-ficha="' + escapeHtmlSafe(fichaKey) + '" style="cursor:pointer;text-decoration:underline dotted;"' : '';
-    return '<div class="cotiz-comp-fila"><span class="thumb">' + thumb + '</span><span' + nombreAttrs + '>' + escapeHtmlSafe(display) + '</span><span>Pide ' + qty + '</span>' + _stockCelda(qty, stock) + '</div>';
+    return '<div class="cotiz-comp-fila"><span class="thumb">' + thumb + '</span><span' + nombreAttrs + '>' + escapeHtmlSafe(display) + '</span><span>Pide ' + qty + '</span>' + _stockCelda(qty, stock, (stock && stock.sku) || fichaKey || '') + '</div>';
   }
   // Tooltip flotante compartido (una sola instancia, se reposiciona) para el desglose
   // bodega/contenedor — aparece ENCIMA del contenido, no empuja nada de layout.

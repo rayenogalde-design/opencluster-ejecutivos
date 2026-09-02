@@ -556,6 +556,18 @@
   .imp-filtros { display:flex; flex-wrap:wrap; gap:0.5rem; margin:0 0 1rem; }
   /* "Por pedir": cuando se incluye lo que ya hay, se dice cuanto hay. Rayen 2026-08-31 */
   .pp-tengo { font-size:0.7rem; font-weight:700; color:#166534; margin-top:0.25rem; }
+  /* Repuestos: van al final, cerrados. Rayen: "en realidad nunca estoy pidiendo repuesto". */
+  .rep-bloque { margin-top:1.4rem; border:1px dashed var(--line); border-radius:12px; overflow:hidden; }
+  .rep-cab { width:100%; display:flex; align-items:center; gap:0.6rem; padding:0.75rem 1rem; cursor:pointer;
+             background:var(--paper); border:0; font-family:inherit; font-size:0.86rem; font-weight:800;
+             color:var(--ink); text-align:left; }
+  .rep-cab:hover { background:rgba(0,0,0,0.03); }
+  .rep-cab .chev { transition:transform 0.15s ease; font-size:0.75rem; color:var(--mist); }
+  .rep-bloque.abierto .rep-cab .chev { transform:rotate(90deg); }
+  .rep-n { font-size:0.72rem; font-weight:800; color:var(--mist); }
+  .rep-sub { flex:1 1 100%; font-size:0.74rem; font-weight:600; color:var(--mist); line-height:1.4; margin:0.2rem 0 0; }
+  .rep-cuerpo { display:none; padding:0.6rem 0.8rem 0.9rem; }
+  .rep-bloque.abierto .rep-cuerpo { display:block; }
   /* Panel de la cotizacion en curso (Rayen 01-sep-2026) */
   #cotiz-panel { position:fixed; right:0; top:0; bottom:0; width:min(430px,94vw); z-index:100001;
                  background:var(--card,#fff); border-left:1px solid var(--line,#E3E7EC);
@@ -4933,6 +4945,25 @@
   // universo que "¿Qué puedo importar?" (_universoImportar), quedándose con los que Qinera SÍ
   // vende y de los que no hay ni una unidad, ni en bodega ni en el contenedor.
   // Va con tarjeta y foto grande, no con tabla, porque el paso siguiente es armar un catálogo.
+  // Los repuestos que Qinera no publica: sin foto ni ficha. Van aparte, al final y cerrados.
+  function _esRepuesto(sku){
+    return (window.SALAS_REPUESTOS || []).indexOf(sku) >= 0;
+  }
+  function _bloqueRepuestos(items, dibujar, id){
+    if (!items.length) return '';
+    return '<div class="rep-bloque" id="' + id + '">' +
+      '<button type="button" class="rep-cab"><span class="chev">▶</span>' +
+      'Repuestos y accesorios<span class="rep-n">' + items.length + '</span>' +
+      '<p class="rep-sub">Fundas, remates, placas, kits de reparación y piezas sueltas. Qinera no los publica, así que no tienen foto ni ficha. Están acá por si alguna vez los necesitas.</p>' +
+      '</button><div class="rep-cuerpo"><div class="stock-disp-grid">' +
+      items.map(dibujar).join('') + '</div></div></div>';
+  }
+  // Se conecta una vez, por delegación: sirve para los bloques de las dos pestañas.
+  document.addEventListener('click', function(ev){
+    const b = ev.target.closest && ev.target.closest('.rep-cab');
+    if (!b) return;
+    b.parentNode.classList.toggle('abierto');
+  });
   let PP_FILTRO = 'todos';
 
   function _ppLista(){
@@ -5023,8 +5054,10 @@
       if (ha !== hb) return ha - hb;
       return String(a.nombre).localeCompare(String(b.nombre), 'es');
     };
-    const _sens = filtrada.filter(x => _grupoDe(x.sku) === 'sensorial').sort(_ordenSensorial);
-    const _caa  = filtrada.filter(x => _grupoDe(x.sku) !== 'sensorial');
+    const _reps = filtrada.filter(x => _esRepuesto(x.sku));
+    const _resto = filtrada.filter(x => !_esRepuesto(x.sku));
+    const _sens = _resto.filter(x => _grupoDe(x.sku) === 'sensorial').sort(_ordenSensorial);
+    const _caa  = _resto.filter(x => _grupoDe(x.sku) !== 'sensorial');
     const _bloque = (titulo, sub, items, id) => items.length
       ? '<div class="pp-bloque-tit"><h3>' + titulo + '</h3>' +
         '<span class="pp-bloque-n">' + items.length + ' producto' + (items.length === 1 ? '' : 's') + '</span>' +
@@ -5033,7 +5066,8 @@
       : '';
     grid.innerHTML =
       _bloque('Sensorial', 'Primero los que están en la hoja <strong>CAA</strong> — material educativo y juguetes de causa-efecto, que son sensoriales igual — y después los de <strong>venta marítima</strong>.', _sens, 'stock-disp-grid-porpedir') +
-      _bloque('Comunicación aumentativa', 'Comunicadores, software (Grid, TD Snap), lectores oculares, conmutadores, soportes y control del entorno.', _caa, 'stock-disp-grid-porpedir-caa');
+      _bloque('Comunicación aumentativa', 'Comunicadores, software (Grid, TD Snap), lectores oculares, conmutadores, soportes y control del entorno.', _caa, 'stock-disp-grid-porpedir-caa') +
+      _bloqueRepuestos(_reps, _tarjeta, 'rep-porpedir');
 
     grid.querySelectorAll('.sala-pick').forEach(cb => {
       cb.addEventListener('click', (ev) => ev.stopPropagation());
@@ -5892,6 +5926,7 @@
 <script src="SalasFotosExtra.js"></script>
 <script src="SalasGrupos.js"></script>
 <script src="SalasFichasQinera.js"></script>
+<script src="SalasRepuestos.js"></script>
 <script src="SalasACotizacion.js"></script>
 <script>
 (function(){

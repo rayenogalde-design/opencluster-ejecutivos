@@ -63226,6 +63226,40 @@ window.OCT_VENTA_APARTE = {
   // Los <script src> ya cargaron cuando corre esto, pero si algun dia se retrasan, se reintenta.
   if (!window.marcarOrigenQinera()) setTimeout(window.marcarOrigenQinera, 400);
 
+  // ── RESCATAR LAS FOTOS QUE SI EXISTEN (Rayen 01-sep-2026) ─────────────────
+  // "¿Qué pasa que no hay fotos?" — las filas del Armador son HTML fijo y se escribieron cuando
+  // varias fotos todavía no estaban en el repo. La foto se busca ahora en las cuatro fuentes y,
+  // si aparece, se reemplaza el cartel de "Sin foto" por la imagen.
+  (function rescatarFotos(){
+    function fotoDe(sku){
+      if (!sku) return "";
+      var c = (window.SALAS_CATALOGO && window.SALAS_CATALOGO[sku]) || null;
+      if (c && c.img) return c.img;
+      var e = (window.SALAS_FOTOS_EXTRA && window.SALAS_FOTOS_EXTRA[sku]) || null;
+      if (e) return (typeof e === "string") ? e : (e.img || e.imagen || "");
+      var f = (window.SALAS_FICHAS && window.SALAS_FICHAS[sku]) || null;
+      if (f && f.img) return f.img;
+      var q = (window.SALAS_FICHAS_QINERA && window.SALAS_FICHAS_QINERA[sku]) || null;
+      if (q && q.imgs && q.imgs.length) return q.imgs[0];
+      var w = (window.SALAS_FICHAS_WEB && window.SALAS_FICHAS_WEB[sku]) || null;
+      if (w && w.imagenes && w.imagenes.length) return w.imagenes[0];
+      return "";
+    }
+    var puestas = 0;
+    document.querySelectorAll("td.thumb .noimg").forEach(function(n){
+      var tr = n.closest("tr");
+      var celda = tr && tr.querySelector("td.name");
+      var sku = celda ? (celda.dataset.ficha || "") : "";
+      var img = fotoDe(sku);
+      if (!img) return;
+      var nombre = celda.childNodes[0] ? celda.childNodes[0].textContent.trim() : "";
+      n.outerHTML = '<img class="zoomimg" src="' + img + '" alt="' + nombre.replace(/"/g, "&quot;") + '" loading="lazy" />';
+      puestas++;
+    });
+    return puestas;
+  })();
+
+
   // ── SALAS PROPUESTAS POR HERNÁN (Rayen 01-sep-2026) ───────────────────────
   // "Es algo que Hernán me preparó para yo poder saber qué elementos tengo que elegir para crear
   // una lista… el número te dice el orden de importancia del producto." Y sobre qué necesita:

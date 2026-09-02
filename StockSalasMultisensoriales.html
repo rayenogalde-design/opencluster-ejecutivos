@@ -2649,7 +2649,32 @@
   function _planDescuento(c){
     const lineas = [], sinBodega = [];
     _smExtraerProductos(c.productos).forEach(p => {
-      const s = STOCK_SM[p.key];
+      let s = STOCK_SM[p.key];
+      // Versiones SHX que se ARMAN: de bodega no sale el SHX (que no existe), salen las dos
+      // piezas — el aparato suelto y un Enabler Socket+. Antes decia "no se descuenta" y el
+      // stock quedaba mal despues de cada venta.
+      if (!s || !s.sku) {
+        const _sk = _skuFaltante(p.display, s);
+        const _par = (typeof _PARES_SHX !== 'undefined') ? _PARES_SHX.find(function(x){ return x.shx === _sk; }) : null;
+        if (_par) {
+          [_par.suelto, _SKU_ENABLER].forEach(function(skuPieza){
+            const sp = _prodPorSku(skuPieza);
+            if (!sp) { sinBodega.push(p.display + ' (falta ' + skuPieza + ')'); return; }
+            const bod = Number(sp.bodega) || 0, cam = Number(sp.camino) || 0;
+            const deBodega = Math.min(bod, p.qty);
+            const deCamino = Math.min(cam, p.qty - deBodega);
+            lineas.push({
+              sku: sp.sku, producto: sp.item,
+              display: sp.item + ' — para armar ' + p.display,
+              cantidad: p.qty, deBodega: deBodega, deCamino: deCamino,
+              falta: p.qty - deBodega - deCamino,
+              quedan: (bod + cam) - deBodega - deCamino,
+              desde: deCamino > 0 ? (deBodega > 0 ? 'bodega+camino' : 'camino') : 'bodega'
+            });
+          });
+          return;
+        }
+      }
       if (!s || !s.sku) { sinBodega.push(p.display); return; }
       const bod = Number(s.bodega) || 0, cam = Number(s.camino) || 0;
       const deBodega = Math.min(bod, p.qty);
@@ -3648,7 +3673,10 @@
     }
     const thumb = f && f.imagen ? '<img class="zoomimg" src="' + f.imagen + '" alt="" loading="lazy" />' : '<div class="noimg">Sin foto</div>';
     const nombreAttrs = f ? ' data-ficha="' + escapeHtmlSafe(fichaKey) + '" style="cursor:pointer;text-decoration:underline dotted;"' : '';
-    return '<div class="cotiz-comp-fila"><span class="thumb">' + thumb + '</span><span' + nombreAttrs + '>' + escapeHtmlSafe(display) + '</span><span>Pide ' + qty + '</span>' + _stockCelda(qty, stock, (stock && stock.sku) || fichaKey || '') + '</div>';
+    // Si no hay stock, el SKU se resuelve por NOMBRE: sin esto no se puede saber que es una
+    // version que se arma con Enabler, y salia "Falta stock" para siempre.
+    const _skuFila = (stock && stock.sku) || _skuFaltante(display, stock) || fichaKey || '';
+    return '<div class="cotiz-comp-fila"><span class="thumb">' + thumb + '</span><span' + nombreAttrs + '>' + escapeHtmlSafe(display) + '</span><span>Pide ' + qty + '</span>' + _stockCelda(qty, stock, _skuFila) + '</div>';
   }
   // Tooltip flotante compartido (una sola instancia, se reposiciona) para el desglose
   // bodega/contenedor — aparece ENCIMA del contenido, no empuja nada de layout.
@@ -3702,7 +3730,9 @@
       const m = matriz[key];
       const stock = STOCK_SM[key];
       const total = stock ? stock.total : 0;
-      const falta = m.total > total;
+      // Lo que se arma con un Enabler no cuenta como faltante: ya esta en casa, en piezas.
+      const _armables0 = _armablesDeSku((stock && stock.sku) || _skuFaltante(m.display, stock) || '');
+      const falta = (m.total > total) && !(_armables0 >= m.total);
       const celdas = seleccionadas.map(c => '<td>' + (m.porCotiz[c.cotizacion] || '—') + '</td>').join('');
       // Nombre del producto: toca para ver su ficha (mismo modal que el resto de la herramienta).
       // MISMO nombre que abajo en "Faltantes" (Rayen 2026-08-06), más los otros nombres con los
@@ -3714,12 +3744,20 @@
         : '<td class="' + nombreClase + '">' + escapeHtmlSafe(nombreMostrado) + _htmlOtrosNombres(key, nombreMostrado) + '</td>';
       // Estado: toca "Alcanza"/"Falta stock" para ver el desglose bodega/contenedor en una
       // ventanita flotante encima (no texto que empuje la fila) — pedido de Rayen 2026-07-21.
-      const desglose = stock ? ((stock.bodega || 0) + ' en bodega + ' + (stock.camino || 0) + ' en contenedor') : 'sin datos de stock';
+      const _armDesg = _armablesDeSku((stock && stock.sku) || _skuFaltante(m.display, stock) || '');
+      const desglose = (_armDesg > 0)
+        ? ('se arma con el aparato suelto + 1 Enabler Socket+ · alcanza para ' + _armDesg)
+        : (stock ? ((stock.bodega || 0) + ' en bodega + ' + (stock.camino || 0) + ' en contenedor') : 'sin datos de stock');
       // El verde ya no puede significar "alcanza sumando el contenedor": eso confundía
       // (Rayen 2026-07-30). Verde = está en bodega hoy; ámbar = llega en el contenedor.
       const _dm = _stockPartido(m.total, stock);
-      const _clsEstado = _dm.sinDato ? 'falta' : (_dm.clase === 'ok' ? 'alcanza' : (_dm.clase === 'cam' ? 'encamino' : 'falta'));
-      const _txtEstado = _dm.sinDato ? 'Falta stock' : (_dm.clase === 'ok' ? 'En bodega' : (_dm.clase === 'cam' ? 'En camino' : 'Falta stock'));
+      // Si es una version SHX que se arma con un Enabler y alcanza, NO falta.
+      const _armaEsta = _armablesDeSku((stock && stock.sku) || _skuFaltante(m.display, stock) || '');
+      const _seArma = _armaEsta > 0 && _armaEsta >= m.total;
+      const _clsEstado = _seArma ? 'alcanza'
+        : (_dm.sinDato ? 'falta' : (_dm.clase === 'ok' ? 'alcanza' : (_dm.clase === 'cam' ? 'encamino' : 'falta')));
+      const _txtEstado = _seArma ? 'Se arma con Enabler'
+        : (_dm.sinDato ? 'Falta stock' : (_dm.clase === 'ok' ? 'En bodega' : (_dm.clase === 'cam' ? 'En camino' : 'Falta stock')));
       const estadoCelda = '<td class="' + _clsEstado + '">' +
         '<span class="cotiz-estado-clickable" data-desglose="' + escapeHtmlSafe(desglose) + '">' + _txtEstado + '</span>' +
       '</td>';

@@ -220,6 +220,21 @@
   .mgp-res-et { font-size:0.66rem; font-weight:800; color:var(--mist); text-transform:uppercase; letter-spacing:0.05em; }
   .mgp-res-v { font-size:1.05rem; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums; }
   .mgp-verde { color:#166534; }
+  /* Pestaña "Vendidas" */
+  .vend-grid { display:flex; flex-direction:column; gap:0.8rem; margin-top:0.9rem; }
+  .vend-card { border:1px solid var(--line); border-radius:12px; padding:0.9rem 1rem; background:var(--card); }
+  .vend-cab { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap; }
+  .vend-cab strong { font-size:0.95rem; color:var(--navy); }
+  .vend-inst { display:block; font-size:0.85rem; font-weight:700; margin-top:0.1rem; }
+  .vend-meta { display:block; font-size:0.73rem; color:var(--mist); margin-top:0.15rem; }
+  .vend-margen { text-align:right; display:flex; flex-direction:column; }
+  .vend-margen span:first-child { font-size:0.66rem; font-weight:800; color:var(--mist); text-transform:uppercase; letter-spacing:0.05em; }
+  .vend-margen strong { font-size:1.2rem; color:#166534; font-variant-numeric:tabular-nums; }
+  .vend-pct { font-size:0.75rem; font-weight:800; color:#166534; }
+  .vend-cifras { display:flex; flex-wrap:wrap; gap:1.1rem; margin-top:0.6rem; padding-top:0.5rem;
+                 border-top:1px solid var(--line); font-size:0.8rem; color:var(--mist); }
+  .vend-cifras strong { color:var(--ink); font-variant-numeric:tabular-nums; }
+  .vend-detalle { margin-top:0.6rem; }
   .mgp-pct { font-size:0.72rem; font-weight:700; color:var(--mist); }
   .mgp-sku { font-size:0.68rem; font-weight:700; color:var(--mist); letter-spacing:0.03em; }
   .mgp-fila { display:grid; grid-template-columns:1fr 6.4rem 6.4rem 6.4rem 7rem; gap:0.5rem;
@@ -672,7 +687,7 @@
       <div class="stock-hero-chip"><span class="stock-hero-dot dot-bodega"></span><b>57</b> en bodega</div>
       <div class="stock-hero-chip"><span class="stock-hero-dot dot-camino"></span><b>147</b> en camino</div>
     </div>
-  </div><button class="tabbtn grp-stock active" data-tab="stock-bodega">Bodega</button><button class="tabbtn grp-stock" data-tab="stock-camino">Contenedor (ya llegó)</button><button class="tabbtn grp-stock" data-tab="stock-combinado">Combinado</button><button class="tabbtn grp-stock" data-tab="stock-porpedir">Por pedir</button><button class="tabbtn grp-stock" data-tab="stock-comparar">Comparar cotizaciones</button><button class="tabbtn grp-stock" data-tab="stock-importar">¿Qué puedo importar?</button><button class="tabbtn grp-stock" data-tab="stock-margenes">Costo y margen</button></div></div>
+  </div><button class="tabbtn grp-stock active" data-tab="stock-bodega">Bodega</button><button class="tabbtn grp-stock" data-tab="stock-camino">Contenedor (ya llegó)</button><button class="tabbtn grp-stock" data-tab="stock-combinado">Combinado</button><button class="tabbtn grp-stock" data-tab="stock-porpedir">Por pedir</button><button class="tabbtn grp-stock" data-tab="stock-comparar">Comparar cotizaciones</button><button class="tabbtn grp-stock" data-tab="stock-importar">¿Qué puedo importar?</button><button class="tabbtn grp-stock" data-tab="stock-margenes">Costo y margen</button><button class="tabbtn grp-stock" data-tab="stock-vendidas">Vendidas</button></div></div>
 <main>
   <section class="panel grp-stock active" id="panel-stock-bodega">
     <div class="panelhead">
@@ -1867,6 +1882,16 @@
     </div>
     <div id="imp-grid"></div>
   </section>
+  <!-- Lo que ya se vendio, con su margen. Se llena con las cotizaciones marcadas como vendidas. -->
+  <section class="panel grp-stock" id="panel-stock-vendidas">
+    <div class="panelhead">
+      <div>
+        <h2>Vendidas</h2>
+        <p class="sug">Las cotizaciones que marcaste como vendidas, con lo que ganaste en cada una y el detalle producto por producto. Arriba, el total de todas juntas.</p>
+      </div>
+    </div>
+    <div id="vend-cont"></div>
+  </section>
   <section class="panel grp-stock" id="panel-stock-margenes">
     <div class="panelhead">
       <div>
@@ -2591,6 +2616,8 @@
       const j = await r.json();
       if (!j || !j.ok || !j.stock) return false;
       VENDIDAS_SM = j.vendidas || {};
+      // Las vendidas llegan con el stock vivo: apenas están, se repinta la pestaña.
+      if (typeof _pintarVendidas === 'function') setTimeout(_pintarVendidas, 0);
       Object.keys(j.stock).forEach(sku => {
         const v = j.stock[sku];
         const bod = Number(v.bodega) || 0, cam = Number(v.camino) || 0;
@@ -3140,6 +3167,105 @@
     });
     pintar();
   })();
+
+  // ── PESTAÑA "VENDIDAS" (Rayen 01-sep-2026) ────────────────────────────────
+  // "Quisiera que hubiera un lugar donde yo pudiera ver las que yo he vendido, el margen y el
+  // detalle de los productos… algo así bien bonito, pero me gustaría también que sea claro el
+  // margen que obtuve de los productos y el total."
+  //
+  // Se arma con las cotizaciones que ya están marcadas como vendidas (VENDIDAS_SM, que viene del
+  // CRM) cruzadas con sus datos. El margen sale de _margenCotiz, la misma cuenta que se ve en el
+  // detalle de cada cotización: no pueden decir cosas distintas.
+  function _pintarVendidas(){
+    const cont = document.getElementById('vend-cont');
+    if (!cont) return;
+    const nums = Object.keys(VENDIDAS_SM || {});
+    if (!nums.length) {
+      cont.innerHTML = '<p class="incluidos-vacio">Todavía no has marcado ninguna cotización como vendida. ' +
+        'Cuando marques una en <strong>Comparar cotizaciones</strong> (botón "Marcar como vendida y descontar del stock"), ' +
+        'aparece acá con su margen y su detalle.</p>';
+      return;
+    }
+    if (!Object.keys(MIS_COSTOS).length) {
+      cont.innerHTML = '<div class="costos-caja"><div class="costos-caja-t">Faltan tus costos para calcular el margen</div>' +
+        '<p class="costos-caja-p">Las ventas están registradas, pero sin el archivo de costos no puedo decirte cuánto ganaste. ' +
+        'Cárgalo en la pestaña <strong>Comparar cotizaciones</strong>, botón <strong>Cargar mis costos</strong>.</p></div>';
+      return;
+    }
+
+    const ventas = nums.map(function(num){
+      const c = COTIZ_SM_TODAS.find(function(x){ return x.cotizacion === num; });
+      if (!c) return null;
+      const m = _margenCotiz(c);
+      return { num: num, c: c, m: m, info: VENDIDAS_SM[num] || {} };
+    }).filter(Boolean);
+    if (!ventas.length) {
+      cont.innerHTML = '<p class="incluidos-vacio">Hay ventas marcadas, pero sus cotizaciones ya no están en el CRM.</p>';
+      return;
+    }
+
+    // Ordenadas por lo que más dejó.
+    ventas.sort(function(a, b){ return b.m.margen - a.m.margen; });
+    const tVenta = ventas.reduce(function(a, v){ return a + v.m.ventaTot; }, 0);
+    const tCosto = ventas.reduce(function(a, v){ return a + v.m.costoTot; }, 0);
+    const tInst  = ventas.reduce(function(a, v){ return a + v.m.transporte; }, 0);
+    const tMargen = tVenta - tCosto;
+    const pct = n => n.toFixed(1).replace('.', ',');
+
+    cont.innerHTML =
+      '<div class="mgp-res">' +
+        '<div><span class="mgp-res-et">Vendidas</span><span class="mgp-res-v">' + ventas.length + '</span></div>' +
+        '<div><span class="mgp-res-et">Venta</span><span class="mgp-res-v">' + _clp(tVenta) + '</span></div>' +
+        '<div><span class="mgp-res-et">Costo</span><span class="mgp-res-v">' + _clp(tCosto) + '</span></div>' +
+        '<div><span class="mgp-res-et">Margen</span><span class="mgp-res-v mgp-verde">' + _clp(tMargen) +
+          (tVenta ? ' · ' + pct(tMargen / tVenta * 100) + '%' : '') + '</span></div>' +
+        (tInst ? '<div><span class="mgp-res-et">Instalación</span><span class="mgp-res-v">' + _clp(tInst) + '</span></div>' : '') +
+      '</div>' +
+      (tInst ? '<p class="mg-nota">La instalación, el transporte y la capacitación van aparte y no entran en el margen: no tenemos registrado lo que cuesta el viaje ni los días de trabajo.</p>' : '') +
+      '<div class="vend-grid">' + ventas.map(function(v){
+        const p = v.m.ventaTot ? (v.m.margen / v.m.ventaTot * 100) : 0;
+        const cuando = v.info.fecha ? ('Vendida el ' + escapeHtmlSafe(v.info.fecha)) : 'Vendida';
+        const quien = v.info.quien ? (' por ' + escapeHtmlSafe(v.info.quien)) : '';
+        return '<div class="vend-card" data-num="' + escapeHtmlSafe(v.num) + '">' +
+          '<div class="vend-cab">' +
+            '<div><strong>' + escapeHtmlSafe(v.num) + '</strong>' +
+              '<span class="vend-inst">' + escapeHtmlSafe(v.c.institucion || '') + '</span>' +
+              '<span class="vend-meta">' + cuando + quien + (v.c.ejecutivo ? ' · ' + escapeHtmlSafe(v.c.ejecutivo) : '') + '</span></div>' +
+            '<div class="vend-margen"><span>Margen</span><strong>' + _clp(v.m.margen) + '</strong>' +
+              '<span class="vend-pct">' + pct(p) + '%</span></div>' +
+          '</div>' +
+          '<div class="vend-cifras">' +
+            '<span>Venta <strong>' + _clp(v.m.ventaTot) + '</strong></span>' +
+            '<span>Costo <strong>' + _clp(v.m.costoTot) + '</strong></span>' +
+            (v.m.transporte ? '<span>Instalación <strong>' + _clp(v.m.transporte) + '</strong></span>' : '') +
+            '<span>' + v.m.filas.length + ' productos</span>' +
+          '</div>' +
+          (v.m.sinCosto.length
+            ? '<p class="mg-alerta">' + v.m.sinCosto.length + ' sin costo en tu archivo: el margen sale más alto que el real.</p>' : '') +
+          '<button type="button" class="mg-btn vend-ver">Ver el detalle de los productos</button>' +
+          '<div class="vend-detalle" style="display:none;">' +
+            '<div class="mg-prod cab"><span>Producto</span><span class="num">Cant</span>' +
+              '<span class="num">Venta</span><span class="num">Costo</span><span class="num">Margen</span></div>' +
+            v.m.filas.map(function(f){
+              return '<div class="mg-prod"><span>' + escapeHtmlSafe(f.display) + '</span>' +
+                '<span class="num">x' + f.qty + '</span>' +
+                '<span class="num">' + (f.sinPrecio ? '<span class="sinc">sin precio</span>' : _clp(f.venta)) + '</span>' +
+                '<span class="num">' + (f.sinCosto ? '<span class="sinc">sin costo</span>' : _clp(f.costo)) + '</span>' +
+                '<span class="num">' + (f.margen === null ? '—' : _clp(f.margen)) + '</span></div>';
+            }).join('') +
+          '</div>' +
+        '</div>';
+      }).join('') + '</div>';
+
+    cont.querySelectorAll('.vend-ver').forEach(function(b){
+      b.addEventListener('click', function(){
+        const d = b.parentNode.querySelector('.vend-detalle');
+        const abierto = d.style.display !== 'none';
+        d.style.display = abierto ? 'none' : 'block';
+        b.textContent = abierto ? 'Ver el detalle de los productos' : 'Ocultar el detalle';
+      });
+    });
+  }
 
   // ── PESTAÑA "COSTO Y MARGEN" (Rayen 2026-08-28: "los quiero en salas", "uno a uno") ───────
   // Cada producto de la tarifa de Qinera con su costo, su precio de venta y lo que deja.
@@ -4514,6 +4640,7 @@
       document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
       if (btn.dataset.tab === 'stock-margenes') _mgpPintar();
       if (btn.dataset.tab === 'stock-porpedir' && typeof _pintarPorPedir === 'function') _pintarPorPedir();
+      if (btn.dataset.tab === 'stock-vendidas' && typeof _pintarVendidas === 'function') _pintarVendidas();
     });
   });
 

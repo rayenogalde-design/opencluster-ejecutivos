@@ -141,6 +141,9 @@ tr:hover td.col-destacado{background:#FFF1DE}
    cursor:pointer}
 .usar-web:hover{background:var(--hover)}
 .dato-sub.usando{color:#0F7B4F;font-weight:700}
+/* precio de la competencia bajo el precio que se cobra — solo si el pedido lo trae */
+.dato-sub.comp-ok{color:#0F7B4F;font-weight:700;white-space:normal}
+.dato-sub.comp-caro{color:#B42318;font-weight:700;white-space:normal}
 .candado{font-size:11px;font-weight:700;color:#9A5B00;white-space:nowrap}
 .margen-in.perdida{color:#B3261E;border-color:#E8B4B0;background:#FDF2F1;font-weight:800}
 /* Margen bajo el mínimo de esa lista. Rayen 20-ago-2026: "no le impidas poner el margen
@@ -451,6 +454,9 @@ function pintar(datos){
       cant:   Number(p.cant || 1),
       img:    p.img || (c && c.img) || "",
       web:    p.web || null,
+      // precio de la competencia para ESE producto, si el pedido lo trae:
+      // { precio: 42990, quien: "Deltamed" }. Los pedidos normales no lo llevan.
+      comp:   p.comp || null,
       stock:  p.stock || null,
       lp:     p.lp || (p.precio ? [] : []),
       precioFijo: (p.precio != null && p.precio !== "") ? Number(p.precio)
@@ -545,6 +551,20 @@ function refrescar(){
     var bajoPrecio = netoUn
       ? '<span class="dato-sub">neto ' + CLP(netoUn) + '</span>' + ((costo && MOSTRAR_COSTO) ? '<span class="dato-sub">costo ' + CLP(costo) + '</span>' : '')
       : '';
+
+    // Precio de la COMPETENCIA, justo debajo del precio que se está cobrando, para poder
+    // mover el margen viendo al lado a cuánto lo vende el otro. Solo aparece si el pedido
+    // lo trae (campo `comp` por producto): los pedidos normales no lo llevan y la fila
+    // se ve igual que siempre. Pedido de Rayen el 3-sep-2026 para la lista de un cliente
+    // que era, casi entera, el catálogo de Deltamed.
+    if (L.comp && L.comp.precio) {
+      var quienComp = L.comp.quien || 'la competencia';
+      var gana = netoUn && pr.iva <= L.comp.precio;
+      bajoPrecio += '<span class="dato-sub comp-' + (netoUn ? (gana ? 'ok' : 'caro') : 'ok') + '">' +
+        quienComp + ' ' + CLP(L.comp.precio) +
+        (netoUn ? (gana ? ' · vamos $' + CLP(L.comp.precio - pr.iva).replace('$', '') + ' abajo'
+                        : ' · ¡MÁS CAROS!') : '') + '</span>';
+    }
 
     var tr = document.createElement("tr");
     tr.innerHTML =

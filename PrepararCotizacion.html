@@ -819,6 +819,36 @@ function cargarSeleccion(){
   pintar(datos);
 }
 
+/* Una cotización PREPARADA que viene marcada con sin_costos:true se abre igual que la
+   selección de una lista de ejecutivo: el archivo no trae ningún costo (vive en un repo
+   público), pero sí el precio publicado y el margen que ese precio lleva, y con esos dos
+   números el navegador deduce aquí lo justo para poder mover el margen. Sin esto la
+   casilla del margen queda deshabilitada pidiendo una clave que este archivo no tiene.
+   Rayen, 3-sep-2026: "no me dejaste los márgenes para modificártelo". */
+function abreSinCostos(datos){
+  COSTOS = {};
+  MOSTRAR_COSTO = false;
+  MARGEN_MIN = (datos.margen_min != null && isFinite(Number(datos.margen_min)))
+             ? Number(datos.margen_min) : null;
+  document.body.classList.add("solo-ejecutivo");
+  (datos.productos || []).forEach(function(p){
+    var base = (p.lp && p.lp.length) ? p.lp[0] : null;
+    if (!base || !base.p) return;
+    var m = (p.mc != null) ? Number(p.mc) : Number(base.m);
+    if (!isFinite(m) || m <= 0 || m >= 0.95) return;
+    var c = Math.round(netoDesde(Math.round(base.p)) * (1 - m));
+    if (c > 0) COSTOS[p.codigo] = c;
+  });
+  document.body.classList.add("con-costos");
+  var barra = document.getElementById("barraClave");
+  barra.classList.add("abierta");
+  document.getElementById("formClave").style.display = "none";
+  document.getElementById("bcTitulo").textContent = "Puedes cambiar el margen y la cantidad de cada producto.";
+  document.getElementById("bcPie").textContent =
+    "Si dejas el margen como viene, es el precio de tu lista tal cual. Si lo cambias, el precio se recalcula solo. También puedes escribir el precio final con IVA.";
+  pintar(datos);
+}
+
 function prepararClave(){
   var barra = document.getElementById("barraClave");
   var form  = document.getElementById("formClave");
@@ -961,6 +991,8 @@ document.addEventListener("DOMContentLoaded", function(){
       document.getElementById("subtitulo").textContent =
         n + " productos, en el orden pedido. Revísalos antes de abrir el cotizador.";
       if (datos.cliente) CLIENTE = datos.cliente;
+      // la nota ya la pinta refrescar() desde DATOS.nota; no hay que repetirla aquí
+      if (datos.sin_costos) { abreSinCostos(datos); return; }
       pintar(datos);
       prepararClave();
     })

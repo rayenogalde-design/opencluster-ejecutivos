@@ -2437,6 +2437,169 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
     });
     return empate ? '' : ganador;
   }
+  // ── LA SEGUNDA FUENTE DE COSTOS: todo lo que NO se le compra a Qinera ─────
+  // Rayen, 9-sep-2026: "los columpios y todo eso que no vende quién era, pero tenemos el costo,
+  // ponlo, lo necesito que me aparezca. No puede ser que haya una cotización donde me diga que
+  // el margen es incorrecto porque un producto no tiene costo."
+  // El archivo de Qinera solo tiene los 334 de su tarifa. Los columpios Southpaw, el saco
+  // propioceptivo, el balancín, los rodillos y hasta los computadores de una cotización tienen
+  // su costo en OTRO lado: su vista de administradora, que sale del maestro.
+  // IGUAL QUE LOS DE QINERA: ni una cifra vive en esta página (está publicada en internet).
+  // Se leen de sus archivos, quedan solo en este navegador. Dos archivos posibles:
+  //   · MisCostosYMargenes.html — su vista de administradora. Trae ~2.400 productos con su
+  //     código OC y su costo neto. Está en su computador y NO está publicada (va en .gitignore).
+  //   · Costos_Salas_FueraDeTarifa_<fecha>.txt — los 3 que no están en ninguna de las dos
+  //     fuentes anteriores, sacados de la hoja "Valores final" del Excel maestro de salas.
+  const COSTOS_OTROS_KEY = 'oct_salas_costos_otros_v1';
+  const COSTOS_OTROS_RUTA_ADM = 'C:\\Rayen\\OpenCluster\\Repos\\opencluster-ejecutivos\\MisCostosYMargenes.html';
+  const COSTOS_OTROS_RUTA_TXT = 'G:\\Mi unidad\\Claude Code Backup\\Claude Files\\Costos_Salas_FueraDeTarifa_2026-09-09.txt';
+  // Las tres, una por linea, para pegarlas de a una en el campo "Nombre" del buscador.
+  const _COSTOS_RUTAS_TXT = [COSTOS_RUTA, COSTOS_OTROS_RUTA_ADM, COSTOS_OTROS_RUTA_TXT].join('\n');
+  // clave -> { oc, sku, nombre, costoNeto, ventaNeto, fuente }
+  let MIS_COSTOS_OTROS = {};
+  const OTROS_POR_OC = {}, OTROS_POR_SKU = {}, OTROS_POR_NOMBRE = {};
+  var _OTROS_IDX = null;
+  function _otrosIndexar(){
+    [OTROS_POR_OC, OTROS_POR_SKU, OTROS_POR_NOMBRE].forEach(function(m){
+      Object.keys(m).forEach(function(k){ delete m[k]; });
+    });
+    _OTROS_IDX = null;
+    Object.keys(MIS_COSTOS_OTROS).forEach(function(k){
+      const d = MIS_COSTOS_OTROS[k];
+      if (!d || !(Number(d.costoNeto) > 0)) return;
+      if (d.oc && !OTROS_POR_OC[d.oc]) OTROS_POR_OC[d.oc] = d;
+      if (d.sku && !OTROS_POR_SKU[d.sku]) OTROS_POR_SKU[d.sku] = d;
+      const n = _claveNombre(d.nombre || '');
+      if (n && !OTROS_POR_NOMBRE[n]) OTROS_POR_NOMBRE[n] = d;
+    });
+  }
+  function _otrosCargar(){
+    try { MIS_COSTOS_OTROS = JSON.parse(localStorage.getItem(COSTOS_OTROS_KEY) || '{}') || {}; }
+    catch(e){ MIS_COSTOS_OTROS = {}; }
+    _otrosIndexar();
+    return Object.keys(MIS_COSTOS_OTROS).length;
+  }
+  function _otrosGuardar(){
+    try { localStorage.setItem(COSTOS_OTROS_KEY, JSON.stringify(MIS_COSTOS_OTROS)); return true; }
+    catch(e){ return false; }
+  }
+  function _otrosBorrar(){
+    MIS_COSTOS_OTROS = {};
+    _otrosIndexar();
+    try { localStorage.removeItem(COSTOS_OTROS_KEY); } catch(e){}
+  }
+  // ── Leer la vista de administradora ───────────────────────────────────────
+  // La página la genera el motor y deja sus productos en una sola línea:
+  //   const DATA = [{"codigo":"OC-0810","nombre":"…","sku":"OCTECH 503","costoNeto":<el costo>,…},…];
+  // Se saca esa línea y se parsea como JSON: es exacto, no adivina nada. Si el motor algún día
+  // cambia el nombre de la variable, esto devuelve null y la página lo DICE en vez de callarse.
+  // Los precios rob/eje vienen CON IVA (comprobado: el rob.v del OC-0810 es igual a su lista de
+  // clientes al 15%), así que la venta neta se saca dividiendo por 1,19. Solo se usa como
+  // último respaldo, cuando el producto no tiene precio en la página de Salas — que es
+  // exactamente el único caso en que la lista de precios sirve para lo sensorial.
+  function _otrosParsearVistaADM(texto){
+    const i = String(texto || '').indexOf('const DATA = [');
+    if (i < 0) return null;
+    const fin = texto.indexOf('\n', i);
+    const linea = texto.slice(i, fin < 0 ? texto.length : fin);
+    const m = linea.match(/^const DATA = (\[[\s\S]*\]);?\s*$/);
+    if (!m) return null;
+    let arr;
+    try { arr = JSON.parse(m[1]); } catch(e){ return null; }
+    if (!Array.isArray(arr)) return null;
+    const out = {};
+    arr.forEach(function(x){
+      if (!x) return;
+      const oc = String(x.codigo || '').trim();
+      const costo = Number(x.costoNeto) || 0;
+      if (!costo) return;                                  // sin costo no sirve
+      if (!/^OC-\d{3,5}$/.test(oc)) return;                // solo productos con código OC
+      const vIva = (x.eje && Number(x.eje.v)) || (x.rob && Number(x.rob.v)) || 0;
+      out[oc] = { oc: oc, sku: String(x.sku || '').trim(), nombre: String(x.nombre || '').trim(),
+                  costoNeto: Math.round(costo), ventaNeto: vIva ? Math.round(vIva / 1.19) : 0,
+                  fuente: 'tu vista de administradora' };
+    });
+    return Object.keys(out).length ? out : null;
+  }
+  // ── Leer el .txt de los que no están en ninguna de las dos listas ─────────
+  // Columnas: identificador (código OC o SKU) | nombre | costo NETO | venta NETA.
+  // Los valores ya vienen netos en el archivo, así que acá NO se divide por nada.
+  function _otrosParsearTxt(texto){
+    if (!/COSTOS OCT\s*[—-]\s*FUERA DE LA TARIFA/i.test(String(texto || ''))) return null;
+    const num = s => Number(String(s == null ? '' : s).replace(/[$\s]/g, '').replace(/,/g, '')) || 0;
+    const out = {};
+    String(texto).split(/\r?\n/).forEach(function(linea){
+      const c = linea.split('\t').map(x => String(x).trim());
+      if (c.length < 3) return;
+      const id = c[0];
+      if (!/^[A-Z]{2,}[-0-9]|^OC-\d{3,5}$/i.test(id)) return;
+      const costo = num(c[2]);
+      if (!costo) return;
+      const esOC = /^OC-\d{3,5}$/i.test(id);
+      out[id] = { oc: esOC ? id.toUpperCase() : '', sku: esOC ? '' : id,
+                  nombre: c[1] || '', costoNeto: Math.round(costo), ventaNeto: Math.round(num(c[3])),
+                  fuente: 'la hoja "Valores final" del Excel de salas' };
+    });
+    return Object.keys(out).length ? out : null;
+  }
+  // ── El costo de un producto en la segunda fuente ──────────────────────────
+  // Mismo criterio que en la primera: código OC → SKU → nombre con alias → conjunto de
+  // palabras, y las palabras SOLO si el ganador es único. Acá el pajar es más grande (2.400
+  // productos contra 334), así que el candado del ganador único importa más todavía.
+  function _otrosIndicePalabras(){
+    if (_OTROS_IDX) return _OTROS_IDX;
+    _OTROS_IDX = [];
+    Object.keys(MIS_COSTOS_OTROS).forEach(function(k){
+      const d = MIS_COSTOS_OTROS[k];
+      if (!d || !(Number(d.costoNeto) > 0)) return;
+      const t = _cpTokens(d.nombre || '');
+      if (t.size) _OTROS_IDX.push({ d: d, t: t });
+    });
+    return _OTROS_IDX;
+  }
+  function _otrosPorPalabras(nombre){
+    const a = _cpTokens(nombre);
+    if (a.size < 2) return null;
+    let mejor = 0, gan = null, empate = false;
+    _otrosIndicePalabras().forEach(function(e){
+      let inter = 0;
+      a.forEach(function(w){ if (e.t.has(w)) inter++; });
+      if (inter < 2) return;
+      const sc = (inter === a.size && inter === e.t.size) ? 3
+               : ((inter === a.size || inter === e.t.size) ? 2 : 0);
+      if (!sc) return;
+      if (sc > mejor) { mejor = sc; gan = e.d; empate = false; }
+      else if (sc === mejor && gan && e.d !== gan) empate = true;
+    });
+    return empate ? null : gan;
+  }
+  function _otrosDe(nombre, sku, oc){
+    if (!Object.keys(MIS_COSTOS_OTROS).length) return null;
+    if (oc && OTROS_POR_OC[oc]) return { d: OTROS_POR_OC[oc], como: 'código OC' };
+    if (sku && OTROS_POR_SKU[sku]) return { d: OTROS_POR_SKU[sku], como: 'SKU' };
+    // Equivalencia comprobada por código entre la bodega de salas y el maestro (tabla de abajo).
+    const ocBodega = sku ? _BODEGA_A_OC[sku] : '';
+    if (ocBodega && OTROS_POR_OC[ocBodega]) return { d: OTROS_POR_OC[ocBodega], como: 'código de bodega' };
+    // El SKU de la tarifa de Qinera lleva a su código OC, y con ese se busca en el maestro.
+    const ocDeSku = sku ? _ocDe(sku) : '';
+    if (ocDeSku && OTROS_POR_OC[ocDeSku]) return { d: OTROS_POR_OC[ocDeSku], como: 'código OC' };
+    const k = _claveNombre(nombre || '');
+    if (k && OTROS_POR_NOMBRE[k]) return { d: OTROS_POR_NOMBRE[k], como: 'nombre' };
+    const p = _otrosPorPalabras(nombre || '');
+    return p ? { d: p, como: 'palabras' } : null;
+  }
+  // Equivalencias bodega de salas -> código OC que están comprobadas POR CÓDIGO, no por
+  // parecido de nombre: el código BJ va dentro del nombre en la planilla INVENTARIO, y de ahí
+  // sale el SKU OCTECH y el código OC. Sin esto el "Balancín 120x30x60" de una cotización no
+  // llega nunca al "Balancín De Espuma" del maestro: no comparten ni una palabra útil.
+  // OJO: NO agregar acá nada que no esté comprobado por código. Dos que parecen calzar y NO
+  // calzan: BJ-EV120050 (Rulo 2 en 1) contra OCTECH 500, y BJ-EV0132 (Saco Cocoon) contra
+  // OCTECH 505 — los códigos son distintos, son productos distintos.
+  const _BODEGA_A_OC = {
+    'BJ-EV073B':  'OC-0155',   // Balancín 120x30x60 = Balancín De Espuma (OCTECH 580)
+    'BJ-EV150030':'OC-1662',   // Rodillo de presión = Rodillos De Presión (OCTECH 541)
+    'BJ-EV120040':'OC-0810'    // Columpio Plataforma De Balanceo (OCTECH 503) — NO la Modificada
+  };
   // ── EL COSTO DE UNA LÍNEA DE COTIZACIÓN ───────────────────────────────────
   // Rayen 9-sep-2026: "Ya no debería decirme que hay productos que no se les conoce el costo."
   // Antes el margen buscaba el costo por DOS vías (el SKU de la bodega de salas y el nombre con
@@ -2446,23 +2609,47 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
   //   verificados por Rayen / tarifa oficial (_skuFaltante) · 5. equivalencias que confirmó
   //   Rayen en StockAlias.js (su clave va SIN espacios, por eso antes no calzaba nunca)
   //   · 6. conjunto de palabras.
+  // Devuelve siempre { info, sku, oc, costoNeto, ventaNeto, como, fuente }. El costo va ya
+  // NETO y calculado según su fuente: los de Qinera pasan por _costoNetoDe (que divide por
+  // 1,19 solo los marítimos) y los de la segunda fuente ya vienen netos.
   function _costoLinea(nombre, s, ocPedido){
+    const q = _costoQineraLinea(nombre, s, ocPedido);
+    if (q) return q;
+    // Segunda fuente: lo que no se le compra a Qinera (columpios, sacos, computadores…).
+    const skuB = (s && s.sku) || _skuFaltante(nombre, s) || '';
+    const o = _otrosDe(nombre, skuB, ocPedido);
+    if (o && Number(o.d.costoNeto) > 0) {
+      return { info: null, sku: o.d.sku || skuB, oc: o.d.oc || _ocDe(skuB),
+               costoNeto: Math.round(Number(o.d.costoNeto)),
+               ventaNeto: Math.round(Number(o.d.ventaNeto) || 0),
+               como: o.como, fuente: o.d.fuente };
+    }
+    return { info: null, sku: skuB, oc: _ocDe(skuB), costoNeto: 0, ventaNeto: 0, como: '', fuente: '' };
+  }
+  // Las seis vías contra la tarifa de Qinera. Devuelve null si ninguna la encuentra.
+  function _costoQineraLinea(nombre, s, ocPedido){
+    const ok = function(sku, como){
+      const info = MIS_COSTOS[sku];
+      return { info: info, sku: sku, oc: _ocDe(sku), costoNeto: _costoNetoDe(info),
+               ventaNeto: Math.round(Number(info.ventaNeto) || 0),
+               como: como, fuente: 'la tarifa de Qinera' };
+    };
     let sku;
     if (ocPedido && _ocASku()[ocPedido]) {
       sku = _ocASku()[ocPedido];
-      if (MIS_COSTOS[sku]) return { info: MIS_COSTOS[sku], sku: sku, como: 'código OC' };
+      if (MIS_COSTOS[sku]) return ok(sku, 'código OC');
     }
-    if (s && s.sku && MIS_COSTOS[s.sku]) return { info: MIS_COSTOS[s.sku], sku: s.sku, como: 'SKU de bodega' };
+    if (s && s.sku && MIS_COSTOS[s.sku]) return ok(s.sku, 'SKU de bodega');
     const k = _claveNombre(nombre);
     const s3 = k ? MIS_COSTOS_POR_NOMBRE[k] : '';
-    if (s3 && MIS_COSTOS[s3]) return { info: MIS_COSTOS[s3], sku: s3, como: 'nombre' };
+    if (s3 && MIS_COSTOS[s3]) return ok(s3, 'nombre');
     sku = _skuFaltante(nombre, s);
-    if (sku && MIS_COSTOS[sku]) return { info: MIS_COSTOS[sku], sku: sku, como: 'SKU de la tarifa' };
+    if (sku && MIS_COSTOS[sku]) return ok(sku, 'SKU de la tarifa');
     const ali = (window.STOCK_ALIAS_SKU || {})[_normTightJS(nombre)];
-    if (ali && MIS_COSTOS[ali]) return { info: MIS_COSTOS[ali], sku: ali, como: 'equivalencia confirmada' };
+    if (ali && MIS_COSTOS[ali]) return ok(ali, 'equivalencia confirmada');
     sku = _cpBuscar(nombre);
-    if (sku && MIS_COSTOS[sku]) return { info: MIS_COSTOS[sku], sku: sku, como: 'palabras' };
-    return { info: null, sku: (s && s.sku) || '', como: '' };
+    if (sku && MIS_COSTOS[sku]) return ok(sku, 'palabras');
+    return null;
   }
   // Copiar sin la API moderna (por si el navegador la bloquea): campo oculto + execCommand.
   function _copiarAlPortapapelesViejo(texto, alTerminar){
@@ -2512,6 +2699,19 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
         req.onerror = function(){ res(null); };
       });
     }).catch(function(){ return null; });
+  }
+  // Rayen 9-sep-2026: ahora son DOS archivos de costos (la tarifa de Qinera y su vista de
+  // administradora, más el .txt de los que no están en ninguna de las dos). Antes se recordaba
+  // uno solo. Se guardan como lista y lo viejo se sigue leyendo: si en la base quedó un handle
+  // suelto de antes, se envuelve en lista y sigue funcionando sin pedirle nada.
+  function _costosHandlesLeer(){
+    return _costosHandleLeer().then(function(h){
+      if (!h) return [];
+      return Array.isArray(h) ? h.filter(Boolean) : [h];
+    });
+  }
+  function _costosHandlesGuardar(lista){
+    return _costosHandleGuardar((lista || []).filter(Boolean));
   }
   function _costosHandleOlvidar(){
     COSTOS_HANDLE = null;
@@ -2568,15 +2768,19 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
       ? '<span class="costos-ok">Archivo recordado: ' + (COSTOS_HANDLE.name || 'el de siempre') +
         ' — apretar "Cargar mis costos" lo relee solo</span> '
       : '';
+    const nOtros = Object.keys(MIS_COSTOS_OTROS).length;
     cont.innerHTML = (n
-      ? '<span class="costos-ok">Costos cargados: ' + n + ' productos</span> ' +
-        '<button type="button" class="costos-mini" id="costos-quitar">Quitar de este computador</button>'
-      : '<span class="costos-no">Sin costos cargados — el Excel saldrá sin valores</span>')
+      ? '<span class="costos-ok">Tarifa de Qinera: ' + n + ' productos</span> '
+      : '<span class="costos-no">Tarifa de Qinera: sin cargar</span> ')
+      + (nOtros
+      ? '<span class="costos-ok">Los demás (tu vista de administradora): ' + nOtros + ' productos</span> '
+      : '<span class="costos-no">Los demás: sin cargar — los columpios, sacos y computadores van a salir "sin costo"</span> ')
+      + ((n || nOtros) ? '<button type="button" class="costos-mini" id="costos-quitar">Quitar de este computador</button>' : '')
       + (recordado ? '<br>' + recordado : '');
     const q = document.getElementById('costos-quitar');
     if (q) q.onclick = function(){
-      if (!confirm('¿Quitar los costos guardados en este computador? Podrás volver a cargarlos cuando quieras.')) return;
-      _costosBorrar(); _costosEstado(); _mgpPintar();
+      if (!confirm('¿Quitar los DOS archivos de costos guardados en este computador (la tarifa de Qinera y los demás)? Podrás volver a cargarlos cuando quieras.')) return;
+      _costosBorrar(); _otrosBorrar(); _costosEstado(); _mgpPintar();
     };
   }
   // Conecta el boton y el selector de archivo. Se llama en cada repintado del comparador.
@@ -2589,48 +2793,95 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
       btnRuta.dataset.listo = '1';
       btnRuta.onclick = function(){
         const avisar = () => {
-          btnRuta.textContent = 'Ruta copiada ✓';
-          setTimeout(() => { btnRuta.textContent = 'Copiar la ruta del archivo'; }, 2500);
+          btnRuta.textContent = 'Rutas copiadas ✓';
+          setTimeout(() => { btnRuta.textContent = 'Copiar las rutas'; }, 2500);
         };
         if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(COSTOS_RUTA).then(avisar, () => _copiarAlPortapapelesViejo(COSTOS_RUTA, avisar));
-        } else _copiarAlPortapapelesViejo(COSTOS_RUTA, avisar);
+          navigator.clipboard.writeText(_COSTOS_RUTAS_TXT).then(avisar, () => _copiarAlPortapapelesViejo(_COSTOS_RUTAS_TXT, avisar));
+        } else _copiarAlPortapapelesViejo(_COSTOS_RUTAS_TXT, avisar);
       };
     }
     if (!btn || !inp || btn.dataset.listo) return;
     btn.dataset.listo = '1';
 
     // Un solo lugar donde se interpreta el archivo, lo abra como lo abra.
-    function _costosAplicarTexto(texto, recordado){
+    // Un archivo puede ser cualquiera de los tres. Se reconoce por el CONTENIDO, no por el
+    // nombre, así da igual dónde lo tenga guardado o cómo se llame:
+    //   · su vista de administradora (MisCostosYMargenes.html) -> segunda fuente, por código OC
+    //   · el .txt "FUERA DE LA TARIFA"                          -> segunda fuente, por SKU
+    //   · el .txt de la tarifa de Qinera                        -> primera fuente
+    // Devuelve el texto de lo que cargó, o '' si no reconoció nada.
+    function _costosAplicarUno(texto){
+      const adm = _otrosParsearVistaADM(texto);
+      if (adm) {
+        Object.keys(adm).forEach(function(k){ MIS_COSTOS_OTROS[k] = adm[k]; });
+        _otrosIndexar(); _otrosGuardar();
+        return Object.keys(adm).length + ' productos de tu vista de administradora';
+      }
+      const extra = _otrosParsearTxt(texto);
+      if (extra) {
+        Object.keys(extra).forEach(function(k){ MIS_COSTOS_OTROS[k] = extra[k]; });
+        _otrosIndexar(); _otrosGuardar();
+        return Object.keys(extra).length + ' productos que no están en ninguna de las dos listas';
+      }
       const datos = _costosParsear(texto);
-      const n = Object.keys(datos).length;
-      if (!n) {
-        alert('No encontré costos en ese archivo.\n\nDebe ser el archivo de la lista de Qinera, con cada producto en una línea: el código, el nombre y los valores separados por tabuladores.');
+      const nd = Object.keys(datos).length;
+      // Este archivo REEMPLAZA la tarifa completa, no la completa. Si trae un puñado de
+      // filas es que se eligio el archivo equivocado: mejor no tocar nada que dejarla con
+      // 3 costos y 331 huecos.
+      if (nd && nd < 50 && Object.keys(MIS_COSTOS).length >= 50) {
+        alert('Ese archivo trae solo ' + nd + ' productos y la tarifa de Qinera que ya tienes ' +
+              'cargada trae ' + Object.keys(MIS_COSTOS).length + '.\n\nNo lo apliqué para no ' +
+              'dejarte sin los costos que ya tenías. Si de verdad querías reemplazarla, aprieta ' +
+              'primero "Quitar de este computador" y vuelve a cargarla.');
+        return '';
+      }
+      if (nd) {
+        MIS_COSTOS = datos;
+        _costosIndexar(); _costosGuardar();
+        return nd + ' productos de la tarifa de Qinera';
+      }
+      return '';
+    }
+    // Aplica uno o varios archivos y avisa UNA sola vez.
+    function _costosAplicarTextos(textos, recordado){
+      const hechos = [];
+      (textos || []).forEach(function(x){ const r = _costosAplicarUno(x); if (r) hechos.push(r); });
+      if (!hechos.length) {
+        alert('No encontré costos en ese archivo.\n\nTiene que ser uno de estos tres:\n\n' +
+          '· tu vista de administradora, ' + COSTOS_OTROS_RUTA_ADM + '\n' +
+          '· la tarifa de Qinera, ' + COSTOS_RUTA + '\n' +
+          '· ' + COSTOS_OTROS_RUTA_TXT);
         return false;
       }
-      MIS_COSTOS = datos;
-      _costosIndexar();
-      const ok = _costosGuardar();
       _costosEstado(); _mgpPintar();
-      alert('Listo: ' + n + ' productos con costo.' +
-        (ok ? '\n\nQuedaron guardados en este computador, así que no te los voy a pedir de nuevo.'
-            : '\n\nOJO: no pude guardarlos en este navegador, así que habrá que cargarlos de nuevo la próxima vez.') +
-        (recordado ? '\n\nY me quedé con el archivo: la próxima vez es un solo clic, sin buscarlo.' : ''));
+      alert('Listo: ' + hechos.join(' y ') + '.' +
+        '\n\nQuedaron guardados en este computador, así que no te los voy a pedir de nuevo.' +
+        (recordado ? '\n\nY me quedé con los archivos: la próxima vez es un solo clic, sin buscarlos.' : ''));
       return true;
     }
+    function _costosAplicarTexto(texto, recordado){ return _costosAplicarTextos([texto], recordado); }
 
     // Leer por el archivo recordado. Devuelve false si no hay o si el permiso no se dio.
     async function _costosDesdeHandle(){
       try {
-        if (!COSTOS_HANDLE) COSTOS_HANDLE = await _costosHandleLeer();
-        if (!COSTOS_HANDLE || !COSTOS_HANDLE.queryPermission) return false;
-        let permiso = await COSTOS_HANDLE.queryPermission({ mode:'read' });
-        if (permiso === 'prompt') permiso = await COSTOS_HANDLE.requestPermission({ mode:'read' });
-        if (permiso !== 'granted') return false;
-        const file = await COSTOS_HANDLE.getFile();
-        return _costosAplicarTexto(await file.text(), false);
+        let lista = await _costosHandlesLeer();
+        if (!lista.length) return false;
+        const textos = [], vivos = [];
+        for (const h of lista) {
+          if (!h || !h.queryPermission) continue;
+          let permiso = await h.queryPermission({ mode:'read' });
+          if (permiso === 'prompt') permiso = await h.requestPermission({ mode:'read' });
+          if (permiso !== 'granted') continue;
+          try { const f = await h.getFile(); textos.push(await f.text()); vivos.push(h); }
+          catch(e){ /* ese archivo se movió: se cae de la lista y se sigue con los otros */ }
+        }
+        if (!textos.length) { await _costosHandleOlvidar(); return false; }
+        // Si alguno se perdió, se guarda la lista con los que quedaron vivos.
+        if (vivos.length !== lista.length) await _costosHandlesGuardar(vivos);
+        COSTOS_HANDLE = vivos[0] || null;
+        return _costosAplicarTextos(textos, false);
       } catch(e){
-        // Archivo movido, renombrado o permiso revocado: se olvida y se vuelve a pedir.
         await _costosHandleOlvidar();
         return false;
       }
@@ -2638,19 +2889,33 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
 
     // Elegir el archivo. Con la API moderna el navegador se queda con la referencia y
     // recuerda además la carpeta (id), así no hay que empezar de cero cada vez.
+    // Se pueden elegir los DOS de una vez (Ctrl y clic en cada uno). Acepta el .html de su
+    // vista de administradora además de los .txt.
     async function _costosElegir(){
       if (!window.showOpenFilePicker) { inp.click(); return; }
       try {
-        const [handle] = await window.showOpenFilePicker({
+        const handles = await window.showOpenFilePicker({
           id: 'oct-costos-salas',
-          multiple: false,
-          types: [{ description: 'Lista de costos (texto)', accept: { 'text/plain': ['.txt', '.tsv', '.csv'] } }]
+          multiple: true,
+          types: [{ description: 'Costos (tu vista de administradora o una lista de texto)',
+                    accept: { 'text/plain': ['.txt', '.tsv', '.csv'], 'text/html': ['.html', '.htm'] } }]
         });
-        if (!handle) return;
-        const file = await handle.getFile();
-        if (_costosAplicarTexto(await file.text(), true)) {
-          COSTOS_HANDLE = handle;
-          await _costosHandleGuardar(handle);
+        if (!handles || !handles.length) return;
+        const textos = [];
+        for (const h of handles) { const f = await h.getFile(); textos.push(await f.text()); }
+        if (_costosAplicarTextos(textos, true)) {
+          // Se suman a los que ya estaban recordados, sin repetir el mismo archivo.
+          const previos = await _costosHandlesLeer();
+          const juntos = previos.slice();
+          for (const h of handles) {
+            let repetido = false;
+            for (const p of previos) {
+              try { if (p && p.isSameEntry && await p.isSameEntry(h)) { repetido = true; break; } } catch(e){}
+            }
+            if (!repetido) juntos.push(h);
+          }
+          await _costosHandlesGuardar(juntos);
+          COSTOS_HANDLE = juntos[0] || null;
           _costosEstado(); _mgpPintar();
         }
       } catch(e){ /* el usuario cerró el buscador de archivos */ }
@@ -2667,12 +2932,15 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
       btnOtro.onclick = async function(){ await _costosHandleOlvidar(); await _costosElegir(); };
     }
     inp.onchange = function(){
-      const file = inp.files && inp.files[0];
-      if (!file) return;
-      const lector = new FileReader();
-      lector.onload = function(){ _costosAplicarTexto(lector.result, false); };
-      lector.onerror = function(){ alert('No pude leer el archivo.'); };
-      lector.readAsText(file, 'utf-8');
+      const files = Array.prototype.slice.call(inp.files || []);
+      if (!files.length) return;
+      let quedan = files.length; const textos = [];
+      files.forEach(function(file){
+        const lector = new FileReader();
+        lector.onload = function(){ textos.push(lector.result); if (!--quedan) _costosAplicarTextos(textos, false); };
+        lector.onerror = function(){ if (!--quedan) { if (textos.length) _costosAplicarTextos(textos, false); else alert('No pude leer el archivo.'); } };
+        lector.readAsText(file, 'utf-8');
+      });
       inp.value = '';
     };
     // Mostrar en el estado si ya hay un archivo recordado.
@@ -2680,6 +2948,7 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
     _costosEstado(); _mgpPintar();
   }
   _costosCargar();
+  _otrosCargar();
   _mgpWire();
   const _btnGan = document.getElementById('cotiz-excel-ganancias');
   if (_btnGan) _btnGan.addEventListener('click', () => {
@@ -3427,8 +3696,9 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
     }
     if (!Object.keys(MIS_COSTOS).length) {
       cont.innerHTML = '<div class="costos-caja"><div class="costos-caja-t">Faltan tus costos para calcular el margen</div>' +
-        '<p class="costos-caja-p">Las ventas están registradas, pero sin el archivo de costos no puedo decirte cuánto ganaste. ' +
-        'Cárgalo en la pestaña <strong>Comparar cotizaciones</strong>, botón <strong>Cargar mis costos</strong>.</p></div>';
+        '<p class="costos-caja-p">Las ventas están registradas, pero sin tus archivos de costos no puedo decirte cuánto ganaste. ' +
+        'Cárgalos en la pestaña <strong>Comparar cotizaciones</strong>, botón <strong>Cargar mis costos</strong> — son dos: la tarifa de ' +
+        'Qinera y tu vista de administradora.</p></div>';
       return;
     }
 
@@ -3507,7 +3777,7 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
               '<span class="num">Venta</span><span class="num">Costo</span><span class="num">Margen</span></div>' +
             v.m.filas.map(function(f){
               return '<div class="mg-prod"><span>' + escapeHtmlSafe(f.display) + '</span>' +
-                '<span title="' + escapeHtmlSafe(f.sku ? f.sku + (f.como ? ' — encontrado por ' + f.como : '') : 'no se pudo identificar') + '">' +
+                '<span title="' + escapeHtmlSafe((f.sku || f.oc || 'sin código') + (f.como ? ' — encontrado por ' + f.como : '') + (f.fuente ? ' · costo de ' + f.fuente : '')) + '">' +
                   (f.oc ? escapeHtmlSafe(f.oc) : (f.sku ? escapeHtmlSafe(f.sku) : '<span class="sinc">?</span>')) + '</span>' +
                 '<span class="num">x' + f.qty + '</span>' +
                 '<span class="num">' + (f.sinPrecio ? '<span class="sinc">sin precio</span>' : _clp(f.venta)) + '</span>' +
@@ -3687,11 +3957,14 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
       // El costo neto lo resuelve _costoNetoDe: divide por 1,19 solo los marítimos.
       // Respaldo de la venta, solo si el catálogo no tiene ese nombre: la venta neta del mismo
       // archivo. Cruza por nombre con alias donde el catálogo por SKU no llega.
-      if (!unit && info && Number(info.ventaNeto)) unit = Math.round(Number(info.ventaNeto));
+      // Último respaldo del precio: la venta que trae la propia fuente del costo. Para lo
+      // sensorial manda el precio de la página de Salas y esto NO lo pisa: solo entra cuando
+      // Salas no tiene precio, que es el único caso en que la lista sirve para lo sensorial.
+      if (!unit && Number(res.ventaNeto)) unit = Math.round(Number(res.ventaNeto));
       const lista  = unit * p.qty;
-      const costoU = _costoNetoDe(info);
+      const costoU = Number(res.costoNeto) || 0;
       const costoL = costoU * p.qty;
-      const ocL    = _ocDe(skuOk);
+      const ocL    = res.oc || _ocDe(skuOk);
       listaTot += lista;
       if (costoU) costoTot += costoL;
       else { sinCosto.push(p.display); sinCostoDet.push({ nombre: p.display, sku: skuOk, oc: ocL, qty: p.qty }); listaSinCosto += lista; }
@@ -3700,7 +3973,7 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
       // un precio. Caso visto el 28-ago en Pica (Tubo de Burbujas Pequeno).
       if (!lista) { sinPrecio.push(p.display); costoSinPrecio += costoL; }
       filas.push({ display: p.display, qty: p.qty, lista: lista, costo: costoL,
-                   sku: skuOk, oc: ocL, como: res.como,
+                   sku: skuOk, oc: ocL, como: res.como, fuente: res.fuente,
                    sinCosto: !costoU, sinPrecio: !lista });
     });
     const netoReg  = Number(c.neto) || 0;
@@ -3722,6 +3995,20 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
     };
   }
 
+  // Qué falta para poder calcular el margen. Devuelve '' si no falta nada.
+  // Rayen 9-sep-2026: son DOS archivos y hay que decirle CUÁL le falta, no "carga tus costos".
+  function _costosQueFalta(){
+    const hayQin = Object.keys(MIS_COSTOS).length > 0;
+    const hayOtros = Object.keys(MIS_COSTOS_OTROS).length > 0;
+    if (hayQin && hayOtros) return '';
+    const donde = ' Se cargan más abajo en esta misma pestaña, botón <strong>Cargar mis costos</strong>. ' +
+      'No viven en esta página (está publicada en internet): se leen de tus archivos y se quedan solo en este navegador.';
+    if (!hayQin && !hayOtros)
+      return 'Faltan tus <strong>dos archivos de costos</strong>: la tarifa de Qinera y tu vista de administradora.' + donde;
+    if (!hayQin)
+      return 'Tienes cargada tu vista de administradora, pero <strong>falta la tarifa de Qinera</strong>, que es la de casi todos los productos de sala. Sin ella el margen saldría inventado, así que no lo muestro.' + donde;
+    return 'Tienes cargada la tarifa de Qinera, pero <strong>falta tu vista de administradora</strong>: sin ella los columpios, los sacos, el balancín y los computadores salen "sin costo" y el margen queda más alto que el real.' + donde;
+  }
   // ── MARGEN DE LAS COTIZACIONES MARCADAS (Rayen 9-sep-2026) ────────────────
   // "Necesito que los márgenes aparezcan muy claros cuando tengo cotizaciones al 90% y al 50%
   // y las marco." Antes el margen solo se veía entrando a cada cotización una por una. Esto es
@@ -3731,9 +4018,7 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
     if (!sel || !sel.length) return '';
     if (!Object.keys(MIS_COSTOS).length) {
       return '<div class="mgm-caja"><div class="mgm-tit">Margen de las ' + sel.length + ' cotizaciones marcadas</div>' +
-        '<p class="mg-nota">Para verlo hay que cargar tus costos una vez en este computador: más abajo en esta ' +
-        'misma pestaña, botón <strong>Cargar mis costos</strong>. Los costos no viven en esta página ' +
-        '(está publicada en internet): se leen de tu archivo del Drive y se quedan solo en este navegador.</p></div>';
+        '<p class="mg-alerta">' + _costosQueFalta() + '</p></div>';
     }
     const pct = n => (Math.round(n * 10) / 10).toFixed(1).replace('.', ',');
     let tVenta = 0, tCosto = 0, tInst = 0, tSinCosto = 0;
@@ -3823,6 +4108,7 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
       '<table class="mgm-tabla"><thead><tr><th>N°</th><th>Institución</th><th>Prob.</th>' +
         '<th>Venta neta</th><th>Costo</th><th>Margen $</th><th>Margen %</th><th>Instalación</th>' +
       '</tr></thead><tbody>' + cuerpo + total + '</tbody></table>' +
+      (Object.keys(MIS_COSTOS_OTROS).length ? '' : '<p class="mg-alerta">' + _costosQueFalta() + '</p>') +
       notaPerdida + aviso + notaSinProd +
       '<p class="mg-nota">La venta es el neto que quedó registrado en el CRM, así que el descuento del ' +
       'ejecutivo ya viene descontado. El costo es el de tu archivo. La instalación, el transporte y la ' +
@@ -3834,10 +4120,7 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
   function _bloqueMargenHTML(c){
     if (!Object.keys(MIS_COSTOS).length) {
       return '<div class="mg-caja"><div class="mg-tit">Margen de la venta</div>' +
-        '<p class="mg-nota">Para verlo hay que cargar tus costos una vez en este computador: pestaña ' +
-        '<strong>Pedido / faltantes</strong>, botón <strong>Cargar mis costos</strong>. Los costos no viven ' +
-        'en esta página (está publicada en internet): se leen de tu archivo del Drive y se quedan solo ' +
-        'en este navegador.</p></div>';
+        '<p class="mg-alerta">' + _costosQueFalta() + '</p></div>';
     }
     const m = _margenCotiz(c);
     if (!m.filas.length) return '';
@@ -3879,7 +4162,7 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
 
     const filasProd = m.filas.map(f =>
       '<div class="mg-prod"><span>' + escapeHtmlSafe(f.display) + '</span>' +
-      '<span title="' + escapeHtmlSafe(f.sku ? f.sku + (f.como ? ' — encontrado por ' + f.como : '') : 'no se pudo identificar') + '">' +
+      '<span title="' + escapeHtmlSafe((f.sku || f.oc || 'sin código') + (f.como ? ' — encontrado por ' + f.como : '') + (f.fuente ? ' · costo de ' + f.fuente : '')) + '">' +
         (f.oc ? escapeHtmlSafe(f.oc) : (f.sku ? escapeHtmlSafe(f.sku) : '<span class="sinc">?</span>')) + '</span>' +
       '<span class="num">x' + f.qty + '</span>' +
       '<span class="num">' + (f.sinPrecio ? '<span class="sinc">sin precio</span>' : _clp(f.venta)) + '</span>' +
@@ -4939,19 +5222,24 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
       // Costos para el Excel del pedido. No viven en esta página (es pública): se cargan del
       // computador de Rayen y quedan guardados solo en su navegador.
       '<div class="costos-caja">' +
-        '<div class="costos-caja-t">Costos para tu Excel del pedido</div>' +
-        '<p class="costos-caja-p">Los costos <strong>no están en esta página</strong> (está publicada en internet). Cárgalos una vez desde tu archivo del Drive y quedan guardados en este computador: de ahí en adelante tu Excel de faltantes sale con lo que te cuesta cada producto y con el total del pedido.</p>' +
+        '<div class="costos-caja-t">Tus costos: el margen y el Excel del pedido</div>' +
+        '<p class="costos-caja-p">Los costos <strong>no están en esta página</strong> (está publicada en internet). Se cargan una vez desde tus archivos y quedan guardados en este computador: de ahí en adelante el margen de cada cotización y el Excel del pedido salen con lo que te cuesta cada producto.</p>' +
+        '<p class="costos-caja-p">Son <strong>dos archivos</strong> y conviene cargar los dos: la <strong>tarifa de Qinera</strong> (los 334 productos que le compras a ellos) y tu <strong>vista de administradora</strong> (todo lo demás — los columpios, los sacos, el balancín, los computadores). Con uno solo, lo del otro sale <em>sin costo</em> y el margen queda mal. Se pueden elegir los dos de una vez: en el buscador de archivos, clic en uno y <strong>Ctrl+clic</strong> en el otro.</p>' +
         '<button type="button" class="btn-secundario" id="costos-cargar">Cargar mis costos</button> ' +
         // Rayen 2026-08-17: buscar el archivo carpeta por carpeta es lento (lo buscó en
         // OpenCluster\\Productos, donde no está). Con la ruta copiada se pega en el campo
         // "Nombre" del buscador de archivos y se abre directo.
         '<button type="button" class="btn-secundario" id="costos-otro">Elegir otro archivo</button> ' +
-        '<button type="button" class="btn-secundario" id="costos-ruta">Copiar la ruta del archivo</button>' +
-        '<input type="file" id="costos-archivo" accept=".txt,.tsv,.csv,text/plain" style="display:none;">' +
+        '<button type="button" class="btn-secundario" id="costos-ruta">Copiar las rutas</button>' +
+        '<input type="file" id="costos-archivo" multiple accept=".txt,.tsv,.csv,.html,.htm,text/plain,text/html" style="display:none;">' +
         '<div id="costos-estado" class="costos-estado"></div>' +
         // Rayen 17-ago-2026: la primera vez hay que ir a buscarlo una sola vez; después el
         // navegador se queda con el archivo y "Cargar mis costos" lo relee sin preguntar nada.
-        '<p class="costos-caja-p" style="margin-top:0.5rem;"><strong>La primera vez</strong> hay que ir a buscar el archivo una sola vez: aprieta <strong>Copiar la ruta</strong>, después <strong>Cargar mis costos</strong>, y en el buscador de archivos pega la ruta con Ctrl+V en el campo <em>Nombre</em> y dale Abrir. Es este archivo:<br><code>' + COSTOS_RUTA + '</code><br><strong>Después</strong> queda recordado: apretar <strong>Cargar mis costos</strong> lo relee del Drive de una, sin buscar nada. Si algún día cambias de archivo, usa <strong>Elegir otro archivo</strong>.</p>' +
+        '<p class="costos-caja-p" style="margin-top:0.5rem;"><strong>La primera vez</strong> hay que ir a buscarlos una sola vez: aprieta <strong>Copiar las rutas</strong>, después <strong>Cargar mis costos</strong>, y en el buscador de archivos pega una ruta con Ctrl+V en el campo <em>Nombre</em> y dale Abrir; repite para la otra. Son estos:</p>' +
+        '<p class="costos-caja-p" style="margin:0.2rem 0 0;">1. La tarifa de Qinera:<br><code>' + COSTOS_RUTA + '</code></p>' +
+        '<p class="costos-caja-p" style="margin:0.35rem 0 0;">2. Tu vista de administradora (todo lo que no es de Qinera):<br><code>' + COSTOS_OTROS_RUTA_ADM + '</code></p>' +
+        '<p class="costos-caja-p" style="margin:0.35rem 0 0;">3. Y este, con los 3 que no están en ninguna de las dos (kit de bola de espejos, escalera grande, columpio cuddle):<br><code>' + COSTOS_OTROS_RUTA_TXT + '</code></p>' +
+        '<p class="costos-caja-p" style="margin-top:0.4rem;"><strong>Después</strong> quedan recordados: apretar <strong>Cargar mis costos</strong> los relee todos de una, sin buscar nada. Si algún día cambia alguno, usa <strong>Elegir otro archivo</strong>.</p>' +
       '</div>' +
       botonCorreo +
       // Agregar productos a mano (Rayen 2026-08-17): el pedido no es solo lo que piden las

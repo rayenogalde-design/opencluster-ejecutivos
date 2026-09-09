@@ -96,8 +96,20 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
 .campo h4{margin:0 0 5px;font-size:9.5px;letter-spacing:1.6px;text-transform:uppercase;
   color:var(--gris-cl);font-weight:700}
 .campo p{margin:0;font-size:13.7px;line-height:1.62;color:#33415C}
-.enum{font-size:13.7px;line-height:1.68;color:#33415C}
-.enum i{font-style:normal;color:var(--naranjo);padding:0 5px}
+/* Rayen 09-sep-2026: "siempre les poniamos unas bullet bien bonitas a estas cosas".
+   La vineta es un SVG inline, como en las fichas del design system: nunca un emoji,
+   y en papel sale igual que en pantalla. */
+.vin-ic{display:block;width:17px;height:17px;margin-top:1px;background:#E9F5FE;border-radius:50%}
+.vin-ic svg{display:block;width:11px;height:11px;margin:3px;fill:none;stroke:var(--celeste-h);
+  stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
+.vin{list-style:none;margin:0;padding:0}
+.vin li{display:grid;grid-template-columns:17px 1fr;gap:9px;align-items:start;
+  font-size:13.7px;line-height:1.5;color:#33415C;margin-bottom:6px;break-inside:avoid}
+.vin li:last-child{margin-bottom:0}
+/* Dos columnas solo en los campos que ocupan el ancho completo: dentro de una
+   columna estrecha partirian las palabras. */
+.vin.dos{columns:2;column-gap:30px}
+@media (max-width:760px){ .vin.dos{columns:1} }
 
 /* tabla de especificaciones: lo propio de una ficha técnica */
 .specs{border-top:1px solid var(--regla);margin-top:4px}
@@ -267,11 +279,30 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
     return html;
   }
 
+  /* La lista con vineta. «ancho» dice si el campo ocupa toda la hoja: solo ahi caben
+     dos columnas. El SVG va inline y el CSS decide como se ve. */
+  var VIN = '<span class="vin-ic"><svg viewBox="0 0 24 24" aria-hidden="true">'+
+            '<polyline points="20 6 9 17 4 12"/></svg></span>';
+  function lista(p, ancho){
+    var cls = (ancho && p.length >= 4) ? "vin dos" : "vin";
+    return '<ul class="'+cls+'">'+p.map(function(x){
+      return '<li>'+VIN+'<span>'+esc(x)+'</span></li>';
+    }).join('')+'</ul>';
+  }
+  /* "Que incluye la entrega" llega como un texto con comas. Se parte en vinetas solo si
+     de verdad es una enumeracion: tres piezas o mas y ninguna sospechosamente corta. */
+  function incluye(t){
+    if(!t) return '';
+    var s = String(t).trim().replace(/.$/, '');
+    var p = s.split(',').map(function(x){ return x.trim(); }).filter(Boolean);
+    if(p.length < 3 || p.some(function(x){ return x.length < 4; })) return '<p>'+esc(s)+'.</p>';
+    return lista(p, true);
+  }
   function enumera(t){
     if(!t) return '';
     var p = String(t).split('·').map(function(x){return x.trim().replace(/\.$/,'');}).filter(Boolean);
     if(p.length < 2) return '<p>'+esc(t)+'</p>';
-    return '<div class="enum">'+p.map(esc).join('<i>·</i>')+'</div>';
+    return lista(p, false);
   }
   function campo(t,c,cl){ return c ? '<div class="campo '+(cl||'')+'"><h4>'+t+'</h4>'+c+'</div>' : ''; }
 
@@ -296,7 +327,7 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
         '<div class="par">'+
           campo('Qué se trabaja con él', enumera(d.trab))+
           campo('Indicado para', enumera(d.ind))+
-          campo('Qué incluye la entrega', d.inc ? '<p>'+esc(d.inc)+'</p>' : '', 'ancho')+
+          campo('Qué incluye la entrega', incluye(d.inc), 'ancho')+
         '</div>'+
         campo('Características técnicas', specs(unir(d.tec,d.cat)), 'ancho')+
       '</div></div>';

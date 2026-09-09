@@ -59,7 +59,11 @@ window.SALAS_CATALOGO = {"BJ-EXPRX12":{"n":"12 tarjetas y 12 pegatinas adicional
       const precio = (it.precio!=null && it.precio!=="") ? it.precio : (c.p||0);
       const nombre = it.nombre || c.n || it.sku;
       const img = it.img || c.img || "";
-      return { nombre:nombre, desc:"", cant:String(it.cant||1), precio:String(precio), modo:"iva", zoom:100, img:absImg(img) };
+      /* 09-sep-2026 - el codigo VIAJA con el producto. Antes el payload era solo el nombre:
+         si alguien editaba el nombre en el cotizador se perdia el cruce, y el costo y el
+         margen salian mal. El codigo OC no se edita, asi que identifica el producto igual. */
+      return { nombre:nombre, desc:"", cant:String(it.cant||1), precio:String(precio), modo:"iva", zoom:100, img:absImg(img),
+               sku:it.sku||"", codigo:window.SALAS_codigoDe(it.sku) };
     }).filter(function(p){ return p.nombre; });
     if(!productos.length){ alert("No hay productos seleccionados."); return false; }
     const payload = { _origen:"salas", productos:productos };
@@ -68,6 +72,50 @@ window.SALAS_CATALOGO = {"BJ-EXPRX12":{"n":"12 tarjetas y 12 pegatinas adicional
     try{ localStorage.setItem("oc_sala_pendiente", JSON.stringify(payload)); }
     catch(e){ alert("No se pudo preparar la cotizacion (memoria del navegador llena)."); return false; }
     window.open("CotizadorOpenCluster.html", "_blank");
+    return true;
+  };
+
+  /* Codigo OC de NUESTRA lista de precios a partir del SKU de Qinera. El mapa vive en
+     SalasCodigosOC.js (334 codigos, generado con gen_salas_codigos_oc.js desde el motor
+     de listas). Si la pagina no carga ese archivo, devuelve "" y nada se rompe. */
+  /* El mapa se carga solo, para que TODAS las paginas de salas (Stock, Armador y las
+     que vengan) manden el codigo sin tener que tocarlas una por una. El guard de
+     «document» es porque el motor de listas ejecuta este archivo en Node para leer
+     los precios: sin el guard reventaria y se perderian los precios de Salas. */
+  if(typeof document !== "undefined" && !window.SALAS_OC){
+    try{
+      var _s = document.createElement("script");
+      _s.src = "SalasCodigosOC.js"; _s.async = false;
+      document.head.appendChild(_s);
+    }catch(e){}
+  }
+
+  window.SALAS_codigoDe = function(sku){
+    if(!sku) return "";
+    var m = window.SALAS_OC || {};
+    return m[sku] || m[String(sku).toUpperCase()] || "";
+  };
+
+  /* Anexo de especificaciones tecnicas SOLO de los productos marcados (Rayen, 09-sep-2026:
+     "que tambien pueda sacar el anexo, pero solo de esos productos que estamos seleccionando").
+     Deja la llave «oc_anexo_pendiente»: la del cotizador («oc_sala_pendiente») se CONSUME al
+     cargarla, por eso el anexo necesita la suya propia. */
+  window.SALAS_abrirAnexo = function(items, extra){
+    extra = extra || {};
+    var productos = (items||[]).map(function(it){
+      var c = window.SALAS_CATALOGO[it.sku] || {};
+      return { sku: it.sku||"", codigo: window.SALAS_codigoDe(it.sku),
+               nombre: it.nombre || c.n || it.sku, cant: String(it.cant||1) };
+    }).filter(function(p){ return p.sku || p.codigo || p.nombre; });
+    if(!productos.length){ alert("Marca al menos un producto antes de pedir el anexo."); return false; }
+    var payload = { _origen:"salas", productos:productos };
+    if(extra.proyecto) payload.proyecto = extra.proyecto;
+    if(extra.estilo)   payload.estilo   = extra.estilo;
+    if(extra.num)      payload.num      = extra.num;
+    if(extra.cliente)  payload.cliente  = extra.cliente;
+    try{ localStorage.setItem("oc_anexo_pendiente", JSON.stringify(payload)); }
+    catch(e){ alert("No se pudo preparar el anexo (memoria del navegador llena)."); return false; }
+    window.open("AnexoEspecificaciones.html", "_blank");
     return true;
   };
 })();

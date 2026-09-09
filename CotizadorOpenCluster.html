@@ -1626,6 +1626,12 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
       <span>Registrar cotización</span>
     </button>
     <button class="bgen" onclick="printDoc()">Guardar como PDF</button>
+    <!-- Anexo de especificaciones tecnicas de ESTA cotizacion (Rayen, 09-sep-2026).
+         Usa el codigo OC que viaja con cada producto, asi que sigue cruzando aunque
+         se haya editado el nombre aqui. -->
+    <button class="bgen" onclick="abrirAnexoEspecificaciones()"
+      title="Armar el anexo de especificaciones tecnicas con los productos de esta cotizacion"
+      style="background:#B85C00">Anexo de especificaciones</button>
     <div id="pdfZoomWrap" style="margin-top:8px;display:flex;align-items:center;gap:6px;justify-content:center;font-family:'Open Sans',sans-serif;background:#fff8ee;padding:6px 10px;border-radius:6px;border:1px solid #f0d8a0;">
       <label for="pdfZoomSel" style="font-size:10px;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:.4px;">Tamaño PDF:</label>
       <button type="button" onclick="ajustarZoomPdf(-1)" aria-label="Reducir 1%" style="width:26px;height:26px;padding:0;border:1px solid #d0d0d0;border-radius:5px;background:white;font-size:14px;font-weight:700;cursor:pointer;color:#333;">−</button>
@@ -4448,6 +4454,25 @@ async function registrarCotizacion() {
   // Ahora: el campo queda mostrando el número recién guardado. Cuando el usuario crea una NUEVA cotización
   // (vía botones "Nueva cotización" / "Duplicar para mismo cliente"), esas rutinas piden el siguiente número
   // por sí mismas (ver crearNuevaDesdeCargada y duplicarParaMismoCliente).
+}
+
+// ── Anexo de especificaciones técnicas de esta cotización ─────────────────
+// Deja los productos en «oc_anexo_pendiente» y abre AnexoEspecificaciones.html.
+// Va el código OC de cada línea (codStore) además del nombre: el anexo busca por
+// código primero, así que un nombre editado aquí ya no rompe el cruce.
+function abrirAnexoEspecificaciones() {
+  const prods = getProds().filter(p => (p.name || "").trim());
+  if (!prods.length) { alert("Esta cotización todavía no tiene productos."); return; }
+  const payload = {
+    _origen: "cotizador",
+    num:      document.getElementById("eNum")?.value.trim() || "",
+    cliente:  document.getElementById("eCInstitucion")?.value.trim() ||
+              document.getElementById("eCNombre")?.value.trim() || "",
+    productos: prods.map(p => ({ codigo: p.codigo || "", nombre: p.name, cant: String(p.cant || 1) }))
+  };
+  try { localStorage.setItem("oc_anexo_pendiente", JSON.stringify(payload)); }
+  catch (e) { alert("No se pudo preparar el anexo (memoria del navegador llena)."); return; }
+  window.open("AnexoEspecificaciones.html", "_blank");
 }
 
 // ── Guardar cotización en computadora ─────────────────────────────────────

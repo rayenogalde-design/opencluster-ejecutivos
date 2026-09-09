@@ -213,6 +213,32 @@
   .mg-btn { display:block; width:100%; margin-top:0.6rem; padding:0.5rem 0.9rem; border:1px solid var(--line); border-radius:10px;
             background:var(--card); color:var(--ink); font-size:0.8rem; font-weight:700; cursor:pointer; font-family:inherit; }
   .mg-btn:hover { background:var(--paper); }
+  /* Margen de las cotizaciones MARCADAS (Rayen 9-sep-2026) — arriba de Comparar cotizaciones. */
+  .mgm-caja { border:1px solid var(--line); border-left:4px solid #166534; border-radius:12px;
+              padding:0.9rem 1.1rem; margin:0 0 1.1rem; background:var(--paper); }
+  .mgm-tit { font-size:0.95rem; font-weight:800; color:var(--navy); margin:0 0 0.6rem; }
+  .mgm-res { display:flex; flex-wrap:wrap; gap:1.6rem; margin-bottom:0.8rem; }
+  .mgm-res > div { display:flex; flex-direction:column; gap:0.1rem; }
+  .mgm-res-et { font-size:0.64rem; font-weight:800; color:var(--mist); text-transform:uppercase; letter-spacing:0.05em; }
+  .mgm-res-v { font-size:1.25rem; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums; }
+  .mgm-res-v.verde { color:#166534; }
+  .mgm-tabla { width:100%; border-collapse:collapse; font-size:0.78rem; }
+  .mgm-tabla th { text-align:right; font-size:0.62rem; font-weight:800; color:var(--mist);
+                  text-transform:uppercase; letter-spacing:0.04em; padding:0.3rem 0.4rem;
+                  border-bottom:1px solid var(--line); }
+  .mgm-tabla th:first-child, .mgm-tabla th:nth-child(2) { text-align:left; }
+  .mgm-tabla td { padding:0.32rem 0.4rem; border-bottom:1px solid var(--line); text-align:right;
+                  font-variant-numeric:tabular-nums; }
+  .mgm-tabla td:first-child, .mgm-tabla td:nth-child(2) { text-align:left; }
+  .mgm-tabla td.pct { font-weight:800; color:#166534; }
+  .mgm-tabla tr.mgm-total td { font-weight:800; border-top:2px solid var(--navy); border-bottom:none; }
+  .mgm-tabla tr.mgm-ojo td.pct { color:#B3261E; }
+  /* Margen negativo: la venta no cubre el costo. Nunca en verde. */
+  .mgm-tabla tr.mgm-perdida td { background:#FEF2F2; }
+  .mgm-tabla tr.mgm-perdida td.pct, .mgm-tabla tr.mgm-perdida td.mgm-mg { color:#B3261E; font-weight:800; }
+  .mgm-res-v.rojo { color:#B3261E; }
+  .mgm-ver { background:none; border:none; padding:0; color:var(--navy); font-weight:700;
+             font-size:0.75rem; cursor:pointer; text-decoration:underline; font-family:inherit; }
   /* Pestaña "Costo y margen" — la lista de todos los productos, uno a uno. */
   .mgp-res { display:flex; flex-wrap:wrap; gap:1.6rem; padding:0.9rem 1.1rem; margin:0 0 0.9rem;
              border:1px solid var(--line); border-radius:12px; background:var(--paper); }
@@ -290,7 +316,7 @@
     .mgp-fila > :nth-child(3) { display:none; }
   }
   .mg-tabla { margin-top:0.6rem; }
-  .mg-prod { display:grid; grid-template-columns:1fr 2rem 5.2rem 5.2rem 5.6rem; gap:0.35rem; font-size:0.75rem;
+  .mg-prod { display:grid; grid-template-columns:1fr 5.2rem 2rem 5.2rem 5.2rem 5.6rem; gap:0.35rem; font-size:0.75rem;
              padding:0.3rem 0; border-bottom:1px solid var(--line); align-items:baseline; }
   .mg-prod.cab { font-weight:800; color:var(--mist); text-transform:uppercase; letter-spacing:0.03em; font-size:0.64rem; }
   .mg-prod .num { text-align:right; font-variant-numeric:tabular-nums; }
@@ -2063,6 +2089,8 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
 </div>
 <script src="StockSalas.js"></script>
 <script src="StockAlias.js"></script>
+<!-- SKU de la tarifa de Qinera -> codigo OC de nuestra lista (334). Sin costos: solo codigos. -->
+<script src="SalasCodigosOC.js"></script>
 <script src="TarifaQineraSku.js"></script>
 <!-- Lo que HOY se puede importar de Qinera (Rayen 2026-08-06): fuera de esta lista, no se trae -->
 <script src="QineraImportables.js"></script>
@@ -2185,7 +2213,10 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
     // El ComuniQa Eye con TD Snap (COM-E-SN) cotizado como "Comuniqa Surface Eye + TD Snap".
     'comuniqa surface eye + td snap': 'comuniqa eye con td snap®',
     'comuniqa eye + td snap': 'comuniqa eye con td snap®',
-    'comuniqa surface eye con td snap': 'comuniqa eye con td snap®'
+    'comuniqa surface eye con td snap': 'comuniqa eye con td snap®',
+    // 2026-09-09: typo real del registro (OC26-3854-SM). No hay otro espejo que se le
+    // parezca: los de la tarifa son grande/pequeño x recto/curvo, y "grande" ya viene escrito.
+    'espejo grecto grande': 'espejo grande recto'
   };
   // El generador de especificaciones (archivo aparte) necesita la MISMA tabla de
   // alias para encontrar "Espejo Recto Grande" como "Espejo grande recto".
@@ -2301,6 +2332,9 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
   let MIS_COSTOS = {};
   const MIS_COSTOS_POR_NOMBRE = {};   // el mismo producto tiene codigo distinto en bodega y en Qinera
   function _costosIndexar(){
+    // Los indices que se arman sobre MIS_COSTOS (palabras y codigo OC) quedan viejos cuando
+    // ella carga otro archivo de costos: se botan aca y se rearman al primer uso.
+    _CP_IDX = null; _OC_IDX = null;
     Object.keys(MIS_COSTOS_POR_NOMBRE).forEach(function(k){ delete MIS_COSTOS_POR_NOMBRE[k]; });
     Object.keys(MIS_COSTOS).forEach(function(sku){
       var k = _claveNombre(MIS_COSTOS[sku].nombre || '');
@@ -2335,6 +2369,100 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
     var k = nombreOClave ? _claveNombre(nombreOClave) : '';
     var s2 = k ? MIS_COSTOS_POR_NOMBRE[k] : '';
     return s2 ? MIS_COSTOS[s2] : null;
+  }
+  // ── El código OC como llave (Rayen 9-sep-2026) ────────────────────────────
+  // Los 334 productos de sala quedaron cargados en el maestro con su código OC y el mapa
+  // SKU -> código vive en SalasCodigosOC.js (window.SALAS_OC). Aquí se usa para dos cosas:
+  // mostrar el código en el detalle del margen (Rayen: "el no ver el costo de cada producto
+  // me pone nerviosa") y, cuando la cotización traiga el código, resolver el costo por él y
+  // no por el nombre, que en el Cotizador se puede editar.
+  const _SALAS_OC = window.SALAS_OC || {};
+  function _ocDe(sku){ return (sku && _SALAS_OC[sku]) || ''; }
+  // Inverso código OC -> SKU. Varios SKU comparten código (un producto en 4 colores). Si los
+  // que comparten código tienen costos distintos, el código NO alcanza para elegir y se
+  // descarta: mejor un hueco que el costo de otro producto.
+  // Se arma al primer uso, no al cargar la página: cuando la página carga, MIS_COSTOS todavía
+  // está vacío y la comparación de costos no podría descartar nada.
+  var _OC_IDX = null;
+  function _ocASku(){
+    if (_OC_IDX) return _OC_IDX;
+    const m = {}, malo = {};
+    Object.keys(_SALAS_OC).forEach(function(sku){
+      const oc = _SALAS_OC[sku]; if (!oc) return;
+      if (!m[oc]) { m[oc] = sku; return; }
+      const a = MIS_COSTOS[m[oc]], b = MIS_COSTOS[sku];
+      if (!a || !b || Number(a.costoPuesto) !== Number(b.costoPuesto)) malo[oc] = 1;
+    });
+    Object.keys(malo).forEach(function(oc){ delete m[oc]; });
+    _OC_IDX = m;
+    return _OC_IDX;
+  }
+  // ── Cruce por CONJUNTO DE PALABRAS ────────────────────────────────────────
+  // El mismo producto aparece en las cotizaciones con las palabras en otro orden y con la
+  // unidad pegada al número ("Muñequeras y tobilleras 1 kg" contra "Muñequeras y tobilleras
+  // de 1kg"), así que comparar la cadena no sirve: se compara el CONJUNTO de palabras.
+  // Solo acepta si el ganador es ÚNICO: si dos productos de la tarifa empatan NO elige, deja
+  // el hueco y lo dice en pantalla. Un costo inventado es peor que un hueco.
+  const _CP_RUIDO = new Set(['de','del','la','el','los','las','y','para','con','en','a','al','por','un','una','sistema']);
+  function _cpTokens(nombre){
+    return new Set(_smProdNorm(nombre)
+      .replace(/(\d)([a-z])/g, '$1 $2').replace(/([a-z])(\d)/g, '$1 $2')
+      .replace(/[^a-z0-9]+/g, ' ').split(' ')
+      .filter(function(w){ return w && !_CP_RUIDO.has(w); }));
+  }
+  var _CP_IDX = null;
+  function _cpIndex(){
+    if (_CP_IDX) return _CP_IDX;
+    _CP_IDX = [];
+    Object.keys(MIS_COSTOS).forEach(function(sku){
+      const t = _cpTokens(MIS_COSTOS[sku].nombre || '');
+      if (t.size) _CP_IDX.push({ sku: sku, t: t });
+    });
+    return _CP_IDX;
+  }
+  function _cpBuscar(nombre){
+    const a = _cpTokens(nombre);
+    if (a.size < 2) return '';               // una sola palabra es demasiado ambigua
+    let mejor = 0, ganador = '', empate = false;
+    _cpIndex().forEach(function(e){
+      const b = e.t;
+      let inter = 0;
+      a.forEach(function(w){ if (b.has(w)) inter++; });
+      if (inter < 2) return;
+      const sc = (inter === a.size && inter === b.size) ? 3
+               : ((inter === a.size || inter === b.size) ? 2 : 0);
+      if (!sc) return;
+      if (sc > mejor) { mejor = sc; ganador = e.sku; empate = false; }
+      else if (sc === mejor && e.sku !== ganador) empate = true;
+    });
+    return empate ? '' : ganador;
+  }
+  // ── EL COSTO DE UNA LÍNEA DE COTIZACIÓN ───────────────────────────────────
+  // Rayen 9-sep-2026: "Ya no debería decirme que hay productos que no se les conoce el costo."
+  // Antes el margen buscaba el costo por DOS vías (el SKU de la bodega de salas y el nombre con
+  // alias) y las otras cuatro, que ya existían para armar el pedido, no las usaba. Orden, de la
+  // llave más segura a la menos segura, y se dice por cuál se encontró:
+  //   1. código OC · 2. SKU de bodega · 3. nombre con alias · 4. lista de precios / overrides
+  //   verificados por Rayen / tarifa oficial (_skuFaltante) · 5. equivalencias que confirmó
+  //   Rayen en StockAlias.js (su clave va SIN espacios, por eso antes no calzaba nunca)
+  //   · 6. conjunto de palabras.
+  function _costoLinea(nombre, s, ocPedido){
+    let sku;
+    if (ocPedido && _ocASku()[ocPedido]) {
+      sku = _ocASku()[ocPedido];
+      if (MIS_COSTOS[sku]) return { info: MIS_COSTOS[sku], sku: sku, como: 'código OC' };
+    }
+    if (s && s.sku && MIS_COSTOS[s.sku]) return { info: MIS_COSTOS[s.sku], sku: s.sku, como: 'SKU de bodega' };
+    const k = _claveNombre(nombre);
+    const s3 = k ? MIS_COSTOS_POR_NOMBRE[k] : '';
+    if (s3 && MIS_COSTOS[s3]) return { info: MIS_COSTOS[s3], sku: s3, como: 'nombre' };
+    sku = _skuFaltante(nombre, s);
+    if (sku && MIS_COSTOS[sku]) return { info: MIS_COSTOS[sku], sku: sku, como: 'SKU de la tarifa' };
+    const ali = (window.STOCK_ALIAS_SKU || {})[_normTightJS(nombre)];
+    if (ali && MIS_COSTOS[ali]) return { info: MIS_COSTOS[ali], sku: ali, como: 'equivalencia confirmada' };
+    sku = _cpBuscar(nombre);
+    if (sku && MIS_COSTOS[sku]) return { info: MIS_COSTOS[sku], sku: sku, como: 'palabras' };
+    return { info: null, sku: (s && s.sku) || '', como: '' };
   }
   // Copiar sin la API moderna (por si el navegador la bloquea): campo oculto + execCommand.
   function _copiarAlPortapapelesViejo(texto, alTerminar){
@@ -3375,10 +3503,12 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
           (v.m.sinCosto.length
             ? '<div class="vend-aviso">' + v.m.sinCosto.length + ' sin costo en tu archivo: la ganancia sale más alta que la real.</div>' : '') +
           '<div class="vend-detalle" style="display:none;">' +
-            '<div class="mg-prod cab"><span>Producto</span><span class="num">Cant</span>' +
+            '<div class="mg-prod cab"><span>Producto</span><span>Código</span><span class="num">Cant</span>' +
               '<span class="num">Venta</span><span class="num">Costo</span><span class="num">Margen</span></div>' +
             v.m.filas.map(function(f){
               return '<div class="mg-prod"><span>' + escapeHtmlSafe(f.display) + '</span>' +
+                '<span title="' + escapeHtmlSafe(f.sku ? f.sku + (f.como ? ' — encontrado por ' + f.como : '') : 'no se pudo identificar') + '">' +
+                  (f.oc ? escapeHtmlSafe(f.oc) : (f.sku ? escapeHtmlSafe(f.sku) : '<span class="sinc">?</span>')) + '</span>' +
                 '<span class="num">x' + f.qty + '</span>' +
                 '<span class="num">' + (f.sinPrecio ? '<span class="sinc">sin precio</span>' : _clp(f.venta)) + '</span>' +
                 '<span class="num">' + (f.sinCosto ? '<span class="sinc">sin costo</span>' : _clp(f.costo)) + '</span>' +
@@ -3529,20 +3659,31 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
   // página, que es pública, no hay ni un costo escrito: si no cargó el archivo, el bloque
   // no se dibuja. Ver el bloque "MIS COSTOS" más arriba.
   function _margenCotiz(c){
-    const filas = [], sinCosto = [], sinPrecio = [];
+    const filas = [], sinCosto = [], sinPrecio = [], sinCostoDet = [];
     let costoTot = 0, listaTot = 0, listaSinCosto = 0, costoSinPrecio = 0;
     _smExtraerProductos(c.productos).forEach(p => {
       const s   = STOCK_SM[p.key];
       const sku = s && s.sku;
+      // COSTO: siempre del archivo de Rayen. Es lo que le pagamos al proveedor por el producto
+      // puesto en Chile; el catálogo NO sirve para esto.
+      // Rayen 9-sep-2026: "ya no debería decirme que hay productos que no se les conoce el
+      // costo". Antes acá se llamaba a _costoDe, que busca por DOS vías (SKU de bodega y nombre
+      // con alias). Ahora va por _costoLinea, que usa las SEIS, empezando por el código OC.
+      const res    = _costoLinea(p.display, s, p.oc || '');
+      const info   = res.info;
+      const skuOk  = res.sku || sku || '';
       const cat = (sku && window.SALAS_CATALOGO) ? window.SALAS_CATALOGO[sku] : null;
       // VENTA: del catálogo, que es el precio que se le cobra al cliente. Lo guarda CON IVA,
       // y el neto de la cotización es neto, así que se pasa a neto para poder restar.
       let pIva = (cat && cat.p) ? Number(cat.p) : 0;
+      // Si el SKU de bodega no lo encontró, se prueba con el SKU que resolvió _costoLinea: es
+      // el mismo producto y así el catálogo también lo ubica. Sin esto un producto con costo
+      // quedaba sin venta y el margen salía MÁS BAJO que el real.
+      if (!pIva && skuOk && window.SALAS_CATALOGO && window.SALAS_CATALOGO[skuOk]) {
+        pIva = Number(window.SALAS_CATALOGO[skuOk].p) || 0;
+      }
       if (!pIva) pIva = _precioPorNombre(p.display);
       let unit = pIva ? Math.round(pIva / 1.19) : 0;
-      // COSTO: siempre del archivo de Rayen. Es lo que le pagamos al proveedor por el producto
-      // puesto en Chile; el catálogo NO sirve para esto.
-      const info   = _costoDe(sku, p.display);
       // El costo neto lo resuelve _costoNetoDe: divide por 1,19 solo los marítimos.
       // Respaldo de la venta, solo si el catálogo no tiene ese nombre: la venta neta del mismo
       // archivo. Cruza por nombre con alias donde el catálogo por SKU no llega.
@@ -3550,14 +3691,16 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
       const lista  = unit * p.qty;
       const costoU = _costoNetoDe(info);
       const costoL = costoU * p.qty;
+      const ocL    = _ocDe(skuOk);
       listaTot += lista;
       if (costoU) costoTot += costoL;
-      else { sinCosto.push(p.display); listaSinCosto += lista; }
+      else { sinCosto.push(p.display); sinCostoDet.push({ nombre: p.display, sku: skuOk, oc: ocL, qty: p.qty }); listaSinCosto += lista; }
       // Sin precio en el catalogo no se le puede repartir venta, pero su costo SI salio de la
       // caja: el margen queda mas bajo que el real. Se avisa en pantalla en vez de inventarle
       // un precio. Caso visto el 28-ago en Pica (Tubo de Burbujas Pequeno).
       if (!lista) { sinPrecio.push(p.display); costoSinPrecio += costoL; }
       filas.push({ display: p.display, qty: p.qty, lista: lista, costo: costoL,
+                   sku: skuOk, oc: ocL, como: res.como,
                    sinCosto: !costoU, sinPrecio: !lista });
     });
     const netoReg  = Number(c.neto) || 0;
@@ -3570,13 +3713,122 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
     });
     filas.sort((a, b) => (b.margen || 0) - (a.margen || 0));
     return {
-      filas: filas, sinCosto: sinCosto, listaSinCosto: listaSinCosto,
+      filas: filas, sinCosto: sinCosto, sinCostoDet: sinCostoDet, listaSinCosto: listaSinCosto,
       sinPrecio: sinPrecio, costoSinPrecio: costoSinPrecio,
       costoTot: costoTot, listaTot: listaTot, ventaTot: ventaTot, netoReg: netoReg,
       transporte: Number(c.transporte) || 0,
       margen: ventaTot - costoTot,
       estimado: !netoReg
     };
+  }
+
+  // ── MARGEN DE LAS COTIZACIONES MARCADAS (Rayen 9-sep-2026) ────────────────
+  // "Necesito que los márgenes aparezcan muy claros cuando tengo cotizaciones al 90% y al 50%
+  // y las marco." Antes el margen solo se veía entrando a cada cotización una por una. Esto es
+  // la misma cuenta de _margenCotiz — no una cuenta nueva — sumada y puesta arriba de todo.
+  // La instalación/transporte va en su propia columna y NO suma al margen (regla de Rayen).
+  function _bloqueMargenMarcadas(sel){
+    if (!sel || !sel.length) return '';
+    if (!Object.keys(MIS_COSTOS).length) {
+      return '<div class="mgm-caja"><div class="mgm-tit">Margen de las ' + sel.length + ' cotizaciones marcadas</div>' +
+        '<p class="mg-nota">Para verlo hay que cargar tus costos una vez en este computador: más abajo en esta ' +
+        'misma pestaña, botón <strong>Cargar mis costos</strong>. Los costos no viven en esta página ' +
+        '(está publicada en internet): se leen de tu archivo del Drive y se quedan solo en este navegador.</p></div>';
+    }
+    const pct = n => (Math.round(n * 10) / 10).toFixed(1).replace('.', ',');
+    let tVenta = 0, tCosto = 0, tInst = 0, tSinCosto = 0;
+    const huecos = {}, sinProductos = [];
+    const filas = [];
+    sel.forEach(function(c){
+      const m = _margenCotiz(c);
+      // Una cotización cuyo único ítem es un servicio (instalación, habilitación, flete) no
+      // tiene productos que costear: su margen NO se puede calcular. Antes de este arreglo
+      // entraba al total con costo $0 y mostraba "100%", que es un número falso. Se aparta.
+      // Caso real: OC26-3619-SM, "Servicio integral de implementación y habilitación técnica".
+      if (!m.filas.length) { sinProductos.push(c); return; }
+      tVenta += m.ventaTot; tCosto += m.costoTot; tInst += m.transporte;
+      tSinCosto += m.sinCosto.length;
+      (m.sinCostoDet || []).forEach(function(d){
+        const k = d.oc || d.sku || d.nombre;
+        huecos[k] = huecos[k] || { nombre: d.nombre, sku: d.sku, oc: d.oc, n: 0 };
+        huecos[k].n++;
+      });
+      filas.push({ c: c, m: m });
+    });
+    if (!filas.length) {
+      return '<div class="mgm-caja"><div class="mgm-tit">Margen de las ' + sel.length + ' cotizaciones marcadas</div>' +
+        '<p class="mg-alerta">Ninguna de las cotizaciones marcadas tiene productos que costear: lo que ' +
+        'traen son servicios (instalación, habilitación, flete). El margen no se puede calcular.</p></div>';
+    }
+    const tMargen = tVenta - tCosto;
+    const cuerpo = filas.map(function(f){
+      const p = f.m.ventaTot ? (f.m.margen / f.m.ventaTot * 100) : 0;
+      const clases = (f.m.sinCosto.length ? 'mgm-ojo ' : '') + (f.m.margen < 0 ? 'mgm-perdida' : '');
+      return '<tr class="' + clases.trim() + '">' +
+        '<td><button type="button" class="mgm-ver" data-abrircotiz="' + escapeHtmlSafe(f.c.cotizacion) + '">' +
+          escapeHtmlSafe(f.c.cotizacion) + '</button></td>' +
+        '<td>' + escapeHtmlSafe(f.c.institucion || '') + '</td>' +
+        '<td>' + (f.c.probabilidad || 0) + '%</td>' +
+        '<td>' + _clp(f.m.ventaTot) + (f.m.estimado ? ' <span class="sinc">est.</span>' : '') + '</td>' +
+        '<td>' + _clp(f.m.costoTot) + '</td>' +
+        '<td class="mgm-mg">' + (f.m.margen < 0 ? '−' + _clp(-f.m.margen) : _clp(f.m.margen)) + '</td>' +
+        '<td class="pct">' + pct(p) + '%' + (f.m.sinCosto.length ? ' *' : '') + '</td>' +
+        '<td>' + (f.m.transporte ? _clp(f.m.transporte) : '—') + '</td>' +
+      '</tr>';
+    }).join('');
+    const total = '<tr class="mgm-total"><td colspan="3">TOTAL — ' + filas.length + ' cotizaci' +
+      (filas.length === 1 ? 'ón' : 'ones') + '</td>' +
+      '<td>' + _clp(tVenta) + '</td><td>' + _clp(tCosto) + '</td><td>' + _clp(tMargen) + '</td>' +
+      '<td class="pct">' + (tVenta ? pct(tMargen / tVenta * 100) : '0,0') + '%</td>' +
+      '<td>' + (tInst ? _clp(tInst) : '—') + '</td></tr>';
+    // Se muestra con qué código se pudo identificar el producto, para que ella lo pueda buscar.
+    // Que aparezca el código NO significa que tenga costo: significa que sabemos cuál es.
+    const lista = Object.keys(huecos).map(function(k){
+      const d = huecos[k];
+      return escapeHtmlSafe(d.nombre) +
+        (d.oc ? ' (' + escapeHtmlSafe(d.oc) + ')'
+              : (d.sku ? ' (' + escapeHtmlSafe(d.sku) + ')' : ' (no lo pude identificar)'));
+    });
+    const perdidas = filas.filter(function(f){ return f.m.margen < 0; });
+    const notaPerdida = perdidas.length
+      ? '<p class="mg-alerta">' + perdidas.length + ' cotización' + (perdidas.length === 1 ? '' : 'es') +
+        ' quedó bajo cero: lo cotizado no alcanza a cubrir el costo de los productos. ' +
+        perdidas.map(function(f){ return escapeHtmlSafe(f.c.cotizacion) + ' (' + escapeHtmlSafe(f.c.institucion || '') +
+          ', ' + pct(f.m.margen / f.m.ventaTot * 100) + '%)'; }).join(' · ') + '.</p>'
+      : '';
+    const aviso = tSinCosto
+      ? '<p class="mg-alerta">* ' + tSinCosto + ' línea' + (tSinCosto === 1 ? '' : 's') +
+        ' sin costo: en esas cotizaciones el margen sale MÁS ALTO que el real. ' +
+        (lista.length === 1 ? 'Es' : 'Son') + ': ' + lista.join(' · ') + '. ' +
+        'Ninguno de ellos está en tu archivo de costos de Qinera: se compran en otra parte. ' +
+        'El código que va entre paréntesis es con el que se pudo identificar el producto.</p>'
+      : '<p class="mg-nota">Todas las líneas de estas cotizaciones tienen costo conocido.</p>';
+    const notaSinProd = sinProductos.length
+      ? '<p class="mg-alerta">Fuera del total: ' + sinProductos.length + ' cotización' +
+        (sinProductos.length === 1 ? '' : 'es') + ' marcada' + (sinProductos.length === 1 ? '' : 's') +
+        ' sin productos que costear — solo trae' + (sinProductos.length === 1 ? '' : 'n') + ' servicios ' +
+        '(instalación, habilitación, flete), así que su margen no se puede calcular: ' +
+        sinProductos.map(function(c){ return escapeHtmlSafe(c.cotizacion) + ' (' + _clp(Number(c.neto)||0) + ')'; }).join(' · ') + '.</p>'
+      : '';
+    return '<div class="mgm-caja">' +
+      '<div class="mgm-tit">Margen de las ' + filas.length + ' cotizaciones marcadas</div>' +
+      '<div class="mgm-res">' +
+        '<div><span class="mgm-res-et">Venta neta</span><span class="mgm-res-v">' + _clp(tVenta) + '</span></div>' +
+        '<div><span class="mgm-res-et">Costo</span><span class="mgm-res-v">' + _clp(tCosto) + '</span></div>' +
+        '<div><span class="mgm-res-et">Margen</span><span class="mgm-res-v ' + (tMargen < 0 ? 'rojo' : 'verde') + '">' +
+          (tMargen < 0 ? '−' + _clp(-tMargen) : _clp(tMargen)) +
+          '  ·  ' + (tVenta ? pct(tMargen / tVenta * 100) : '0,0') + '%</span></div>' +
+        (tInst ? '<div><span class="mgm-res-et">Instalación (aparte)</span><span class="mgm-res-v">' + _clp(tInst) + '</span></div>' : '') +
+      '</div>' +
+      '<table class="mgm-tabla"><thead><tr><th>N°</th><th>Institución</th><th>Prob.</th>' +
+        '<th>Venta neta</th><th>Costo</th><th>Margen $</th><th>Margen %</th><th>Instalación</th>' +
+      '</tr></thead><tbody>' + cuerpo + total + '</tbody></table>' +
+      notaPerdida + aviso + notaSinProd +
+      '<p class="mg-nota">La venta es el neto que quedó registrado en el CRM, así que el descuento del ' +
+      'ejecutivo ya viene descontado. El costo es el de tu archivo. La instalación, el transporte y la ' +
+      'capacitación van en su propia columna y no entran en el margen. Toca un N° para ver el detalle ' +
+      'producto por producto.</p>' +
+    '</div>';
   }
 
   function _bloqueMargenHTML(c){
@@ -3594,10 +3846,16 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
     const fila = (et, val, clase) => '<div class="mg-fila' + (clase ? ' ' + clase : '') + '"><span>' + et +
       '</span><span class="num">' + val + '</span></div>';
 
+    // Rayen quiere saber CUÁL y por qué, no solo cuántos: va el nombre con el código con que
+    // se pudo identificar. Si ni el código aparece, es que ese producto no está en la tarifa
+    // de Qinera — se compra en otra parte y su costo no está en este archivo.
     const alerta = m.sinCosto.length
       ? '<p class="mg-alerta">Ojo: ' + m.sinCosto.length + ' producto' + (m.sinCosto.length === 1 ? '' : 's') +
-        ' sin costo en tu archivo, así que el margen de arriba está más alto que el real. Son: ' +
-        m.sinCosto.map(escapeHtmlSafe).join(', ') + '.</p>'
+        ' sin costo en tu archivo de Qinera, así que el margen de arriba está más alto que el real. ' +
+        (m.sinCosto.length === 1 ? 'Es' : 'Son') + ': ' +
+        (m.sinCostoDet || []).map(function(d){
+          return escapeHtmlSafe(d.nombre) + (d.sku ? ' (' + escapeHtmlSafe(d.oc || d.sku) + ')' : ' (no lo pude identificar)');
+        }).join(' · ') + '. Ninguno está en tu archivo de costos de Qinera: se compran en otra parte.</p>'
       : '';
     const avisoSinPrecio = m.sinPrecio.length
       ? '<p class="mg-alerta">' + m.sinPrecio.length + ' producto' + (m.sinPrecio.length === 1 ? '' : 's') +
@@ -3621,6 +3879,8 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
 
     const filasProd = m.filas.map(f =>
       '<div class="mg-prod"><span>' + escapeHtmlSafe(f.display) + '</span>' +
+      '<span title="' + escapeHtmlSafe(f.sku ? f.sku + (f.como ? ' — encontrado por ' + f.como : '') : 'no se pudo identificar') + '">' +
+        (f.oc ? escapeHtmlSafe(f.oc) : (f.sku ? escapeHtmlSafe(f.sku) : '<span class="sinc">?</span>')) + '</span>' +
       '<span class="num">x' + f.qty + '</span>' +
       '<span class="num">' + (f.sinPrecio ? '<span class="sinc">sin precio</span>' : _clp(f.venta)) + '</span>' +
       '<span class="num">' + (f.sinCosto ? '<span class="sinc">sin costo</span>' : _clp(f.costo)) + '</span>' +
@@ -3649,7 +3909,7 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
       notaDif + notaEstimado + alerta + avisoSinPrecio +
       '<button type="button" class="mg-btn" id="mg-ver">Ver el margen de cada producto</button>' +
       '<div class="mg-tabla" id="mg-tabla" style="display:none;">' +
-        '<div class="mg-prod cab"><span>Producto</span><span class="num">Cant</span>' +
+        '<div class="mg-prod cab"><span>Producto</span><span>Código</span><span class="num">Cant</span>' +
         '<span class="num">Venta</span><span class="num">Costo</span><span class="num">Margen</span></div>' +
         filasProd +
         '<p class="mg-nota">La venta de cada producto es su parte del neto cotizado, repartida según lo que ' +
@@ -4663,7 +4923,8 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
     const botonCorreo = faltantesLista.length
       ? '<button type="button" class="btn-primario" id="btn-correo-faltantes" style="margin:0.8rem 0;">Enviar correo a Mario con este detalle (' + faltantesLista.length + ' productos)</button>'
       : '';
-    cont.innerHTML = '<h3>Cotizaciones lado a lado — ' + seleccionadas.length + ' juntas</h3>' +
+    cont.innerHTML = _bloqueMargenMarcadas(seleccionadas) +
+      '<h3>Cotizaciones lado a lado — ' + seleccionadas.length + ' juntas</h3>' +
       '<button type="button" class="btn-secundario" id="btn-excel-comparacion" style="margin:0 0 0.8rem;">Descargar Excel de estas ' + seleccionadas.length + ' cotizaciones</button>' +
       '<p class="nivel-nota">Cada columna es una cotización — cuánto pide cada una del mismo producto, el total sumado, y si el stock alcanza para todas juntas.</p>' +
       tablaMatriz +
@@ -6077,6 +6338,7 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
 <script src="SalasGrupos.js"></script>
 <script src="SalasFichasQinera.js"></script>
 <script src="SalasRepuestos.js"></script>
+<script src="SalasCodigosOC.js"></script>
 <script src="SalasACotizacion.js"></script>
 <script>
 (function(){
@@ -6443,6 +6705,29 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
     b.addEventListener("click", function(){ _especificacionesDeMarcados(); });
     ref.parentNode.insertBefore(b, ref);
   })();
+  /* Anexo de especificaciones para el CLIENTE, solo de lo marcado (Rayen, 09-sep-2026).
+     Es otro documento que el de licitacion: aqui si se puede usar lo que publica el
+     fabricante, porque es venta directa. Va con el codigo OC, no con el nombre. */
+  (function(){
+    var ref = document.getElementById("salaEnviarCotiz");
+    if (!ref || document.getElementById("salaAnexoBtn")) return;
+    var b = document.createElement("button");
+    b.id = "salaAnexoBtn";
+    b.type = "button";
+    b.className = ref.className;
+    b.style.cssText = ref.style.cssText;
+    b.style.bottom = "180px";
+    b.style.background = "#B85C00";
+    b.textContent = "Anexo para el cliente";
+    b.title = "Armar el anexo de especificaciones tecnicas solo con los productos marcados";
+    b.addEventListener("click", function(){
+      var items = gather();
+      if(!items.length){ alert("Marca al menos un producto (casilla ✓) antes de pedir el anexo."); return; }
+      window.SALAS_abrirAnexo(items, {});
+    });
+    ref.parentNode.insertBefore(b, ref);
+  })();
+
   var btn = document.getElementById("salaEnviarCotiz");
   if(btn) btn.addEventListener("click", function(){
     var items = gather();

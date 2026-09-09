@@ -117,6 +117,9 @@
   .totalnum { font-family:'Playfair Display',serif; font-size:1.65rem; font-weight:700; font-variant-numeric: tabular-nums; }
   /* Cuadro dorado de la ganancia (Rayen 2026-09-08). Solo se dibuja si hay costos cargados
      en este navegador: la pagina es publica y no lleva ni un costo escrito. */
+  /* Rayen 08-sep-2026: en la sala NUEVA solo el buscador y el listado. Fuera el bloque de
+     productos ya incluidos (las otras salas si lo conservan). */
+  #panel-nueva > .incluidos-box { display:none; }
   .margenbox { background:linear-gradient(135deg,#C9A227,#8A6A14); color:#fff; padding:0.9rem 1.3rem;
     border-radius:16px; text-align:center; box-shadow:0 6px 18px rgba(138,106,20,.28); align-self:start; }
   .margennum { font-family:'Playfair Display',serif; font-size:1.65rem; font-weight:700; font-variant-numeric:tabular-nums; }
@@ -62122,6 +62125,21 @@
 
   // El panel de la sala nueva y el que esté activo arrancan con su stock a la vista.
   try { _ponerStockEnPanel(document.getElementById('panel-nueva')); } catch(e){}
+  // Rayen 08-sep-2026: armando una sala NUEVA, los chips "Elemental/Simple", "Calma", etc. de
+  // cada producto confunden (parece que el producto es de otra sala). Se saca esa columna solo
+  // en el panel de la sala nueva; en las salas ya armadas se mantiene.
+  try {
+    var _pn = document.getElementById('panel-nueva');
+    if (_pn) _pn.querySelectorAll('table').forEach(function(tb){
+      if (!tb.querySelector('tbody input.inc')) return;
+      var cab = tb.querySelector('thead tr');
+      if (!cab || !cab.lastElementChild || !/sugerida/i.test(cab.lastElementChild.textContent)) return;
+      cab.lastElementChild.remove();
+      tb.querySelectorAll('tbody tr').forEach(function(tr){
+        if (tr.lastElementChild) tr.lastElementChild.remove();
+      });
+    });
+  } catch(e){}
   try { _ponerStockEnPanel(document.querySelector('.panel.active')); } catch(e){}
 
 

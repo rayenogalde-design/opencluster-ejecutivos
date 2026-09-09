@@ -115,6 +115,14 @@
   .sug { font-size:0.82rem; color:var(--mist); margin:0; }
   .totalbox { background:linear-gradient(135deg, var(--grp-solid, var(--navy)), color-mix(in srgb, var(--grp-solid, var(--navy)) 75%, #000)); color:#fff; padding:0.9rem 1.3rem; border-radius:16px; min-width:220px; text-align:right; box-shadow:0 10px 26px -12px rgba(0,10,40,0.4); }
   .totalnum { font-family:'Playfair Display',serif; font-size:1.65rem; font-weight:700; font-variant-numeric: tabular-nums; }
+  /* Cuadro dorado de la ganancia (Rayen 2026-09-08). Solo se dibuja si hay costos cargados
+     en este navegador: la pagina es publica y no lleva ni un costo escrito. */
+  .margenbox { background:linear-gradient(135deg,#C9A227,#8A6A14); color:#fff; padding:0.9rem 1.3rem;
+    border-radius:16px; text-align:center; box-shadow:0 6px 18px rgba(138,106,20,.28); align-self:start; }
+  .margennum { font-family:'Playfair Display',serif; font-size:1.65rem; font-weight:700; font-variant-numeric:tabular-nums; }
+  .margenlabel { font-size:.72rem; letter-spacing:.04em; text-transform:uppercase; opacity:.95; margin-top:.15rem; }
+  .margendet { font-size:.7rem; opacity:.85; margin-top:.3rem; }
+  .margenaviso { font-size:.7rem; margin-top:.35rem; background:rgba(0,0,0,.18); border-radius:8px; padding:.25rem .45rem; }
   .totallabel { font-size:0.76rem; color:rgba(255,255,255,0.8); margin-top:0.2rem; }
   .controls { display:flex; gap:0.6rem; flex-wrap:wrap; margin-bottom:0.9rem; }
   .controls input, .controls select { font-family:inherit; font-size:0.85rem; padding:0.5rem 0.75rem; border:1px solid var(--line); border-radius:10px; background:var(--card); color:var(--ink); }
@@ -61608,6 +61616,89 @@
     });
   });
 
+  // ── GANANCIA DE LA SALA — cuadro dorado (Rayen 2026-09-08) ────────────────
+  // "que al lado del verde aparezca un cuadrado dorado con el margen en ganancia, para ir viendo
+  // rápidamente cuánto ganaría con esa cotización".
+  // Los costos NO viven en esta página (está publicada en internet): se leen del navegador, del
+  // mismo archivo que ella carga una vez en la página de Stock con "Cargar mis costos". Si en
+  // este computador no hay costos cargados, el cuadro simplemente NO aparece — un terapeuta que
+  // abra el Armador no ve ninguna ganancia ni ningún costo.
+  const _ARM_COSTOS_KEY = 'oct_salas_mis_costos_v1';
+  let _ARM_COSTOS = null, _ARM_COSTOS_NOM = null;
+  function _armNorm(s){
+    return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s*-\s*/g, ' ').replace(/^sistema\s+/, '').replace(/\s+/g, ' ').trim();
+  }
+  function _armCostos(){
+    if (_ARM_COSTOS) return _ARM_COSTOS;
+    try { _ARM_COSTOS = JSON.parse(localStorage.getItem(_ARM_COSTOS_KEY) || '{}') || {}; }
+    catch(e){ _ARM_COSTOS = {}; }
+    _ARM_COSTOS_NOM = {};
+    Object.keys(_ARM_COSTOS).forEach(function(sku){
+      const k = _armNorm((_ARM_COSTOS[sku] || {}).nombre || '');
+      if (k && !_ARM_COSTOS_NOM[k]) _ARM_COSTOS_NOM[k] = sku;
+    });
+    return _ARM_COSTOS;
+  }
+  // Misma regla que la página de Stock (no puede haber dos cuentas distintas): la columna
+  // "puesto en Chile" viene CON IVA en los marítimos (es el EXW x 1,551) y NETA en los de
+  // transporte incluido. Sin la vía guardada se deduce del recargo.
+  function _armCostoNeto(info){
+    if (!info) return 0;
+    const bruto = Number(info.costoPuesto) || 0;
+    if (!bruto) return 0;
+    const exw = Number(info.costoQinera) || 0;
+    const maritimo = String(info.via || '').indexOf('maritimo') >= 0
+      || (!info.via && exw > 0 && (bruto / exw) > 1.2);
+    return Math.round(maritimo ? bruto / 1.19 : bruto);
+  }
+  // Por código y, si no está, por nombre: en bodega el mismo producto tiene otro código
+  // (la "Máquina de burbujas" MP-EX46-1 es el "Pompas SHX" BJ-EX46 de Qinera).
+  function _armCostoDe(sku, nombre){
+    const C = _armCostos();
+    if (sku && C[sku]) return C[sku];
+    const k = nombre ? _armNorm(nombre) : '';
+    const s2 = k ? _ARM_COSTOS_NOM[k] : '';
+    return s2 ? C[s2] : null;
+  }
+  function _armCLP(n){ return '$' + Math.round(n || 0).toLocaleString('es-CL'); }
+  function _pintarMargenSala(sala, totalIva){
+    const elTotal = document.getElementById('total-' + sala);
+    if (!elTotal) return;
+    const caja = elTotal.closest('.totalbox');
+    if (!caja) return;
+    let box = document.getElementById('margen-' + sala);
+    const hayCostos = Object.keys(_armCostos()).length > 0;
+    if (!hayCostos) { if (box) box.remove(); return; }
+    if (!box) {
+      box = document.createElement('div');
+      box.className = 'margenbox';
+      box.id = 'margen-' + sala;
+      caja.insertAdjacentElement('afterend', box);
+    }
+    let costo = 0, sinCosto = 0, marcados = 0;
+    document.querySelectorAll('input.inc[data-sala="' + sala + '"]').forEach(function(chk){
+      if (!chk.checked) return;
+      const qty = Number(qtyInputDe(chk).value) || 1;
+      marcados++;
+      const f = FICHAS[chk.dataset.sku];
+      const info = _armCostoDe(chk.dataset.sku, f ? f.nombre : '');
+      const cu = _armCostoNeto(info);
+      if (cu) costo += cu * qty; else sinCosto++;
+    });
+    if (!marcados) { box.style.display = 'none'; return; }
+    box.style.display = '';
+    const ventaNeta = Math.round((Number(totalIva) || 0) / 1.19);
+    const ganancia = ventaNeta - costo;
+    const pct = ventaNeta ? (ganancia / ventaNeta * 100) : 0;
+    box.innerHTML =
+      '<div class="margennum">' + _armCLP(ganancia) + '</div>' +
+      '<div class="margenlabel">ganancia neta &middot; margen ' + pct.toFixed(1).replace('.', ',') + '%</div>' +
+      '<div class="margendet">venta neta ' + _armCLP(ventaNeta) + ' &minus; costo ' + _armCLP(costo) +
+        ' &middot; con IVA ' + _armCLP(Math.round(ganancia * 1.19)) + '</div>' +
+      (sinCosto ? '<div class="margenaviso">' + sinCosto + ' producto' + (sinCosto === 1 ? '' : 's') +
+        ' sin costo en tu archivo: la ganancia sale más alta que la real.</div>' : '');
+  }
   function recalcular(sala) {
     // Guarda de seguridad: esta función se llama para TODAS las salas al cargar la página (ver
     // bucle clavesRecalc más abajo) — si esta página no tiene esa sala (ej. la página de Stock,
@@ -61625,6 +61716,7 @@
     });
     elTotal.textContent = '$' + Math.round(total).toLocaleString('es-CL');
     elCount.textContent = count;
+    _pintarMargenSala(sala, total);
     renderIncluidos(sala);
     actualizarResumenStock(sala);
     // La sala nueva suma además la instalación/capacitación de la región elegida.

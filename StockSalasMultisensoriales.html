@@ -2148,7 +2148,19 @@
     'columpio de rulo 2 en 1': 'columpio rulo 2 en 1',
     'columpio de rulo advantage 2 en 1': 'columpio rulo 2 en 1',
     'columpio rulo advantage 2 en 1': 'columpio rulo 2 en 1',
-    'columpio de rollo 2 en 1': 'columpio rulo 2 en 1'
+    'columpio de rollo 2 en 1': 'columpio rulo 2 en 1',
+    // 2026-09-08: los 3 productos de OC26-3881-SM que salian sin costo Y sin precio a la vez.
+    // Los datos SI estaban: el nombre de la cotizacion no cruzaba con el del catalogo/tarifa.
+    //   "Sistema SHX Compact sin tablet" -> el Compact a secas (BJ-EX04). El que trae tablet es
+    //   BJ-EX04-I "con iPad"; el BJ-EX04-SP "sin proyeccion" es otro producto y NO se toca.
+    'shx compact sin tablet': 'shx compact',
+    // Ya existia 'proyector de estrellas shx'; faltaba la version sin el "de".
+    'proyector estrellas shx': 'estrellas shx',
+    'proyector estrellas': 'estrellas shx',
+    // El ComuniQa Eye con TD Snap (COM-E-SN) cotizado como "Comuniqa Surface Eye + TD Snap".
+    'comuniqa surface eye + td snap': 'comuniqa eye con td snap®',
+    'comuniqa eye + td snap': 'comuniqa eye con td snap®',
+    'comuniqa surface eye con td snap': 'comuniqa eye con td snap®'
   };
   // El generador de especificaciones (archivo aparte) necesita la MISMA tabla de
   // alias para encontrar "Espejo Recto Grande" como "Espejo grande recto".
@@ -3600,7 +3612,14 @@
       '<div class="mg-tit">Margen de la venta</div>' +
       fila(m.estimado ? 'Venta de productos (estimada)' : 'Venta de productos (neto cotizado)', _clp(m.ventaTot)) +
       fila('Costo de los productos', _clp(m.costoTot)) +
-      fila('Margen', _clp(m.margen) + ' · ' + pctTxt(pct) + '%', 'total') +
+      fila('Venta con IVA', _clp(Math.round(m.ventaTot * 1.19))) +
+      fila('Costo con IVA', _clp(Math.round(m.costoTot * 1.19))) +
+      fila('Margen neto', _clp(m.margen) + ' · ' + pctTxt(pct) + '%', 'total') +
+      fila('Margen con IVA', _clp(Math.round(m.margen * 1.19)) + ' · ' + pctTxt(pct) + '%', 'total') +
+      '<p class="mg-nota">El margen con IVA es el mismo margen multiplicado por 1,19: el IVA se cobra ' +
+        'en la venta y se paga en el costo, así que el <strong>porcentaje es el mismo</strong> en las dos ' +
+        'líneas. La utilidad de verdad es la neta; la de con IVA es la que calza con los montos de la ' +
+        'cotización.</p>' +
       (m.transporte
         ? '<p class="mg-nota">Aparte, el cliente pagó <strong>' + _clp(m.transporte) + '</strong> por transporte, ' +
           'instalación y capacitación. No entra en el margen de arriba: no tenemos registrado lo que cuesta ' +
@@ -4272,7 +4291,7 @@
   // El SKU se busca en tres pasos: stock -> lista de precios por nombre -> lista de SKU por nombre,
   // así se valoriza también lo que nunca pasó por bodega. Devuelve además los que quedaron sin
   // precio, para poder decir en pantalla que el monto no los incluye.
-  let _idxPrecioPorNombre = null;
+  let _idxPrecioPorNombre = null, _idxPrecioAlias = null;
   function _precioPorNombre(nombre){
     if(!_idxPrecioPorNombre){
       _idxPrecioPorNombre = {};
@@ -4292,7 +4311,18 @@
         });
       }
     }
-    return _idxPrecioPorNombre[_normTightJS(nombre)] || 0;
+    // Respaldo por clave CON alias: sin esto un producto escrito distinto en la cotizacion
+    // ("Proyector Estrellas SHX") quedaba sin precio aunque el alias ya lo une al del catalogo.
+    if(!_idxPrecioAlias){
+      _idxPrecioAlias = {};
+      if(window.SALAS_CATALOGO){
+        Object.keys(SALAS_CATALOGO).forEach(function(sku){
+          const c = SALAS_CATALOGO[sku];
+          if(c && c.n && c.p){ const k = _claveNombre(c.n); if(k && !_idxPrecioAlias[k]) _idxPrecioAlias[k] = Number(c.p); }
+        });
+      }
+    }
+    return _idxPrecioPorNombre[_normTightJS(nombre)] || _idxPrecioAlias[_claveNombre(nombre)] || 0;
   }
   function _montoEstCotizDetalle(c){
     let total = 0; const sinPrecio = [];

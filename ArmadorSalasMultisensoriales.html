@@ -482,6 +482,31 @@
 </style>
 </head>
 <body>
+<script>
+/* Buscador tolerante (pedido de Rayen 2026-09-08: "que encuentre sea como sea que se escriba el
+   producto"). Ignora mayusculas/minusculas, tildes y dieresis, la enie, guiones, puntos,
+   parentesis y espacios de mas; y busca por palabras sueltas en cualquier orden, asi
+   "tubo burbujas" encuentra "Tubo de burbujas Luminea" y "MUNEQUERAS" encuentra
+   "Munequeras y tobilleras". Se normalizan LAS DOS PUNTAS: lo que ella escribe y el texto
+   guardado en los data-* de cada fila o tarjeta. Va aca arriba, antes que todo el resto del
+   codigo, para que cualquier buscador de la pagina lo tenga disponible. */
+function ocNorm(s){
+  return String(s === null || s === undefined ? '' : s)
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+function ocPalabras(q){ var n = ocNorm(q); return n ? n.split(' ') : []; }
+function ocCalza(q, texto){
+  var ps = Array.isArray(q) ? q : ocPalabras(q);
+  if (!ps.length) return true;
+  var t = ocNorm(texto);
+  for (var i = 0; i < ps.length; i++) { if (t.indexOf(ps[i]) === -1) return false; }
+  return true;
+}
+try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = ocCalza; } catch(e){}
+</script>
 <div class="hero-wrap">
 <header class="top">
   <div class="hero-eyebrow">OpenCluster · Salas Multisensoriales</div>
@@ -61101,17 +61126,14 @@
   // Compartida entre el render de la lista y el botón "Marcar todas" (así ambos respetan
   // exactamente el mismo texto buscado + filtro de probabilidad activo en pantalla).
   function cotizFiltradasActuales(q){
-    const qn = (q||'').trim().toLowerCase();
+    const qn = ocPalabras(q);
     const chk90 = document.getElementById('cotiz-prob-90');
     const chk50 = document.getElementById('cotiz-prob-50');
     const solo90 = chk90 && chk90.checked;
     const solo50 = chk50 && chk50.checked;
     const filtroProbActivo = solo90 || solo50;
     return COTIZ_SM_TODAS.filter(c => {
-      const okTexto = !qn
-        || String(c.cotizacion).toLowerCase().includes(qn)
-        || String(c.institucion).toLowerCase().includes(qn)
-        || String(c.ejecutivo).toLowerCase().includes(qn);
+      const okTexto = ocCalza(qn, String(c.cotizacion) + ' ' + String(c.institucion) + ' ' + String(c.ejecutivo));
       const okProb = !filtroProbActivo || (solo90 && c.probabilidad === 90) || (solo50 && c.probabilidad === 50);
       return okTexto && okProb;
     });
@@ -61300,10 +61322,10 @@
     const grid = document.getElementById(gridId);
     if (!input || !grid) return;
     input.addEventListener('input', () => {
-      const q = input.value.trim().toLowerCase();
+      const q = ocPalabras(input.value);
       grid.querySelectorAll('.stock-disp-card').forEach(card => {
         const buscable = card.dataset.buscar || '';
-        card.style.display = (!q || buscable.includes(q)) ? '' : 'none';
+        card.style.display = ocCalza(q, buscable) ? '' : 'none';
       });
     });
   }
@@ -61551,10 +61573,10 @@
     const input = document.getElementById('stock-buscar-' + cual);
     if (!input) return;
     input.addEventListener('input', () => {
-      const q = input.value.trim().toLowerCase();
+      const q = ocPalabras(input.value);
       let visibles = 0;
       document.querySelectorAll('#tbody-stock-' + cual + ' tr').forEach(tr => {
-        const ok = !q || (tr.dataset.buscar || '').includes(q);
+        const ok = ocCalza(q, tr.dataset.buscar || '');
         tr.classList.toggle('hidden', !ok);
         if (ok) visibles++;
       });
@@ -62552,9 +62574,9 @@
     return conteos;
   }
   function renderPanelFamilias(f, conteos, buscar) {
-    const q = (buscar || '').trim().toLowerCase();
+    const q = ocPalabras(buscar);
     const html = FAMILIA_GRUPOS.map(g => {
-      const fams = g.familias.filter(fam => conteos[fam] && (!q || fam.toLowerCase().includes(q) || g.grupo.toLowerCase().includes(q)));
+      const fams = g.familias.filter(fam => conteos[fam] && ocCalza(q, fam + ' ' + g.grupo));
       if (!fams.length) return '';
       const seleccionadasEnGrupo = fams.filter(fam => f.familias.has(fam)).length;
       return '<div class="filtros-grupo' + (q ? ' open' : '') + '">' +
@@ -62662,10 +62684,10 @@
   const cSearch = document.getElementById('confirmar-search');
   const cFiltro = document.getElementById('confirmar-filtro');
   function aplicarFiltroConfirmar() {
-    const q = cSearch.value.trim().toLowerCase();
+    const q = ocPalabras(cSearch.value);
     const modo = cFiltro.value;
     document.querySelectorAll('#confirmar-grid .pcard').forEach(card => {
-      const okQ = !q || card.dataset.nombre.includes(q);
+      const okQ = ocCalza(q, card.dataset.nombre || '');
       const marcado = card.classList.contains('confirmado');
       let okModo = true;
       if (modo === 'sin-marcar') okModo = !marcado;
@@ -63228,10 +63250,11 @@ window.OCT_VENTA_APARTE = {
     wrap.parentNode.insertBefore(box, wrap.nextSibling);
     var buscador = box.querySelector('.caa-search');
     buscador.addEventListener('input', function(){
-      var palabras = norm(buscador.value).length ? buscador.value.toLowerCase().split(/s+/).filter(Boolean).map(norm) : [];
+      var palabras = ocPalabras(buscador.value);
       box.querySelectorAll('tbody tr').forEach(function(tr){
-        var texto = norm(tr.dataset.nombre) + norm((tr.querySelector('input.inc')||{}).dataset ? tr.querySelector('input.inc').dataset.sku : '');
-        tr.classList.toggle('hidden', palabras.length ? !palabras.every(function(p){ return texto.indexOf(p) > -1; }) : false);
+        var _inc = tr.querySelector('input.inc');
+        var texto = (tr.dataset.nombre || '') + ' ' + ((_inc && _inc.dataset.sku) || '');
+        tr.classList.toggle('hidden', !ocCalza(palabras, texto));
       });
     });
     return box.querySelector('tbody');

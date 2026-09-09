@@ -93,8 +93,21 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
 .par{display:grid;grid-template-columns:1fr 1fr;gap:13px 34px;margin-bottom:16px}
 .campo{min-width:0}
 .campo.ancho{grid-column:1/-1}
-.campo h4{margin:0 0 5px;font-size:9.5px;letter-spacing:1.6px;text-transform:uppercase;
-  color:var(--gris-cl);font-weight:700}
+.campo.ind{margin-bottom:18px}
+/* Rayen 09-sep-2026: los subtitulos como los chips del catalogo — "¿PARA QUE SIRVE?"
+   en pildora celeste con el texto azul. Es el mismo recurso que ya usa el catalogo
+   de productos, para que los dos documentos se lean como de la misma casa. */
+.chip{display:inline-block;font-size:9px;letter-spacing:1.3px;text-transform:uppercase;
+  font-weight:800;color:#fff;background:linear-gradient(90deg,var(--navy),#0A63D8 62%,var(--celeste));
+  border-radius:999px;padding:5px 13px;line-height:1.35}
+.campo h4{margin:0 0 9px}
+/* En la ficha tecnica, "INDICADO PARA" es lo unico que va sobre fondo naranjo palido:
+   es el dato mas vendedor. Se copia igual, con su chip y sus vinetas en naranjo. */
+.campo.ind{background:#FDF2E6;border:1px solid #F4D8B8;border-radius:9px;padding:15px 18px 16px}
+.campo.ind .chip{color:#A85400;background:#F8E1C6}
+.campo.ind .vin-ic{width:7px;height:7px;margin:6px 5px 0 4px;background:var(--naranjo);border-radius:50%}
+.campo.ind .vin-ic svg{display:none}
+.campo.ind .vin li{color:#4A3520}
 .campo p{margin:0;font-size:13.7px;line-height:1.62;color:#33415C}
 /* Rayen 09-sep-2026: "siempre les poniamos unas bullet bien bonitas a estas cosas".
    La vineta es un SVG inline, como en las fichas del design system: nunca un emoji,
@@ -112,19 +125,24 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
 @media (max-width:760px){ .vin.dos{columns:1} }
 
 /* tabla de especificaciones: lo propio de una ficha técnica */
-.specs{border-top:1px solid var(--regla);margin-top:4px}
+/* Rayen 09-sep-2026: "el recuadro de las caracteristicas tecnicas, imita el de las
+   fichas tecnicas, hazlo menos plano, se mimetiza demasiado con lo demas".
+   De la ficha se copia: marco propio, filas separadas por linea fina y el VALOR en
+   navy y en negrita, que es lo que hace que se lea como una ficha y no como texto. */
+.specs{border:1px solid #C7D8EE;border-radius:7px;background:#FBFDFF;
+  padding:3px 16px;margin-top:2px}
 /* Rayen 09-sep: "las especificaciones tecnicas juntalas un poquito, mas compactas".
    Dos pares dato/valor por fila y menos aire entre lineas. */
 .specs dl{margin:0;display:grid;grid-template-columns:minmax(104px,auto) 1fr minmax(104px,auto) 1fr;
   column-gap:30px}
-.specs dt{padding:4px 12px 4px 0;font-size:10.5px;letter-spacing:.5px;text-transform:uppercase;
-  color:var(--gris-cl);font-weight:700;border-bottom:1px solid var(--regla-f)}
-.specs dd{margin:0;padding:4px 0;font-size:12.8px;line-height:1.5;color:#2A374F;
-  border-bottom:1px solid var(--regla-f)}
+.specs dt{padding:7px 12px 7px 0;font-size:10.5px;letter-spacing:.5px;text-transform:uppercase;
+  color:#5E6E92;font-weight:700;border-bottom:1px solid #E4EDF7}
+.specs dd{margin:0;padding:7px 0;font-size:12.8px;line-height:1.5;color:var(--navy);
+  font-weight:600;border-bottom:1px solid #E4EDF7}
 @media (max-width:760px){
   .specs dl{grid-template-columns:minmax(104px,auto) 1fr}
 }
-.libre{font-size:12.9px;line-height:1.56;color:#2A374F;padding-top:7px}
+.libre{font-size:12.9px;line-height:1.56;color:#2A374F;padding-top:9px}
 
 .pie{padding:22px 58px 6px;color:var(--gris);font-size:11.5px;line-height:1.6}
 
@@ -291,20 +309,21 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
   }
   /* "Que incluye la entrega" llega como un texto con comas. Se parte en vinetas solo si
      de verdad es una enumeracion: tres piezas o mas y ninguna sospechosamente corta. */
-  function incluye(t){
+  function incluye(t, ancho){
+    if(ancho === undefined) ancho = true;
     if(!t) return '';
     var s = String(t).trim().replace(/.$/, '');
     var p = s.split(',').map(function(x){ return x.trim(); }).filter(Boolean);
     if(p.length < 3 || p.some(function(x){ return x.length < 4; })) return '<p>'+esc(s)+'.</p>';
-    return lista(p, true);
+    return lista(p, ancho);
   }
-  function enumera(t){
+  function enumera(t, ancho){
     if(!t) return '';
     var p = String(t).split('·').map(function(x){return x.trim().replace(/\.$/,'');}).filter(Boolean);
     if(p.length < 2) return '<p>'+esc(t)+'</p>';
-    return lista(p, false);
+    return lista(p, !!ancho);
   }
-  function campo(t,c,cl){ return c ? '<div class="campo '+(cl||'')+'"><h4>'+t+'</h4>'+c+'</div>' : ''; }
+  function campo(t,c,cl){ return c ? '<div class="campo '+(cl||'')+'"><h4><span class="chip">'+t+'</span></h4>'+c+'</div>' : ''; }
 
   function foto(sku,d){
     var c = CAT[sku];
@@ -323,12 +342,13 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
       '<div class="col-izq"><span class="orden">'+i+'</span>'+foto(sku,d)+'</div>'+
       '<div>'+
         '<div class="cab"><h3>'+esc(d.n)+'</h3><span class="cod">'+esc(d.oc||sku)+'</span></div>'+
-        (d.que ? '<p class="intro">'+esc(d.que)+'</p>' : '')+
+        (d.que ? '<h4 class="campo"><span class="chip">¿Para qué sirve?</span></h4>'+
+                 '<p class="intro">'+esc(d.que)+'</p>' : '')+
         '<div class="par">'+
-          campo('Qué se trabaja con él', enumera(d.trab))+
-          campo('Indicado para', enumera(d.ind))+
-          campo('Qué incluye la entrega', incluye(d.inc), 'ancho')+
+          campo('¿Qué se trabaja con él?', enumera(d.trab))+
+          campo('¿Qué incluye la entrega?', incluye(d.inc, false))+
         '</div>'+
+        campo('¿Para quién está indicado?', enumera(d.ind, true), 'ancho ind')+
         campo('Características técnicas', specs(unir(d.tec,d.cat)), 'ancho')+
       '</div></div>';
   }

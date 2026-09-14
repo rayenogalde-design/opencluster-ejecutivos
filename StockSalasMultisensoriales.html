@@ -2106,6 +2106,11 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
 <script src="LicitacionesData.js"></script>
 <script src="SpecsLicitacion.js"></script>
 <script src="EspecificacionesTecnicas.js"></script>
+<!-- Los costos de Rayen, CIFRADOS (AES-256-GCM). Aquí no hay ni una cifra legible: se abren en
+     su navegador con la misma clave de su vista de administradora. Los genera
+     Claude Files\genera_costos_salas_cifrados.js — para cambiar un costo se edita el .txt de
+     origen y se vuelve a correr. Ver la memoria «costos-nunca-publicos». -->
+<script src="CostosSalasCifrados.js"></script>
 <script>
   // 19-ago-2026 — RESTAURADOS por error de borrado: q168 (OCTECH 574, Soporte silla de ruedas Monty 3D Plus),
   // q179 (OCTECH 553, TD Navio Maxi), q68 (OCTECH 548, Specs Switch/Conmutador Spec) van CON precio de transferencia
@@ -2992,6 +2997,50 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
       });
       inp.value = '';
     };
+    // ── LOS COSTOS YA VIENEN DENTRO DE LA PÁGINA, CIFRADOS ──────────────────
+    // Rayen, 14-sep-2026: «quiero dejar de cargar los costos a cada rato, es muy molesto…
+    // déjame todo ahí cargado, cualquier cambio lo haces tú automático, nada de andar
+    // cargando archivos». Van en CostosSalasCifrados.js, cifrados con la MISMA clave de su
+    // vista de administradora: si ya la abrió en este computador, esto se desbloquea solo y
+    // no le pide nada. En claro no pueden ir — el repositorio es público.
+    // Si algo falla, no pasa nada: sigue existiendo el botón de cargar los archivos a mano.
+    const CLAVE_GUARDADA = 'oct_clave_MisCostosYMargenes_PRIVADA.html';
+    function _b64a(s){ const b = atob(s); const u = new Uint8Array(b.length);
+                       for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
+    async function _costosAbrirPaquete(clave){
+      const p = window.OCT_COSTOS_SALAS;
+      const mat = await crypto.subtle.importKey('raw', new TextEncoder().encode(clave), 'PBKDF2', false, ['deriveKey']);
+      const llave = await crypto.subtle.deriveKey(
+        { name: 'PBKDF2', salt: _b64a(p.sal), iterations: p.iter, hash: 'SHA-256' },
+        mat, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+      const plano = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: _b64a(p.iv) }, llave, _b64a(p.datos));
+      return JSON.parse(new TextDecoder().decode(plano));
+    }
+    async function _costosDeLaPagina(){
+      const p = window.OCT_COSTOS_SALAS;
+      if (!p || !p.datos || !window.crypto || !crypto.subtle) return;
+      let clave = null;
+      try { clave = localStorage.getItem(CLAVE_GUARDADA); } catch(e){}
+      let d = null;
+      if (clave) { try { d = await _costosAbrirPaquete(clave); } catch(e){ d = null; } }
+      if (!d) {
+        // Solo se le pregunta si de verdad no hay costos: si ya los tiene cargados a mano,
+        // no tiene por qué aparecerle un cuadro de clave al abrir la página.
+        if (Object.keys(MIS_COSTOS).length) return;
+        const escrita = prompt('Tus costos vienen dentro de esta página, cerrados con tu clave.\n\n' +
+                               'Escribe la misma clave de "Mis Costos y Márgenes" y no te la vuelvo a pedir en este computador.');
+        if (!escrita) return;
+        try { d = await _costosAbrirPaquete(escrita); }
+        catch(e){ alert('Esa clave no abre los costos. Puedes cargarlos a mano con el botón de más abajo.'); return; }
+        try { localStorage.setItem(CLAVE_GUARDADA, escrita); } catch(e){}
+      }
+      [d.tarifa, d.fuera, d.adm].forEach(function(t){ if (t) { try { _costosAplicarUno(t); } catch(e){} } });
+      _costosEstado(); _mgpPintar();
+      if (typeof renderComparacionCotizaciones === 'function') { try { renderComparacionCotizaciones(); } catch(e){} }
+      if (typeof _pintarVendidas === 'function') { try { _pintarVendidas(); } catch(e){} }
+    }
+    _costosDeLaPagina();
+
     // Mostrar en el estado si ya hay un archivo recordado.
     _costosHandleLeer().then(function(h){ if (h) { COSTOS_HANDLE = h; _costosEstado(); _mgpPintar(); } });
     _costosEstado(); _mgpPintar();

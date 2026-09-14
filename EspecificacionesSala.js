@@ -5,6 +5,18 @@
 // que a su vez sale de la tienda y del portal de soporte del fabricante.
 // Ver la memoria «productos-sala-fuente-unica».
 //
+// ⚠️ 11-sep-2026: gen_datos_web.js YA NO EXISTE en ninguna carpeta (ni en Claude Files ni en el
+// repo). Hasta que se reescriba, este archivo es la única copia de estos textos: si alguien lo
+// regenera desde el Excel sin corregirlo antes, se pierden los nombres unificados de abajo.
+//
+// ⚠️ LOS NOMBRES (campo "n") NO SON LIBRES. El 11-sep-2026, después de que a Rayen le saliera un
+// margen inflado porque el mismo producto se llamaba distinto acá y en su tarifa, se unificó el
+// nombre de 17 productos con SalasACotizacion.js y con las FICHAS de la página de Stock. Antes de
+// cambiar un nombre de acá hay que cambiarlo en los tres, o el cruce por nombre se vuelve a
+// romper y el margen vuelve a salir mal. El guardián
+// «Claude Files\verifica_nombres_salas.js» lo comprueba: correrlo ANTES de entregar cualquier
+// cotización o documento de salas.
+//
 // Generado el 2026-09-09 · 64 productos.
 // Campos: n nombre · oc código OC · fam familia · que qué es · trab qué se trabaja ·
 //         ind indicado para · inc qué incluye · tec ficha técnica · cat características del catálogo
@@ -54,7 +66,7 @@ window.SALAS_ESPECIFICACIONES = {
   "cat": "Medidas 140 x 180 cm · Tejido vinílico antimicrobiano, antibacteriano y antimicótico · Alta resistencia a la abrasión · Resistente a transpiración, saliva, orina y sangre · Peso del tejido 620 g/m² · Espesor de 0,5 a 1 mm · Cumple el reglamento REACH · Material ignífugo, clasificación M2 · Cumple la norma EN 71-3 de seguridad de juguetes · Excelente resistencia solar · Espumas de poliuretano y polietileno normalizadas según estándares europeos · Disponible en 12 colores"
  },
  "BJ-LRIN": {
-  "n": "Rincón Luminea",
+  "n": "Rincón Luminea sin tablet",
   "oc": "OC-1622",
   "fam": "Rincón Luminea",
   "que": "Espacio multisensorial compacto y autoinstalable que transforma cualquier rincón en un entorno interactivo de luz y color, sin requerir obra ni instalaciones complejas. Es un pequeño espacio multisensorial lleno de oportunidades terapéuticas, de uso terapéutico, educativo y de ocio.",
@@ -65,7 +77,7 @@ window.SALAS_ESPECIFICACIONES = {
   "cat": "Altura 180 cm · Ancho y profundidad 110 x 110 cm · Incluye tubo de burbujas Luminea · Fibra óptica de 2 m · Aplicación Luminea para Android · Base intercambiable en PVC o en tacto piel · Fijación a pared · Punto de acceso incluido"
  },
  "BJ-LRIN23": {
-  "n": "Rincón Luminea con tableta",
+  "n": "Rincón Luminea con tablet",
   "oc": "",
   "fam": "Rincón Luminea",
   "que": "La versión del Rincón Luminea que trae su propia tableta de control incorporada, para gobernarlo sin depender de la unidad central de la sala.",
@@ -87,7 +99,7 @@ window.SALAS_ESPECIFICACIONES = {
   "cat": "Medidas 40 x 40 cm · Se adapta a distintos usos corporales · Se conecta a fuentes de audio y de vídeo · Necesita amplificador vibroacústico, kit Bluetooth o Sistema SHX para funcionar"
  },
  "BJ-EMSC": {
-  "n": "Sensory Cube",
+  "n": "Sensory Cube grande",
   "oc": "OC-0897",
   "fam": "Sensory Cube",
   "que": "Dado inalámbrico interactivo que permite controlar los dispositivos de luz y las escenas multisensoriales de forma lúdica y accesible. Al lanzarlo cambia los colores, activa efectos y transforma el entorno.",
@@ -120,7 +132,7 @@ window.SALAS_ESPECIFICACIONES = {
   "cat": "Medidas 100 x 85 cm · Inalámbrica por radiofrecuencia · Compatible con el Sistema SHX y con Luminea · Configuración sencilla con un botón trasero · Tejido vinílico antimicrobiano, antibacteriano y antimicótico · Alta resistencia a la abrasión · Resistente a transpiración, saliva, orina y sangre · Peso del tejido 620 g/m² · Espesor de 0,5 a 1 mm · Cumple el reglamento REACH · Material ignífugo, clasificación M2 · Cumple la norma EN 71-3 · Excelente resistencia solar"
  },
  "BJ-SF11": {
-  "n": "Sensory Feet",
+  "n": "Sensory Feet 1.1",
   "oc": "OC-1690",
   "fam": "Sensory Feet",
   "que": "Material de integración sensorial en forma de pies y de círculos, para trabajar el reconocimiento, la percepción táctil y la comunicación. Permite armar circuitos de estimulación táctil personalizados.",
@@ -186,7 +198,7 @@ window.SALAS_ESPECIFICACIONES = {
   "cat": "Alto regulable de 105 a 115 cm · Ancho 86 cm · Material acrílico con refuerzo posterior de madera · Protección perimetral"
  },
  "BJ-LLLT": {
-  "n": "Línea LED Luminea",
+  "n": "Línea LED Luminea Para Techo 5 Metros",
   "oc": "OC-1203",
   "fam": "Línea LED Luminea",
   "que": "Tira LED flexible de 5 metros para crear ambientes multisensoriales personalizados. Se integra en las paredes y aporta iluminación ambiental y estimulación visual con efectos de luz y cambios de color.",
@@ -197,7 +209,7 @@ window.SALAS_ESPECIFICACIONES = {
   "cat": "Tira LED de larga duración de 5 m · Perfil de soporte y difusor de luz · Fuente de alimentación incluida · Compatible con el Sistema SHX · Funciona en automático sin controlador · Entrada de conmutador en modo causa-efecto y en modo secuencial · Control DMX · Receptor de radiofrecuencia · Doble WiFi · Compatible con la aplicación Luminea"
  },
  "BJ-LLLR": {
-  "n": "Línea LED Luminea para respaldo",
+  "n": "Línea LED Luminea para respaldo 5 metros",
   "oc": "",
   "fam": "Línea LED Luminea",
   "que": "Tira LED de 5 metros de larga duración que se adapta al contorno de las paredes y de los respaldos del mobiliario, con perfil de soporte y difusor de luz.",
@@ -307,7 +319,7 @@ window.SALAS_ESPECIFICACIONES = {
   "cat": "Tecnología ultrasónica · Funcionamiento silencioso · Apagado automático cuando se agota el agua · Seis luces LED con dos niveles de brillo · Vapor fresco, seco y perfumado"
  },
  "BJ-SGL": {
-  "n": "Sensory Go",
+  "n": "Sensory Go Luminea",
   "oc": "",
   "fam": "Sensory Go",
   "que": "Carrito multisensorial portátil que transforma cualquier espacio en un entorno sensorial accesible e interactivo. Se enchufa y funciona, sin instalación, y se traslada de una sala a otra.",
@@ -362,7 +374,7 @@ window.SALAS_ESPECIFICACIONES = {
   "cat": "Ventilador de tres velocidades · Incluye el receptor de radiofrecuencia Enabler Socket+ · Compatible con el Sistema SHX · Incluye el cableado necesario"
  },
  "BJ-EMAVIBX": {
-  "n": "Amplificador vibroacústico",
+  "n": "Amplificador vibroacústico adicional",
   "oc": "OC-0085",
   "fam": "Amplificador vibroacústico",
   "que": "Equipo que convierte la señal de sonido procedente de un micrófono o de un reproductor en vibración transmitida al mobiliario de la sala, de modo que la música, la voz o el audio de un vídeo se sienten en el cuerpo.",
@@ -461,7 +473,7 @@ window.SALAS_ESPECIFICACIONES = {
   "cat": "Dos aceites base: almendra dulce y semillas de uva, de 50 ml cada uno · Siete aceites esenciales de 10 ml: naranja, eucalipto, lavanda, mejorana, menta, romero e ylang ylang · Dos pipetas de plástico · Cuatro botellas de 30 ml para las mezclas"
  },
  "BJ-KUV": {
-  "n": "Kit de material ultravioleta",
+  "n": "Bolsa material Ultravioleta",
   "oc": "OC-1184",
   "fam": "Kit de material ultravioleta",
   "que": "Conjunto de objetos fluorescentes que brillan bajo la luz ultravioleta y crean experiencias sensoriales llamativas y motivadoras. Pensado para estimular la atención visual y la exploración.",
@@ -472,7 +484,7 @@ window.SALAS_ESPECIFICACIONES = {
   "cat": "Spinner ultravioleta · Guante de textura · Dos maracas · Pañuelos de malabares · Muelle Rainbow Springy · Flexiball · Spaghetti · Tubos sonoros · Dos tamaños de pop tube · Manopla con pelota de tenis · Seis pelotas surtidas · Bolsa de almacenaje"
  },
  "BJ-E16807": {
-  "n": "Set de discos táctiles para pies y manos",
+  "n": "Conjunto de discos táctiles para pies y manos",
   "oc": "OC-0846",
   "fam": "Set de discos táctiles para pies y manos",
   "que": "Conjunto de cinco discos táctiles para el desarrollo del reconocimiento y la percepción táctil. La actividad consiste en hacer coincidir los discos grandes con los pequeños escondidos en la bolsa.",
@@ -582,7 +594,7 @@ window.SALAS_ESPECIFICACIONES = {
   "cat": "Medidas 80 cm de diámetro por 40 cm de profundidad · Diseño resistente"
  },
  "BJ-51090000": {
-  "n": "Pelota de terapia 45 cm",
+  "n": "Pelota de terapia de diámetro 45 cm",
   "oc": "",
   "fam": "Pelota de terapia",
   "que": "Pelota versátil para trabajar el equilibrio, la coordinación, el control postural y la conciencia corporal.",
@@ -593,7 +605,7 @@ window.SALAS_ESPECIFICACIONES = {
   "cat": "Diámetro 45 cm · Colores azulón o grafito"
  },
  "BJ-51091000": {
-  "n": "Pelota de terapia 55 cm",
+  "n": "Pelota de terapia de diámetro 55 cm",
   "oc": "",
   "fam": "Pelota de terapia",
   "que": "La versión de 55 cm de la pelota de terapia, para trabajar el equilibrio, la coordinación, el control postural y la conciencia corporal.",
@@ -626,7 +638,7 @@ window.SALAS_ESPECIFICACIONES = {
   "cat": "Medidas 23 × 120 × 185 cm de altura · Peso máximo admitido 90 kg"
  },
  "BJ-EV2208": {
-  "n": "Saco de danza M",
+  "n": "Saco de danza propioceptivo talla M",
   "oc": "",
   "fam": "Saco de danza",
   "que": "Saco de licra elástica que envuelve el cuerpo y permite explorar el movimiento desde dentro. Favorece la conciencia corporal, el movimiento creativo y la integración sensorial.",
@@ -648,7 +660,7 @@ window.SALAS_ESPECIFICACIONES = {
   "cat": "Largo 127 cm · Peso máximo admitido 90 kg · Red de nylon elástica de alta resistencia · Un lateral más alto que el otro · Incluye mosquetón · Uso en interiores"
  },
  "BJ-SD12319": {
-  "n": "Manta de peso mediana 2,2 kg",
+  "n": "Manta de peso azul y roja mediana 2,2 kg",
   "oc": "",
   "fam": "Manta de peso",
   "que": "Manta que da presión profunda uniforme para favorecer la relajación, la conciencia corporal y la regulación sensorial. Su diseño envolvente aporta calma y seguridad.",
@@ -659,7 +671,7 @@ window.SALAS_ESPECIFICACIONES = {
   "cat": "Medidas 150 x 90 cm · Peso 2,3 kg · 100% poliéster · Colores azul y roja · Lavado sólo a mano"
  },
  "BJ-SD12320": {
-  "n": "Manta de peso grande 3,6 kg",
+  "n": "Manta de peso gris y roja grande 3,6 kg",
   "oc": "",
   "fam": "Manta de peso",
   "que": "La versión grande de la manta de presión profunda uniforme, que favorece la relajación, la conciencia corporal y la regulación sensorial.",
@@ -681,7 +693,7 @@ window.SALAS_ESPECIFICACIONES = {
   "cat": "Medidas 75 x 60 x 50 cm · Tejido vinílico antimicrobiano · Peso del tejido 620 g/m² · Espuma de poliuretano y polietileno normalizada · Material ignífugo, clasificación M2 · Cumple la norma EN 71-3"
  },
  "BJ-EMRM": {
-  "n": "Protección de pared a medida",
+  "n": "Protección de pared a medida (por metro)",
   "oc": "",
   "fam": "Protección de pared a medida",
   "que": "Revestimiento acolchado para crear entornos seguros y confortables. Su superficie amortigua golpes e impactos, y protege tanto a las personas como a la instalación.",
@@ -703,7 +715,7 @@ window.SALAS_ESPECIFICACIONES = {
   "cat": "Recipiente de 1 litro · No mezclar con agua · Agitar antes de usar · Guardar con el tapón cerrado en lugar seco"
  },
  "BJ-SD12021": {
-  "n": "Peso para hombros Lola la oruga grande",
+  "n": "Peso para hombros Lola la Oruga grande 1,3 kg",
   "oc": "",
   "fam": "Peso para hombros Lola la oruga",
   "que": "Oruga de peso que se coloca sobre los hombros y genera una presión calmante. Es un recurso muy usado para bajar la activación sin necesidad de aislar a la persona.",

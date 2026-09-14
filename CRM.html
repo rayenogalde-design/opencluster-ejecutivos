@@ -11182,95 +11182,132 @@ function _smTipoInstitucion(c){
 // Normaliza nombres de producto para agrupar variantes con errores de tipeo del registro
 // (ej. "vibracústico"/"vibroacústico", "Kit de Aromaterapia"/"Kit de Iniciación de Aromaterapia").
 const _SM_PROD_ALIAS = {
-  'linea led luminea para techo 5mts.': 'linea led luminea para techo',
-  'linea led para techo': 'linea led luminea para techo',
-  '5m linea led luminea para techo luminea': 'linea led luminea para techo',
-  'kit de aromaterapia': 'kit de iniciacion de aromaterapia',
-  // Agregados al cruzar el stock (OC 028/2026) contra las cotizaciones reales: mismo producto,
-  // escrito distinto entre lo que se tipeó en la cotización y el nombre de catálogo/factura.
-  // Sin esto, cotizaciones reales (ej. la de Coronel al 90%) no aparecían bajo su producto de stock.
-  'amplificador vibroacustico': 'amplificador vibroacustico adicional',
-  'difusor aromaterapia': 'difusor de aromaterapia',
-  // Mismo alias que en StockSalasMultisensoriales.html (los dos mapas van a la par):
-  // "Tabla Scooter" a secas es la de 40 cm, BJ-61062000 (Rayen 13-ago). La de 30 cm es otra.
-  'tabla scooter': 'tabla scooter 40 cm',
-  'espejo recto grande': 'espejo grande recto',
-  'espejo recto grande rincon luminea': 'espejo grande recto',
-  'linea led de 5m luminea': 'linea led luminea para techo',
-  'linea led luminea (5 m)': 'linea led luminea para techo',
-  'linea led luminea para techo 5 metros': 'linea led luminea para techo',
-  'linea led luminea': 'linea led luminea para techo',
-  'manta de peso azul y roja mediana 2': 'manta de peso azul y roja mediana 2,2kg',
-  'manta de peso gris y roja grande 3': 'manta de peso gris y roja grande 3,6kg',
-  'piscina vibroacustica luminea': 'piscina luminea vibroacustica',
-  'rincon luminea con tablet': 'rincon luminea',
-  'sensory feet': 'sensory feet 1.1',
-  'sensory feet 1.1.': 'sensory feet 1.1',
-  'kit de material uv': 'bolsa material ultravioleta',
-  // Detectado 2026-07-21 (Rayen): casi todas las cotizaciones reales dicen "Proyector de
-  // estrellas SHX", pero el catálogo/factura lo llama "Estrellas SHX" — sin este alias, esa
-  // demanda no se cruzaba nunca contra el stock (quedaba "aparte", como si fueran 2 productos).
-  'proyector de estrellas shx': 'estrellas shx',
-  'proyector de estrellas': 'estrellas shx',
-  // 2026-09-08: los mismos 3 nombres que faltaban en la pagina de Stock (OC26-3881-SM). Esta
-  // tabla esta duplicada a proposito: si se agrega aqui, agregar tambien alla.
-  'proyector estrellas shx': 'estrellas shx',
-  'proyector estrellas': 'estrellas shx',
-  'shx compact sin tablet': 'shx compact',
-  'comuniqa surface eye + td snap': 'comuniqa eye con td snap®',
-  'comuniqa eye + td snap': 'comuniqa eye con td snap®',
-  'comuniqa surface eye con td snap': 'comuniqa eye con td snap®',
-  // Rayen 2026-08-25: son DOS productos DISTINTOS y no se juntan. El "Foco de luz UV LED (SHX)"
-  // de las cotizaciones es BJ-EIFUVLX; el BJ-EIFUVL es la lampara suelta, sin integracion SHX.
-  'foco de luz uv led (shx)': 'foco de luz uv led shx',
-  // Igual detectado por Rayen 2026-07-21: cotizaciones dicen "Kit de voz SHX", el catálogo/stock
-  // lo tiene como "Kit Voz SHX" (BJ-EXKV, sin "de").
-  'kit de voz shx': 'kit voz shx',
-  // Ronda de revisión sistemática 2026-07-21 (Rayen fue confirmando uno por uno):
-  'cubo sensorial': 'sensory cube grande',
-  'butaca vibroacustica': 'butaca relax vibroacustica',
-  'puff vibroacustico': 'puff transformable vibroacustico',
-  'enabler socket+': 'enabler socket +',
-  'kit de bola de espejos mediana': 'kit de bola de espejo',
-  'pelota de terapia de diametro 55cm': 'pelota terapeutica 55 cm diametro',
-  'pelota terapeutica 45 cm': 'pelota terapeutica 45 cm diametro',
-  // El catálogo llama a este SKU "Conjunto de discos táctiles para pies y manos" pero la bodega
-  // lo anotó como "Set de disco táctiles" (BJ-E16807) — sin este alias las cotizaciones (que usan
-  // el nombre largo del catálogo) no cruzaban contra ese stock.
-  'conjunto de discos tactiles para pies y manos': 'set de disco tactiles',
-  'set discos tactiles pies y manos': 'set de disco tactiles',
-  // "Tubo de burbujas Luminea" es el nombre oficial del catálogo para el mismo SKU que en la
-  // factura viene como "Tubo de burbujas pequeño" (BJ-LTUB, ya marcado "supuesto" — pendiente
-  // de confirmar con el proveedor, este alias no cambia esa duda, solo evita que la demanda
-  // quede sin cruzar mientras tanto).
-  'tubo de burbujas luminea': 'tubo de burbujas pequeno',
-  'tubo de burbujas': 'tubo de burbujas pequeno',
-  // Confirmado por Rayen: "Pelota cacahuete" = "Maní terapéutico" (nombre en español de España
-  // vs. Chile del mismo producto).
-  'pelota cacahuete': 'mani terapeutico',
-  // Duplicado a proposito con StockSalasMultisensoriales.html (mantener sincronizado): los mismos
-  // productos como los escribio Neuroarcoiris, que si no salian como "sin dato" estando en bodega.
-  'pelota cacahuate': 'mani terapeutico',
-  'balancin de terapia vibroacustico': 'balancin vibroacustico',
-  'base cuadrada para tubo de burbujas': 'base cuadrada para rincon luminea',
-  'base cuadrada para tubo de burbujas y fibra optica': 'base cuadrada para rincon luminea',
-  'pelota de terapia de diametro 45cm': 'pelota terapeutica 45 cm diametro',
-  'proyector estrellas luz led': 'estrellas shx',
-  // Investigado 2026-07-21 (ficha Qinera + página real opencluster-tech.cl/products/cortina-de-
-  // fibra-optica): la página describe el producto BASE como fijo y menciona "Cortina Luminea
-  // Oscilante" aparte, como upgrade con estímulo adicional — así que cuando una cotización dice
-  // solo "Cortina De Fibra Óptica" (sin decir "oscilante"), es la variante estándar que sí
-  // tenemos en bodega. NO se aplicó alias para "oscilante" — esa sigue sin cruzar a propósito,
-  // porque hoy no hay stock de esa variante.
-  'cortina de fibra optica': 'cortina luminea',
-  'cortina de fibra optica luminea': 'cortina luminea',
-  // Rayen 2026-07-21: "burbujas y pompas es lo mismo" / "kit de estimulacion sensorial y kit de
-  // masajes son lo mismo".
-  'burbujas': 'pompas shx',
-  'burbujas shx': 'pompas shx',
-  'maquina de burbujas': 'pompas shx',
-  'kit de estimulacion sensorial': 'kit de masaje'
-};
+    'linea led luminea para techo 5mts.': 'linea led luminea para techo 5 metros',
+    'linea led para techo': 'linea led luminea para techo 5 metros',
+    '5m linea led luminea para techo luminea': 'linea led luminea para techo 5 metros',
+    'kit de aromaterapia': 'kit de iniciacion de aromaterapia',
+    'amplificador vibroacustico': 'amplificador vibroacustico adicional',
+    'difusor aromaterapia': 'difusor de aromaterapia',
+    // Rayen 2026-08-17: "Tabla Scooter" a secas y "Tabla Scooter 40 cm" son el MISMO producto
+    // (BJ-61062000, ella lo confirmó el 13-ago) — sin este alias salían como dos líneas en el
+    // pedido, con el mismo código y el mismo precio. La de 30 cm (BJ-61061500) NO se toca.
+    'tabla scooter': 'tabla scooter 40 cm',
+    'espejo recto grande': 'espejo grande recto',
+    'espejo recto grande rincon luminea': 'espejo grande recto',
+    'linea led de 5m luminea': 'linea led luminea para techo',
+    'linea led luminea (5 m)': 'linea led luminea para techo 5 metros',    'linea led luminea': 'linea led luminea para techo',
+    'manta de peso azul y roja mediana 2': 'manta de peso azul y roja mediana 2,2kg',
+    // Neuroarcoiris cotizo "azul y roja - mediana - 3,6kg", que NO existe: en la tarifa la azul y
+    // roja mediana es de 2,2kg y la de 3,6kg es la grande gris y roja. Rayen 2026-08-13: "pesan
+    // igual, no me importa el color" -> MANDA EL PESO. 3,6kg = BJ-SD12320, la grande.
+    'manta de peso azul y roja mediana 3': 'manta de peso gris y roja grande 3,6kg',
+    'manta de peso azul y roja mediana 3,6kg': 'manta de peso gris y roja grande 3,6kg',
+    'manta de peso azul y roja grande 3': 'manta de peso gris y roja grande 3,6kg',
+    'manta de peso gris y roja grande 3': 'manta de peso gris y roja grande 3,6kg',
+    'piscina vibroacustica luminea': 'piscina luminea vibroacustica',    'sensory feet': 'sensory feet 1.1',
+    'sensory feet 1.1.': 'sensory feet 1.1',
+    'kit de material uv': 'bolsa material ultravioleta',
+    // Igual que en CRM.html (duplicado a propósito, mantener sincronizado): casi todas las
+    // cotizaciones reales dicen "Proyector de estrellas SHX", pero el catálogo lo llama
+    // "Estrellas SHX" — sin este alias esa demanda no se cruzaba contra el stock.
+    'proyector de estrellas shx': 'estrellas shx',
+    'proyector de estrellas': 'estrellas shx',
+    // Rayen 2026-08-25: son DOS productos DISTINTOS y no se juntan. El "Foco de luz UV LED
+    // (SHX)" de las cotizaciones es BJ-EIFUVLX ("Foco de luz UV LED SHX", EXW EUR 188,8); el
+    // BJ-EIFUVL ("Foco de luz UV LED", EXW EUR 63,2) es la lampara suelta, sin integracion al
+    // sistema. Reemplaza la nota del 13-ago que los daba por equivalentes.
+    'foco de luz uv led (shx)': 'foco de luz uv led shx',
+    'kit de voz shx': 'kit voz shx',
+    'cubo sensorial': 'sensory cube grande',
+    'butaca vibroacustica': 'butaca relax vibroacustica',
+    'puff vibroacustico': 'puff transformable vibroacustico',
+    'enabler socket+': 'enabler socket +',    'pelota de terapia de diametro 55cm': 'pelota terapeutica 55 cm diametro',
+    'pelota terapeutica 45 cm': 'pelota terapeutica 45 cm diametro',    'set discos tactiles pies y manos': 'conjunto de discos tactiles para pies y manos',
+    'tubo de burbujas luminea': 'tubo de burbujas pequeno',
+    'tubo de burbujas': 'tubo de burbujas pequeno',
+    'pelota cacahuete': 'mani terapeutico',
+    // Los mismos productos escritos como los escribio Neuroarcoiris. Sin esto salian como
+    // "Sin dato" aunque estan en bodega: el mani (1), la pelota de 45 (1) y las estrellas (3+4).
+    'pelota cacahuate': 'mani terapeutico',
+    // Mismo SKU (BJ-EMBT-V), distinto nombre: en la tarifa es "Balancin de TERAPIA vibroacustico"
+    // y en bodega quedo como "Balancin vibroacustico". Sin esto se pedia uno teniendo uno guardado.
+    'balancin de terapia vibroacustico': 'balancin vibroacustico',
+    // Rayen 2026-08-13: la base del rincon ES la base del tubo. El rincon Luminea se arma con
+    // tubo + base + fibra optica, y el codigo lo confirma: en bodega es MP-LEMBCTF "Base cuadrada
+    // para rincon Luminea" y en la tarifa BJ-LEMBCTF "Base cuadrada para tubo de burbujas y fibra
+    // optica" — mismo sufijo, distinto prefijo, igual que MP-EX46-1 / BJ-EX46 en las pompas.
+    'base cuadrada para tubo de burbujas': 'base cuadrada para rincon luminea',
+    'base cuadrada para tubo de burbujas y fibra optica': 'base cuadrada para rincon luminea',
+    'pelota de terapia de diametro 45cm': 'pelota terapeutica 45 cm diametro',
+    'pelota de terapia de diametro 55cm ': 'pelota terapeutica 55 cm diametro',
+    'proyector estrellas luz led': 'estrellas shx',
+    'cortina de fibra optica': 'cortina luminea',
+    'cortina de fibra optica luminea': 'cortina luminea',
+    // Rayen 2026-07-21: "burbujas y pompas es lo mismo" / "kit de estimulacion sensorial y kit de
+    // masajes son lo mismo".
+    'burbujas': 'pompas shx',
+    'burbujas shx': 'pompas shx',
+    'maquina de burbujas': 'pompas shx',
+    'kit de estimulacion sensorial': 'kit de masaje',
+    // Rayen 2026-07-27: Saco Propioceptivo = Saco de danza; Columpio (de) rulo/rollo (Advantage)
+    // 2 en 1 = el mismo. (La Piscina Luminea vs vibroacústica NO se unen: son productos distintos.)
+    'saco propioceptivo': 'saco de danza m',
+    'columpio de rulo 2 en 1': 'columpio rulo 2 en 1',
+    'columpio de rulo advantage 2 en 1': 'columpio rulo 2 en 1',
+    'columpio rulo advantage 2 en 1': 'columpio rulo 2 en 1',
+    'columpio de rollo 2 en 1': 'columpio rulo 2 en 1',
+    // 2026-09-08: los 3 productos de OC26-3881-SM que salian sin costo Y sin precio a la vez.
+    // Los datos SI estaban: el nombre de la cotizacion no cruzaba con el del catalogo/tarifa.
+    //   "Sistema SHX Compact sin tablet" -> el Compact a secas (BJ-EX04). El que trae tablet es
+    //   BJ-EX04-I "con iPad"; el BJ-EX04-SP "sin proyeccion" es otro producto y NO se toca.
+    'shx compact sin tablet': 'shx compact',
+    // Ya existia 'proyector de estrellas shx'; faltaba la version sin el "de".
+    'proyector estrellas shx': 'estrellas shx',
+    'proyector estrellas': 'estrellas shx',
+    // El ComuniQa Eye con TD Snap (COM-E-SN) cotizado como "Comuniqa Surface Eye + TD Snap".
+    'comuniqa surface eye + td snap': 'comuniqa eye con td snap®',
+    'comuniqa eye + td snap': 'comuniqa eye con td snap®',
+    'comuniqa surface eye con td snap': 'comuniqa eye con td snap®',
+    // 2026-09-09: typo real del registro (OC26-3854-SM). No hay otro espejo que se le
+    // parezca: los de la tarifa son grande/pequeño x recto/curvo, y "grande" ya viene escrito.
+    'espejo grecto grande': 'espejo grande recto',
+    // ── Nombres canónicos, 11-sep-2026 ────────────────────────────────────────
+    // Rayen encontró que el margen le salía mal porque el mismo producto se llamaba
+    // distinto en la cotización y en su tarifa. Se unificó el nombre en
+    // EspecificacionesSala.js, SalasACotizacion.js y las FICHAS de esta página; acá
+    // quedan los nombres VIEJOS y los del proveedor, para que las cotizaciones ya
+    // emitidas y el archivo de costos de Qinera sigan cruzando.
+    'sensory cube': 'sensory cube grande',   // BJ-EMSC — Sensory Cube
+    'sensory feet': 'sensory feet 1.1',   // BJ-SF11 — Sensory Feet
+    'sensory go': 'sensory go luminea',   // BJ-SGL — Sensory Go
+    'linea led de 5m luminea para respaldo': 'linea led luminea para respaldo 5 metros',   // BJ-LLLR — Línea led de 5m Luminea para respaldo
+    'linea led luminea para respaldo': 'linea led luminea para respaldo 5 metros',   // BJ-LLLR — Línea LED Luminea para respaldo
+    'amplificador vibroacustico': 'amplificador vibroacustico adicional',   // BJ-EMAVIBX — Amplificador vibroacústico
+    'kit de material ultravioleta': 'bolsa material ultravioleta',   // BJ-KUV — Kit de material ultravioleta
+    'set de discos tactiles para pies y manos': 'conjunto de discos tactiles para pies y manos',   // BJ-E16807 — Set de discos táctiles para pies y manos
+    'pelota de terapia de diametro 45cm': 'pelota de terapia de diametro 45 cm',   // BJ-51090000 — Pelota de terapia de diámetro 45cm
+    'pelota de terapia 45 cm': 'pelota de terapia de diametro 45 cm',   // BJ-51090000 — Pelota de terapia 45 cm
+    'pelota de terapia de diametro 55cm': 'pelota de terapia de diametro 55 cm',   // BJ-51091000 — Pelota de terapia de diámetro 55cm
+    'pelota de terapia 55 cm': 'pelota de terapia de diametro 55 cm',   // BJ-51091000 — Pelota de terapia 55 cm
+    'manta de peso azul y roja mediana 2,2kg': 'manta de peso azul y roja mediana 2,2 kg',   // BJ-SD12319 — Manta de peso azul y roja - mediana - 2,2kg
+    'manta de peso mediana 2,2 kg': 'manta de peso azul y roja mediana 2,2 kg',   // BJ-SD12319 — Manta de peso mediana 2,2 kg
+    'manta de peso gris y roja grande 3,6kg': 'manta de peso gris y roja grande 3,6 kg',   // BJ-SD12320 — Manta de peso gris y roja - grande - 3,6kg
+    'manta de peso grande 3,6 kg': 'manta de peso gris y roja grande 3,6 kg',   // BJ-SD12320 — Manta de peso grande 3,6 kg
+    'peso para hombros: lola la oruga grande 1,3kg': 'peso para hombros lola la oruga grande 1,3 kg',   // BJ-SD12021 — Peso para hombros: Lola la Oruga grande 1,3kg
+    'peso para hombros lola la oruga grande': 'peso para hombros lola la oruga grande 1,3 kg',   // BJ-SD12021 — Peso para hombros Lola la oruga grande
+    'proteccion de pared a medida': 'proteccion de pared a medida (por metro)',   // BJ-EMRM — Protección de pared a medida
+    'rincon luminea': 'rincon luminea sin tablet',   // BJ-LRIN — Rincón Luminea
+    'rincon luminea con tableta': 'rincon luminea con tablet',   // BJ-LRIN23 — Rincón Luminea con tableta
+    'linea led de 5m luminea': 'linea led luminea para techo 5 metros',   // BJ-LLLT — Línea led de 5m Luminea
+    'linea led luminea': 'linea led luminea para techo 5 metros',   // BJ-LLLT — Línea LED Luminea
+    'saco de danza m': 'saco de danza propioceptivo talla m',   // BJ-EV2208 — Saco de danza M
+    'saco propioceptivo (saco de danza)': 'saco de danza propioceptivo talla m',   // BJ-EV2208 — Saco Propioceptivo (Saco de danza)
+    'columpio plataforma de balanceo': 'plataforma de balanceo advantage',   // q128 — Columpio Plataforma De Balanceo
+    'teclado clevy alto contraste': 'teclado clevy alto contraste tri mode',   // q190 — Teclado Clevy Alto Contraste
+    // Puente del destino viejo de la línea LED: los tres alias que ya existían
+    // apuntaban acá, y con la resolución en cadena de más abajo llegan solos al nuevo.
+    'linea led luminea para techo': 'linea led luminea para techo 5 metros',
+    };
 function _smProdNorm(name){
   return String(name||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')
     .replace(/vibracustic/g,'vibroacustic').replace(/aromateria\b/g,'aromaterapia')

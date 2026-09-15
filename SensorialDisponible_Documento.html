@@ -101,6 +101,55 @@ body{margin:0;background:#EEF1F5;font-family:'Open Sans',system-ui,sans-serif;co
 .chips span{border:1px solid #E5E9F0;background:#fff;border-radius:6px;padding:4px 10px;font-size:11.5px}
 .pendiente{background:#FAEEDA;color:#412402;border-radius:6px;padding:9px 13px;font-size:12px}
 
+/* ── Las 3 salas ──────────────────────────────────────── */
+.salas-intro{padding:34px 54px 0}
+.salas-intro .rot{
+  font-family:'Montserrat',sans-serif;font-size:11px;font-weight:700;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--sky);margin-bottom:6px;
+}
+.salas-intro h2{font-family:'Montserrat',sans-serif;font-size:22px;font-weight:800;color:var(--navy);margin:0 0 8px}
+.salas-intro p{margin:0;color:#4B5563;font-size:13px;max-width:620px}
+
+.sala{padding:0 54px;margin-top:26px;break-inside:avoid}
+.sala-caja{border:1.5px solid var(--navy);border-radius:10px;overflow:hidden;background:#fff}
+.sala-cab{
+  background:linear-gradient(170deg,#0A0F1E,#001a60 35%,#0A2E8A 60%,#06b3fd);
+  border-bottom:3px solid var(--naranja);padding:20px 22px;color:#fff;
+}
+.sala-cab h3{font-family:'Montserrat',sans-serif;font-size:20px;font-weight:800;margin:0 0 5px;line-height:1.2}
+.sala-cab .para{font-size:12.5px;opacity:.9;font-style:italic}
+.sala-cuerpo{padding:20px 22px}
+.sala-txt{font-size:13.2px;line-height:1.72;margin:0 0 16px;color:#334155}
+.sala-bloque{margin-bottom:14px}
+.sala-bloque .et{
+  font-family:'Montserrat',sans-serif;font-size:9.5px;font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--sky);margin-bottom:6px;
+}
+.sala-chips{display:flex;flex-wrap:wrap;gap:6px}
+.sala-chips span{border:1px solid #CBE4F7;background:#F4F9FF;color:var(--navy);border-radius:999px;padding:4px 12px;font-size:11.5px;font-weight:600}
+.sala-chips.perfil span{border-color:#E5E9F0;background:#fff;color:#334155;font-weight:400}
+.sala-nota{font-size:11.5px;color:var(--suave);font-style:italic;margin-top:2px}
+
+.sala-lista{border-top:1px solid #E5E9F0;margin-top:16px;padding-top:14px}
+.sala-lista .et{
+  font-family:'Montserrat',sans-serif;font-size:9.5px;font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--navy);margin-bottom:9px;
+}
+.sala-items{display:grid;grid-template-columns:repeat(2,1fr);gap:5px 20px}
+.sala-item{display:flex;align-items:baseline;gap:8px;font-size:12px;padding:3px 0;border-bottom:1px dotted #E5E9F0}
+.sala-item .nom{flex:1;color:#334155}
+.sala-item .val{font-weight:600;color:var(--navy);font-variant-numeric:tabular-nums;white-space:nowrap}
+.sala-total{
+  display:flex;align-items:baseline;justify-content:space-between;gap:14px;
+  margin-top:16px;padding:14px 22px 16px;background:#F4F9FF;border:1.5px solid var(--navy);border-radius:8px;
+}
+.sala-total .lab{font-family:'Montserrat',sans-serif;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--navy)}
+.sala-total .num{font-family:'Montserrat',sans-serif;font-size:24px;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums}
+.sala-total .iva{font-size:10.5px;color:var(--suave);display:block;text-align:right;font-weight:400}
+
+.corte{padding:40px 54px 0}
+.corte-linea{border-top:1px solid #E5E9F0}
+
 .cierre{text-align:center;padding:34px 54px 10px;color:var(--suave);font-size:11.5px;border-top:1px solid #E5E9F0;margin-top:30px}
 
 @media print{
@@ -137,6 +186,8 @@ body{margin:0;background:#EEF1F5;font-family:'Open Sans',system-ui,sans-serif;co
     </div>
   </div>
 
+  <div id="salas"></div>
+
   <div class="indice">
     <div class="heading">Contenido</div>
     <ol id="indice"></ol>
@@ -148,9 +199,11 @@ body{margin:0;background:#EEF1F5;font-family:'Open Sans',system-ui,sans-serif;co
 </div>
 
 <script src="SensorialBodega.js"></script>
+<script src="SensorialSalas.js"></script>
 <script>
 (function(){
   var P = window.SENSORIAL_BODEGA || [], CATS = window.SENSORIAL_CATS || [];
+  var SALAS = window.SENSORIAL_SALAS || [];
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
   function pesos(n){ return '$' + Number(n||0).toLocaleString('es-CL'); }
@@ -165,6 +218,42 @@ body{margin:0;background:#EEF1F5;font-family:'Open Sans',system-ui,sans-serif;co
     return '<div class="chips">' + p.map(function(x){ return '<span>' + esc(x) + '</span>'; }).join('') + '</div>';
   }
   function seccion(titulo, cuerpo){ return cuerpo ? '<div class="seccion"><div class="heading">'+titulo+'</div>'+cuerpo+'</div>' : ''; }
+
+  /* ── Las 3 salas, antes de los productos ───────────────────── */
+  function listaChips(txt, clase){
+    var p = String(txt || '').split('·').map(function(x){ return x.trim(); }).filter(Boolean);
+    if(!p.length) return '';
+    return '<div class="sala-chips' + (clase ? ' ' + clase : '') + '">' +
+      p.map(function(x){ return '<span>' + esc(x) + '</span>'; }).join('') + '</div>';
+  }
+  if(SALAS.length){
+    var hs = '<div class="salas-intro">' +
+      '<div class="rot">Tres formas de armarla</div>' +
+      '<h2>Nuestras salas</h2>' +
+      '<p>Cada una responde a una necesidad distinta y tiene un valor cerrado. ' +
+      'Todos sus productos están en bodega y aparecen con su ficha completa más adelante.</p>' +
+      '</div>';
+    SALAS.forEach(function(s){
+      hs += '<div class="sala"><div class="sala-caja">' +
+        '<div class="sala-cab"><h3>' + esc(s.n) + '</h3><div class="para">' + esc(s.para) + '</div></div>' +
+        '<div class="sala-cuerpo">' +
+          '<p class="sala-txt">' + esc(s.txt) + '</p>' +
+          (s.foco ? '<div class="sala-bloque"><div class="et">En qué está enfocada</div>' + listaChips(s.foco) + '</div>' : '') +
+          (s.quien ? '<div class="sala-bloque"><div class="et">A quién puede ayudar</div>' + listaChips(s.quien, 'perfil') + '</div>' : '') +
+          (s.nota ? '<div class="sala-nota">' + esc(s.nota) + '</div>' : '') +
+          '<div class="sala-lista"><div class="et">Qué incluye · ' + s.items.length + ' productos</div>' +
+            '<div class="sala-items">' + s.items.map(function(i){
+              return '<div class="sala-item"><span class="nom">' + (i.cant > 1 ? i.cant + '× ' : '') + esc(i.n) +
+                '</span><span class="val">' + pesos(i.iva * i.cant) + '</span></div>'; }).join('') +
+            '</div>' +
+          '</div>' +
+          '<div class="sala-total"><span class="lab">Valor de la sala</span>' +
+            '<span><span class="num">' + pesos(s.total) + '</span><span class="iva">IVA incluido</span></span></div>' +
+        '</div></div></div>';
+    });
+    hs += '<div class="corte"><div class="corte-linea"></div></div>';
+    document.getElementById('salas').innerHTML = hs;
+  }
 
   /* orden: por categoría, como vienen los datos */
   var orden = [];

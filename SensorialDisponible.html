@@ -53,6 +53,47 @@ h1{font-size:23px;font-weight:800;color:var(--navy);margin:0 0 4px;letter-spacin
 .chip[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff;font-weight:700}
 .conteo{font-size:12px;color:var(--suave);margin-left:auto;white-space:nowrap}
 
+/* ── Las 3 salas ──────────────────────────────────────────── */
+#salas{padding-top:28px}
+.salas-cab{margin-bottom:16px}
+.salas-cab .rot{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--sky);margin-bottom:3px}
+.salas-cab h2{font-size:20px;font-weight:800;color:var(--navy);margin:0 0 4px}
+.salas-cab p{margin:0;font-size:13px;color:var(--suave);max-width:640px}
+.salas-grilla{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.sala{
+  background:var(--blanco);border:1px solid var(--linea);border-radius:16px;overflow:hidden;
+  display:flex;flex-direction:column;transition:transform .15s,box-shadow .15s;
+}
+.sala:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,26,96,.09)}
+.sala-cab{
+  background:linear-gradient(170deg,#0A0F1E,#001a60 35%,#0A2E8A 60%,#06b3fd);
+  border-bottom:3px solid var(--naranja);padding:16px 18px;color:#fff;
+}
+.sala-cab h3{margin:0 0 4px;font-size:17px;font-weight:800;line-height:1.2}
+.sala-cab .para{font-size:11.5px;opacity:.88;line-height:1.4}
+.sala-cuerpo{padding:16px 18px 18px;display:flex;flex-direction:column;gap:13px;flex:1}
+.sala-txt{margin:0;font-size:12.8px;line-height:1.62;color:var(--texto)}
+.sala-bloque .et{font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--sky);margin-bottom:5px}
+.sala-chips{display:flex;flex-wrap:wrap;gap:5px}
+.sala-chips span{border:1px solid #CBE4F7;background:#F4F9FF;color:#042C53;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:600}
+.sala-chips.perfil span{border-color:var(--linea);background:var(--fondo);color:#334155;font-weight:400}
+.sala-nota{font-size:11.5px;color:var(--suave);font-style:italic}
+.sala-ver{
+  background:none;border:0;padding:0;color:var(--sky);font-family:inherit;font-size:12px;
+  font-weight:700;cursor:pointer;text-align:left;
+}
+.sala-items{display:none;flex-direction:column;gap:2px}
+.sala-items.abierto{display:flex}
+.sala-items div{display:flex;justify-content:space-between;gap:10px;font-size:11.5px;padding:3px 0;border-bottom:1px dotted var(--linea)}
+.sala-items span:last-child{font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums;white-space:nowrap}
+.sala-total{
+  margin-top:auto;padding:12px 14px;background:var(--fondo);border:1px solid var(--linea);border-radius:12px;
+  display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+}
+.sala-total .lab{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--suave)}
+.sala-total .num{font-size:19px;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums}
+.sala-total .iva{display:block;font-size:9.5px;color:var(--suave);text-align:right;font-weight:500}
+
 /* ── Secciones y grilla ───────────────────────────────────── */
 main{padding:28px 0 60px}
 .seccion{margin-bottom:34px}
@@ -208,6 +249,8 @@ footer{border-top:1px solid var(--linea);background:var(--blanco);padding:22px 0
   </div>
 </div>
 
+<section class="wrap" id="salas"></section>
+
 <main class="wrap" id="lista"></main>
 
 <footer>OpenCluster Technologies · Construyendo Inclusión · www.opencluster-tech.cl</footer>
@@ -228,15 +271,54 @@ footer{border-top:1px solid var(--linea);background:var(--blanco);padding:22px 0
 </div>
 
 <script src="SensorialBodega.js"></script>
+<script src="SensorialSalas.js"></script>
 <script>
 (function(){
   var P = window.SENSORIAL_BODEGA || [], CATS = window.SENSORIAL_CATS || [];
+  var SALAS = window.SENSORIAL_SALAS || [];
   var filtro = 0, texto = '';
 
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
   function pesos(n){ return '$' + Number(n||0).toLocaleString('es-CL'); }
   function normal(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''); }
+
+  /* ── Las 3 salas, antes de los productos ─────────────── */
+  function chipsDe(txt, clase){
+    var p = String(txt||'').split('·').map(function(x){ return x.trim(); }).filter(Boolean);
+    if(!p.length) return '';
+    return '<div class="sala-chips'+(clase?' '+clase:'')+'">' +
+      p.map(function(x){ return '<span>'+esc(x)+'</span>'; }).join('') + '</div>';
+  }
+  if(SALAS.length){
+    document.getElementById('salas').innerHTML =
+      '<div class="salas-cab"><div class="rot">Tres formas de armarla</div>' +
+      '<h2>Nuestras salas</h2>' +
+      '<p>Cada una responde a una necesidad distinta y tiene un valor cerrado. ' +
+      'Todos sus productos están en bodega y más abajo aparece la ficha de cada uno.</p></div>' +
+      '<div class="salas-grilla">' + SALAS.map(function(s,k){
+        return '<div class="sala">' +
+          '<div class="sala-cab"><h3>'+esc(s.n)+'</h3><div class="para">'+esc(s.para)+'</div></div>' +
+          '<div class="sala-cuerpo">' +
+            '<p class="sala-txt">'+esc(s.txt)+'</p>' +
+            (s.foco ? '<div class="sala-bloque"><div class="et">En qué está enfocada</div>'+chipsDe(s.foco)+'</div>' : '') +
+            (s.quien ? '<div class="sala-bloque"><div class="et">A quién puede ayudar</div>'+chipsDe(s.quien,'perfil')+'</div>' : '') +
+            (s.nota ? '<div class="sala-nota">'+esc(s.nota)+'</div>' : '') +
+            '<button class="sala-ver" data-sala="'+k+'">Ver los '+s.items.length+' productos</button>' +
+            '<div class="sala-items" id="salaitems'+k+'">' + s.items.map(function(i){
+              return '<div><span>'+(i.cant>1?i.cant+'× ':'')+esc(i.n)+'</span><span>'+pesos(i.iva*i.cant)+'</span></div>'; }).join('') +
+            '</div>' +
+            '<div class="sala-total"><span class="lab">Valor de la sala</span>' +
+              '<span><span class="num">'+pesos(s.total)+'</span><span class="iva">IVA incluido</span></span></div>' +
+          '</div></div>';
+      }).join('') + '</div>';
+    document.getElementById('salas').addEventListener('click', function(e){
+      var b = e.target.closest('.sala-ver'); if(!b) return;
+      var caja = document.getElementById('salaitems'+b.dataset.sala);
+      var abierto = caja.classList.toggle('abierto');
+      b.textContent = abierto ? 'Ocultar los productos' : 'Ver los '+SALAS[b.dataset.sala].items.length+' productos';
+    });
+  }
 
   /* ── Filtros ─────────────────────────────────────────── */
   var chips = document.getElementById('chips');

@@ -189,6 +189,10 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
    en la hoja del producto, no empujarlo a una hoja nueva. */
 /* La explicacion en palabras corrientes de un termino de terapia: acompaña, no compite. */
 .glo{color:var(--gris-cl);font-weight:400}
+/* El resultado para la persona, cerrando la descripcion: mismo cuerpo, un punto mas de peso. */
+.logro{font-weight:600;color:var(--navy)}
+/* «Lo que lo distingue»: una linea, sin caja, para que no pese como una seccion mas. */
+.unico p{margin:2px 0 0;font-size:12.4px;line-height:1.45;color:var(--navy);font-weight:600}
 .matlist p{margin:0;font-size:11.8px;line-height:1.38}
 .matlist .mk{font-weight:600;color:var(--navy)}
 .matbox{break-inside:avoid;page-break-inside:avoid;margin-top:7px}
@@ -540,7 +544,8 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
     'estimulacion basal': 'estimulación para personas con muy poca movilidad o respuesta',
   };
   /* Esto no responde «¿que se trabaja con el?»: es donde se usa. Sale de esa lista. */
-  var DONDE = /^(salas multisensoriales|centros educativos|entornos terapeuticos|zonas de descanso|fisioterapia|atencion temprana|intervencion terapeutica|espacios terapeuticos|salas de estimulacion)$/;
+  /* Sin anclar el final: «Salas multisensoriales y espacios terapeuticos» tambien es un donde. */
+  var DONDE = /^(salas multisensoriales|salas de estimulacion|centros educativos|centros de dia|entornos terapeuticos|espacios terapeuticos|zonas de descanso|fisioterapia|atencion temprana|intervencion terapeutica|colegios|residencias)/;
   function sinTildes(t){ return String(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim(); }
   function explica(t){
     var k = sinTildes(t).replace(/\.$/,'');
@@ -633,8 +638,12 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
           (d.oc ? '<span class="cod">'+esc(d.oc)+'</span>' : '')+
         '</div>'+
       '<div>'+
+        /* El «logro» cierra la descripcion con el resultado para la persona. Rayen, 14-sep-2026:
+           «¿para que sirve? describe el aparato, no el resultado», y el resultado es lo que compra
+           quien firma. */
         (d.que ? '<h4 class="campo"><span class="chip">¿Para qué sirve?</span></h4>'+
-                 '<p class="intro">'+esc(d.que)+'</p>' : '')+
+                 '<p class="intro">'+esc(d.que)+
+                 (d.logro ? ' <span class="logro">'+esc(d.logro)+'</span>' : '')+'</p>' : '')+
         /* Con muchos usos la lista se partia alrededor de la foto y parecian dos listas sueltas
            (la Piscina Luminea, con once): a partir de seis baja entera y va a dos columnas. */
         campo('¿Qué se trabaja con él?',
@@ -657,7 +666,9 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
                                       : '<p>'+esc(equipo)+'.</p>');
            return (tabla ? '<div class="campo ancho"><h4 class="tit-tec">Especificaciones técnicas</h4>'+tabla+'</div>' : '')+
                   (extra ? campo('Características adicionales', extra, 'ancho') : '')+
-                  (mat ? campo("Detalle de materialidad", mat, "ancho matbox") : "");
+                  (mat ? campo("Detalle de materialidad", mat, "ancho matbox") : "")+
+                  (d.unico ? '<div class="campo ancho matbox unico"><h4><span class="chip">Lo que lo distingue</span></h4>'+
+                             '<p>'+esc(d.unico)+'</p></div>' : '');
          })()+
       '</div></div>'+   /* cierra la columna del contenido Y la rejilla de la ficha */
       '</div>'+          /* cierra .ficha: lo que sigue es hermano, no contenido */

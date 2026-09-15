@@ -182,6 +182,22 @@ main{padding:28px 0 60px}
 .tag.aviso{background:#FAEEDA;color:#412402}
 /* «qué estimula» va dentro del párrafo, en el mismo tamaño, solo en navy */
 .estim{color:var(--navy);font-weight:700}
+
+/* ── Materiales: lo que el papel acredita ─────────────────── */
+.mat{margin-top:16px;border:1px solid #A9DCC9;border-radius:12px;overflow:hidden;background:#F2FBF8}
+.mat-cab{background:#E1F5EE;padding:9px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #C5E8DC}
+.mat-cab svg{flex:none;color:#04342C}
+.mat-cab b{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#04342C}
+.mat-sellos{display:flex;flex-wrap:wrap;gap:6px;padding:13px 14px 5px}
+.mat-sellos span{background:var(--blanco);border:1px solid #A9DCC9;color:#04342C;border-radius:999px;padding:4px 12px;font-size:11.5px;font-weight:700}
+.mat-detalle{padding:11px 14px 14px;font-size:12px;line-height:1.6;color:#2F4F46}
+.mat-detalle div{margin-bottom:3px}
+.mat-detalle b{color:#04342C;font-weight:700}
+/* en la tarjeta, un sello chico que avisa que tiene respaldo */
+.sello-mini{
+  position:absolute;bottom:8px;right:8px;background:#E1F5EE;color:#04342C;border:1px solid #A9DCC9;
+  border-radius:999px;padding:3px 9px;font-size:9.5px;font-weight:700;letter-spacing:.02em;
+}
 .destacado{border-left:3px solid var(--sky);padding:2px 0 2px 13px;font-size:13.5px;color:var(--texto)}
 .destacado b{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--sky);font-weight:700;margin-bottom:2px}
 .bloque{margin-bottom:18px}
@@ -336,11 +352,12 @@ footer{border-top:1px solid var(--linea);background:var(--blanco);padding:22px 0
       ? '<img src="'+esc(p.img)+'" alt="'+esc(p.n)+'" loading="lazy" onerror="this.parentNode.innerHTML=\'<span class=&quot;sinfoto&quot;>Sin foto</span>\'">'
       : '<span class="sinfoto">Sin foto</span>';
     var pend = p.fuente === 'pendiente' ? '<span class="pendiente">Ficha en preparación</span>' : '';
+    var sello = (p.sellos && p.sellos.length) ? '<span class="sello-mini">Materiales certificados</span>' : '';
     var precio = p.iva
       ? '<div class="t-precio"><b>'+pesos(p.iva)+'</b><span>IVA incluido</span></div>'
       : '<div class="sinprecio">Precio a consultar</div>';
     return '<button class="tarjeta" data-i="'+i+'">' +
-      '<div class="foto">'+foto+pend+'</div>' +
+      '<div class="foto">'+foto+pend+sello+'</div>' +
       '<div class="t-cuerpo">' +
         '<p class="t-nombre">'+esc(p.n)+'</p>' +
         (p.oc ? '<div class="t-meta"><span class="t-oc">'+esc(p.oc)+'</span></div>' : '') +
@@ -373,6 +390,28 @@ footer{border-top:1px solid var(--linea);background:var(--blanco);padding:22px 0
 
   /* ── Ficha ───────────────────────────────────────────── */
   function bloque(titulo, cuerpo){ return cuerpo ? '<div class="bloque"><h4>'+titulo+'</h4>'+cuerpo+'</div>' : ''; }
+
+  /* Los materiales: los sellos primero, que es lo que se lee de un vistazo, y debajo el
+     detalle con el texto aprobado. */
+  function bloqueMateriales(p){
+    if(!p.mat) return '';
+    var lineas = String(p.mat).split('\n').filter(Boolean).map(function(l){
+      var i = l.indexOf(':');
+      return i > 0
+        ? '<div><b>'+esc(l.slice(0,i+1))+'</b> '+esc(l.slice(i+1).trim())+'</div>'
+        : '<div>'+esc(l)+'</div>';
+    }).join('');
+    return '<div class="mat">' +
+      '<div class="mat-cab">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M12 3 4 6v6c0 4.4 3.4 8.3 8 9 4.6-.7 8-4.6 8-9V6l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg>' +
+        '<b>Materiales · lo que el papel acredita</b>' +
+      '</div>' +
+      (p.sellos && p.sellos.length
+        ? '<div class="mat-sellos">'+p.sellos.map(function(s){ return '<span>'+esc(s)+'</span>'; }).join('')+'</div>' : '') +
+      '<div class="mat-detalle">'+lineas+'</div>' +
+    '</div>';
+  }
   function comoLista(txt){
     var p = String(txt).split('·').map(function(x){ return x.trim(); }).filter(Boolean);
     if(p.length < 2) return '<p>'+esc(txt)+'</p>';
@@ -413,6 +452,7 @@ footer{border-top:1px solid var(--linea);background:var(--blanco);padding:22px 0
       bloque('Qué incluye la entrega', p.inc ? '<p>'+esc(p.inc)+'</p>' : '') +
       bloque('Ficha técnica', p.tec ? '<div class="tecnica">'+esc(p.tec)+'</div>' : '') +
       bloque('Características', p.car ? comoLista(p.car) : '') +
+      bloqueMateriales(p) +
       (p.fuente === 'pendiente'
         ? '<p class="nota">La descripción de este producto todavía se está preparando.</p>' : '');
 

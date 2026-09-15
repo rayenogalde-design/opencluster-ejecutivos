@@ -2295,9 +2295,21 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
     STOCK_SM[k] = p;
   });
   // Extrae {key, display, qty} de un string de productos tipo "Nombre x Cant, Nombre2 x Cant2".
-  function _smExtraerProductos(prodStr){
+  // codsStr: la lista de codigos OC que desde el 14-sep-2026 devuelve el CRM en c.codigos,
+  // con la MISMA forma que productos ("OC-1829 x1, OC-0833 x1, ..."). Se empareja por
+  // POSICION y solo si las dos listas tienen la misma cantidad de items: si un nombre trae
+  // una coma adentro, el split lo parte en dos y las posiciones se corren, asi que en ese
+  // caso se descartan todos los codigos y se sigue cruzando por nombre. Ponerle a un
+  // producto el costo de otro seria peor que no tener costo.
+  function _smExtraerProductos(prodStr, codsStr){
     const vistos = new Set(); const out = [];
-    String(prodStr||'').split(',').map(x=>x.trim()).filter(Boolean).forEach(item=>{
+    const _crudos = String(prodStr||'').split(',').map(x=>x.trim()).filter(Boolean);
+    let _cods = String(codsStr||'').split(',').map(x=>x.trim()).filter(Boolean)
+      .map(x => { const m = x.match(/OC-\d{3,5}/i); return m ? m[0].toUpperCase() : ''; });
+    if (_cods.length !== _crudos.length) _cods = [];   // desalineadas: mejor ninguna
+    let _i = -1;
+    _crudos.forEach(item=>{
+      _i++;
       const m = item.match(/^(.*?)\s*[xX]\s*(\d+)\s*$/);
       const rawName = m ? m[1].trim() : item;
       const qty = m ? (parseInt(m[2],10)||1) : 1;
@@ -2327,7 +2339,7 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
       if(_SM_PROD_ALIAS[key]) key = _SM_PROD_ALIAS[key];
       if(vistos.has(key)) return;
       vistos.add(key);
-      out.push({ key, display: rawName, qty });
+      out.push({ key, display: rawName, qty, oc: _cods[_i] || '' });
     });
     return out;
   }
@@ -3238,7 +3250,7 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
   // (productos que nunca compramos, servicios) para avisarlo en pantalla.
   function _planDescuento(c){
     const lineas = [], sinBodega = [];
-    _smExtraerProductos(c.productos).forEach(p => {
+    _smExtraerProductos(c.productos, c.codigos).forEach(p => {
       let s = STOCK_SM[p.key];
       // Versiones SHX que se ARMAN: de bodega no sale el SHX (que no existe), salen las dos
       // piezas — el aparato suelto y un Enabler Socket+. Antes decia "no se descuenta" y el
@@ -3317,7 +3329,7 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
   // Los productos de una cotización cruzados con el stock, tal como los espera el
   // generador de Excel. Lo usan el Excel de una cotización y las pestañas del de varias.
   function _filasStockDeCotizacion(c){
-    return _smExtraerProductos(c.productos).map(p => {
+    return _smExtraerProductos(c.productos, c.codigos).map(p => {
       const s = STOCK_SM[p.key];
       const d = _stockPartido(p.qty, s);
       return {
@@ -3359,7 +3371,7 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
     // no puedan mostrar cosas distintas.
     const matriz = {};
     seleccionadas.forEach(c => {
-      _smExtraerProductos(c.productos).forEach(p => {
+      _smExtraerProductos(c.productos, c.codigos).forEach(p => {
         if (!matriz[p.key]) matriz[p.key] = { display: p.display, porCotiz: {}, total: 0 };
         matriz[p.key].porCotiz[c.cotizacion] = (matriz[p.key].porCotiz[c.cotizacion] || 0) + p.qty;
         matriz[p.key].total += p.qty;
@@ -3424,7 +3436,7 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
   }
   // Desde una cotización: los mismos productos que ya se extraen para el stock.
   function _especificacionesDeCotizacion(c){
-    var items = _smExtraerProductos(c.productos).map(function(p){
+    var items = _smExtraerProductos(c.productos, c.codigos).map(function(p){
       var s = STOCK_SM[p.key];
       return { sku: (s && s.sku) || '', nombre: p.display, cantidad: p.qty };
     });
@@ -4075,7 +4087,7 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
   function _margenCotiz(c){
     const filas = [], sinCosto = [], sinPrecio = [], sinCostoDet = [];
     let costoTot = 0, listaTot = 0, listaSinCosto = 0, costoSinPrecio = 0;
-    _smExtraerProductos(c.productos).forEach(p => {
+    _smExtraerProductos(c.productos, c.codigos).forEach(p => {
       const s   = STOCK_SM[p.key];
       const sku = s && s.sku;
       // COSTO: siempre del archivo de Rayen. Es lo que le pagamos al proveedor por el producto
@@ -4368,7 +4380,7 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
     const cuerpo = document.getElementById('cotiz-detalle-cuerpo');
     if (!c || !modal || !cuerpo) return;
     const estadoTxt = c.ganada ? 'Ganada' : (c.perdida ? 'Descartada' : 'En gestión');
-    const prods = _smExtraerProductos(c.productos);
+    const prods = _smExtraerProductos(c.productos, c.codigos);
     const filasProd = prods.map(p => '<div class="cotiz-detalle-prod-fila"><span>' + escapeHtmlSafe(p.display) + '</span><span>x' + p.qty + '</span></div>').join('');
     // Seguimientos (pestaña Seguimientos del CRM) y Mensajes de cotización (pedido de Rayen
     // 2026-07-21: "los seguimientos, comentarios que haya escrito para saber de qué es") — para
@@ -4515,7 +4527,7 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
   function _tablaMatrizCotizaciones(seleccionadas){
     const matriz = {}; // key -> { display, porCotiz:{num:qty}, total }
     seleccionadas.forEach(c => {
-      _smExtraerProductos(c.productos).forEach(p => {
+      _smExtraerProductos(c.productos, c.codigos).forEach(p => {
         if (!matriz[p.key]) matriz[p.key] = { display: p.display, porCotiz: {}, total: 0 };
         matriz[p.key].porCotiz[c.cotizacion] = (matriz[p.key].porCotiz[c.cotizacion] || 0) + p.qty;
         matriz[p.key].total += p.qty;
@@ -4596,7 +4608,7 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
   function _demandaPorKey(seleccionadas){
     const demanda = {};
     seleccionadas.forEach(c => {
-      _smExtraerProductos(c.productos).forEach(p => { demanda[p.key] = (demanda[p.key] || 0) + p.qty; });
+      _smExtraerProductos(c.productos, c.codigos).forEach(p => { demanda[p.key] = (demanda[p.key] || 0) + p.qty; });
     });
     return demanda;
   }
@@ -4790,7 +4802,7 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
     // Nombre que viene en la cotización, por si el producto no calza con el stock (así no queda
     // "(sin nombre de stock)") — 2026-07-27.
     const displayPorKey = {};
-    seleccionadas.forEach(c => _smExtraerProductos(c.productos).forEach(p => { if(!displayPorKey[p.key]) displayPorKey[p.key] = p.display; }));
+    seleccionadas.forEach(c => _smExtraerProductos(c.productos, c.codigos).forEach(p => { if(!displayPorKey[p.key]) displayPorKey[p.key] = p.display; }));
     const items = Object.keys(demanda).map(key => {
       const s = STOCK_SM[key];
       const pedido = demanda[key];
@@ -4822,7 +4834,7 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
     let pedidoCon = 0, pedidoSin = 0, salasSin = 0, salasCon = 0;
     (seleccionadas || []).forEach(c => {
       const conSHX = _llevaSistemaSHX(c);
-      _smExtraerProductos(c.productos).forEach(p => {
+      _smExtraerProductos(c.productos, c.codigos).forEach(p => {
         if (p.key !== _CLAVE_RINCON) return;
         if (conSHX) { pedidoSin += p.qty; salasSin++; } else { pedidoCon += p.qty; salasCon++; }
       });
@@ -5050,7 +5062,7 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
   }
   function _montoEstCotizDetalle(c){
     let total = 0; const sinPrecio = [];
-    _smExtraerProductos(c.productos).forEach(p => {
+    _smExtraerProductos(c.productos, c.codigos).forEach(p => {
       const s = STOCK_SM[p.key];
       const sku = s && s.sku;
       const cat = (sku && window.SALAS_CATALOGO) ? window.SALAS_CATALOGO[sku] : null;
@@ -5084,7 +5096,7 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
             + (pr ? pr + '% DE PROBABILIDAD DE CIERRE' : 'SIN PROBABILIDAD ASIGNADA')
             + '</td></tr>';
       }
-      const prods = _smExtraerProductos(c.productos).map(p => escapeHtmlSafe(p.display) + ' x' + p.qty).join(' · ');
+      const prods = _smExtraerProductos(c.productos, c.codigos).map(p => escapeHtmlSafe(p.display) + ' x' + p.qty).join(' · ');
       return sep
         + '<tr><td style="' + S.td + 'white-space:nowrap;font-weight:700;">' + escapeHtmlSafe(c.cotizacion) + '</td>'
         + '<td style="' + S.td + '">' + escapeHtmlSafe(c.institucion || '') + '</td>'
@@ -5138,7 +5150,7 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
     // Informe visual
     let _probGrupo = null;
     const filasCot = ordenadas.map(c => {
-      const prods = _smExtraerProductos(c.productos);
+      const prods = _smExtraerProductos(c.productos, c.codigos);
       const prodTxt = prods.map(p => escapeHtmlSafe(p.display) + ' x' + p.qty).join(', ');
       const _pr = c.probabilidad || 0;
       const _pill = '<span class="inf-prob ' + (_pr >= 90 ? 'p90' : (_pr >= 50 ? 'p50' : 'p0')) + '">' + _pr + '%</span>';
@@ -5342,7 +5354,7 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
     // Por prioridad: tarjetas UNA AL LADO DE LA OTRA (no apiladas), en el orden elegido, y
     // arrastrables para cambiar ese orden. Cada una muestra si el stock alcanza para ELLA sola.
     const tarjetas = seleccionadas.map((c, idx) => {
-      const prods = _smExtraerProductos(c.productos);
+      const prods = _smExtraerProductos(c.productos, c.codigos);
       const filas = prods.map(p => _cotizFilaComparacion(p.display, p.qty, p.key)).join('');
       return '<div class="cotiz-comp-card cotiz-comp-card-prioridad" draggable="true" data-num="' + escapeHtmlSafe(c.cotizacion) + '">' +
         '<div class="cotiz-comp-prioridad-badge">N°' + (idx + 1) + '</div>' +
@@ -5580,7 +5592,7 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
     if (c.estado) partes.push('Estado: ' + c.estado);
     if (c.probabilidad) partes.push('Probabilidad de cierre: ' + c.probabilidad + '%');
     if (c.total_iva) partes.push('Total c/IVA: $' + pesos(c.total_iva));
-    const prods = _smExtraerProductos(c.productos);
+    const prods = _smExtraerProductos(c.productos, c.codigos);
     if (prods.length) partes.push(prods.length + ' productos · ' + prods.reduce((s, p) => s + p.qty, 0) + ' unidades');
     const ult = (c.seguimientos && c.seguimientos.length) ? c.seguimientos[c.seguimientos.length - 1] : null;
     if (ult && (ult.comentario || ult.estado)) partes.push('Último seguimiento: ' + (ult.comentario || ult.estado));

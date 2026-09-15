@@ -2246,7 +2246,7 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
     'peso para hombros: lola la oruga grande 1,3kg': 'peso para hombros lola la oruga grande 1,3 kg',   // BJ-SD12021 — Peso para hombros: Lola la Oruga grande 1,3kg
     'peso para hombros lola la oruga grande': 'peso para hombros lola la oruga grande 1,3 kg',   // BJ-SD12021 — Peso para hombros Lola la oruga grande
     'proteccion de pared a medida': 'proteccion de pared a medida (por metro)',   // BJ-EMRM — Protección de pared a medida
-    'rincon luminea': 'rincon luminea sin tablet',   // BJ-LRIN — Rincón Luminea
+    'rincon luminea': 'rincon luminea con tablet',   // BJ-LRIN23 — Rayen, 15-sep-2026: "a Rauco y a todos les cobramos el con tablet"
     'rincon luminea con tableta': 'rincon luminea con tablet',   // BJ-LRIN23 — Rincón Luminea con tableta
     'linea led de 5m luminea': 'linea led luminea para techo 5 metros',   // BJ-LLLT — Línea led de 5m Luminea
     'linea led luminea': 'linea led luminea para techo 5 metros',   // BJ-LLLT — Línea LED Luminea
@@ -4494,6 +4494,20 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
     if (!f) {
       const qk = 'q:' + _normTightJS(display);
       if (FICHAS[qk]) { f = FICHAS[qk]; fichaKey = qk; }
+    }
+    // Rayen, 15-sep-2026: "por que el comunica esta sin imagen???" (OC26-3881-SM).
+    // La ficha existe y tiene foto, pero la cotizacion escribe el nombre de la TIENDA
+    // ("Comuniqa Surface Eye + TD Snap") y la ficha se llama como la tarifa de Qinera
+    // ("ComuniQa Eye con TD Snap"). Arriba se busca con el nombre TAL CUAL viene, sin pasar
+    // por _SM_PROD_ALIAS, que es justo el mapa que sabe que son el mismo producto. Asi que si
+    // no aparecio, se reintenta con el nombre ya traducido por el alias. Sirve para todos los
+    // productos que se cotizan con un nombre y tienen ficha con otro, no solo el ComuniQa.
+    if (!f) {
+      const aliasKey = _SM_PROD_ALIAS[_smProdNorm(display)];
+      if (aliasKey) {
+        const qkAlias = 'q:' + _normTightJS(aliasKey);
+        if (FICHAS[qkAlias]) { f = FICHAS[qkAlias]; fichaKey = qkAlias; }
+      }
     }
     const thumb = f && f.imagen ? '<img class="zoomimg" src="' + f.imagen + '" alt="" loading="lazy" />' : '<div class="noimg">Sin foto</div>';
     const nombreAttrs = f ? ' data-ficha="' + escapeHtmlSafe(fichaKey) + '" style="cursor:pointer;text-decoration:underline dotted;"' : '';

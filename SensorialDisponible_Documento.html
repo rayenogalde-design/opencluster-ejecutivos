@@ -74,6 +74,16 @@ body{margin:0;background:#EEF1F5;font-family:'Open Sans',system-ui,sans-serif;co
 .foto img{width:100%;height:100%;object-fit:contain;padding:8px}
 .foto .sin{color:#C3CEDD;font-size:11px}
 .resumen p{margin:0 0 10px;font-size:13px;line-height:1.62}
+.sentidos{margin-top:12px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.sentidos b{
+  font-family:'Montserrat',sans-serif;font-size:9px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--sky);
+}
+.sent{border:1px solid #CBE4F7;background:#F4F9FF;color:var(--navy);border-radius:999px;padding:3px 11px;font-size:11px;font-weight:600}
+.funcion{
+  margin-top:9px;background:#E1F5EE;color:#04342C;border-radius:6px;padding:7px 12px;
+  font-size:12px;font-weight:600;
+}
 .cifras{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
 .pastilla{border:1px solid #CBE4F7;background:#F4F9FF;border-radius:6px;padding:7px 12px}
 .pastilla b{display:block;font-family:'Montserrat',sans-serif;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--sky)}
@@ -123,7 +133,6 @@ body{margin:0;background:#EEF1F5;font-family:'Open Sans',system-ui,sans-serif;co
       para qué perfiles está indicado, qué incluye la entrega y sus características técnicas.</p>
     <div class="meta">
       <div><b>Productos</b><span id="mProd">—</span></div>
-      <div><b>Unidades en bodega</b><span id="mUnid">—</span></div>
       <div><b>Fecha</b><span id="mFecha">—</span></div>
     </div>
   </div>
@@ -185,16 +194,18 @@ body{margin:0;background:#EEF1F5;font-family:'Open Sans',system-ui,sans-serif;co
       ? '<img src="' + esc(p.img) + '" alt="' + esc(p.n) + '" loading="lazy">'
       : '<span class="sin">Sin foto</span>';
     var precio = p.iva
-      ? '<div class="pastilla"><b>Precio</b><span>' + pesos(p.iva) + '</span><small>IVA incluido · neto ' + pesos(p.neto) + '</small></div>'
+      ? '<div class="pastilla"><b>Precio</b><span>' + pesos(p.iva) + '</span><small>IVA incluido</small></div>'
       : '<div class="pastilla"><b>Precio</b><span style="font-size:12px">A consultar</span></div>';
-    var stock = '<div class="pastilla"><b>En bodega</b><span>' + p.bodega + '</span>' +
-      (p.camino ? '<small>' + p.camino + ' en camino</small>' : '') + '</div>';
     var cod = p.oc ? '<div class="pastilla"><b>Código</b><span style="font-size:12.5px">' + esc(p.oc) + '</span></div>' : '';
+    var sentidos = (p.est && p.est.length)
+      ? '<div class="sentidos"><b>Qué estimula</b>' +
+        p.est.map(function(s){ return '<span class="sent">' + esc(s) + '</span>'; }).join('') + '</div>' : '';
+    var funcion = p.fun ? '<div class="funcion">' + esc(p.fun) + '</div>' : '';
 
     html += '<div class="prod">' +
       '<div class="banner">' +
         '<div class="num">' + n + '</div>' +
-        '<div class="tit"><h2>' + esc(p.n) + '</h2>' + (p.oc ? '<div class="oc">Código ' + esc(p.oc) + '</div>' : '') + '</div>' +
+        '<div class="tit"><h2>' + esc(p.n) + '</h2></div>' +
         '<img src="isotipo-oct.png" alt="" onerror="this.style.display=\'none\'">' +
       '</div>' +
       '<div class="caja">' +
@@ -203,7 +214,8 @@ body{margin:0;background:#EEF1F5;font-family:'Open Sans',system-ui,sans-serif;co
           '<div class="resumen">' +
             (p.que ? '<p>' + esc(p.que) + '</p>' : '') +
             (p.logro ? '<p style="color:#334155">' + esc(p.logro) + '</p>' : '') +
-            '<div class="cifras">' + precio + stock + cod + '</div>' +
+            sentidos + funcion +
+            '<div class="cifras">' + precio + cod + '</div>' +
           '</div>' +
         '</div>' +
         seccion('Qué se trabaja con él', p.trab ? chips(p.trab) : '') +
@@ -218,7 +230,6 @@ body{margin:0;background:#EEF1F5;font-family:'Open Sans',system-ui,sans-serif;co
   document.getElementById('fichas').innerHTML = html;
 
   document.getElementById('mProd').textContent = P.length;
-  document.getElementById('mUnid').textContent = P.reduce(function(a,p){ return a + (p.bodega||0); }, 0);
   document.getElementById('mFecha').textContent = fecha();
 })();
 </script>

@@ -139,6 +139,15 @@ main{padding:28px 0 60px}
 .tag{background:var(--hover);color:#042C53;border-radius:999px;padding:4px 11px;font-size:11px;font-weight:700}
 .tag.verde{background:#E1F5EE;color:#04342C}
 .tag.aviso{background:#FAEEDA;color:#412402}
+.sentidos b{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--navy);font-weight:700;margin-bottom:6px}
+.sent{
+  background:var(--blanco);border:1px solid #CBE4F7;color:#042C53;border-radius:999px;
+  padding:4px 12px;font-size:11.5px;font-weight:700;
+}
+.funcion{
+  background:#E1F5EE;color:#04342C;border-radius:10px;padding:9px 13px;
+  font-size:12.5px;font-weight:700;line-height:1.4;
+}
 .destacado{border-left:3px solid var(--sky);padding:2px 0 2px 13px;font-size:13.5px;color:var(--texto)}
 .destacado b{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--sky);font-weight:700;margin-bottom:2px}
 .bloque{margin-bottom:18px}
@@ -184,7 +193,6 @@ footer{border-top:1px solid var(--linea);background:var(--blanco);padding:22px 0
     </div>
     <div class="cifras">
       <div class="cifra"><b id="nProd">—</b><span>productos</span></div>
-      <div class="cifra"><b id="nUnid">—</b><span>unidades</span></div>
     </div>
   </div>
 </header>
@@ -261,7 +269,7 @@ footer{border-top:1px solid var(--linea);background:var(--blanco);padding:22px 0
       '<div class="t-cuerpo">' +
         '<p class="t-nombre">'+esc(p.n)+'</p>' +
         (p.oc ? '<div class="t-meta"><span class="t-oc">'+esc(p.oc)+'</span></div>' : '') +
-        '<div class="t-pie">'+precio+'<span class="stock">'+p.bodega+' en bodega</span></div>' +
+        '<div class="t-pie">'+precio+'</div>' +
       '</div></button>';
   }
   function pintar(){
@@ -298,7 +306,7 @@ footer{border-top:1px solid var(--linea);background:var(--blanco);padding:22px 0
   window.abrir = function(i){
     var p = P[i];
     document.getElementById('fNombre').textContent = p.n;
-    document.getElementById('fOc').textContent = p.oc ? 'Código ' + p.oc : '';
+    document.getElementById('fOc').textContent = '';
     var fotos = [].concat(p.img ? [p.img] : [], p.imgs || []).filter(function(v,ix,a){ return v && a.indexOf(v)===ix; });
     var galeria = fotos.length
       ? '<div class="f-fotos"><div class="f-foto"><img id="fGrande" src="'+esc(fotos[0])+'" alt="'+esc(p.n)+'"></div>' +
@@ -309,14 +317,19 @@ footer{border-top:1px solid var(--linea);background:var(--blanco);padding:22px 0
 
     var precio = p.iva
       ? '<div class="f-precio"><div class="grande">'+pesos(p.iva)+'</div>' +
-        '<div class="chico">IVA incluido · neto '+pesos(p.neto)+(p.aprox ? ' · valor aproximado' : '')+'</div></div>'
+        '<div class="chico">IVA incluido'+(p.aprox ? ' · valor aproximado' : '')+
+        (p.oc ? ' · '+esc(p.oc) : '')+'</div></div>'
       : '<div class="f-precio"><div class="grande" style="font-size:16px">Precio a consultar</div></div>';
 
-    var tags = '<div class="f-tags"><span class="tag verde">'+p.bodega+' en bodega</span>' +
-      (p.camino ? '<span class="tag">'+p.camino+' en camino</span>' : '') +
-      (p.fuente === 'pendiente' ? '<span class="tag aviso">Ficha en preparación</span>' : '') + '</div>';
+    var tags = p.fuente === 'pendiente'
+      ? '<div class="f-tags"><span class="tag aviso">Ficha en preparación</span></div>' : '';
 
-    var destacados =
+    var sentidos = (p.est && p.est.length)
+      ? '<div class="sentidos"><b>Qué estimula</b><div class="lista">' +
+        p.est.map(function(s){ return '<span class="sent">'+esc(s)+'</span>'; }).join('') + '</div></div>' : '';
+    var funcion = p.fun ? '<div class="funcion">'+esc(p.fun)+'</div>' : '';
+
+    var destacados = sentidos + funcion +
       (p.logro ? '<div class="destacado"><b>Qué logra</b>'+esc(p.logro)+'</div>' : '') +
       (p.unico ? '<div class="destacado"><b>Lo que lo hace distinto</b>'+esc(p.unico)+'</div>' : '');
 
@@ -347,7 +360,6 @@ footer{border-top:1px solid var(--linea);background:var(--blanco);padding:22px 0
 
   /* ── Arranque ────────────────────────────────────────── */
   document.getElementById('nProd').textContent = P.length;
-  document.getElementById('nUnid').textContent = P.reduce(function(a,p){ return a + (p.bodega||0); }, 0);
   pintar();
 
   /* ?ver=<código OC o número> abre directamente esa ficha */

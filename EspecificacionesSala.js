@@ -22,6 +22,7 @@
 //         ind indicado para · inc qué incluye · tec ficha técnica · cat características del catálogo
 //         mat detalle de materialidad (lo escribe gen_materialidad_web.js)
 //         mat detalle de materialidad (lo escribe gen_materialidad_web.js)
+//         mat detalle de materialidad (lo escribe gen_materialidad_web.js)
 window.SALAS_ESPECIFICACIONES = {
  "BJ-EX04": {
   "n": "Sistema SHX Compact",
@@ -37,7 +38,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-EX02": {
   "n": "SHX Rack",
-  "oc": "",
+  "oc": "OC-2380",
   "fam": "SHX Rack",
   "que": "Sistema de control centralizado para salas multisensoriales que coordina luz, imagen, sonido, vibración y efectos sensoriales desde una tableta. Permite crear escenas temáticas personalizadas adaptadas a cada usuario y a cada objetivo terapéutico.",
   "trab": "Crear ambientes temáticos coordinados · Estimulación multisensorial inmersiva · Control simultáneo de múltiples dispositivos · Experiencias terapéuticas personalizadas · Interacción activa del usuario · Aprendizaje interactivo · Ocio y participación adaptada",
@@ -85,7 +86,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-LRIN23": {
   "n": "Rincón Luminea con tablet",
-  "oc": "",
+  "oc": "OC-2435",
   "fam": "Rincón Luminea",
   "que": "La versión del Rincón Luminea que trae su propia tableta de control incorporada, para gobernarlo sin depender de la unidad central de la sala.",
   "trab": "Estimulación visual · Regulación sensorial · Causa-efecto · Relajación · Atención · Interacción · Actividades personalizadas · Juegos interactivos",
@@ -121,7 +122,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-EMSCP": {
   "n": "Sensory Cube pequeño",
-  "oc": "",
+  "oc": "OC-2375",
   "fam": "Sensory Cube",
   "que": "La versión pequeña del dado inalámbrico interactivo que controla los dispositivos de luz y las escenas de la sala. Permite cambiar colores, activar efectos y transformar el entorno de forma lúdica y accesible.",
   "trab": "Estimulación sensorial · Control de la iluminación · Cambio de escenas audiovisuales · Trabajo de atención y comunicación · Motricidad fina · Propiocepción · Habilidades sociales · Juego simbólico",
@@ -133,7 +134,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-EMSST": {
   "n": "Sensory Step",
-  "oc": "",
+  "oc": "OC-2379",
   "fam": "Sensory Step",
   "que": "Alfombra inalámbrica interactiva que controla los dispositivos de luz y las experiencias multisensoriales con el movimiento y la presión de los pies. Cambia colores, activa escenas y transforma el ambiente de la sala.",
   "trab": "Causa-efecto · Atención conjunta · Motricidad fina · Propiocepción · Elección · Memoria · Gestión de turnos · Juego simbólico · Asociación · Comunicación · Habilidades sociales",
@@ -156,7 +157,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-EMCA-V": {
   "n": "Cama de agua vibroacústica",
-  "oc": "",
+  "oc": "OC-1024",
   "fam": "Cama de agua vibroacústica",
   "que": "Colchón de agua adaptable con sistema de calefacción, que vibra al ritmo de la música y de los sonidos. Proporciona una experiencia profunda y relajante que combina la estimulación táctil con la auditiva.",
   "trab": "Exploración y conciencia corporal · Estimulación multisensorial · Relajación terapéutica",
@@ -179,7 +180,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-EEGC": {
   "n": "Espejo grande curvo",
-  "oc": "",
+  "oc": "OC-1753",
   "fam": "Espejo recto / curvo",
   "que": "Espejo curvo que refleja y multiplica la luz, el movimiento y los colores, potenciando los efectos visuales y creando espacios más envolventes. Favorece la exploración visual, la conciencia corporal y la interacción.",
   "trab": "Multiplica los estímulos visuales · Favorece el reconocimiento del propio cuerpo · Capta la atención · Fomenta la exploración visual · Crea experiencias inmersivas",
@@ -190,7 +191,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-EEPR": {
   "n": "Espejo pequeño recto",
-  "oc": "",
+  "oc": "OC-1774",
   "fam": "Espejo recto / curvo",
   "que": "Espejo pequeño para potenciar la experiencia visual y sensorial de la sala. Complemento habitual del tubo de burbujas y de los rincones sensoriales.",
   "trab": "Reconocimiento facial y corporal · Seguimiento visual · Rincones sensoriales · Exploración visual · Atención conjunta · Percepción del esquema corporal",
@@ -201,7 +202,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-EEPC": {
   "n": "Espejo pequeño curvo",
-  "oc": "",
+  "oc": "OC-1758",
   "fam": "Espejo recto / curvo",
   "que": "Espejo curvo pequeño que amplía visualmente el espacio y multiplica los efectos de luz. Favorece la exploración visual, la conciencia corporal y la interacción con los elementos de la sala.",
   "trab": "Refleja y multiplica la luz, el movimiento y los colores · Aumenta el impacto visual · Capta la atención · Fomenta la exploración visual · Genera experiencias inmersivas · Contribuye al reconocimiento corporal",
@@ -224,7 +225,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-LLLR": {
   "n": "Línea LED Luminea para respaldo 5 metros",
-  "oc": "",
+  "oc": "OC-1928",
   "fam": "Línea LED Luminea",
   "que": "Tira LED de 5 metros de larga duración que se adapta al contorno de las paredes y de los respaldos del mobiliario, con perfil de soporte y difusor de luz.",
   "trab": "Iluminación de respaldos y contornos · Delimitación de zonas · Refuerzo de estímulos visuales · Integración en el mobiliario de la sala",
@@ -236,7 +237,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-LTUB": {
   "n": "Tubo de burbujas Luminea",
-  "oc": "",
+  "oc": "OC-2425",
   "fam": "Tubo de burbujas Luminea",
   "que": "Crea experiencias visuales envolventes que favorecen la relajación, la atención y el bienestar, mediante luz, movimiento y cambios de color.",
   "trab": "Seguimiento visual · Atención conjunta · Relación causa-efecto · Elección · Memoria · Coordinación viso-motora · Comunicación y habilidades sociales · Gestión de turnos y cálculo",
@@ -248,7 +249,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-LDFIB": {
   "n": "Ducha Luminea",
-  "oc": "",
+  "oc": "OC-1571",
   "fam": "Ducha Luminea",
   "que": "Cortina de fibras ópticas iluminadas, con 150 haces de 3 metros, que crea un espacio envolvente. Permite la interacción táctil y visual para estimular la atención, la regulación emocional y la participación activa.",
   "trab": "Causa-efecto · Atención conjunta · Motricidad fina · Propiocepción · Elección y memoria · Gestión de turnos · Juego simbólico · Comunicación · Habilidades sociales",
@@ -272,7 +273,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-LCCFIB": {
   "n": "Cielo Luminea circular",
-  "oc": "",
+  "oc": "OC-1131",
   "fam": "Cielo Luminea circular",
   "que": "Panel circular de luz de 122,3 cm de diámetro que crea un efecto de estrellas brillantes con cambios de color aleatorios. Favorece la relajación, la atención visual y la regulación emocional.",
   "trab": "Causa-efecto · Atención conjunta · Memoria · Gestión de turnos · Juego simbólico · Asociación · Comunicación · Habilidades sociales",
@@ -344,7 +345,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-SGL": {
   "n": "Sensory Go Luminea",
-  "oc": "",
+  "oc": "OC-2376",
   "fam": "Sensory Go",
   "que": "Carrito multisensorial portátil que transforma cualquier espacio en un entorno sensorial accesible e interactivo. Se enchufa y funciona, sin instalación, y se traslada de una sala a otra.",
   "trab": "Relajación · Exploración sensorial · Intervención terapéutica · Estimulación educativa · Reducción del estrés y la ansiedad · Mejora del bienestar · Desarrollo cognitivo · Ocio",
@@ -356,7 +357,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-SGSX": {
   "n": "Sensory Go SHX",
-  "oc": "",
+  "oc": "OC-2378",
   "fam": "Sensory Go",
   "que": "Carrito multisensorial transportable que convierte cualquier espacio en una experiencia inmersiva, interactiva y personalizable con la tecnología SHX. Es la versión más completa de los tres carritos.",
   "trab": "Estimulación multisensorial interactiva · Regulación sensorial · Aprendizaje y desarrollo · Rehabilitación · Bienestar y relajación · Ocio educativo",
@@ -368,7 +369,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-SGP": {
   "n": "Sensory Go Luminea Plus",
-  "oc": "",
+  "oc": "OC-2377",
   "fam": "Sensory Go",
   "que": "Carrito multisensorial portátil que combina luz, vibración, aromaterapia y efectos ultravioleta para crear experiencias sensoriales completas, accesibles e inmersivas. Se controla desde la aplicación, con pulsadores o con sistemas de acceso adaptado.",
   "trab": "Estimulación sensorial en entornos terapéuticos · Intervención en escuelas y centros educativos · Bienestar en centros de mayores · Reducción del estrés en hospitales · Relajación en empresas · Experiencias sensoriales personalizadas en hogares",
@@ -440,7 +441,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-EX46": {
   "n": "Pompas SHX",
-  "oc": "",
+  "oc": "OC-2345",
   "fam": "Pompas SHX",
   "que": "Generador de burbujas para salas sensoriales que crea estímulos visuales dinámicos. Favorece la atención, la exploración y la interacción, y es muy útil para trabajar el seguimiento ocular y la coordinación.",
   "trab": "Captar la atención · Estimular el seguimiento visual · Provocar anticipación · Generar interacción compartida · Activar o relajar según el contexto",
@@ -452,7 +453,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-LPLNT": {
   "n": "Planeta Luminea",
-  "oc": "",
+  "oc": "OC-2342",
   "fam": "Planeta Luminea",
   "que": "Esfera que cambia de color e ilumina la estancia creando ambientes inmersivos y acogedores. Se controla con mandos accesibles, dados interactivos, alfombras o la aplicación Luminea.",
   "trab": "Relajación · Exploración sensorial · Interacción · Estimulación visual · Intervención terapéutica y educativa",
@@ -464,7 +465,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-EX26": {
   "n": "Panel Táctil SHX",
-  "oc": "",
+  "oc": "OC-2322",
   "fam": "Panel Táctil SHX",
   "que": "Gran panel táctil que controla el software del sistema para seleccionar escenas y colecciones. Permite además añadir software sensorial adicional y trabajar directamente sobre la pantalla.",
   "trab": "Control directo de las escenas y de los dispositivos de la sala · Elección entre alternativas · Trabajo conjunto sobre la misma superficie · Actividades interactivas en pantalla",
@@ -476,7 +477,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-EIBLUVX": {
   "n": "Barra LED UV SHX",
-  "oc": "",
+  "oc": "OC-0695",
   "fam": "Barra LED UV SHX",
   "que": "Tubo de luz LED ultravioleta que baña de luz negra una zona completa de la sala. Realza los materiales blancos y fluorescentes, y sirve tanto para actividades de atención y concentración como para crear ambientes.",
   "trab": "Realce de materiales fluorescentes · Actividades de concentración · Creación de ambientes multisensoriales",
@@ -533,7 +534,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-LAFIB": {
   "n": "Alfombra Luminea",
-  "oc": "",
+  "oc": "OC-0617",
   "fam": "Alfombra Luminea",
   "que": "Alfombra interactiva que transforma el suelo en una experiencia inmersiva. Responde al movimiento y a la presión con efectos de luz, y se controla con mandos accesibles, pulsadores o la aplicación Luminea.",
   "trab": "Motricidad · Coordinación · Atención · Interacción lúdica · Intervención terapéutica · Estimulación visual · Relación causa-efecto",
@@ -545,7 +546,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-EX410": {
   "n": "Fireball SHX",
-  "oc": "",
+  "oc": "OC-1835",
   "fam": "Fireball SHX",
   "que": "Bola de luces LED giratoria que genera efectos dinámicos y envolventes. Sus cambios de color y sus proyecciones ayudan a captar la atención y a favorecer la exploración.",
   "trab": "Estimulación visual · Enriquecimiento de la experiencia sensorial · Punto focal de la sala · Complemento de las fibras ópticas",
@@ -557,7 +558,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-LFIB2UV": {
   "n": "Fibra óptica Luminea UV de 2 m",
-  "oc": "",
+  "oc": "OC-1803",
   "fam": "Fibra óptica Luminea UV de 2 m",
   "que": "Haz de fibra óptica de 150 filamentos reactivos a la luz ultravioleta. Da estimulación visual y táctil mediante el centelleo de la luz, y facilita la atención, el enfoque y la comunicación por causa-efecto.",
   "trab": "Estimulación visual y sensorial · Desarrollo de la relación causa-efecto · Facilitación de la comunicación · Percepción corporal",
@@ -568,7 +569,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-EMBT-V": {
   "n": "Balancín de terapia vibroacústico",
-  "oc": "",
+  "oc": "OC-0156",
   "fam": "Balancín de terapia vibroacústico",
   "que": "Combina el movimiento de balanceo con la estimulación vibroacústica. Las vibraciones se sincronizan con la música y los sonidos, y favorecen la regulación sensorial, la conciencia corporal y el bienestar emocional.",
   "trab": "Regulación sensorial · Conciencia corporal · Estimulación vestibular por balanceo · Relajación · Musicoterapia",
@@ -580,7 +581,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-EMRV": {
   "n": "Respaldo foam cóncavo",
-  "oc": "",
+  "oc": "OC-2364",
   "fam": "Respaldo foam cóncavo",
   "que": "Respaldo acolchado para crear espacios envolventes y confortables. Su forma curva favorece la relajación durante las actividades sensoriales o el descanso, y se combina con el resto de los módulos.",
   "trab": "Salas multisensoriales · Entornos terapéuticos · Espacios educativos · Zonas de descanso · Facilita el masaje y la comunicación · Se combina con los módulos convexos para lograr un efecto ondulado",
@@ -592,7 +593,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-EMRX": {
   "n": "Respaldo foam convexo",
-  "oc": "",
+  "oc": "OC-2365",
   "fam": "Respaldo foam convexo",
   "que": "Respaldo acolchado de forma curva hacia fuera, que crea espacios dinámicos y confortables. Da apoyo postural y una superficie segura, y se combina con el resto de los módulos.",
   "trab": "Salas multisensoriales · Entornos terapéuticos · Zonas de descanso · Actividades de estimulación sensorial · Relajación, interacción, comunicación y masaje · Crea ambientes acogedores y fluidos",
@@ -615,7 +616,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-43700100": {
   "n": "Pelota cacahuete",
-  "oc": "",
+  "oc": "OC-1246",
   "fam": "Pelota cacahuete",
   "que": "Pelota terapéutica en forma de cacahuete para integración sensorial, rehabilitación y desarrollo psicomotriz. Mejora la postura, refuerza la musculatura profunda y desarrolla el equilibrio.",
   "trab": "Integración sensorial · Terapias de rehabilitación · Desarrollo psicomotriz · Motricidad gruesa · Coordinación · Equilibrio",
@@ -626,7 +627,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-EVPG": {
   "n": "Peonza gigante",
-  "oc": "",
+  "oc": "OC-2010",
   "fam": "Peonza gigante",
   "que": "Elemento de equilibrio y movimiento que invita a girar, balancearse y explorar la coordinación con el juego activo. Sirve para trabajo individual o en grupo.",
   "trab": "Equilibrio · Coordinación · Control postural · Conciencia corporal · Circuitos motores · Psicomotricidad · Integración sensorial · Juego libre y creativo",
@@ -637,7 +638,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-51090000": {
   "n": "Pelota de terapia de diámetro 45 cm",
-  "oc": "",
+  "oc": "OC-1484",
   "fam": "Pelota de terapia",
   "que": "Pelota versátil para trabajar el equilibrio, la coordinación, el control postural y la conciencia corporal.",
   "trab": "Fisioterapia · Integración sensorial · Atención temprana · Psicomotricidad · Motricidad gruesa",
@@ -648,7 +649,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-51091000": {
   "n": "Pelota de terapia de diámetro 55 cm",
-  "oc": "",
+  "oc": "OC-1485",
   "fam": "Pelota de terapia",
   "que": "La versión de 55 cm de la pelota de terapia, para trabajar el equilibrio, la coordinación, el control postural y la conciencia corporal.",
   "trab": "Fisioterapia · Integración sensorial · Atención temprana · Psicomotricidad · Motricidad gruesa",
@@ -703,7 +704,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-SD12319": {
   "n": "Manta de peso azul y roja mediana 2,2 kg",
-  "oc": "",
+  "oc": "OC-1944",
   "fam": "Manta de peso",
   "que": "Manta que da presión profunda uniforme para favorecer la relajación, la conciencia corporal y la regulación sensorial. Su diseño envolvente aporta calma y seguridad.",
   "trab": "Estimulación propioceptiva · Regulación corporal y emocional · Relajación y concentración · Aplicaciones localizadas en distintas partes del cuerpo",
@@ -714,7 +715,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-SD12320": {
   "n": "Manta de peso gris y roja grande 3,6 kg",
-  "oc": "",
+  "oc": "OC-1247",
   "fam": "Manta de peso",
   "que": "La versión grande de la manta de presión profunda uniforme, que favorece la relajación, la conciencia corporal y la regulación sensorial.",
   "trab": "Estimulación propioceptiva · Regulación corporal y emocional · Relajación · Actividades que piden calma y organización corporal",
@@ -736,7 +737,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-EMRM": {
   "n": "Protección de pared a medida (por metro)",
-  "oc": "",
+  "oc": "OC-2346",
   "fam": "Protección de pared a medida",
   "que": "Revestimiento acolchado para crear entornos seguros y confortables. Su superficie amortigua golpes e impactos, y protege tanto a las personas como a la instalación.",
   "trab": "Salas multisensoriales · Espacios terapéuticos · Centros educativos · Rincones de calma · Integración sensorial · Regulación emocional · Espacios que necesitan contención y seguridad",
@@ -748,7 +749,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-EMLPJ1": {
   "n": "Líquido para pompas de jabón 1 L",
-  "oc": "",
+  "oc": "OC-1932",
   "fam": "Líquido para pompas de jabón 1 L",
   "que": "Líquido de recambio de 1 litro para la máquina de pompas de jabón. Su formulación genera burbujas grandes y muy visibles, que estimulan la atención y el seguimiento visual.",
   "trab": "Centros de estimulación temprana · Salas multisensoriales · Residencias · Escuelas especiales · Actividades de causa-efecto y de juego",
@@ -759,7 +760,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-SD12021": {
   "n": "Peso para hombros Lola la Oruga grande 1,3 kg",
-  "oc": "",
+  "oc": "OC-2333",
   "fam": "Peso para hombros Lola la oruga",
   "que": "Oruga de peso que se coloca sobre los hombros y genera una presión calmante. Es un recurso muy usado para bajar la activación sin necesidad de aislar a la persona.",
   "trab": "Presión calmante · Desarrollo sensorial · Reducción de la ansiedad",

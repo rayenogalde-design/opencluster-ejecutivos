@@ -187,6 +187,8 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
 .sv{font-size:12.6px;color:var(--navy);font-weight:600;text-align:right}
 /* Detalle de materialidad: compacto, una linea por rotulo. Sin recuadro: el bloque tiene que caber
    en la hoja del producto, no empujarlo a una hoja nueva. */
+/* La explicacion en palabras corrientes de un termino de terapia: acompaña, no compite. */
+.glo{color:var(--gris-cl);font-weight:400}
 .matlist p{margin:0;font-size:11.8px;line-height:1.38}
 .matlist .mk{font-weight:600;color:var(--navy)}
 .matbox{break-inside:avoid;page-break-inside:avoid;margin-top:7px}
@@ -394,6 +396,11 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
     return v.charAt(0).toUpperCase() + v.slice(1);
   }
   /* «specs» arma la tabla; «adicionales» devuelve lo que no es par dato/valor. */
+  /* «Modulo de vibracion de 16 Ω de impedancia, 100 W maximos…» es un DATO, no un argumento de
+     venta, aunque su etiqueta no este en la lista de arriba. Se reconoce por la forma:
+     «<sujeto> de <cifra>…». Asi la tabla se queda con lo tecnico y «Caracteristicas adicionales»
+     con lo que de verdad convence. */
+  var ETIQ_LIBRE = /^([A-ZÁÉÍÓÚÑ][^.,;:]{2,26}?)\s+de\s+(?=\d)/;
   function partir(trozos){
     var pares = [], libres = [];
     trozos.forEach(function(x){
@@ -401,7 +408,14 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
       if(m && x.length > m[0].length + 2){
         var et = m[0].replace(/[:\s]+$/,'');
         pares.push([et, valor(x.slice(m[0].length))]);
-      } else libres.push(x);
+        return;
+      }
+      var g = x.match(ETIQ_LIBRE);
+      if(g && cifras(x).length){
+        pares.push([g[1].trim(), valor(x.slice(g[0].length))]);
+        return;
+      }
+      libres.push(x);
     });
     return {pares: pares, libres: libres};
   }
@@ -483,10 +497,10 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
      dos columnas. El SVG va inline y el CSS decide como se ve. */
   var VIN = '<span class="vin-ic"><svg viewBox="0 0 24 24" aria-hidden="true">'+
             '<polyline points="20 6 9 17 4 12"/></svg></span>';
-  function lista(p, ancho){
+  function lista(p, ancho, conGlosario){
     var cls = (ancho && p.length >= 4) ? "vin dos" : "vin";
     return '<ul class="'+cls+'">'+p.map(function(x){
-      return '<li>'+VIN+'<span>'+esc(x)+'</span></li>';
+      return '<li>'+VIN+'<span>'+(conGlosario ? explica(x) : esc(x))+'</span></li>';
     }).join('')+'</ul>';
   }
   /* "Que incluye la entrega" llega como un texto con comas. Se parte en vinetas solo si
@@ -499,11 +513,47 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
     if(p.length < 3 || p.some(function(x){ return x.length < 4; })) return '<p>'+esc(s)+'.</p>';
     return lista(p, ancho);
   }
-  function enumera(t, ancho){
+  /* El documento lo lee quien firma la compra —un director, un jefe de DAEM, un alcalde—, no un
+     terapeuta. Los terminos de terapia van con su explicacion en palabras corrientes; los que se
+     entienden solos (relajacion, memoria, equilibrio) no llevan nada. */
+  var GLOSARIO = {
+    'integracion sensorial': 'ordenar lo que se ve, se oye y se siente',
+    'propiocepcion': 'saber dónde está el propio cuerpo sin mirarlo',
+    'estimulacion propioceptiva': 'saber dónde está el propio cuerpo sin mirarlo',
+    'atencion conjunta': 'mirar lo mismo que la otra persona, la base de la comunicación',
+    'causa-efecto': 'descubrir que su acción provoca algo',
+    'relacion causa-efecto': 'descubrir que su acción provoca algo',
+    'motricidad fina': 'movimiento de manos y dedos',
+    'motricidad gruesa': 'movimiento del cuerpo entero',
+    'juego simbolico': 'jugar a imaginar y representar',
+    'coordinacion viso-motora': 'coordinar lo que ve con lo que hace la mano',
+    'conciencia corporal': 'reconocer el propio cuerpo',
+    'percepcion corporal': 'reconocer el propio cuerpo',
+    'regulacion sensorial': 'calmarse cuando hay demasiado estímulo',
+    'regulacion corporal y emocional': 'calmar el cuerpo y las emociones',
+    'gestion de turnos': 'aprender a esperar su turno',
+    'control postural': 'sostener la postura',
+    'seguimiento visual': 'seguir algo con la mirada',
+    'exploracion sensorial': 'explorar con los sentidos',
+    'percepcion sensorial': 'percibir por los sentidos',
+    'reconocimiento tactil': 'reconocer por el tacto',
+    'estimulacion basal': 'estimulación para personas con muy poca movilidad o respuesta',
+  };
+  /* Esto no responde «¿que se trabaja con el?»: es donde se usa. Sale de esa lista. */
+  var DONDE = /^(salas multisensoriales|centros educativos|entornos terapeuticos|zonas de descanso|fisioterapia|atencion temprana|intervencion terapeutica|espacios terapeuticos|salas de estimulacion)$/;
+  function sinTildes(t){ return String(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim(); }
+  function explica(t){
+    var k = sinTildes(t).replace(/\.$/,'');
+    return GLOSARIO[k] ? t + ' <span class="glo">— ' + GLOSARIO[k] + '</span>' : esc(t);
+  }
+
+  function enumera(t, ancho, conGlosario){
     if(!t) return '';
     var p = String(t).split('·').map(function(x){return x.trim().replace(/\.$/,'');}).filter(Boolean);
-    if(p.length < 2) return '<p>'+esc(t)+'</p>';
-    return lista(p, !!ancho);
+    if(conGlosario) p = p.filter(function(x){ return !DONDE.test(sinTildes(x)); });
+    if(!p.length) return '';
+    if(p.length < 2) return '<p>'+(conGlosario ? explica(p[0]) : esc(t))+'</p>';
+    return lista(p, !!ancho, conGlosario);
   }
   function campo(t,c,cl){ return c ? '<div class="campo '+(cl||'')+'"><h4><span class="chip">'+t+'</span></h4>'+c+'</div>' : ''; }
 
@@ -588,7 +638,7 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
         /* Con muchos usos la lista se partia alrededor de la foto y parecian dos listas sueltas
            (la Piscina Luminea, con once): a partir de seis baja entera y va a dos columnas. */
         campo('¿Qué se trabaja con él?',
-              (String(d.trab||'').split('·').length > 5 ? enumera(d.trab, true) : enumera(d.trab)),
+              (String(d.trab||'').split('·').length > 5 ? enumera(d.trab, true, true) : enumera(d.trab, false, true)),
               (String(d.trab||'').split('·').length > 5 ? 'ancho tras' : 'junto'))+
         campo('¿Qué incluye la entrega?', incluye(d.inc, true), 'ancho tras')+
         /* Rayen 14-sep-2026: en las unidades de control «¿para quién está indicado?» no dice nada

@@ -185,9 +185,12 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
    izquierda: alineada a la derecha se lee mal, como ya se vio. */
 /* todos los valores anclados a la derecha, tambien las frases largas (Rayen 09-sep) */
 .sv{font-size:12.6px;color:var(--navy);font-weight:600;text-align:right}
-/* Detalle de materialidad: misma tabla, pero su texto es largo y va alineado a la izquierda. */
-.specs.mat .sv{text-align:left;font-weight:400}
-.specs.mat .sk{font-weight:600}
+/* Detalle de materialidad: compacto, una linea por rotulo. Sin recuadro: el bloque tiene que caber
+   en la hoja del producto, no empujarlo a una hoja nueva. */
+.matlist p{margin:0;font-size:11.8px;line-height:1.38}
+.matlist .mk{font-weight:600;color:var(--navy)}
+.matbox{break-inside:avoid;page-break-inside:avoid;margin-top:7px}
+.matbox>h4{margin-bottom:2px}
 @media screen and (max-width:760px){ .sfila{grid-template-columns:1fr;gap:0} }
 .libre{font-size:12.2px;line-height:1.5;color:#2A374F;padding-top:8px;
   break-inside:avoid;page-break-inside:avoid}
@@ -459,11 +462,20 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
       return [l.slice(0,i).trim(), l.slice(i+1).trim()];
     }).filter(Boolean);
     if(!filas.length) return '';
-    /* misma tabla que las especificaciones, pero el valor alineado a la izquierda: aca el texto es
-       largo y a la derecha queda en bandera y cuesta leerlo. */
-    return '<div class="specs mat">' + filas.map(function(x){
-      return '<div class="sfila"><span class="sk">'+esc(x[0])+'</span>'+
-             '<span class="sv">'+esc(x[1])+'</span></div>';
+    /* Va COMPACTA, como «Caracteristicas adicionales»: una linea por rotulo, sin recuadro ni
+       relleno. Con la tabla de las especificaciones tecnicas el bloque pesaba tanto que empujaba
+       al producto a una hoja nueva (medido: 6 productos pasaban de 7 a 10 hojas). */
+    /* En los equipos electricos los dos rotulos son una linea cada uno y su hoja suele venir al
+       tope (el Sistema SHX Compact se pasaba a una segunda hoja): ahi van seguidos, sin abrir un
+       parrafo por rotulo. En el mobiliario, donde el texto es largo, cada rotulo va en su linea. */
+    var soloEquipo = filas.every(function(x){ return /fabricante|eléctrica/i.test(x[0]); });
+    if (soloEquipo) {
+      return '<div class="matlist"><p>' + filas.map(function(x){
+        return '<span class="mk">'+esc(x[0])+':</span> '+esc(x[1]);
+      }).join(' · ') + '</p></div>';
+    }
+    return '<div class="matlist">' + filas.map(function(x){
+      return '<p><span class="mk">'+esc(x[0])+':</span> '+esc(x[1])+'</p>';
     }).join('') + '</div>';
   }
 
@@ -509,7 +521,7 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
            var mat = materialidad(d.mat);
            return (tabla ? '<div class="campo ancho"><h4 class="tit-tec">Especificaciones técnicas</h4>'+tabla+'</div>' : '')+
                   (extra ? campo('Características adicionales', extra, 'ancho') : '')+
-                  (mat ? '<div class="campo ancho"><h4 class="tit-tec">Detalle de materialidad</h4>'+mat+'</div>' : '');
+                  (mat ? campo("Detalle de materialidad", mat, "ancho matbox") : "");
          })()+
       '</div></div>'+   /* cierra la columna del contenido Y la rejilla de la ficha */
       '</div>'+          /* cierra .ficha: lo que sigue es hermano, no contenido */

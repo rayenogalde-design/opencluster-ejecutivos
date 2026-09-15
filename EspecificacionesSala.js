@@ -21,6 +21,7 @@
 // Campos: n nombre · oc código OC · fam familia · que qué es · trab qué se trabaja ·
 //         ind indicado para · inc qué incluye · tec ficha técnica · cat características del catálogo
 //         mat detalle de materialidad (lo escribe gen_materialidad_web.js)
+//         mat detalle de materialidad (lo escribe gen_materialidad_web.js)
 window.SALAS_ESPECIFICACIONES = {
  "BJ-EX04": {
   "n": "Sistema SHX Compact",
@@ -56,7 +57,7 @@ window.SALAS_ESPECIFICACIONES = {
   "inc": "Se entrega con sacos de bolas transparentes.",
   "tec": "Medidas de 145 × 145 × 70 cm. Entrada de 100 a 240 V 50/60 Hz, consumo de 70 W. Cable DMX de 6 m, dirección DMX 118. Módulo de vibración de 16 Ω de impedancia, 100 W máximos y 50 W continuos, frecuencia máxima de 120 Hz, con cable de 15 m y conector SpeakON macho. Tejido de peso total 620 g/m² y espesor de 0,5 a 1 mm.",
   "cat": "Medidas 145 x 145 x 70 cm · Incluye sacos de bolas transparentes · Sistema vibroacústico integrado · Tejido vinílico con protección antimicrobiana · Resistente a la abrasión y a la transpiración · Cumple el reglamento REACH · Material ignífugo, clasificación M2 · Cumple la norma EN 71-3 · Compatible con el Sistema SHX · Funciona en automático · Entrada de conmutador · Control DMX · Doble WiFi · Compatible con la aplicación Luminea",
-  "mat": "Tejido: Impermeable a líquidos, incluidas la transpiración, la saliva, la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa"
+  "mat": "Tejido: Impermeable también a la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa"
  },
  "BJ-EMPT-V": {
   "n": "Puff transformable vibroacústico",
@@ -743,7 +744,7 @@ window.SALAS_ESPECIFICACIONES = {
   "inc": "",
   "tec": "Las medidas están en la columna siguiente.",
   "cat": "Medidas 120 x 100 x 3 cm por pieza · Tejido vinílico de 620 g/m², espesor de 0,5 a 1 mm · Protección antimicrobiana, antibacteriana y antimicótica · Alta resistencia a la abrasión y a la transpiración · Material ignífugo, clasificación M2 · Espuma de poliuretano y polietileno normalizada · Cumple el reglamento REACH y la norma EN 71-3 · Fabricación a medida · Disponible en 12 colores",
-  "mat": "Tejido: Impermeable a líquidos, incluidas la transpiración, la saliva, la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa"
+  "mat": "Tejido: Impermeable también a la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa"
  },
  "BJ-EMLPJ1": {
   "n": "Líquido para pompas de jabón 1 L",

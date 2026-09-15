@@ -359,10 +359,26 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
       c.forEach(function(p){ vistoNum[p] = 1; });
       vistoTxt.push(k); salida.push(x);
     });
+    /* Comparar cadenas enteras dejaba pasar «Incluye sacos de bolas transparentes» cuando la
+       entrega decia «Se entrega con sacos de bolas transparentes»: se compara por PALABRAS. */
+    function palabras(t){
+      return String(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')
+        .split(/[^a-z0-9]+/).filter(function(w){ return w.length > 3; });
+    }
+    /* OJO: «dicho» guarda las llaves sin espacios; para comparar por palabras hay que partir del
+       texto original de «que incluye la entrega». */
+    var dichoPal = String(yaDicho||'').split(/[,.]/).map(palabras).filter(function(p){ return p.length; });
     return salida.filter(sirveParaElCliente).filter(function(x){
       var k = llave(x);
       /* si el trozo ya esta nombrado en "que incluye la entrega", no se repite */
-      return !dicho.some(function(d){ return k===d || (k.length>4 && d.indexOf(k)>-1) || (d.length>4 && k.indexOf(d)>-1); });
+      if(dicho.some(function(d){ return k===d || (k.length>4 && d.indexOf(k)>-1) || (d.length>4 && k.indexOf(d)>-1); })) return false;
+      var p = palabras(x);
+      if(p.length < 2) return true;
+      return !dichoPal.some(function(dp){
+        if(!dp.length) return false;
+        var comunes = p.filter(function(w){ return dp.indexOf(w) > -1; }).length;
+        return comunes >= p.length * 0.75;   /* casi todas sus palabras ya se dijeron */
+      });
     });
   }
 
@@ -390,6 +406,15 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
   function specs(trozos){
     var p = partir(trozos).pares;
     if(p.length < 2) return '';
+    /* La misma etiqueta no puede salir dos veces (la piscina traia «Tejido» dos veces y
+       «Entrada» dos veces): se juntan sus valores en una sola fila. */
+    var orden = [], porEtiq = {};
+    p.forEach(function(x){
+      var k = llave(x[0]);
+      if(porEtiq[k]){ porEtiq[k][1] += '. ' + x[1]; return; }
+      porEtiq[k] = [x[0], x[1]]; orden.push(k);
+    });
+    p = orden.map(function(k){ return porEtiq[k]; });
     return '<div class="specs">' + p.map(function(x){
       return '<div class="sfila"><span class="sk">'+esc(x[0])+'</span>'+
              '<span class="sv">'+esc(x[1])+'</span></div>';
@@ -526,7 +551,11 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
       '<div>'+
         (d.que ? '<h4 class="campo"><span class="chip">¿Para qué sirve?</span></h4>'+
                  '<p class="intro">'+esc(d.que)+'</p>' : '')+
-        campo('¿Qué se trabaja con él?', enumera(d.trab), 'junto')+
+        /* Con muchos usos la lista se partia alrededor de la foto y parecian dos listas sueltas
+           (la Piscina Luminea, con once): a partir de seis baja entera y va a dos columnas. */
+        campo('¿Qué se trabaja con él?',
+              (String(d.trab||'').split('·').length > 5 ? enumera(d.trab, true) : enumera(d.trab)),
+              (String(d.trab||'').split('·').length > 5 ? 'ancho tras' : 'junto'))+
         campo('¿Qué incluye la entrega?', incluye(d.inc, true), 'ancho tras')+
         /* Rayen 14-sep-2026: en las unidades de control «¿para quién está indicado?» no dice nada
            —«él es el controlador, el cerebro de toda una sala»— y le quita sitio a lo que importa:

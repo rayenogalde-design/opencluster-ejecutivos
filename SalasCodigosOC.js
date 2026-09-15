@@ -3,7 +3,9 @@
    Fuente: _motor/SENSORIAL_codigos_finales.json (generado 2026-09-09).
    Para que la cotizacion de Salas y el anexo de especificaciones identifiquen el
    producto por su codigo y no por el nombre, que en el cotizador se puede editar.
-   Codigos: 334   ·   sin codigo todavia: 0 */
+   Codigos: 337   ·   sin codigo todavia: 0
+   De esos, 3 vienen de la tabla EXTRAS del generador: productos que vendemos
+   pero que no estan en la tarifa, asi que el motor no los trae. */
 window.SALAS_OC = {
   "BJ-1000145":"OC-2229",
   "BJ-101":"OC-1297",
@@ -146,6 +148,7 @@ window.SALAS_OC = {
   "BJ-EIBLUVX":"OC-0695",
   "BJ-EIFUVL":"OC-1839",
   "BJ-EIFUVLX":"OC-1083",
+  "BJ-EKBE300":"OC-2439",
   "BJ-EKIA":"OC-1183",
   "BJ-EKIA-LAV":"OC-1183",
   "BJ-EL00153":"OC-1525",
@@ -220,6 +223,7 @@ window.SALAS_OC = {
   "BJ-EMSST":"OC-2379",
   "BJ-EMYIN-A":"OC-2306",
   "BJ-EMYIN-B":"OC-2307",
+  "BJ-EPS061-C":"OC-2440",
   "BJ-EPS30":"OC-0632",
   "BJ-EPS45":"OC-0676",
   "BJ-EPSCV":"OC-0618",
@@ -228,6 +232,7 @@ window.SALAS_OC = {
   "BJ-ETBA":"OC-0606",
   "BJ-ETFFOX-P":"OC-1134",
   "BJ-ETKB":"OC-1900",
+  "BJ-EV2208":"OC-1677",
   "BJ-EVPG":"OC-2010",
   "BJ-EX02":"OC-2380",
   "BJ-EX02-2P":"OC-2381",

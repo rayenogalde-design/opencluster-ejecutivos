@@ -24,6 +24,7 @@
 //         mat detalle de materialidad (lo escribe gen_materialidad_web.js)
 //         mat detalle de materialidad (lo escribe gen_materialidad_web.js)
 //         mat detalle de materialidad (lo escribe gen_materialidad_web.js)
+//         mat detalle de materialidad (lo escribe gen_materialidad_web.js)
 window.SALAS_ESPECIFICACIONES = {
  "BJ-EX04": {
   "n": "Sistema SHX Compact",
@@ -650,7 +651,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-EKBE300": {
   "n": "Kit de bola de espejos mediana",
-  "oc": "",
+  "oc": "OC-2439",
   "fam": "Kit de bola de espejos mediana",
   "que": "Bola giratoria de espejos de 30 cm que proyecta miles de destellos de luz por toda la sala, con un foco de filtro de colores. Se fija al techo y gira lentamente con motor.",
   "trab": "Seguimiento visual · Estimulación sensorial · Creación de ambiente envolvente en la sala",
@@ -727,7 +728,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-EV2208": {
   "n": "Saco de danza propioceptivo talla M",
-  "oc": "",
+  "oc": "OC-1677",
   "fam": "Saco de danza",
   "que": "Saco de licra elástica que envuelve el cuerpo y permite explorar el movimiento desde dentro. Favorece la conciencia corporal, el movimiento creativo y la integración sensorial.",
   "trab": "Conciencia corporal · Coordinación y equilibrio · Expresión corporal y creatividad · Actividades grupales · Danza y dramatización",
@@ -771,7 +772,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-EPS061-C": {
   "n": "Escalera grande",
-  "oc": "",
+  "oc": "OC-2440",
   "fam": "Escalera grande",
   "que": "Escalera de espuma de cuatro peldaños para favorecer el desarrollo psicomotor, la coordinación y la exploración del movimiento. Su estructura acolchada permite armar circuitos motrices seguros.",
   "trab": "Subir y bajar · Trepar · Exploración corporal · Circuitos de psicomotricidad · Integración sensorial · Desarrollo del equilibrio y de la confianza corporal",

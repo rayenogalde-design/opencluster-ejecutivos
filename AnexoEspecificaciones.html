@@ -454,29 +454,43 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
      rotulo: «Tejido: ... · ...\nEspuma: ...». Se pinta con la MISMA tabla de las especificaciones
      tecnicas (etiqueta a la izquierda, valor a la derecha), para no meter un elemento nuevo en un
      diseno que ya esta cerrado. Solo sale si el producto tiene el dato. */
-  function materialidad(mat){
-    if(!mat) return '';
-    var filas = String(mat).split('\n').map(function(l){
+  /* Unidades de control: el «¿para quién está indicado?» no aporta y ocupa el sitio de lo que
+     importa. Si aparece otro controlador, se agrega aquí su SKU. */
+  var SIN_INDICADO = { 'BJ-EX04':1, 'BJ-EX02':1 };
+
+  /* Separa el campo «mat» en sus lineas rotuladas. */
+  function matFilas(mat){
+    if(!mat) return [];
+    return String(mat).split('\n').map(function(l){
       var i = l.indexOf(':');
       if(i < 0) return null;
       return [l.slice(0,i).trim(), l.slice(i+1).trim()];
     }).filter(Boolean);
-    if(!filas.length) return '';
+  }
+  /* Rayen 14-sep-2026: un equipo electrico no tiene «materialidad» —no lleva tela ni espuma—,
+     asi que en esos el marcado CE y lo de las sustancias se suman al final de sus caracteristicas,
+     y la seccion no aparece. La seccion es del mobiliario. */
+  function esMobiliario(filas){
+    return filas.some(function(x){ return /^(tejido|espuma)$/i.test(x[0]); });
+  }
+  function materialidad(mat){
+    var filas = matFilas(mat);
+    if(!filas.length || !esMobiliario(filas)) return '';
     /* Va COMPACTA, como «Caracteristicas adicionales»: una linea por rotulo, sin recuadro ni
        relleno. Con la tabla de las especificaciones tecnicas el bloque pesaba tanto que empujaba
        al producto a una hoja nueva (medido: 6 productos pasaban de 7 a 10 hojas). */
     /* En los equipos electricos los dos rotulos son una linea cada uno y su hoja suele venir al
        tope (el Sistema SHX Compact se pasaba a una segunda hoja): ahi van seguidos, sin abrir un
        parrafo por rotulo. En el mobiliario, donde el texto es largo, cada rotulo va en su linea. */
-    var soloEquipo = filas.every(function(x){ return /fabricante|eléctrica/i.test(x[0]); });
-    if (soloEquipo) {
-      return '<div class="matlist"><p>' + filas.map(function(x){
-        return '<span class="mk">'+esc(x[0])+':</span> '+esc(x[1]);
-      }).join(' · ') + '</p></div>';
-    }
     return '<div class="matlist">' + filas.map(function(x){
       return '<p><span class="mk">'+esc(x[0])+':</span> '+esc(x[1])+'</p>';
     }).join('') + '</div>';
+  }
+  /* Lo que se le suma a «Caracteristicas adicionales» cuando el producto es un equipo. */
+  function matDeEquipo(mat){
+    var filas = matFilas(mat);
+    if(!filas.length || esMobiliario(filas)) return '';
+    return filas.map(function(x){ return x[1].replace(/\s*·\s*/g, '. '); }).join('. ');
   }
 
   function foto(sku,d){
@@ -514,11 +528,17 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
                  '<p class="intro">'+esc(d.que)+'</p>' : '')+
         campo('¿Qué se trabaja con él?', enumera(d.trab), 'junto')+
         campo('¿Qué incluye la entrega?', incluye(d.inc, true), 'ancho tras')+
-        campo('¿Para quién está indicado?', enumera(d.ind, true), 'ancho ind')+
+        /* Rayen 14-sep-2026: en las unidades de control «¿para quién está indicado?» no dice nada
+           —«él es el controlador, el cerebro de toda una sala»— y le quita sitio a lo que importa:
+           qué hace, qué incluye y sus especificaciones. */
+        (SIN_INDICADO[sku] ? '' : campo('¿Para quién está indicado?', enumera(d.ind, true), 'ancho ind'))+
         (function(){
            var tro = unir(d.tec,d.cat,d.inc);
            var tabla = specs(tro), extra = adicionales(tro);
            var mat = materialidad(d.mat);
+           var equipo = matDeEquipo(d.mat);
+           if (equipo) extra = (extra ? extra.replace(/<\/p>\s*$/, ' ' + esc(equipo) + '.</p>')
+                                      : '<p>'+esc(equipo)+'.</p>');
            return (tabla ? '<div class="campo ancho"><h4 class="tit-tec">Especificaciones técnicas</h4>'+tabla+'</div>' : '')+
                   (extra ? campo('Características adicionales', extra, 'ancho') : '')+
                   (mat ? campo("Detalle de materialidad", mat, "ancho matbox") : "");

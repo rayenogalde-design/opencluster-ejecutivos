@@ -332,7 +332,10 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
         var c = tk[j].replace(/[²³]/g,'').toLowerCase();
         if(UNI.test(c)){ u = c; break; }
       }
-      pares.push(t.replace(',','.').replace(/\.0+$/,'') + '|' + u);
+      /* En español el punto separa los miles y la coma los decimales: «1.920» y «1920» son el
+         mismo numero, y sin esto la tienda y el portal parecian decir cosas distintas. */
+      var n = t.replace(/\.(?=\d{3}\b)/g,'').replace(',','.').replace(/\.0+$/,'');
+      pares.push(n + '|' + u);
     });
     return pares;
   }
@@ -407,12 +410,41 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
     var p = partir(trozos).pares;
     if(p.length < 2) return '';
     /* La misma etiqueta no puede salir dos veces (la piscina traia «Tejido» dos veces y
-       «Entrada» dos veces): se juntan sus valores en una sola fila. */
+       «Entrada» dos veces). Con tres reglas, en este orden:
+         · si lo segundo ya esta dicho en lo primero, se descarta («Pantalla multitáctil» cuando
+           arriba ya dice «Pantalla multitáctil de 42 pulgadas…»);
+         · si los dos valores hablan de cosas distintas pero la etiqueta corta es la misma, se
+           conserva la etiqueta LARGA de cada uno («Tensión de alimentación» y «Tensión máxima de
+           trabajo» son dos datos, no uno);
+         · si no, se juntan en una sola fila. */
+    function pal2(t){ return String(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')
+      .split(/[^a-z0-9]+/).filter(function(w){ return w.length > 3; }); }
+    /* «Medidas» y «Dimensiones» son lo mismo: si no se unen, el Panel Tactil sale con las dos. */
+    var SINON = { dimensiones: 'medidas', dimension: 'medidas', medida: 'medidas' };
     var orden = [], porEtiq = {};
     p.forEach(function(x){
       var k = llave(x[0]);
-      if(porEtiq[k]){ porEtiq[k][1] += '. ' + x[1]; return; }
-      porEtiq[k] = [x[0], x[1]]; orden.push(k);
+      k = SINON[k] || k;
+      if(!porEtiq[k]){ porEtiq[k] = [x[0], x[1]]; orden.push(k); return; }
+      var ya = porEtiq[k][1], nue = x[1];
+      var pn = pal2(nue), py = pal2(ya);
+      var dentro = pn.length && pn.every(function(w){ return py.indexOf(w) > -1; });
+      if(dentro) return;                                   /* no aporta nada nuevo */
+      /* Las dos fuentes del fabricante a veces se contradicen en el MISMO dato (el Sensory Step
+         mide 97 × 80 × 4 cm en el portal de soporte y 100 × 85 cm en la tienda). Al cliente no se
+         le pueden mostrar las dos: manda la ficha del portal, que es la que va primero. La
+         diferencia queda anotada en el auditor, para preguntarsela al fabricante. */
+      var uy = cifras(ya).map(function(c){ return c.split(/\d/).pop(); });
+      var un = cifras(nue).map(function(c){ return c.split(/\d/).pop(); });
+      var chocan = un.length && uy.length && un.some(function(u){ return uy.indexOf(u) > -1; }) &&
+                   cifras(nue).some(function(c){ return cifras(ya).indexOf(c) === -1; });
+      if(chocan) return;
+      if(/\s/.test(x[0].trim()) || /\s/.test(porEtiq[k][0].trim())){
+        porEtiq[k + '·' + orden.length] = [x[0], nue];     /* etiquetas largas: son dos datos */
+        orden.push(k + '·' + orden.length);
+        return;
+      }
+      porEtiq[k][1] = ya + '. ' + nue;
     });
     p = orden.map(function(k){ return porEtiq[k]; });
     return '<div class="specs">' + p.map(function(x){

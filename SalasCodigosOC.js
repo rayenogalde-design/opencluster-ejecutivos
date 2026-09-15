@@ -265,7 +265,7 @@ window.SALAS_OC = {
   "BJ-I13":"OC-1960",
   "BJ-I16":"OC-1961",
   "BJ-K06":"OC-1913",
-  "BJ-KMAS":"OC-1182",
+  "BJ-KMAS":"OC-1912",
   "BJ-KUV":"OC-1184",
   "BJ-KVSL":"OC-1189",
   "BJ-LAFIB":"OC-0617",

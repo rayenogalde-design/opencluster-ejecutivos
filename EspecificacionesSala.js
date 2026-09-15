@@ -20,6 +20,7 @@
 // Generado el 2026-09-09 · 64 productos.
 // Campos: n nombre · oc código OC · fam familia · que qué es · trab qué se trabaja ·
 //         ind indicado para · inc qué incluye · tec ficha técnica · cat características del catálogo
+//         mat detalle de materialidad (lo escribe gen_materialidad_web.js)
 window.SALAS_ESPECIFICACIONES = {
  "BJ-EX04": {
   "n": "Sistema SHX Compact",
@@ -30,7 +31,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Discapacidad física (lesión medular, esclerosis múltiple, ELA) · Parálisis cerebral · Trastorno del espectro autista · Daño cerebral · Discapacidad intelectual · Personas mayores · Atención temprana",
   "inc": "Ordenador multimedia, software de control, amplificador de vibración, unidad central de sala, teclado inalámbrico, altavoces, videoproyector con su soporte y tableta de control, disponible en versión Android o iPad.",
   "tec": "Unidad de 220 × 190 × 65 mm. Entrada de 100 a 240 V AC 50/60 Hz, salida 24 V DC / 5 A. Puerto USB tipo C de 5 V / 100 mA. Audio por jack estéreo de 3,5 mm. Salida de vibración por conector SpeakON, 50 W máximos con impedancia mínima de 4 Ω. Control por radiofrecuencia de 433 MHz con alcance de 30 m, infrarrojo de 38 kHz y protocolo DMX. Requisitos mínimos del equipo informático de gobierno: procesador de cuatro núcleos a 2,70 GHz, 8 GB de memoria, 240 GB de almacenamiento, sistema operativo Windows 10 Pro de 64 bits, salidas DVI-D y HDMI y WiFi 802.11ac de doble banda.",
-  "cat": "Ordenador multimedia · Software Control SHX · Amplificador de vibración · Central Device SHX · Proyector incluido · Tablet SHX · Altavoces de sobremesa · Teclado inalámbrico · Compatible con múltiples sistemas de acceso"
+  "cat": "Ordenador multimedia · Software Control SHX · Amplificador de vibración · Central Device SHX · Proyector incluido · Tablet SHX · Altavoces de sobremesa · Teclado inalámbrico · Compatible con múltiples sistemas de acceso",
+  "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa\nSeguridad eléctrica: Marcado CE de la Unión Europea en seguridad eléctrica y compatibilidad electromagnética"
  },
  "BJ-EX02": {
   "n": "SHX Rack",
@@ -41,7 +43,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Discapacidad física (lesión medular, esclerosis múltiple, ELA) · Parálisis cerebral · Trastorno del espectro autista · Daño cerebral (ictus, traumatismo craneoencefálico) · Discapacidad intelectual · Personas mayores · Discapacidad visual · Atención temprana",
   "inc": "Se entrega con altavoces de techo, reproductor-mezclador de audio y receptor inalámbrico integrados.",
   "tec": "Dimensiones externas de 540 × 430 × 560 mm. Alimentación de 230 V 50 Hz. Consumo máximo total de 2.300 W. Equipo informático integrado: procesador de cuatro núcleos a 2,70 GHz, 32 GB de memoria, 240 GB en estado sólido más 1 TB de respaldo, sistema operativo de 64 bits. Amplificación de 2+2 salidas de vibración de 50 W por canal y 2 canales de altavoz de 80 W por canal. Control por radiofrecuencia de 433 MHz con 30 m de alcance. Salidas DMX, HDMI, D-Sub y DVI-D. Soporte para una y para doble proyección.",
-  "cat": "Ordenador servidor SHX · Software de control · Tableta con control inalámbrico · Proyector de corta distancia · Sistema de sonido integrado · Amplificador de vibración de 2x2 salidas · Rack con todas las conexiones · Mueble con cerradura de 90 x 62 x 57 cm · Más de 150 escenas incluidas · Personalización ilimitada"
+  "cat": "Ordenador servidor SHX · Software de control · Tableta con control inalámbrico · Proyector de corta distancia · Sistema de sonido integrado · Amplificador de vibración de 2x2 salidas · Rack con todas las conexiones · Mueble con cerradura de 90 x 62 x 57 cm · Más de 150 escenas incluidas · Personalización ilimitada",
+  "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa"
  },
  "BJ-LPIS-V": {
   "n": "Piscina Luminea vibroacústica",
@@ -52,7 +55,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Parálisis cerebral · Trastorno del espectro autista · Daño cerebral · Discapacidad intelectual · Atención temprana",
   "inc": "Se entrega con sacos de bolas transparentes.",
   "tec": "Medidas de 145 × 145 × 70 cm. Entrada de 100 a 240 V 50/60 Hz, consumo de 70 W. Cable DMX de 6 m, dirección DMX 118. Módulo de vibración de 16 Ω de impedancia, 100 W máximos y 50 W continuos, frecuencia máxima de 120 Hz, con cable de 15 m y conector SpeakON macho. Tejido de peso total 620 g/m² y espesor de 0,5 a 1 mm.",
-  "cat": "Medidas 145 x 145 x 70 cm · Incluye sacos de bolas transparentes · Sistema vibroacústico integrado · Tejido vinílico con protección antimicrobiana · Resistente a la abrasión y a la transpiración · Cumple el reglamento REACH · Material ignífugo, clasificación M2 · Cumple la norma EN 71-3 · Compatible con el Sistema SHX · Funciona en automático · Entrada de conmutador · Control DMX · Doble WiFi · Compatible con la aplicación Luminea"
+  "cat": "Medidas 145 x 145 x 70 cm · Incluye sacos de bolas transparentes · Sistema vibroacústico integrado · Tejido vinílico con protección antimicrobiana · Resistente a la abrasión y a la transpiración · Cumple el reglamento REACH · Material ignífugo, clasificación M2 · Cumple la norma EN 71-3 · Compatible con el Sistema SHX · Funciona en automático · Entrada de conmutador · Control DMX · Doble WiFi · Compatible con la aplicación Luminea",
+  "mat": "Tejido: Impermeable a líquidos, incluidas la transpiración, la saliva, la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa"
  },
  "BJ-EMPT-V": {
   "n": "Puff transformable vibroacústico",
@@ -63,7 +67,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Discapacidad física (lesión medular, esclerosis múltiple, ELA, enfermedades neuromusculares) · Parálisis cerebral · Trastorno del espectro autista · Daño cerebral (ictus, traumatismo craneoencefálico) · Discapacidad intelectual · Discapacidad visual",
   "inc": "Puff transformable con módulo vibroacústico integrado. La vibración requiere el amplificador vibroacústico, el kit vibroacústico inalámbrico o la unidad central del sistema.",
   "tec": "Medidas de 140 × 180 cm. Módulo de vibración de 16 Ω de impedancia, 100 W máximos y 50 W continuos, con frecuencia máxima de 120 Hz. Tejido de peso total 620 g/m² y espesor de 0,5 a 1 mm.",
-  "cat": "Medidas 140 x 180 cm · Tejido vinílico antimicrobiano, antibacteriano y antimicótico · Alta resistencia a la abrasión · Resistente a transpiración, saliva, orina y sangre · Peso del tejido 620 g/m² · Espesor de 0,5 a 1 mm · Cumple el reglamento REACH · Material ignífugo, clasificación M2 · Cumple la norma EN 71-3 de seguridad de juguetes · Excelente resistencia solar · Espumas de poliuretano y polietileno normalizadas según estándares europeos · Disponible en 12 colores"
+  "cat": "Medidas 140 x 180 cm · Tejido vinílico antimicrobiano, antibacteriano y antimicótico · Alta resistencia a la abrasión · Resistente a transpiración, saliva, orina y sangre · Peso del tejido 620 g/m² · Espesor de 0,5 a 1 mm · Cumple el reglamento REACH · Material ignífugo, clasificación M2 · Cumple la norma EN 71-3 de seguridad de juguetes · Excelente resistencia solar · Espumas de poliuretano y polietileno normalizadas según estándares europeos · Disponible en 12 colores",
+  "mat": "Tejido: Apto para el contacto directo con la piel · Verificado en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa"
  },
  "BJ-LRIN": {
   "n": "Rincón Luminea sin tablet",
@@ -74,7 +79,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Parálisis cerebral · Trastorno del espectro autista · Daño cerebral (ictus, traumatismo craneoencefálico) · Discapacidad intelectual · Personas mayores · Discapacidad visual · Atención temprana",
   "inc": "Tubo de burbujas, fibra óptica de 2 metros, base para el tubo, punto de acceso inalámbrico, aplicación de control para Android y fijación a pared.",
   "tec": "Altura total de 180 cm, con 110 × 110 cm de ancho y profundidad. Requiere una toma de 230 V. Genera su propia red WiFi. Esta versión se gobierna desde la unidad central del sistema: no lleva tableta propia.",
-  "cat": "Altura 180 cm · Ancho y profundidad 110 x 110 cm · Incluye tubo de burbujas Luminea · Fibra óptica de 2 m · Aplicación Luminea para Android · Base intercambiable en PVC o en tacto piel · Fijación a pared · Punto de acceso incluido"
+  "cat": "Altura 180 cm · Ancho y profundidad 110 x 110 cm · Incluye tubo de burbujas Luminea · Fibra óptica de 2 m · Aplicación Luminea para Android · Base intercambiable en PVC o en tacto piel · Fijación a pared · Punto de acceso incluido",
+  "mat": "Tejido: Impermeable a líquidos, incluidas la transpiración, la saliva, la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa\nDeclaración del fabricante: Tratamiento antimicrobiano incorporado al tejido desde su fabricación · Sin las sustancias químicas restringidas en Europa"
  },
  "BJ-LRIN23": {
   "n": "Rincón Luminea con tablet",
@@ -85,7 +91,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Parálisis cerebral · Trastorno del espectro autista · Daño cerebral · Discapacidad intelectual · Personas mayores · Discapacidad visual · Atención temprana",
   "inc": "Se entrega con tubo de burbujas luminea.",
   "tec": "Altura total de 180 cm, con 110 × 110 cm de ancho y profundidad. Requiere una toma de 230 V. Genera su propia red WiFi. Esta versión incluye su propia tableta de control.",
-  "cat": "Altura 180 cm · Ancho y profundidad 110 x 110 cm · Incluye tubo de burbujas Luminea · Fibra óptica de 2 m · Tableta de control con la aplicación para Android · Base intercambiable en PVC o en tacto piel · Punto de acceso · Fijación a pared · Elementos sincronizables entre sí"
+  "cat": "Altura 180 cm · Ancho y profundidad 110 x 110 cm · Incluye tubo de burbujas Luminea · Fibra óptica de 2 m · Tableta de control con la aplicación para Android · Base intercambiable en PVC o en tacto piel · Punto de acceso · Fijación a pared · Elementos sincronizables entre sí",
+  "mat": "Tejido: Impermeable a líquidos, incluidas la transpiración, la saliva, la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa\nDeclaración del fabricante: Tratamiento antimicrobiano incorporado al tejido desde su fabricación · Sin las sustancias químicas restringidas en Europa"
  },
  "BJ-EMCV": {
   "n": "Cojín vibroacústico",
@@ -96,7 +103,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Discapacidad física (lesión medular, esclerosis múltiple, ELA, enfermedades neuromusculares) · Parálisis cerebral · Trastorno del espectro autista · Discapacidad auditiva · Atención temprana",
   "inc": "",
   "tec": "Medidas de 40 × 40 cm. Módulo de vibración de 16 Ω de impedancia, 100 W máximos y 50 W continuos, con frecuencia máxima de 120 Hz. Tejido de 620 g/m² y espesor de 0,5 a 1 mm. Espuma de poliuretano de 25 kg/m³.",
-  "cat": "Medidas 40 x 40 cm · Se adapta a distintos usos corporales · Se conecta a fuentes de audio y de vídeo · Necesita amplificador vibroacústico, kit Bluetooth o Sistema SHX para funcionar"
+  "cat": "Medidas 40 x 40 cm · Se adapta a distintos usos corporales · Se conecta a fuentes de audio y de vídeo · Necesita amplificador vibroacústico, kit Bluetooth o Sistema SHX para funcionar",
+  "mat": "Tejido: Impermeable a líquidos, incluidas la transpiración, la saliva, la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa\nDeclaración del fabricante: Tratamiento antimicrobiano incorporado al tejido desde su fabricación · Sin las sustancias químicas restringidas en Europa"
  },
  "BJ-EMSC": {
   "n": "Sensory Cube grande",
@@ -107,7 +115,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Parálisis cerebral · Trastorno del espectro autista · Daño cerebral (ictus, traumatismo craneoencefálico) · Discapacidad intelectual · Personas mayores · Discapacidad visual",
   "inc": "",
   "tec": "Medidas 40 × 40 × 40 cm. Carga por USB de 5 V / 1.000 mA. Batería de litio-polímero de 3,7 V y 2.400 mAh. Comunicación por radiofrecuencia de 433 MHz. Tejido de 620 g/m² y espesor de 0,5 a 1 mm. Espumas de poliuretano y polietileno normalizadas.",
-  "cat": "Medidas 40 × 40 × 40 cm · Compatible con el Sistema SHX y con Luminea · Configuración sencilla con un botón trasero · Tejido vinílico antimicrobiano, antibacteriano y antimicótico · Alta resistencia a la abrasión · Resistente a transpiración, saliva, orina y sangre · Peso del tejido 620 g/m² · Espesor de 0,5 a 1 mm · Cumple el reglamento REACH · Material ignífugo, clasificación M2 · Cumple la norma EN 71-3 · Excelente resistencia solar · Espumas de poliuretano y polietileno normalizadas según estándares europeos"
+  "cat": "Medidas 40 × 40 × 40 cm · Compatible con el Sistema SHX y con Luminea · Configuración sencilla con un botón trasero · Tejido vinílico antimicrobiano, antibacteriano y antimicótico · Alta resistencia a la abrasión · Resistente a transpiración, saliva, orina y sangre · Peso del tejido 620 g/m² · Espesor de 0,5 a 1 mm · Cumple el reglamento REACH · Material ignífugo, clasificación M2 · Cumple la norma EN 71-3 · Excelente resistencia solar · Espumas de poliuretano y polietileno normalizadas según estándares europeos",
+  "mat": "Tejido: Apto para el contacto directo con la piel · Verificado en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa"
  },
  "BJ-EMSCP": {
   "n": "Sensory Cube pequeño",
@@ -118,7 +127,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Parálisis cerebral · Trastorno del espectro autista · Daño cerebral (ictus, traumatismo) · Discapacidad intelectual · Personas mayores · Discapacidad visual",
   "inc": "",
   "tec": "Medidas 25 × 25 × 25 cm. Carga por USB de 5 V / 1.000 mA. Batería de litio-polímero de 3,7 V y 2.400 mAh. Comunicación por radiofrecuencia de 433 MHz. Tejido de 620 g/m² y espesor de 0,5 a 1 mm. Espumas de poliuretano y polietileno normalizadas.",
-  "cat": "Medidas 25 x 25 cm · Tejido vinílico antimicrobiano, antibacteriano y antimicótico · Resistente a la abrasión, la transpiración, la saliva, la orina y la sangre · Peso del tejido 620 g/m² · Espesor de 0,5 a 1 mm · Cumple el reglamento REACH · Material ignífugo, clasificación M2 · Cumple la norma EN 71-3 · Espumas de poliuretano y polietileno normalizadas · Compatible con el Sistema SHX y con la aplicación Luminea"
+  "cat": "Medidas 25 x 25 cm · Tejido vinílico antimicrobiano, antibacteriano y antimicótico · Resistente a la abrasión, la transpiración, la saliva, la orina y la sangre · Peso del tejido 620 g/m² · Espesor de 0,5 a 1 mm · Cumple el reglamento REACH · Material ignífugo, clasificación M2 · Cumple la norma EN 71-3 · Espumas de poliuretano y polietileno normalizadas · Compatible con el Sistema SHX y con la aplicación Luminea",
+  "mat": "Tejido: Apto para el contacto directo con la piel · Verificado en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa"
  },
  "BJ-EMSST": {
   "n": "Sensory Step",
@@ -129,7 +139,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Parálisis cerebral · Trastorno del espectro autista · Daño cerebral (ictus, traumatismo craneoencefálico) · Discapacidad intelectual · Personas mayores · Discapacidad visual",
   "inc": "",
   "tec": "Medidas de 97 × 80 × 4 cm. Peso de 1 kg. Carga por USB de 5 V / 1.000 mA con conector de 5,5 × 2,1 mm. Batería de litio-polímero de 700 mAh, con carga completa en 2 a 3 horas. Tejido de vinilo de 620 g/m² y espesor de 0,5 a 1 mm.",
-  "cat": "Medidas 100 x 85 cm · Inalámbrica por radiofrecuencia · Compatible con el Sistema SHX y con Luminea · Configuración sencilla con un botón trasero · Tejido vinílico antimicrobiano, antibacteriano y antimicótico · Alta resistencia a la abrasión · Resistente a transpiración, saliva, orina y sangre · Peso del tejido 620 g/m² · Espesor de 0,5 a 1 mm · Cumple el reglamento REACH · Material ignífugo, clasificación M2 · Cumple la norma EN 71-3 · Excelente resistencia solar"
+  "cat": "Medidas 100 x 85 cm · Inalámbrica por radiofrecuencia · Compatible con el Sistema SHX y con Luminea · Configuración sencilla con un botón trasero · Tejido vinílico antimicrobiano, antibacteriano y antimicótico · Alta resistencia a la abrasión · Resistente a transpiración, saliva, orina y sangre · Peso del tejido 620 g/m² · Espesor de 0,5 a 1 mm · Cumple el reglamento REACH · Material ignífugo, clasificación M2 · Cumple la norma EN 71-3 · Excelente resistencia solar",
+  "mat": "Tejido: Apto para el contacto directo con la piel · Verificado en laboratorio europeo"
  },
  "BJ-SF11": {
   "n": "Sensory Feet 1.1",
@@ -151,7 +162,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Lesión medular · Esclerosis múltiple · ELA · Enfermedades neuromusculares · Parálisis cerebral · Trastorno del espectro autista · Daño cerebral (ictus, traumatismo) · Discapacidad visual",
   "inc": "",
   "tec": "Medidas 110 x 210 x 40 cm. Calentador: alimentación 230 V 50 Hz, potencia 240 W. Vibrador: impedancia 16 Ω, potencia máxima 100 W, potencia continua 50 W AES, frecuencia máxima 120 Hz, cable de 15 m con conector SpeakON macho. Estructura construida sobre tablero fenólico marino de alta resistencia a la carga y a la humedad.",
-  "cat": "Medidas 110 x 210 x 40 cm · Tablero fenólico marino · Tejido vinílico antimicrobiano y resistente · Calefacción a 230 V · Accesible para grúas de transferencia · Disponible en 12 colores"
+  "cat": "Medidas 110 x 210 x 40 cm · Tablero fenólico marino · Tejido vinílico antimicrobiano y resistente · Calefacción a 230 V · Accesible para grúas de transferencia · Disponible en 12 colores",
+  "mat": "Tejido: Impermeable a líquidos, incluidas la transpiración, la saliva, la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa\nDeclaración del fabricante: Sin las sustancias químicas restringidas en Europa"
  },
  "BJ-EEGR": {
   "n": "Espejo grande recto",
@@ -206,7 +218,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Discapacidad física · Parálisis cerebral · Trastorno del espectro autista · Daño cerebral · Discapacidad intelectual · Personas mayores · Discapacidad visual y baja visión",
   "inc": "Línea LED de 5 metros, fuente de alimentación y controlador con su cable de control.",
   "tec": "Línea LED de color direccionable de 5 m, con 60 LED por metro, 12 W por metro y 350 lúmenes por metro, con grado de protección IP54. Alimentación de 24 V DC. Fuente de alimentación de entrada 230 V AC y salida 24 V DC, 70 W totales, de 110 × 60 × 40 mm. Controlador DMX de 5 a 24 V y 11 W, de 125 × 65 × 45 mm. Cable DMX de 6 m, dirección DMX 001.",
-  "cat": "Tira LED de larga duración de 5 m · Perfil de soporte y difusor de luz · Fuente de alimentación incluida · Compatible con el Sistema SHX · Funciona en automático sin controlador · Entrada de conmutador en modo causa-efecto y en modo secuencial · Control DMX · Receptor de radiofrecuencia · Doble WiFi · Compatible con la aplicación Luminea"
+  "cat": "Tira LED de larga duración de 5 m · Perfil de soporte y difusor de luz · Fuente de alimentación incluida · Compatible con el Sistema SHX · Funciona en automático sin controlador · Entrada de conmutador en modo causa-efecto y en modo secuencial · Control DMX · Receptor de radiofrecuencia · Doble WiFi · Compatible con la aplicación Luminea",
+  "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa\nSeguridad eléctrica: Marcado CE de la Unión Europea en seguridad eléctrica y compatibilidad electromagnética"
  },
  "BJ-LLLR": {
   "n": "Línea LED Luminea para respaldo 5 metros",
@@ -217,7 +230,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Discapacidad física · Parálisis cerebral · Trastorno del espectro autista · Daño cerebral · Discapacidad intelectual · Personas mayores · Discapacidad visual y baja visión",
   "inc": "Se entrega con fuente de alimentación.",
   "tec": "Línea LED de color direccionable de 5 m, con 60 LED por metro, 12 W por metro y 350 lúmenes por metro, con grado de protección IP54. Alimentación de 24 V DC. Fuente de alimentación de entrada 230 V AC y salida 24 V DC, 70 W totales, de 110 × 60 × 40 mm. Controlador DMX de 5 a 24 V y 11 W, de 125 × 65 × 45 mm. Cable DMX de 6 m.",
-  "cat": "Tira LED de 5 m · Perfil de soporte y difusor de luz · Fuente de alimentación incluida · Compatible con el Sistema SHX · Funciona en automático · Entrada de conmutador en modo causa-efecto y en modo secuencial · Control DMX · Receptor de radiofrecuencia · Doble WiFi · Compatible con la aplicación Luminea"
+  "cat": "Tira LED de 5 m · Perfil de soporte y difusor de luz · Fuente de alimentación incluida · Compatible con el Sistema SHX · Funciona en automático · Entrada de conmutador en modo causa-efecto y en modo secuencial · Control DMX · Receptor de radiofrecuencia · Doble WiFi · Compatible con la aplicación Luminea",
+  "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa\nSeguridad eléctrica: Marcado CE de la Unión Europea en seguridad eléctrica y compatibilidad electromagnética"
  },
  "BJ-LTUB": {
   "n": "Tubo de burbujas Luminea",
@@ -228,7 +242,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Parálisis cerebral · Trastorno del espectro autista · Daño cerebral · Discapacidad intelectual · Personas mayores · Discapacidad visual · Atención temprana",
   "inc": "",
   "tec": "Base de 36 × 36 × 15 cm. Columna de metacrilato de 1,8 m de altura y 20 cm de diámetro, con capacidad aproximada de 50 litros de agua. Alimentación de 230 V AC 50 Hz con salida de 12 V AC / 50 VA o de 12 V DC / 36 W. Potencia máxima de 35 W.",
-  "cat": "Medidas 180 x 20 cm · Elevada luminosidad · Metacrilato de alta calidad · Compatible con el Sistema SHX · Funciona en automático sin controlador · Tres modos de burbujas: continuo, esporádico y en secuencia · Doble WiFi y receptor de radiofrecuencia · Compatible con la aplicación Luminea"
+  "cat": "Medidas 180 x 20 cm · Elevada luminosidad · Metacrilato de alta calidad · Compatible con el Sistema SHX · Funciona en automático sin controlador · Tres modos de burbujas: continuo, esporádico y en secuencia · Doble WiFi y receptor de radiofrecuencia · Compatible con la aplicación Luminea",
+  "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa\nSeguridad eléctrica: Marcado CE de la Unión Europea en seguridad eléctrica y compatibilidad electromagnética"
  },
  "BJ-LDFIB": {
   "n": "Ducha Luminea",
@@ -239,7 +254,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Parálisis cerebral · Trastorno del espectro autista · Daño cerebral (ictus, traumatismo) · Discapacidad intelectual · Personas mayores · Discapacidad visual",
   "inc": "",
   "tec": "150 filamentos de fibra óptica de 3 m de longitud. Alimentación de 5 V, 3 A. Potencia de 3 W. Fuente de luz de 180 × 80 × 50 mm. Base de 800 × 500 × 8 mm. Cable DMX de 6 m.",
-  "cat": "150 haces de fibra óptica de 3 m · Alta luminosidad · Sistema de soporte para techo · Compatible con el Sistema SHX · Funciona en automático sin controlador · Entrada de conmutador en modo causa-efecto y en modo secuencial · Control DMX · Receptor de radiofrecuencia · Doble WiFi · Compatible con la aplicación Luminea · Fibras seguras al tacto, no dan calor"
+  "cat": "150 haces de fibra óptica de 3 m · Alta luminosidad · Sistema de soporte para techo · Compatible con el Sistema SHX · Funciona en automático sin controlador · Entrada de conmutador en modo causa-efecto y en modo secuencial · Control DMX · Receptor de radiofrecuencia · Doble WiFi · Compatible con la aplicación Luminea · Fibras seguras al tacto, no dan calor",
+  "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa\nSeguridad eléctrica: Marcado CE de la Unión Europea en seguridad eléctrica y compatibilidad electromagnética"
  },
  "BJ-LCFIB": {
   "n": "Cortina Luminea",
@@ -250,7 +266,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Parálisis cerebral · Trastorno del espectro autista · Daño cerebral · Discapacidad intelectual · Personas mayores · Discapacidad visual",
   "inc": "Se entrega con fuente de luz.",
   "tec": "66 filamentos de fibra óptica de 2 m de longitud, con 1 m de ancho de cortina. Alimentación de 5 V, 2 A. Potencia de 6 W. Fuente de luz de 180 × 80 × 50 mm. Cable DMX de 6 m.",
-  "cat": "Cortina tubular para colgar del techo · Fibras ópticas de alta calidad · Alta luminosidad · Fuente de luz incluida · Compatible con el Sistema SHX · Funciona en automático · Entrada de conmutador en modo causa-efecto y en modo secuencial · Control DMX · Receptor de radiofrecuencia · Doble WiFi · Compatible con la aplicación Luminea"
+  "cat": "Cortina tubular para colgar del techo · Fibras ópticas de alta calidad · Alta luminosidad · Fuente de luz incluida · Compatible con el Sistema SHX · Funciona en automático · Entrada de conmutador en modo causa-efecto y en modo secuencial · Control DMX · Receptor de radiofrecuencia · Doble WiFi · Compatible con la aplicación Luminea",
+  "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa\nSeguridad eléctrica: Marcado CE de la Unión Europea en seguridad eléctrica y compatibilidad electromagnética"
  },
  "BJ-LCCFIB": {
   "n": "Cielo Luminea circular",
@@ -261,7 +278,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Parálisis cerebral · Trastorno del espectro autista · Daño cerebral · Discapacidad intelectual · Personas mayores · Discapacidad visual",
   "inc": "",
   "tec": "Diámetro 122,3 cm. Alimentación de la fuente de luz 5 V, 2 A. Tensión del alimentador 230 V – 50 Hz. Potencia 6 W. Fuente de luz de 180 x 80 x 50 mm. Cable DMX de 6 m.",
-  "cat": "Diámetro 122,3 cm · Sistema de soporte para techo · Compatible con el Sistema SHX · Funciona en automático sin controlador · Entrada de conmutador en modo causa-efecto y en modo secuencial · Control DMX · Receptor de radiofrecuencia · Doble WiFi · Compatible con la aplicación Luminea"
+  "cat": "Diámetro 122,3 cm · Sistema de soporte para techo · Compatible con el Sistema SHX · Funciona en automático sin controlador · Entrada de conmutador en modo causa-efecto y en modo secuencial · Control DMX · Receptor de radiofrecuencia · Doble WiFi · Compatible con la aplicación Luminea",
+  "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa"
  },
  "BJ-LCTRL": {
   "n": "Button 6",
@@ -272,7 +290,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Parálisis cerebral · Trastorno del espectro autista · Daño cerebral · Discapacidad intelectual · Personas mayores · Discapacidad visual",
   "inc": "Mando con batería recargable y su cargador.",
   "tec": "Dimensiones de 290 × 220 × 120 mm. Seis pulsadores retroiluminados y seis entradas de conmutador para acceso adaptado. Batería de litio-polímero de 3,7 V y 2.400 mAh, con carga por USB de 5 V – 1 A en 5 horas. Comunicación por radiofrecuencia de 433 MHz en banda ISM.",
-  "cat": "Funciona por radiofrecuencia · Seis botones retroiluminados · Carátula transparente para poner pictogramas · Seis entradas para conmutador · Batería recargable · Compatible con el Sistema SHX y con los productos Luminea"
+  "cat": "Funciona por radiofrecuencia · Seis botones retroiluminados · Carátula transparente para poner pictogramas · Seis entradas para conmutador · Batería recargable · Compatible con el Sistema SHX y con los productos Luminea",
+  "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa\nSeguridad eléctrica: Marcado CE de la Unión Europea en seguridad eléctrica y compatibilidad electromagnética"
  },
  "BJ-LCTRL1": {
   "n": "Button 1",
@@ -283,7 +302,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Discapacidad física (lesión medular, esclerosis múltiple, ELA) · Parálisis cerebral · Trastorno del espectro autista · Daño cerebral · Discapacidad intelectual · Personas mayores · Discapacidad visual · Atención temprana",
   "inc": "Pulsador con alimentación por pilas.",
   "tec": "Superficie de activación de 125 mm de diámetro. Alimentación con dos pilas AAA y ahorro automático de energía. Alcance de hasta 25 m. Modos de funcionamiento independientes para la columna de burbujas, para los haces de fibra óptica, para el resto de los elementos de iluminación, para el gobierno de la sala completa, y un modo combinado que acciona todos los dispositivos de iluminación a la vez.",
-  "cat": "Inalámbrico · Las pilas soportan 100.000 pulsaciones · Se configura por la parte posterior · Pantalla indicadora · Compatible con los dispositivos Luminea y con las salas SHX · Incluye dos pilas AAA"
+  "cat": "Inalámbrico · Las pilas soportan 100.000 pulsaciones · Se configura por la parte posterior · Pantalla indicadora · Compatible con los dispositivos Luminea y con las salas SHX · Incluye dos pilas AAA",
+  "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa\nSeguridad eléctrica: Marcado CE de la Unión Europea en seguridad eléctrica y compatibilidad electromagnética"
  },
  "BJ-EIFUVLX": {
   "n": "Foco de luz UV LED SHX",
@@ -294,7 +314,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Discapacidad física (lesión medular, esclerosis múltiple, ELA) · Parálisis cerebral · Trastorno del espectro autista · Daño cerebral (ictus, traumatismo craneoencefálico) · Discapacidad intelectual · Personas mayores · Discapacidad visual",
   "inc": "Proyector con su alimentación.",
   "tec": "Dimensiones de 120 × 120 × 190 mm. Alimentación de 220 a 240 V AC 50/60 Hz. Potencia de 8 W. Peso de 0,9 kg.",
-  "cat": "Lámpara DMX de 55 LED · Funciona a 230 V · Compatible con el Sistema SHX · Incluye el receptor de radiofrecuencia Enabler Socket+"
+  "cat": "Lámpara DMX de 55 LED · Funciona a 230 V · Compatible con el Sistema SHX · Incluye el receptor de radiofrecuencia Enabler Socket+",
+  "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa\nSeguridad eléctrica: Marcado CE de la Unión Europea en seguridad eléctrica y compatibilidad electromagnética"
  },
  "BJ-EX47": {
   "n": "Estrellas SHX",
@@ -305,7 +326,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Discapacidad física · Parálisis cerebral · Trastorno del espectro autista · Daño cerebral · Discapacidad intelectual · Personas mayores · Discapacidad visual · Atención temprana",
   "inc": "Proyector con su adaptador de alimentación y el receptor que lo integra al sistema.",
   "tec": "Proyector de 127 × 137 × 220 mm. Alimentación del equipo de 5 V DC – 0,5 A, con adaptador de 110 a 240 V AC 50/60 Hz y salida de 5 V DC – 1 A. Cobertura de 3 m² desde 2 m de distancia. Lente de nebulosa azul. Control por radiofrecuencia y compatibilidad con conmutador externo.",
-  "cat": "Miles de efectos visuales en movimiento · Compatible con el Sistema SHX · Sincronizable con otros dispositivos para escenas coordinadas · Incluye el receptor de radiofrecuencia Enabler Socket+ · Se puede controlar por voz, por mirada, con objetos o con pulsadores"
+  "cat": "Miles de efectos visuales en movimiento · Compatible con el Sistema SHX · Sincronizable con otros dispositivos para escenas coordinadas · Incluye el receptor de radiofrecuencia Enabler Socket+ · Se puede controlar por voz, por mirada, con objetos o con pulsadores",
+  "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa\nSeguridad eléctrica: Marcado CE de la Unión Europea en seguridad eléctrica y compatibilidad electromagnética"
  },
  "BJ-EDA": {
   "n": "Difusor de aromaterapia",
@@ -316,7 +338,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Discapacidad física · Parálisis cerebral · Trastorno del espectro autista · Daño cerebral · Discapacidad intelectual · Personas mayores · Discapacidad visual",
   "inc": "Difusor con su alimentación.",
   "tec": "Nebulización por ultrasonido con depósito de agua e iluminación tenue. Se integra a la unidad central del sistema.",
-  "cat": "Tecnología ultrasónica · Funcionamiento silencioso · Apagado automático cuando se agota el agua · Seis luces LED con dos niveles de brillo · Vapor fresco, seco y perfumado"
+  "cat": "Tecnología ultrasónica · Funcionamiento silencioso · Apagado automático cuando se agota el agua · Seis luces LED con dos niveles de brillo · Vapor fresco, seco y perfumado",
+  "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa\nSeguridad eléctrica: Marcado CE de la Unión Europea en seguridad eléctrica y compatibilidad electromagnética"
  },
  "BJ-SGL": {
   "n": "Sensory Go Luminea",
@@ -327,7 +350,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Personas mayores · Niños en escuelas · Personas con discapacidad · Pacientes en hospitales · Bibliotecas · Museos · Empresas · Hogares",
   "inc": "",
   "tec": "Las medidas están en la columna siguiente.",
-  "cat": "Transportable con ruedas · Instalación inmediata, sin obra · Medidas del carro 46 x 96 x 130 cm · Tubo de burbujas de 120 cm · Fibra óptica de 3 m · Tableta con la aplicación preinstalada · Amplificador de sonido · Unidad de vibración · Estanterías con espacio de guardado · Componentes protegidos · Ampliable con elementos complementarios"
+  "cat": "Transportable con ruedas · Instalación inmediata, sin obra · Medidas del carro 46 x 96 x 130 cm · Tubo de burbujas de 120 cm · Fibra óptica de 3 m · Tableta con la aplicación preinstalada · Amplificador de sonido · Unidad de vibración · Estanterías con espacio de guardado · Componentes protegidos · Ampliable con elementos complementarios",
+  "mat": "Tejido: Impermeable a líquidos, incluidas la transpiración, la saliva, la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa\nDeclaración del fabricante: Tratamiento antimicrobiano incorporado al tejido desde su fabricación · Sin las sustancias químicas restringidas en Europa\nSeguridad eléctrica: Marcado CE de la Unión Europea en seguridad eléctrica y compatibilidad electromagnética"
  },
  "BJ-SGSX": {
   "n": "Sensory Go SHX",
@@ -338,7 +362,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Centros de personas mayores · Escuelas · Centros para personas con discapacidad · Hospitales · Bibliotecas · Empresas · Hogares · Museos",
   "inc": "",
   "tec": "Las medidas están en la columna siguiente.",
-  "cat": "Medidas 46 x 96 x 130 cm · Carro con ruedas y estanterías · Unidad central SHX Compact con proyector · Tableta de control · Amplificador y altavoz integrados · Tubo de burbujas de 120 cm · Fibra óptica de 3 m · Unidad de vibración · Cojín vibroacústico · Button 6 y Button 1 · Sistema de reconocimiento de objetos"
+  "cat": "Medidas 46 x 96 x 130 cm · Carro con ruedas y estanterías · Unidad central SHX Compact con proyector · Tableta de control · Amplificador y altavoz integrados · Tubo de burbujas de 120 cm · Fibra óptica de 3 m · Unidad de vibración · Cojín vibroacústico · Button 6 y Button 1 · Sistema de reconocimiento de objetos",
+  "mat": "Tejido: Impermeable a líquidos, incluidas la transpiración, la saliva, la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa\nDeclaración del fabricante: Tratamiento antimicrobiano incorporado al tejido desde su fabricación · Sin las sustancias químicas restringidas en Europa\nSeguridad eléctrica: Marcado CE de la Unión Europea en seguridad eléctrica y compatibilidad electromagnética"
  },
  "BJ-SGP": {
   "n": "Sensory Go Luminea Plus",
@@ -349,7 +374,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Personas mayores · Niños en escuelas · Personas con discapacidad · Pacientes en hospitales · Bibliotecas, empresas y museos",
   "inc": "Se entrega con punto de acceso.",
   "tec": "Las medidas están en la columna siguiente.",
-  "cat": "Medidas 46 x 96 x 130 cm con el tubo montado · Carro con ruedas y estanterías · Tubo de burbujas de 120 cm · Fibra óptica de 3 m · Tableta con la aplicación preinstalada · Button 6 y Button 1 · Cojín vibroacústico · Difusor de aromaterapia · Foco ultravioleta · Kit de material UV y kit de masaje · Amplificador y altavoz integrados · Punto de acceso incluido"
+  "cat": "Medidas 46 x 96 x 130 cm con el tubo montado · Carro con ruedas y estanterías · Tubo de burbujas de 120 cm · Fibra óptica de 3 m · Tableta con la aplicación preinstalada · Button 6 y Button 1 · Cojín vibroacústico · Difusor de aromaterapia · Foco ultravioleta · Kit de material UV y kit de masaje · Amplificador y altavoz integrados · Punto de acceso incluido",
+  "mat": "Tejido: Impermeable a líquidos, incluidas la transpiración, la saliva, la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa\nDeclaración del fabricante: Tratamiento antimicrobiano incorporado al tejido desde su fabricación · Sin las sustancias químicas restringidas en Europa\nSeguridad eléctrica: Marcado CE de la Unión Europea en seguridad eléctrica y compatibilidad electromagnética"
  },
  "BJ-EXPRX": {
   "n": "SHX Proximity",
@@ -360,7 +386,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Parálisis cerebral · Trastorno del espectro autista · Daño cerebral (ictus, traumatismo) · Discapacidad intelectual · Personas mayores · Discapacidad visual",
   "inc": "Se entrega con 18 tarjetas y adhesivos regrabables un número ilimitado de veces.",
   "tec": "Lector de proximidad de 13,56 MHz, con distancia de lectura de 3 cm y hasta 5 cm. Conexión USB 2.0, alimentación de 5 V y consumo de 200 mA. Cable de 5 m. Compatible con tarjetas Mifare Classic de 1 kB y con sistemas operativos Windows, Linux, Mac OS y Android 3.1 o superior.",
-  "cat": "Dispositivo USB con cable de 5 m · Área de reconocimiento de unos 5 cm · Incluye 18 tarjetas y adhesivos regrabables un número ilimitado de veces · Tarjetas preconfiguradas de volumen, stop, botones, secuencial y aleatorio · Compatible con el Sistema SHX"
+  "cat": "Dispositivo USB con cable de 5 m · Área de reconocimiento de unos 5 cm · Incluye 18 tarjetas y adhesivos regrabables un número ilimitado de veces · Tarjetas preconfiguradas de volumen, stop, botones, secuencial y aleatorio · Compatible con el Sistema SHX",
+  "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa"
  },
  "BJ-EX41": {
   "n": "Ventilador SHX",
@@ -371,7 +398,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Discapacidad física (lesión medular, esclerosis múltiple, ELA, enfermedades neuromusculares) · Parálisis cerebral · Trastorno del espectro autista · Daño cerebral (ictus, traumatismo craneoencefálico) · Discapacidad intelectual · Personas mayores · Discapacidad visual · Atención temprana",
   "inc": "Ventilador con su alimentación.",
   "tec": "Alimentación de 230 V AC 50 Hz. Potencia de 135 W. Aspas metálicas de 45 cm de diámetro. Tres velocidades e inclinación ajustable.",
-  "cat": "Ventilador de tres velocidades · Incluye el receptor de radiofrecuencia Enabler Socket+ · Compatible con el Sistema SHX · Incluye el cableado necesario"
+  "cat": "Ventilador de tres velocidades · Incluye el receptor de radiofrecuencia Enabler Socket+ · Compatible con el Sistema SHX · Incluye el cableado necesario",
+  "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa"
  },
  "BJ-EMAVIBX": {
   "n": "Amplificador vibroacústico adicional",
@@ -382,7 +410,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Parálisis cerebral · Trastorno del espectro autista · Daño cerebral (ictus, traumatismo craneoencefálico) · Discapacidad intelectual · Personas mayores · Discapacidad visual · Discapacidad auditiva · Atención temprana",
   "inc": "Amplificador con dos canales de salida de vibración.",
   "tec": "Dimensiones de 482 × 95 × 300 mm y peso de 7,6 kg. Alimentación de 230 V / 50 Hz, con consumo máximo de 730 VA. Dos canales, con potencia nominal en estéreo de 2 × 200 W a 4 Ω y 2 × 125 W a 8 Ω, y potencia de pico de 600 W. Impedancia de entrada de 55 kΩ y sensibilidad de entrada de 1,3 V. Rango de frecuencia de 10 a 20.000 Hz. Relación señal-ruido de 64 dB. Separación entre canales superior a 55 dB. Distorsión de 0,05%. Temperatura de trabajo de 0 a 40 °C.",
-  "cat": "Etapa preamplificadora y etapa amplificadora de dos canales · Entrada jack estéreo de 3,5 mm · Permite conectar hasta dos elementos vibroacústicos a la vez · Compatible con el Sistema SHX · Cableado y conexionado incluidos"
+  "cat": "Etapa preamplificadora y etapa amplificadora de dos canales · Entrada jack estéreo de 3,5 mm · Permite conectar hasta dos elementos vibroacústicos a la vez · Compatible con el Sistema SHX · Cableado y conexionado incluidos",
+  "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa"
  },
  "BJ-EXKV": {
   "n": "Kit Voz SHX",
@@ -393,7 +422,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Discapacidad física · Parálisis cerebral · Trastorno del espectro autista · Daño cerebral · Discapacidad intelectual · Personas mayores · Discapacidad visual · Atención temprana",
   "inc": "Se entrega con receptor, transmisor de petaca, micrófono de mano, micrófono de diadema, cable jack de 6,5 a 3,5 mm, alimentador del receptor y los programas de control de voz y de medición de nivel.",
   "tec": "Receptor de 12 a 18 V DC / 4 W. Micrófonos alimentados con dos pilas AA de 1,5 V cada uno. Frecuencia de trabajo de 200 a 230 MHz. Rango dinámico superior a 90 dB. Respuesta en frecuencia de 40 Hz a 15 kHz ±3 dB. Potencia de salida de 8,5 mW. Relación señal-ruido superior a 90 dB.",
-  "cat": "Dos micrófonos inalámbricos, de mano y de diadema · Sistema de recepción · Alimentador y cableado incluidos · Compatible con la central SHX · Cuatro modos de iluminación: blancos, colores, aleatorio y por picos · Incluye el programa de control · Convierte la voz en señales luminosas · Compatible con los elementos vibroacústicos"
+  "cat": "Dos micrófonos inalámbricos, de mano y de diadema · Sistema de recepción · Alimentador y cableado incluidos · Compatible con la central SHX · Cuatro modos de iluminación: blancos, colores, aleatorio y por picos · Incluye el programa de control · Convierte la voz en señales luminosas · Compatible con los elementos vibroacústicos",
+  "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa"
  },
  "BJ-KVSL": {
   "n": "Kit vibroacústico Bluetooth",
@@ -404,7 +434,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Parálisis cerebral · Trastorno del espectro autista · Daño cerebral (ictus, traumatismo craneoencefálico) · Discapacidad intelectual · Personas mayores · Discapacidad visual · Discapacidad auditiva · Atención temprana",
   "inc": "Módulo emisor y receptor inalámbrico con su alimentación.",
   "tec": "Conexión inalámbrica con el reproductor de audio o con la unidad central del sistema.",
-  "cat": "Receptor Bluetooth · Altavoces autoamplificados · Etapa preamplificadora · Amplificador de dos canales · Entrada jack estéreo de 3,5 mm · Compatible con los dispositivos Luminea · Necesita tres tomas de corriente de 230 V"
+  "cat": "Receptor Bluetooth · Altavoces autoamplificados · Etapa preamplificadora · Amplificador de dos canales · Entrada jack estéreo de 3,5 mm · Compatible con los dispositivos Luminea · Necesita tres tomas de corriente de 230 V",
+  "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa"
  },
  "BJ-EX46": {
   "n": "Pompas SHX",
@@ -415,7 +446,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Discapacidad física (lesión medular, esclerosis múltiple, ELA) · Parálisis cerebral · Trastorno del espectro autista · Daño cerebral · Discapacidad intelectual · Personas mayores · Discapacidad visual · Atención temprana",
   "inc": "Se entrega con el enabler socket+, 1 litro de solución jabonosa, estantería.",
   "tec": "Máquina de 285 × 165 × 185 mm, o 220 mm de alto con el asa. Estante de 350 × 300 × 16 mm. Alimentación de 110 a 240 V AC 50/60 Hz – 0,16 A, con adaptador de 12 V DC. Capacidad de líquido de 500 ml. Peso de 1,7 kg.",
-  "cat": "Generador eléctrico con molinillo · Asa de transporte · Incluye el Enabler Socket+ · Incluye 1 litro de solución jabonosa · Estantería incluida"
+  "cat": "Generador eléctrico con molinillo · Asa de transporte · Incluye el Enabler Socket+ · Incluye 1 litro de solución jabonosa · Estantería incluida",
+  "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa"
  },
  "BJ-LPLNT": {
   "n": "Planeta Luminea",
@@ -426,7 +458,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Discapacidad física · Parálisis cerebral · Trastorno del espectro autista · Daño cerebral · Discapacidad intelectual · Personas mayores · Discapacidad visual · Atención temprana",
   "inc": "",
   "tec": "Diámetro 50 cm. Peso 3 kg. Alimentación 240 V AC 50 Hz con salida de 12 V DC. Cable DMX de 6 m.",
-  "cat": "Compatible con el Sistema SHX y con la aplicación Luminea · Control DMX · Receptor de radiofrecuencia · Doble WiFi · Se cuelga del techo o se coloca en el suelo · Requiere cableado"
+  "cat": "Compatible con el Sistema SHX y con la aplicación Luminea · Control DMX · Receptor de radiofrecuencia · Doble WiFi · Se cuelga del techo o se coloca en el suelo · Requiere cableado",
+  "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa"
  },
  "BJ-EX26": {
   "n": "Panel Táctil SHX",
@@ -437,7 +470,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Discapacidad física (lesión medular, esclerosis múltiple, ELA) · Parálisis cerebral · Trastorno del espectro autista · Daño cerebral (ictus, traumatismo) · Discapacidad intelectual · Atención temprana",
   "inc": "Se entrega con cable HDMI, cable USB y cable de alimentación de 15 m.",
   "tec": "Pantalla multitáctil de 42 pulgadas en diagonal, con resolución de 1.920 × 1.080 a 60 Hz, relación 16:9, brillo de 500 nits, contraste de 4000:1 y ángulo de visión de hasta 178°. Alimentación de 240 V AC 50/60 Hz. Audio de 4 × 5 W estéreo. Dimensiones de 1.007 × 596 × 60 mm sin protección ni soporte. Peso de 20,78 kg. Temperatura de trabajo de 0 a 35 °C.",
-  "cat": "Pantalla multitáctil · Resolución 1920 x 1080 Full HD · 16,7 millones de colores · Brillo 700 cd/m² · Ángulo de visión de 178° · Tiempo de respuesta de 8 ms · Tecnología táctil por infrarrojos con doble punto · Medidas 104 x 63 cm · Forrado protector de espuma · Botón de encendido integrado"
+  "cat": "Pantalla multitáctil · Resolución 1920 x 1080 Full HD · 16,7 millones de colores · Brillo 700 cd/m² · Ángulo de visión de 178° · Tiempo de respuesta de 8 ms · Tecnología táctil por infrarrojos con doble punto · Medidas 104 x 63 cm · Forrado protector de espuma · Botón de encendido integrado",
+  "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa"
  },
  "BJ-EIBLUVX": {
   "n": "Barra LED UV SHX",
@@ -448,7 +482,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Discapacidad física · Parálisis cerebral · Trastorno del espectro autista · Daño cerebral · Discapacidad intelectual · Personas mayores · Discapacidad visual",
   "inc": "",
   "tec": "Las medidas están en la columna siguiente.",
-  "cat": "Seis LED UV de 3 W · Funciona a 230 V · Consumo de 20 W · Medidas 360 x 53 x 55 mm · Compatible con el Sistema SHX"
+  "cat": "Seis LED UV de 3 W · Funciona a 230 V · Consumo de 20 W · Medidas 360 x 53 x 55 mm · Compatible con el Sistema SHX",
+  "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa"
  },
  "BJ-234": {
   "n": "Enabler Socket+",
@@ -459,7 +494,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Discapacidad física (lesión medular, esclerosis múltiple, ELA, enfermedades neuromusculares) · Parálisis cerebral · Daño cerebral (ictus, traumatismo craneoencefálico)",
   "inc": "",
   "tec": "Dimensiones 105 x 59 x 50 mm. Tensión de alimentación 230 V – 50 Hz. Tensión máxima de trabajo 250 V. Frecuencia de trabajo 433 MHz. Dos conexiones de jack hembra mono de 3,5 mm. Carga máxima del enchufe: 2.000 W / 9 A en cargas resistivas, 1.000 W / 5,5 A con motores y 300 W / 1,7 A en halógenas con transformador. Carga máxima de la salida de conmutador 24 V – 1 A.",
-  "cat": "Alimentación 230 V AC · Tamaño 105 x 53 x 46 mm · Entrada y salida de conmutador de 3,5 mm · Tres modos: encendido y apagado, pulsador y temporizado de 1 a 5 minutos · Permite conectar hasta 16 dispositivos · Carga máxima de 2.000 W resistivos, 1.000 W en motor y 300 W en halógenas"
+  "cat": "Alimentación 230 V AC · Tamaño 105 x 53 x 46 mm · Entrada y salida de conmutador de 3,5 mm · Tres modos: encendido y apagado, pulsador y temporizado de 1 a 5 minutos · Permite conectar hasta 16 dispositivos · Carga máxima de 2.000 W resistivos, 1.000 W en motor y 300 W en halógenas",
+  "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa\nSeguridad eléctrica: Marcado CE de la Unión Europea en seguridad eléctrica y compatibilidad electromagnética"
  },
  "BJ-EKIA": {
   "n": "Kit de iniciación de aromaterapia",
@@ -503,7 +539,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Parálisis cerebral · Trastorno del espectro autista · Daño cerebral (ictus, traumatismo) · Discapacidad intelectual · Personas mayores · Discapacidad visual",
   "inc": "",
   "tec": "Medidas 2 x 1 m. Alimentación de la fuente de luz 5 V, 2 A. Tensión del alimentador 230 V – 50 Hz. Potencia 6 W. Fuente de luz de 180 x 80 x 50 mm. Cable DMX de 6 m.",
-  "cat": "Medidas 2 x 1 m · Compatible con el Sistema SHX · Funciona en automático sin controlador · Entrada de conmutador en modo causa-efecto y en modo secuencial · Control DMX · Receptor de radiofrecuencia · Doble WiFi · Compatible con la aplicación Luminea"
+  "cat": "Medidas 2 x 1 m · Compatible con el Sistema SHX · Funciona en automático sin controlador · Entrada de conmutador en modo causa-efecto y en modo secuencial · Control DMX · Receptor de radiofrecuencia · Doble WiFi · Compatible con la aplicación Luminea",
+  "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa\nSeguridad eléctrica: Marcado CE de la Unión Europea en seguridad eléctrica y compatibilidad electromagnética"
  },
  "BJ-EX410": {
   "n": "Fireball SHX",
@@ -514,7 +551,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Discapacidad física · Parálisis cerebral · Trastorno del espectro autista · Daño cerebral · Discapacidad intelectual · Personas mayores · Discapacidad visual",
   "inc": "Se entrega con el receptor de radiofrecuencia enabler socket+.",
   "tec": "Dimensiones 190 x 190 x 155 mm. Alimentación 240 V AC 50/60 Hz. Potencia 20 W. Seis LED de 3 W en rojo, verde, azul, ámbar y blanco.",
-  "cat": "Bola de luces LED giratoria · Incluye el receptor de radiofrecuencia Enabler Socket+ · Compatible con el Sistema SHX"
+  "cat": "Bola de luces LED giratoria · Incluye el receptor de radiofrecuencia Enabler Socket+ · Compatible con el Sistema SHX",
+  "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa"
  },
  "BJ-LFIB2UV": {
   "n": "Fibra óptica Luminea UV de 2 m",
@@ -536,7 +574,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Discapacidad física (lesión medular, esclerosis múltiple, ELA) · Trastorno del espectro autista · Discapacidad intelectual · Personas mayores · Discapacidad visual",
   "inc": "",
   "tec": "Las medidas están en la columna siguiente.",
-  "cat": "Medidas 130 x 87 x 80 cm · Peso 15 kg · Tejido vinílico antimicrobiano · Resistente a la abrasión · Cumple el reglamento REACH · Material ignífugo, clasificación M2 · Espumas de poliuretano y polietileno normalizadas"
+  "cat": "Medidas 130 x 87 x 80 cm · Peso 15 kg · Tejido vinílico antimicrobiano · Resistente a la abrasión · Cumple el reglamento REACH · Material ignífugo, clasificación M2 · Espumas de poliuretano y polietileno normalizadas",
+  "mat": "Tejido: Impermeable a líquidos, incluidas la transpiración, la saliva, la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa"
  },
  "BJ-EMRV": {
   "n": "Respaldo foam cóncavo",
@@ -547,7 +586,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Trabajo de relajación y descanso acompañado · Espacios de contención · Salas Snoezelen",
   "inc": "",
   "tec": "Las medidas están en la columna siguiente.",
-  "cat": "Alto 100 cm · Ancho 70 cm · Grosor 5 cm · Tejido vinílico con protección antimicrobiana · Peso del tejido 620 g/m² · Material ignífugo, clasificación M2 · Cumple la norma EN 71-3"
+  "cat": "Alto 100 cm · Ancho 70 cm · Grosor 5 cm · Tejido vinílico con protección antimicrobiana · Peso del tejido 620 g/m² · Material ignífugo, clasificación M2 · Cumple la norma EN 71-3",
+  "mat": "Tejido: Impermeable a líquidos, incluidas la transpiración, la saliva, la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa"
  },
  "BJ-EMRX": {
   "n": "Respaldo foam convexo",
@@ -558,7 +598,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Trabajo de relajación y apoyo postural · Espacios de contención · Salas Snoezelen",
   "inc": "",
   "tec": "Las medidas están en la columna siguiente.",
-  "cat": "Alto 100 cm · Ancho 70 cm · Grosor 5 cm · Tejido vinílico con protección antimicrobiana · Espumas de poliuretano y polietileno normalizadas · Material ignífugo, clasificación M2 · Disponible en 12 colores"
+  "cat": "Alto 100 cm · Ancho 70 cm · Grosor 5 cm · Tejido vinílico con protección antimicrobiana · Espumas de poliuretano y polietileno normalizadas · Material ignífugo, clasificación M2 · Disponible en 12 colores",
+  "mat": "Tejido: Impermeable a líquidos, incluidas la transpiración, la saliva, la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa"
  },
  "BJ-EKBE300": {
   "n": "Kit de bola de espejos mediana",
@@ -701,7 +742,8 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Actividades de movimiento · Intervención terapéutica · Entornos donde hay riesgo de golpes",
   "inc": "",
   "tec": "Las medidas están en la columna siguiente.",
-  "cat": "Medidas 120 x 100 x 3 cm por pieza · Tejido vinílico de 620 g/m², espesor de 0,5 a 1 mm · Protección antimicrobiana, antibacteriana y antimicótica · Alta resistencia a la abrasión y a la transpiración · Material ignífugo, clasificación M2 · Espuma de poliuretano y polietileno normalizada · Cumple el reglamento REACH y la norma EN 71-3 · Fabricación a medida · Disponible en 12 colores"
+  "cat": "Medidas 120 x 100 x 3 cm por pieza · Tejido vinílico de 620 g/m², espesor de 0,5 a 1 mm · Protección antimicrobiana, antibacteriana y antimicótica · Alta resistencia a la abrasión y a la transpiración · Material ignífugo, clasificación M2 · Espuma de poliuretano y polietileno normalizada · Cumple el reglamento REACH y la norma EN 71-3 · Fabricación a medida · Disponible en 12 colores",
+  "mat": "Tejido: Impermeable a líquidos, incluidas la transpiración, la saliva, la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa"
  },
  "BJ-EMLPJ1": {
   "n": "Líquido para pompas de jabón 1 L",

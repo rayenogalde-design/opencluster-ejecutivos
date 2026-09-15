@@ -185,6 +185,9 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
    izquierda: alineada a la derecha se lee mal, como ya se vio. */
 /* todos los valores anclados a la derecha, tambien las frases largas (Rayen 09-sep) */
 .sv{font-size:12.6px;color:var(--navy);font-weight:600;text-align:right}
+/* Detalle de materialidad: misma tabla, pero su texto es largo y va alineado a la izquierda. */
+.specs.mat .sv{text-align:left;font-weight:400}
+.specs.mat .sk{font-weight:600}
 @media screen and (max-width:760px){ .sfila{grid-template-columns:1fr;gap:0} }
 .libre{font-size:12.2px;line-height:1.5;color:#2A374F;padding-top:8px;
   break-inside:avoid;page-break-inside:avoid}
@@ -444,6 +447,26 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
   }
   function campo(t,c,cl){ return c ? '<div class="campo '+(cl||'')+'"><h4><span class="chip">'+t+'</span></h4>'+c+'</div>' : ''; }
 
+  /* Detalle de materialidad. Viene del campo «mat» de EspecificacionesSala.js, una linea por
+     rotulo: «Tejido: ... · ...\nEspuma: ...». Se pinta con la MISMA tabla de las especificaciones
+     tecnicas (etiqueta a la izquierda, valor a la derecha), para no meter un elemento nuevo en un
+     diseno que ya esta cerrado. Solo sale si el producto tiene el dato. */
+  function materialidad(mat){
+    if(!mat) return '';
+    var filas = String(mat).split('\n').map(function(l){
+      var i = l.indexOf(':');
+      if(i < 0) return null;
+      return [l.slice(0,i).trim(), l.slice(i+1).trim()];
+    }).filter(Boolean);
+    if(!filas.length) return '';
+    /* misma tabla que las especificaciones, pero el valor alineado a la izquierda: aca el texto es
+       largo y a la derecha queda en bandera y cuesta leerlo. */
+    return '<div class="specs mat">' + filas.map(function(x){
+      return '<div class="sfila"><span class="sk">'+esc(x[0])+'</span>'+
+             '<span class="sv">'+esc(x[1])+'</span></div>';
+    }).join('') + '</div>';
+  }
+
   function foto(sku,d){
     var c = CAT[sku];
     var src = (c && c.img) ? c.img : '';
@@ -483,8 +506,10 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
         (function(){
            var tro = unir(d.tec,d.cat,d.inc);
            var tabla = specs(tro), extra = adicionales(tro);
+           var mat = materialidad(d.mat);
            return (tabla ? '<div class="campo ancho"><h4 class="tit-tec">Especificaciones técnicas</h4>'+tabla+'</div>' : '')+
-                  (extra ? campo('Características adicionales', extra, 'ancho') : '');
+                  (extra ? campo('Características adicionales', extra, 'ancho') : '')+
+                  (mat ? '<div class="campo ancho"><h4 class="tit-tec">Detalle de materialidad</h4>'+mat+'</div>' : '');
          })()+
       '</div></div>'+   /* cierra la columna del contenido Y la rejilla de la ficha */
       '</div>'+          /* cierra .ficha: lo que sigue es hermano, no contenido */

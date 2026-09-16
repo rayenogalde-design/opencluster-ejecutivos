@@ -25,6 +25,7 @@
 //         mat detalle de materialidad (lo escribe gen_materialidad_web.js)
 //         mat detalle de materialidad (lo escribe gen_materialidad_web.js)
 //         mat detalle de materialidad (lo escribe gen_materialidad_web.js)
+//         mat detalle de materialidad (lo escribe gen_materialidad_web.js)
 window.SALAS_ESPECIFICACIONES = {
  "BJ-EX04": {
   "n": "Sistema SHX Compact",
@@ -51,7 +52,7 @@ window.SALAS_ESPECIFICACIONES = {
   "tec": "Dimensiones externas de 540 × 430 × 560 mm. Alimentación de 230 V 50 Hz. Consumo máximo total de 2.300 W. Equipo informático integrado: procesador de cuatro núcleos a 2,70 GHz, 32 GB de memoria, 240 GB en estado sólido más 1 TB de respaldo, sistema operativo de 64 bits. Amplificación de 2+2 salidas de vibración de 50 W por canal y 2 canales de altavoz de 80 W por canal. Control por radiofrecuencia de 433 MHz con 30 m de alcance. Salidas DMX, HDMI, D-Sub y DVI-D. Soporte para una y para doble proyección.",
   "cat": "Ordenador servidor SHX · Software de control · Tableta con control inalámbrico · Proyector de corta distancia · Sistema de sonido integrado · Amplificador de vibración de 2x2 salidas · Rack con todas las conexiones · Mueble con cerradura de 90 x 62 x 57 cm · Más de 150 escenas incluidas · Personalización ilimitada",
   "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa",
-  "logro": "Deja la sala completa gobernada desde un solo mueble cerrado, con más de 150 escenas listas para usar desde el primer día.",
+  "logro": "Deja la sala completa gobernada desde un solo mueble cerrado, con más de 150 escenas ya incluidas.",
   "unico": "Integra el equipo, la amplificación y las conexiones en un rack con cerradura, y admite doble proyección."
  },
  "BJ-LPIS-V": {
@@ -65,8 +66,8 @@ window.SALAS_ESPECIFICACIONES = {
   "tec": "Medidas de 145 × 145 × 70 cm. Entrada de 100 a 240 V 50/60 Hz, consumo de 70 W. Cable DMX de 6 m, dirección DMX 118. Módulo de vibración de 16 Ω de impedancia, 100 W máximos y 50 W continuos, frecuencia máxima de 120 Hz, con cable de 15 m y conector SpeakON macho. Tejido de peso total 620 g/m² y espesor de 0,5 a 1 mm.",
   "cat": "Medidas 145 x 145 x 70 cm · Incluye sacos de bolas transparentes · Sistema vibroacústico integrado · Tejido vinílico con protección antimicrobiana · Resistente a la abrasión y a la transpiración · Cumple el reglamento REACH · Material ignífugo, clasificación M2 · Cumple la norma EN 71-3 · Compatible con el Sistema SHX · Funciona en automático · Entrada de conmutador · Control DMX · Doble WiFi · Compatible con la aplicación Luminea",
   "mat": "Tejido: Impermeable también a la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa",
-  "logro": "El cuerpo queda contenido entre las bolas mientras la música se siente como vibración. Son dos estímulos a la vez, y por eso funciona con personas a las que cuesta mucho calmar.",
-  "unico": "La vibración va sincronizada con la música y se gobierna desde el sistema de la sala: no es una piscina de bolas con luz."
+  "logro": "El cuerpo queda contenido entre las bolas mientras la música se siente como vibración: el contacto y el sonido a la vez, para trabajar el límite corporal.",
+  "unico": "La vibración va sincronizada con la música y se controla desde el sistema de la sala: no es una piscina de bolas con luz."
  },
  "BJ-EMPT-V": {
   "n": "Puff transformable vibroacústico",
@@ -79,7 +80,7 @@ window.SALAS_ESPECIFICACIONES = {
   "tec": "Medidas de 140 × 180 cm. Módulo de vibración de 16 Ω de impedancia, 100 W máximos y 50 W continuos, con frecuencia máxima de 120 Hz. Tejido de peso total 620 g/m² y espesor de 0,5 a 1 mm.",
   "cat": "Medidas 140 x 180 cm · Tejido vinílico antimicrobiano, antibacteriano y antimicótico · Alta resistencia a la abrasión · Resistente a transpiración, saliva, orina y sangre · Peso del tejido 620 g/m² · Espesor de 0,5 a 1 mm · Cumple el reglamento REACH · Material ignífugo, clasificación M2 · Cumple la norma EN 71-3 de seguridad de juguetes · Excelente resistencia solar · Espumas de poliuretano y polietileno normalizadas según estándares europeos · Disponible en 12 colores",
   "mat": "Tejido: Apto para el contacto directo con la piel · Verificado en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa",
-  "logro": "Se moldea a la postura de cada persona, incluidas las que no sostienen el tronco, y le transmite la música por el cuerpo.",
+  "logro": "Se moldea a la postura de cada persona, sentada o tendida, y le transmite la música por el cuerpo.",
   "unico": "Cambia de forma según se use como asiento o tendido, y trae el módulo vibroacústico integrado en el propio puff."
  },
  "BJ-LRIN": {
@@ -93,8 +94,8 @@ window.SALAS_ESPECIFICACIONES = {
   "tec": "Altura total de 180 cm, con 110 × 110 cm de ancho y profundidad. Requiere una toma de 230 V. Genera su propia red WiFi. Esta versión se gobierna desde la unidad central del sistema: no lleva tableta propia.",
   "cat": "Altura 180 cm · Ancho y profundidad 110 x 110 cm · Incluye tubo de burbujas Luminea · Fibra óptica de 2 m · Aplicación Luminea para Android · Base intercambiable en PVC o en tacto piel · Fijación a pared · Punto de acceso incluido",
   "mat": "Tejido: Impermeable a líquidos, incluidas la transpiración, la saliva, la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa\nDeclaración del fabricante: Tratamiento antimicrobiano incorporado al tejido desde su fabricación · Sin las sustancias químicas restringidas en Europa",
-  "logro": "Convierte una esquina cualquiera en un espacio multisensorial completo, sin obra y sin dedicarle una sala entera.",
-  "unico": "Se instala sobre la pared y se gobierna desde el sistema de la sala, con el tubo, la fibra óptica y su base en un solo conjunto."
+  "logro": "Arma un espacio multisensorial en cualquier rincón, sin obra y sin dedicarle una sala entera: ocupa 110 × 110 cm contra la pared.",
+  "unico": "Reúne el tubo de burbujas y la fibra óptica en un solo conjunto autoinstalable, y se controla desde el sistema de la sala."
  },
  "BJ-LRIN23": {
   "n": "Rincón Luminea con tablet",
@@ -107,7 +108,7 @@ window.SALAS_ESPECIFICACIONES = {
   "tec": "Altura total de 180 cm, con 110 × 110 cm de ancho y profundidad. Requiere una toma de 230 V. Genera su propia red WiFi. Esta versión incluye su propia tableta de control.",
   "cat": "Altura 180 cm · Ancho y profundidad 110 x 110 cm · Incluye tubo de burbujas Luminea · Fibra óptica de 2 m · Tableta de control con la aplicación para Android · Base intercambiable en PVC o en tacto piel · Punto de acceso · Fijación a pared · Elementos sincronizables entre sí",
   "mat": "Tejido: Impermeable a líquidos, incluidas la transpiración, la saliva, la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa\nDeclaración del fabricante: Tratamiento antimicrobiano incorporado al tejido desde su fabricación · Sin las sustancias químicas restringidas en Europa",
-  "logro": "Convierte una esquina cualquiera en un espacio multisensorial completo, sin obra y sin dedicarle una sala entera.",
+  "logro": "Arma un espacio multisensorial en cualquier rincón, sin obra y sin dedicarle una sala entera, y se maneja desde su propia tableta.",
   "unico": "Trae su propia tableta de control, así que funciona sin depender de la unidad central de la sala."
  },
  "BJ-EMCV": {
@@ -135,7 +136,7 @@ window.SALAS_ESPECIFICACIONES = {
   "tec": "Medidas 40 × 40 × 40 cm. Carga por USB de 5 V / 1.000 mA. Batería de litio-polímero de 3,7 V y 2.400 mAh. Comunicación por radiofrecuencia de 433 MHz. Tejido de 620 g/m² y espesor de 0,5 a 1 mm. Espumas de poliuretano y polietileno normalizadas.",
   "cat": "Medidas 40 × 40 × 40 cm · Compatible con el Sistema SHX y con Luminea · Configuración sencilla con un botón trasero · Tejido vinílico antimicrobiano, antibacteriano y antimicótico · Alta resistencia a la abrasión · Resistente a transpiración, saliva, orina y sangre · Peso del tejido 620 g/m² · Espesor de 0,5 a 1 mm · Cumple el reglamento REACH · Material ignífugo, clasificación M2 · Cumple la norma EN 71-3 · Excelente resistencia solar · Espumas de poliuretano y polietileno normalizadas según estándares europeos",
   "mat": "Tejido: Apto para el contacto directo con la piel · Verificado en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa",
-  "logro": "Con lanzarlo o girarlo se cambia la luz de toda la sala: convierte el control del entorno en un juego que se entiende sin explicación.",
+  "logro": "Se lanza o se gira y cambia la luz de toda la sala: con 40 cm de lado, se usa de pie, en el suelo y entre varias personas.",
   "unico": "Es inalámbrico, se configura con un botón y funciona tanto con el Sistema SHX como con la línea Luminea."
  },
  "BJ-EMSCP": {
@@ -149,7 +150,7 @@ window.SALAS_ESPECIFICACIONES = {
   "tec": "Medidas 25 × 25 × 25 cm. Carga por USB de 5 V / 1.000 mA. Batería de litio-polímero de 3,7 V y 2.400 mAh. Comunicación por radiofrecuencia de 433 MHz. Tejido de 620 g/m² y espesor de 0,5 a 1 mm. Espumas de poliuretano y polietileno normalizadas.",
   "cat": "Medidas 25 x 25 cm · Tejido vinílico antimicrobiano, antibacteriano y antimicótico · Resistente a la abrasión, la transpiración, la saliva, la orina y la sangre · Peso del tejido 620 g/m² · Espesor de 0,5 a 1 mm · Cumple el reglamento REACH · Material ignífugo, clasificación M2 · Cumple la norma EN 71-3 · Espumas de poliuretano y polietileno normalizadas · Compatible con el Sistema SHX y con la aplicación Luminea",
   "mat": "Tejido: Apto para el contacto directo con la piel · Verificado en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa",
-  "logro": "Con lanzarlo o girarlo se cambia la luz de toda la sala: convierte el control del entorno en un juego que se entiende sin explicación.",
+  "logro": "Se lanza o se gira y cambia la luz de toda la sala: la persona controla el entorno con un gesto, sin aprender a usar un mando.",
   "unico": "Del tamaño de una mano, para trabajar sobre la mesa o en el regazo."
  },
  "BJ-EMSST": {
@@ -161,10 +162,10 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Parálisis cerebral · Trastorno del espectro autista · Daño cerebral (ictus, traumatismo craneoencefálico) · Discapacidad intelectual · Personas mayores · Discapacidad visual",
   "inc": "",
   "tec": "Medidas de 97 × 80 × 4 cm. Peso de 1 kg. Carga por USB de 5 V / 1.000 mA con conector de 5,5 × 2,1 mm. Batería de litio-polímero de 700 mAh, con carga completa en 2 a 3 horas. Tejido de vinilo de 620 g/m² y espesor de 0,5 a 1 mm.",
-  "cat": "Medidas 100 x 85 cm · Inalámbrica por radiofrecuencia · Compatible con el Sistema SHX y con Luminea · Configuración sencilla con un botón trasero · Tejido vinílico antimicrobiano, antibacteriano y antimicótico · Alta resistencia a la abrasión · Resistente a transpiración, saliva, orina y sangre · Peso del tejido 620 g/m² · Espesor de 0,5 a 1 mm · Cumple el reglamento REACH · Material ignífugo, clasificación M2 · Cumple la norma EN 71-3 · Excelente resistencia solar",
+  "cat": "Inalámbrica por radiofrecuencia · Compatible con el Sistema SHX y con Luminea · Configuración sencilla con un botón trasero · Tejido vinílico antimicrobiano, antibacteriano y antimicótico · Alta resistencia a la abrasión · Resistente a transpiración, saliva, orina y sangre · Peso del tejido 620 g/m² · Espesor de 0,5 a 1 mm · Cumple el reglamento REACH · Material ignífugo, clasificación M2 · Cumple la norma EN 71-3 · Excelente resistencia solar",
   "mat": "Tejido: Apto para el contacto directo con la piel · Verificado en laboratorio europeo",
   "logro": "Se pisa y la sala responde: pone el control del entorno en los pies, para quien trabaja de pie o en desplazamiento.",
-  "unico": "Inalámbrica y de un centímetro de alto: se pone y se quita sin instalar nada."
+  "unico": "Inalámbrica y plana, de 97 × 80 × 4 cm: se pone y se quita sin instalar nada."
  },
  "BJ-SF11": {
   "n": "Sensory Feet 1.1",
@@ -188,7 +189,7 @@ window.SALAS_ESPECIFICACIONES = {
   "tec": "Medidas 110 x 210 x 40 cm. Calentador: alimentación 230 V 50 Hz, potencia 240 W. Vibrador: impedancia 16 Ω, potencia máxima 100 W, potencia continua 50 W AES, frecuencia máxima 120 Hz, cable de 15 m con conector SpeakON macho. Estructura construida sobre tablero fenólico marino de alta resistencia a la carga y a la humedad.",
   "cat": "Medidas 110 x 210 x 40 cm · Tablero fenólico marino · Tejido vinílico antimicrobiano y resistente · Calefacción a 230 V · Accesible para grúas de transferencia · Disponible en 12 colores",
   "mat": "Tejido: Impermeable a líquidos, incluidas la transpiración, la saliva, la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa\nDeclaración del fabricante: Sin las sustancias químicas restringidas en Europa",
-  "logro": "Sostiene el cuerpo entero repartiendo el peso, con calor y vibración: es la posición donde más fácil se relaja una persona con mucha rigidez o con dolor.",
+  "logro": "Sostiene el cuerpo entero repartiendo el peso, con calor y con la vibración de la música: el estímulo táctil y el auditivo a la vez.",
   "unico": "Calefacción y vibración en la misma cama, construida sobre tablero fenólico marino y accesible para grúa de transferencia."
  },
  "BJ-EEGR": {
@@ -246,8 +247,8 @@ window.SALAS_ESPECIFICACIONES = {
   "tec": "Línea LED de color direccionable de 5 m, con 60 LED por metro, 12 W por metro y 350 lúmenes por metro, con grado de protección IP54. Alimentación de 24 V DC. Fuente de alimentación de entrada 230 V AC y salida 24 V DC, 70 W totales, de 110 × 60 × 40 mm. Controlador DMX de 5 a 24 V y 11 W, de 125 × 65 × 45 mm. Cable DMX de 6 m, dirección DMX 001.",
   "cat": "Tira LED de larga duración de 5 m · Perfil de soporte y difusor de luz · Fuente de alimentación incluida · Compatible con el Sistema SHX · Funciona en automático sin controlador · Entrada de conmutador en modo causa-efecto y en modo secuencial · Control DMX · Receptor de radiofrecuencia · Doble WiFi · Compatible con la aplicación Luminea",
   "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa\nSeguridad eléctrica: Marcado CE de la Unión Europea en seguridad eléctrica y compatibilidad electromagnética",
-  "logro": "Cambia el color de la sala completa en segundos, que es lo que permite pasar de una actividad activadora a una de calma sin mover a nadie de sitio.",
-  "unico": "Cinco metros que siguen el contorno del techo o de los respaldos, con su perfil y su difusor, y se gobiernan desde el sistema."
+  "logro": "Cambia el color de la sala completa en segundos y delimita zonas con luz, sin mover a nadie de sitio.",
+  "unico": "Cinco metros que siguen el contorno del techo, con su perfil y su difusor, y se controlan desde el sistema."
  },
  "BJ-LLLR": {
   "n": "Línea LED Luminea para respaldo 5 metros",
@@ -272,7 +273,7 @@ window.SALAS_ESPECIFICACIONES = {
   "tec": "Base de 36 × 36 × 15 cm. Columna de metacrilato de 1,8 m de altura y 20 cm de diámetro, con capacidad aproximada de 50 litros de agua. Alimentación de 230 V AC 50 Hz con salida de 12 V AC / 50 VA o de 12 V DC / 36 W. Potencia máxima de 35 W.",
   "cat": "Medidas 180 x 20 cm · Elevada luminosidad · Metacrilato de alta calidad · Compatible con el Sistema SHX · Funciona en automático sin controlador · Tres modos de burbujas: continuo, esporádico y en secuencia · Doble WiFi y receptor de radiofrecuencia · Compatible con la aplicación Luminea",
   "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa\nSeguridad eléctrica: Marcado CE de la Unión Europea en seguridad eléctrica y compatibilidad electromagnética",
-  "logro": "Da un punto de atención visual estable, con movimiento lento y color, al que la mirada vuelve sola.",
+  "logro": "Da un punto de atención visual estable, con movimiento lento y cambio de color, para trabajar el seguimiento de la mirada.",
   "unico": "Se controla desde la aplicación y desde el sistema de la sala, y funciona también solo, en automático."
  },
  "BJ-LDFIB": {
@@ -323,7 +324,7 @@ window.SALAS_ESPECIFICACIONES = {
   "cat": "Funciona por radiofrecuencia · Seis botones retroiluminados · Carátula transparente para poner pictogramas · Seis entradas para conmutador · Batería recargable · Compatible con el Sistema SHX y con los productos Luminea",
   "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa\nSeguridad eléctrica: Marcado CE de la Unión Europea en seguridad eléctrica y compatibilidad electromagnética",
   "logro": "Pone la sala entera al alcance de una persona con control motor muy reducido: seis órdenes distintas desde el pulsador que ya usa.",
-  "unico": "Sus seis entradas admiten cualquier pulsador adaptado, así que se acomoda a la persona y no al revés."
+  "unico": "Sus seis entradas admiten el pulsador adaptado que la persona ya tiene, sin cambiarle la forma de acceder."
  },
  "BJ-LCTRL1": {
   "n": "Button 1",
@@ -336,8 +337,8 @@ window.SALAS_ESPECIFICACIONES = {
   "tec": "Superficie de activación de 125 mm de diámetro. Alimentación con dos pilas AAA y ahorro automático de energía. Alcance de hasta 25 m. Modos de funcionamiento independientes para la columna de burbujas, para los haces de fibra óptica, para el resto de los elementos de iluminación, para el gobierno de la sala completa, y un modo combinado que acciona todos los dispositivos de iluminación a la vez.",
   "cat": "Inalámbrico · Las pilas soportan 100.000 pulsaciones · Se configura por la parte posterior · Pantalla indicadora · Compatible con los dispositivos Luminea y con las salas SHX · Incluye dos pilas AAA",
   "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa\nSeguridad eléctrica: Marcado CE de la Unión Europea en seguridad eléctrica y compatibilidad electromagnética",
-  "logro": "Una sola acción, sin elección que administrar: el primer paso para descubrir que lo que uno hace cambia algo.",
-  "unico": "Un único botón grande, para empezar a trabajar causa y efecto sin distraerse con más opciones."
+  "logro": "Una sola pulsación enciende la escena: es el mando para empezar a trabajar causa y efecto, sin opciones que administrar.",
+  "unico": "Un único botón grande e inalámbrico, con pilas para 100.000 pulsaciones."
  },
  "BJ-EIFUVLX": {
   "n": "Foco de luz UV LED SHX",
@@ -362,7 +363,7 @@ window.SALAS_ESPECIFICACIONES = {
   "tec": "Proyector de 127 × 137 × 220 mm. Alimentación del equipo de 5 V DC – 0,5 A, con adaptador de 110 a 240 V AC 50/60 Hz y salida de 5 V DC – 1 A. Cobertura de 3 m² desde 2 m de distancia. Lente de nebulosa azul. Control por radiofrecuencia y compatibilidad con conmutador externo.",
   "cat": "Miles de efectos visuales en movimiento · Compatible con el Sistema SHX · Sincronizable con otros dispositivos para escenas coordinadas · Incluye el receptor de radiofrecuencia Enabler Socket+ · Se puede controlar por voz, por mirada, con objetos o con pulsadores",
   "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa\nSeguridad eléctrica: Marcado CE de la Unión Europea en seguridad eléctrica y compatibilidad electromagnética",
-  "logro": "Cambia el techo entero de la sala en un segundo y da un punto donde la mirada se queda quieta, que es lo primero que se busca para bajar la activación.",
+  "logro": "Cambia el techo entero de la sala en un segundo y deja miles de puntos de luz donde fijar la mirada.",
   "unico": "Se activa por voz, por mirada, con objetos o con pulsadores, y se sincroniza con el resto de los equipos de la sala."
  },
  "BJ-EDA": {
@@ -376,7 +377,7 @@ window.SALAS_ESPECIFICACIONES = {
   "tec": "Nebulización por ultrasonido con depósito de agua e iluminación tenue. Se integra a la unidad central del sistema.",
   "cat": "Tecnología ultrasónica · Funcionamiento silencioso · Apagado automático cuando se agota el agua · Seis luces LED con dos niveles de brillo · Vapor fresco, seco y perfumado",
   "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa\nSeguridad eléctrica: Marcado CE de la Unión Europea en seguridad eléctrica y compatibilidad electromagnética",
-  "logro": "Incorpora el olfato, que es el sentido que más rápido asocia un lugar con una sensación de calma.",
+  "logro": "Incorpora el olfato al trabajo multisensorial, junto con la luz, el sonido y la vibración de la escena.",
   "unico": "Funciona por ultrasonido, sin calentar el aceite, y se integra en la escena de la sala."
  },
  "BJ-SGL": {
@@ -426,7 +427,7 @@ window.SALAS_ESPECIFICACIONES = {
   "tec": "Lector de proximidad de 13,56 MHz, con distancia de lectura de 3 cm y hasta 5 cm. Conexión USB 2.0, alimentación de 5 V y consumo de 200 mA. Cable de 5 m. Compatible con tarjetas Mifare Classic de 1 kB y con sistemas operativos Windows, Linux, Mac OS y Android 3.1 o superior.",
   "cat": "Dispositivo USB con cable de 5 m · Área de reconocimiento de unos 5 cm · Incluye 18 tarjetas y adhesivos regrabables un número ilimitado de veces · Tarjetas preconfiguradas de volumen, stop, botones, secuencial y aleatorio · Compatible con el Sistema SHX",
   "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa",
-  "logro": "Un objeto de todos los días, con su etiqueta, enciende una escena completa. Permite elegir y anticipar con objetos reales a quien no lee ni habla.",
+  "logro": "Un objeto de todos los días, con su etiqueta, enciende una escena completa: permite elegir con objetos reales a quien no lee ni habla.",
   "unico": "Reconoce solo el objeto etiquetado y lanza la escena sin que nadie toque un control: las tarjetas y adhesivos se regraban tantas veces como haga falta."
  },
  "BJ-EX41": {
@@ -440,7 +441,7 @@ window.SALAS_ESPECIFICACIONES = {
   "tec": "Alimentación de 230 V AC 50 Hz. Potencia de 135 W. Aspas metálicas de 45 cm de diámetro. Tres velocidades e inclinación ajustable.",
   "cat": "Ventilador de tres velocidades · Incluye el receptor de radiofrecuencia Enabler Socket+ · Compatible con el Sistema SHX · Incluye el cableado necesario",
   "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa",
-  "logro": "Suma el aire al resto de los estímulos: se siente en la piel y ayuda a que la escena se perciba con el cuerpo, no solo con los ojos.",
+  "logro": "Suma el aire al resto de los estímulos: se siente en la piel y permite recrear ambientes como la playa, la montaña o la selva.",
   "unico": "Se enciende dentro de la escena, coordinado con la luz y el sonido."
  },
  "BJ-EMAVIBX": {
@@ -466,8 +467,8 @@ window.SALAS_ESPECIFICACIONES = {
   "tec": "Receptor de 12 a 18 V DC / 4 W. Micrófonos alimentados con dos pilas AA de 1,5 V cada uno. Frecuencia de trabajo de 200 a 230 MHz. Rango dinámico superior a 90 dB. Respuesta en frecuencia de 40 Hz a 15 kHz ±3 dB. Potencia de salida de 8,5 mW. Relación señal-ruido superior a 90 dB.",
   "cat": "Dos micrófonos inalámbricos, de mano y de diadema · Sistema de recepción · Alimentador y cableado incluidos · Compatible con la central SHX · Cuatro modos de iluminación: blancos, colores, aleatorio y por picos · Incluye el programa de control · Convierte la voz en señales luminosas · Compatible con los elementos vibroacústicos",
   "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa",
-  "logro": "Deja gobernar la sala hablando, sin tocar nada: sirve cuando las manos no responden.",
-  "unico": "Añade el control por voz al sistema que ya está instalado, sin cambiar nada más."
+  "logro": "La voz enciende la sala: al hablar o cantar, el sonido se convierte en luz y en vibración, sin tocar nada.",
+  "unico": "Dos micrófonos inalámbricos, de mano y de diadema, con cuatro modos de iluminación, que se suman al sistema ya instalado."
  },
  "BJ-KVSL": {
   "n": "Kit vibroacústico Bluetooth",
@@ -516,8 +517,8 @@ window.SALAS_ESPECIFICACIONES = {
   "tec": "Pantalla multitáctil de 42 pulgadas en diagonal, con resolución de 1.920 × 1.080 a 60 Hz, relación 16:9, brillo de 500 nits, contraste de 4000:1 y ángulo de visión de hasta 178°. Alimentación de 240 V AC 50/60 Hz. Audio de 4 × 5 W estéreo. Dimensiones de 1.007 × 596 × 60 mm sin protección ni soporte. Peso de 20,78 kg. Temperatura de trabajo de 0 a 35 °C.",
   "cat": "Pantalla multitáctil · Resolución 1920 x 1080 Full HD · 16,7 millones de colores · Brillo 700 cd/m² · Ángulo de visión de 178° · Tiempo de respuesta de 8 ms · Tecnología táctil por infrarrojos con doble punto · Medidas 104 x 63 cm · Forrado protector de espuma · Botón de encendido integrado",
   "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa",
-  "logro": "Lleva la actividad a una pantalla grande que responde al toque, para trabajar de pie y en grupo, no cada uno con su tableta.",
-  "unico": "Táctil por infrarrojos con doble punto y forrado protector de espuma, pensada para uso intensivo con niños."
+  "logro": "Lleva la actividad a una pantalla grande que responde al toque, para trabajar de pie y sobre la misma superficie.",
+  "unico": "Táctil por infrarrojos con doble punto, así que dos personas trabajan a la vez sobre la misma pantalla, y va forrado en espuma protectora."
  },
  "BJ-EIBLUVX": {
   "n": "Barra LED UV SHX",
@@ -622,7 +623,7 @@ window.SALAS_ESPECIFICACIONES = {
   "tec": "Las medidas están en la columna siguiente.",
   "cat": "Medidas 130 x 87 x 80 cm · Peso 15 kg · Tejido vinílico antimicrobiano · Resistente a la abrasión · Cumple el reglamento REACH · Material ignífugo, clasificación M2 · Espumas de poliuretano y polietileno normalizadas",
   "mat": "Tejido: Impermeable a líquidos, incluidas la transpiración, la saliva, la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa",
-  "logro": "Une el balanceo con la vibración de la música: el movimiento lento organiza y la vibración acompaña.",
+  "logro": "Une el balanceo con la vibración de la música: el movimiento del cuerpo y el sonido en la misma sesión.",
   "unico": "El balanceo lo da la propia persona y la vibración llega por el mismo mueble."
  },
  "BJ-EMRV": {

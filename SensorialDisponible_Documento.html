@@ -175,7 +175,44 @@ body{margin:0;background:#EEF1F5;font-family:'Open Sans',system-ui,sans-serif;co
 .op-det{
   background:var(--navy);color:#fff;border-radius:0 0 10px 10px;padding:9px 22px;
   font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  display:flex;justify-content:space-between;align-items:center;gap:14px;
 }
+.op-det .tot{font-size:13px;letter-spacing:0;font-variant-numeric:tabular-nums}
+
+/* El combo: las fotos de todo lo que entra en la sala, como las opciones A/B/C
+   del Hospital Roberto del Río. Foto, nombre, código, valor y una línea de para qué sirve. */
+.op-lo{margin-top:18px}
+.op-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-top:10px}
+.tarj{
+  border:1px solid #DCE6F2;border-radius:8px;background:#fff;padding:13px 13px 15px;
+  display:flex;flex-direction:column;text-align:center;break-inside:avoid;
+}
+.tarj .tf{height:96px;display:flex;align-items:center;justify-content:center;margin-bottom:9px}
+.tarj .tf img{max-width:100%;max-height:96px;object-fit:contain}
+.tarj .tf .sin{color:#C3CEDD;font-size:10.5px}
+/* min-height de dos líneas: así el precio queda a la misma altura en las tres tarjetas
+   aunque un nombre ocupe una línea y el de al lado dos. */
+.tarj h4{font-family:'Montserrat',sans-serif;font-size:12.5px;font-weight:800;color:var(--navy);margin:0 0 3px;line-height:1.28;min-height:32px}
+.tarj .toc{font-family:'Montserrat',sans-serif;font-size:9.5px;font-weight:700;letter-spacing:.09em;color:var(--naranja)}
+.tarj .tpre{
+  font-family:'Montserrat',sans-serif;font-size:15px;font-weight:800;color:#0B76C4;
+  border-top:1px solid #E5E9F0;margin-top:9px;padding-top:9px;font-variant-numeric:tabular-nums;
+}
+.tarj .ttx{font-size:10.8px;line-height:1.52;color:#4B5563;text-align:left;margin-top:8px}
+
+/* La sección de detalle, después de las tres opciones */
+.det-cab{
+  margin:26px 54px 0;background:#F4F7FC;border-left:5px solid var(--navy);border-radius:0 8px 8px 0;
+  padding:12px 18px;display:flex;align-items:center;gap:12px;break-after:avoid;
+}
+.det-cab .dl{
+  width:30px;height:30px;flex:none;border-radius:999px;background:var(--navy);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-family:'Montserrat',sans-serif;font-weight:800;font-size:14px;
+}
+.det-cab h3{font-family:'Montserrat',sans-serif;font-size:15px;font-weight:800;color:var(--navy);margin:0;line-height:1.2}
+.det-cab .dsub{font-size:11px;color:var(--suave)}
+.det-ya{margin:10px 54px 0;font-size:11.5px;color:#4B5563;background:#FFF7EC;border:1px solid #F3DFC2;border-radius:6px;padding:9px 13px}
+.det-ya b{color:var(--navy)}
 
 .corte{padding:40px 54px 0}
 .corte-linea{border-top:1px solid #E5E9F0}
@@ -217,6 +254,8 @@ body{margin:0;background:#EEF1F5;font-family:'Open Sans',system-ui,sans-serif;co
   </div>
 
   <div id="salas"></div>
+
+  <div id="detalle"></div>
 
   <div class="indice">
     <div class="heading">Los demás productos disponibles</div>
@@ -279,6 +318,34 @@ body{margin:0;background:#EEF1F5;font-family:'Open Sans',system-ui,sans-serif;co
       p.map(function(x){ return '<span>' + esc(x) + '</span>'; }).join('') + '</div>';
   }
   var LETRA = ['A', 'B', 'C', 'D', 'E'];
+  var numFicha = 0;                       /* la numeración corre por todo el documento */
+  function buscaProd(nombre){ return P.filter(function(x){ return x.n === nombre; })[0]; }
+  /* La línea corta de la tarjeta del combo: la primera frase de «qué es», que habla de ESE
+     producto. El «fun» no sirve aquí: es genérico por tipo de estímulo y sale repetido en
+     media grilla («es un estímulo que regula…» en tres tarjetas seguidas). */
+  function corto(p){
+    if(p.que){
+      var i = p.que.indexOf('. ');
+      var f = i > 0 ? p.que.slice(0, i + 1) : p.que;
+      if(f.length > 150){ f = f.slice(0, 147).replace(/[\s,;]+\S*$/, '') + '…'; }
+      return f;
+    }
+    return p.fun || '';
+  }
+  function tarjeta(it){
+    var p = buscaProd(it.n) || {};
+    var foto = (p.img || it.img)
+      ? '<img src="' + esc(p.img || it.img) + '" alt="' + esc(it.n) + '" loading="lazy">'
+      : '<span class="sin">Sin foto</span>';
+    var valor = it.iva || p.iva;
+    return '<div class="tarj">' +
+      '<div class="tf">' + foto + '</div>' +
+      '<h4>' + esc(it.n) + (it.cant > 1 ? ' <span style="color:#0B76C4">×' + it.cant + '</span>' : '') + '</h4>' +
+      ((it.oc || p.oc) ? '<div class="toc">' + esc(it.oc || p.oc) + '</div>' : '') +
+      '<div class="tpre">' + (valor ? pesos(valor * (it.cant > 1 ? it.cant : 1)) : 'A consultar') + '</div>' +
+      (corto(p) ? '<div class="ttx">' + esc(corto(p)) + '</div>' : '') +
+    '</div>';
+  }
   if(SALAS.length){
     /* 1 · Las tres opciones juntas, para decidir de una mirada */
     var hs = '<div class="salas-intro">' +
@@ -311,16 +378,50 @@ body{margin:0;background:#EEF1F5;font-family:'Open Sans',system-ui,sans-serif;co
             (s.quien ? '<div><div class="et">A quién puede ayudar</div>' + listaChips(s.quien, 'perfil') + '</div>' : '') +
           '</div>' +
           (s.nota ? '<div class="op-nota">' + esc(s.nota) + '</div>' : '') +
+          '<div class="op-lo">' +
+            '<div class="et" style="font-family:\'Montserrat\',sans-serif;font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--sky)">Todo lo que incluye</div>' +
+            '<div class="op-grid">' + s.items.map(tarjeta).join('') + '</div>' +
+          '</div>' +
         '</div>' +
-        '<div class="op-det">Los ' + s.items.length + ' productos de esta sala</div>' +
+        '<div class="op-det"><span>Sala completa · ' + s.items.length + ' productos</span>' +
+          '<span class="tot">' + pesos(s.total) + ' IVA incluido</span></div>' +
       '</div>';
-      s.items.forEach(function(it, ix){
-        var p = P.filter(function(x){ return x.n === it.n; })[0];
-        if(p) hs += fichaDe(p, ix + 1);
-      });
-      hs += '<div class="corte"><div class="corte-linea"></div></div>';
     });
     document.getElementById('salas').innerHTML = hs;
+
+    /* 3 · El detalle producto por producto, opción por opción, después de las tres.
+       Un producto que está en dos salas se describe UNA vez, en la primera en que aparece;
+       en las siguientes va nombrado en una línea para no repetir la ficha entera. */
+    var hd = '<div class="corte"><div class="corte-linea"></div></div>' +
+      '<div class="salas-intro">' +
+        '<div class="rot">Producto por producto</div>' +
+        '<h2>El detalle de cada opción</h2>' +
+        '<p>Qué es cada elemento, qué se trabaja con él, para qué perfiles está indicado ' +
+        'y sus características técnicas.</p>' +
+      '</div>';
+    var yaVisto = {};
+    SALAS.forEach(function(s, k){
+      hd += '<div class="det-cab">' +
+        '<div class="dl">' + LETRA[k] + '</div>' +
+        '<div><h3>' + esc(s.n) + '</h3>' +
+        '<div class="dsub">Opción ' + LETRA[k] + ' · ' + s.items.length + ' productos · ' + pesos(s.total) + ' IVA incluido</div></div>' +
+      '</div>';
+      var repes = [], fichas = '';
+      s.items.forEach(function(it){
+        var p = buscaProd(it.n);
+        if(!p) return;
+        if(yaVisto[it.n]){ repes.push(it.n + ' (Opción ' + yaVisto[it.n] + ')'); return; }
+        yaVisto[it.n] = LETRA[k];
+        numFicha++;
+        fichas += fichaDe(p, numFicha);
+      });
+      if(repes.length){
+        hd += '<div class="det-ya">Esta sala incluye además <b>' + esc(repes.join(' · ')) +
+          '</b>, ya descritos más arriba.</div>';
+      }
+      hd += fichas;
+    });
+    document.getElementById('detalle').innerHTML = hd;
   }
 
   /* Los productos que NO entran en ninguna de las tres salas: van al final, en su propia
@@ -332,7 +433,7 @@ body{margin:0;background:#EEF1F5;font-family:'Open Sans',system-ui,sans-serif;co
   P.forEach(function(p,i){ if(orden.indexOf(i) < 0 && !enSalas[p.n]) orden.push(i); });
 
   /* índice de esa sección final */
-  var ind = '', catActual = null, n = 0;
+  var ind = '', catActual = null, n = numFicha;   /* sigue la numeración de las salas */
   orden.forEach(function(i){
     var p = P[i];
     if(p.cat !== catActual){
@@ -347,7 +448,7 @@ body{margin:0;background:#EEF1F5;font-family:'Open Sans',system-ui,sans-serif;co
 
   /* fichas */
   var html = '';
-  n = 0;
+  n = numFicha;
   orden.forEach(function(i){
     var p = P[i]; n++;
     html += fichaDe(p, n);

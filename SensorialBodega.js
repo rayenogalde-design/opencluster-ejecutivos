@@ -1,5 +1,5 @@
 /* Productos de sala multisensorial disponibles en bodega.
- * Generado el 2026-09-15 por gen_datos.js desde la pagina de Stock de Salas
+ * Generado el 2026-09-16 por gen_datos.js desde la pagina de Stock de Salas
  * (StockSalasMultisensoriales.html) y EspecificacionesSala.js. NO SE EDITA A MANO.
  * Los textos pasan por un guardian que detiene el generador si aparece el proveedor.
  * Sin costos ni margenes: solo precio de venta. */

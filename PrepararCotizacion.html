@@ -165,6 +165,13 @@ td.col-destacado .dato-sub.comp-caro,.dato-sub.comp-caro{color:#B42318;font-weig
   .barra-clave input{width:130px}
   table{table-layout:auto}
 }
+/* Rayen, 17-sep-2026: "necesito que el precotizador tenga alguna forma rapida de borrar
+   todo y partir de cero". El boton solo aparece cuando la precotizacion viene de una
+   seleccion (?d=seleccion): una cotizacion preparada vive en un archivo y no se borra. */
+.cab-tabla{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.cab-tabla h2{margin:0}
+button.sec.peligro{color:#B3261E;border-color:#E8B4B0}
+button.sec.peligro:hover{background:#FDECEA}
 .ya-venia{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:#eef7ff;color:#0b6bb3;font-size:10px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;vertical-align:middle}
 </style>
 </head>
@@ -190,7 +197,10 @@ td.col-destacado .dato-sub.comp-caro,.dato-sub.comp-caro{color:#B42318;font-weig
   <div id="mensaje"></div>
 
   <div class="card" id="cardTabla" style="display:none">
-    <h2>Productos, en el orden pedido</h2>
+    <div class="cab-tabla">
+      <h2>Productos, en el orden pedido</h2>
+      <button class="sec peligro" type="button" id="btnVaciar" style="display:none">Vaciar y empezar de cero</button>
+    </div>
 
     <div class="barra-clave" id="barraClave">
       <div class="bc-txt">
@@ -281,7 +291,7 @@ td.col-destacado .dato-sub.comp-caro,.dato-sub.comp-caro{color:#B42318;font-weig
 // a un archivo chico que se pide SIN caché; si no calza con la que trae adentro, se
 // recarga sola con una dirección nueva y esa sí llega fresca.
 // AL PUBLICAR UN CAMBIO: subir VERSION acá Y en version.json (el mismo número).
-var VERSION = "2026-09-09-01";
+var VERSION = "2026-09-17-01";
 
 (function comprobarVersion(){
   fetch("version.json?t=" + Date.now(), { cache:"no-store" })
@@ -748,6 +758,43 @@ async function abrirCostos(clave){
   refrescar();
 }
 
+/* ── Vaciar todo y partir de cero ──────────────────────────────────────────
+   Borra la seleccion que llego a esta pantalla Y el carrito de la lista de donde
+   salio, para que al volver alla no siga todo marcado. Lo que NO se toca: la clave
+   guardada de la vista de administradora (oc_clave_*), las precotizaciones marcadas
+   como enviadas y lo que ya este camino al Cotizador. */
+function volverA(){
+  try {
+    if (document.referrer && document.referrer.indexOf(location.origin) === 0 &&
+        document.referrer.indexOf("PrepararCotizacion") < 0) return document.referrer;
+  } catch(e){}
+  return "index.html";
+}
+
+function vaciarTodo(){
+  if (!confirm("¿Vaciar todo y empezar de cero? Se borran los productos que marcaste y los precios y márgenes que cambiaste aquí. Las cotizaciones ya registradas no se tocan.")) return;
+  var claves = ["oc_precotizacion", "oc_cotizacion_base",
+                "cotRayen", "cotRayenLista", "cotRayenOrden", "cotRayenMargenes", "cotRayenPara"];
+  try {
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      // los carritos de las listas privadas: oct_<ejecutivo>_privada_cotizacion_v1
+      if (k && /_cotizacion(_cliente)?_v1$/.test(k)) claves.push(k);
+    }
+    claves.forEach(function(k){ localStorage.removeItem(k); });
+  } catch(e){}
+
+  LINEAS = []; DATOS = null; CLIENTE = null; BASE = null;
+  document.getElementById("cardTabla").style.display = "none";
+  document.getElementById("cardAcciones").style.display = "none";
+  document.getElementById("titulo").textContent = "Todo borrado";
+  document.getElementById("subtitulo").textContent = "La selección quedó vacía.";
+  document.title = "Precotización — vacía";
+  msg("info", "Listo: <strong>no quedó nada seleccionado</strong>. " +
+      '<a href="' + volverA() + '">Vuelve a tu lista de precios</a> y marca los productos de nuevo.');
+  window.scrollTo(0, 0);
+}
+
 // ── La selección que ella marcó en su lista de administradora ──────────────
 function cargarSeleccion(){
   var crudo = null;
@@ -761,6 +808,7 @@ function cargarSeleccion(){
   try { datos = JSON.parse(crudo); } catch(e){ msg("error", "La selección llegó dañada."); return; }
   if (!datos.productos || !datos.productos.length) { msg("error", "La selección llegó vacía."); return; }
 
+  document.getElementById("btnVaciar").style.display = "";
   document.getElementById("titulo").textContent = datos.titulo || "Mi selección";
   document.title = (datos.titulo || "Mi selección") + " — Cotización preparada";
   document.getElementById("subtitulo").textContent = datos.subtitulo ||
@@ -971,6 +1019,7 @@ function pintarIndice(){
 
 document.addEventListener("DOMContentLoaded", function(){
   document.getElementById("btnAbrir").addEventListener("click", abrirEnCotizador);
+  document.getElementById("btnVaciar").addEventListener("click", vaciarTodo);
   document.getElementById("btnTodoWeb").addEventListener("click", function(){
     LINEAS.forEach(function(L){ if (L.web) L.precioManual = transferenciaDe(L.web); });
     refrescar();

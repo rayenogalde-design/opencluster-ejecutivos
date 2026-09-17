@@ -309,19 +309,26 @@ body{margin:0;background:#EEF1F5;font-family:'Open Sans',system-ui,sans-serif;co
   margin-top:16px;display:flex;align-items:center;gap:14px;
   border:1.5px solid var(--linea);border-radius:10px;background:#fff;padding:12px 14px;
 }
-.invita-mini{width:62px;height:62px;border-radius:8px;object-fit:cover;flex:none;display:block}
+.invita-mini{width:74px;height:74px;border-radius:9px;object-fit:cover;flex:none;display:block;
+  box-shadow:0 3px 10px rgba(0,26,96,.22)}
 .invita-t{flex:1;font-size:12.5px;line-height:1.5;color:var(--texto);min-width:0}
 .invita-rot{
   display:block;font-family:'Montserrat',sans-serif;font-size:10.5px;font-weight:700;
   letter-spacing:.015em;color:var(--sky);margin-bottom:2px;
 }
 .invita-btn{
-  flex:none;cursor:pointer;font-family:'Montserrat',sans-serif;font-size:11.5px;font-weight:700;
-  color:#fff;background:var(--navy);border:0;border-radius:999px;padding:9px 16px;
-  transition:background .18s;
+  flex:none;cursor:pointer;font-family:'Montserrat',sans-serif;font-size:12.5px;font-weight:800;
+  color:#fff;background:var(--naranja);border:0;border-radius:999px;padding:11px 20px;
+  box-shadow:0 4px 14px rgba(255,126,0,.35);display:flex;align-items:center;gap:8px;white-space:nowrap;
+  transition:transform .15s,box-shadow .15s,background .15s;
 }
-.invita-btn:hover{background:var(--naranja)}
+.invita-btn::before{content:'▶';font-size:10px}
+.invita-btn:hover{transform:translateY(-2px);box-shadow:0 7px 18px rgba(255,126,0,.45)}
+.invita-btn:disabled{background:var(--navy);box-shadow:none;transform:none;cursor:default}
 .invita-marco{margin-top:12px;display:flex;justify-content:center}
+.invita-marco[hidden]{display:none}
+.invita-marco iframe{width:560px;max-width:100%;height:auto;aspect-ratio:16/9;border:0;border-radius:10px;background:#F4F7FC}
+.invita-vert iframe{width:322px;aspect-ratio:9/16}
 .invita-marco iframe{width:326px;max-width:100%;height:560px;border:0;border-radius:10px;background:#fafafa}
 @media(max-width:560px){ .invita{flex-wrap:wrap} .invita-btn{width:100%} }
 @media print{ .invita,.invita-marco{display:none} }
@@ -871,33 +878,28 @@ html{scroll-behavior:smooth}
             (s.foco ? '<div><div class="et">En qué está enfocada</div>' + listaChips(s.foco) + '</div>' : '') +
             (s.quien ? '<div><div class="et">A quién puede ayudar</div>' + listaChips(s.quien, 'perfil') + '</div>' : '') +
           '</div>' +
-          /* uno o varios videos por sala; los de Instagram son verticales y van en marco angosto */
+          /* Rayen, 17-sep-2026: «estás usando demasiado espacio para un video; que sea un icono
+             pequeño y al lado la invitación». El marco se carga solo cuando lo piden: así el
+             documento abre liviano y no aparecen los recuadros negros de YouTube. */
           (function (v) {
             if (!v) return '';
-            var lista = Array.isArray(v) ? v : [v];
-            lista = lista.filter(function (x) { return x && (x.ig || x.drive || x.yt); });
+            var lista = (Array.isArray(v) ? v : [v]).filter(function (x) { return x && (x.ig || x.drive || x.yt); });
             if (!lista.length) return '';
-            return '<div class="video' + (lista.some(function (x) { return x.drive || x.yt; }) ? ' video-ancho' : '') + '">' +
-              '<div class="video-cab">' +
-                '<svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="3"/>' +
-                '<path d="m10 9.5 5 2.5-5 2.5Z"/></svg>' +
-                (lista.length > 1 ? 'Verla funcionando, aquí y en Europa' : 'Verla funcionando') +
-              '</div>' +
-              lista.map(function (x) {
-                return '<div class="video-c' + (x.vert ? ' video-c-vert' : '') + '">' +
-                  '<div class="video-marco"><iframe src="' + (x.drive
-                      ? 'https://drive.google.com/file/d/' + esc(x.drive) + '/preview'
-                      : x.yt
-                      ? 'https://www.youtube-nocookie.com/embed/' + esc(x.yt)
-                      : 'https://www.instagram.com/p/' + esc(x.ig) + '/embed/') +
-                    '" loading="lazy" allowtransparency="true" scrolling="no" ' +
-                    'allow="encrypted-media" allowfullscreen title="Video de la sala"></iframe></div>' +
-                  '<div class="video-t">' + esc(x.txt) +
-                    (x.ig ? '<span class="pie">Si el video no carga, se puede ver en instagram.com/opencluster_tech</span>' : '') +
-                  '</div>' +
-                '</div>';
-              }).join('<div class="video-sep"></div>') +
-            '</div>';
+            return lista.map(function (x, k) {
+              window.__nv = (window.__nv || 0) + 1;
+              var id = 'vid' + window.__nv;
+              var fuente = x.drive ? 'https://drive.google.com/file/d/' + esc(x.drive) + '/preview'
+                : x.yt ? 'https://www.youtube-nocookie.com/embed/' + esc(x.yt)
+                : 'https://www.instagram.com/p/' + esc(x.ig) + '/embed/';
+              return '<div class="invita">' +
+                  (x.mini ? '<img class="invita-mini" src="' + esc(x.mini) + '" alt="" loading="lazy">' : '') +
+                  '<div class="invita-t"><span class="invita-rot">Un minuto de video</span>' + esc(x.txt) + '</div>' +
+                  '<button type="button" class="invita-btn" data-id="' + id + '" data-src="' + fuente + '">Ver el video</button>' +
+                '</div>' +
+                '<div class="invita-marco' + ((x.ig || x.vert) ? ' invita-vert' : '') + '" id="' + id + '" hidden>' +
+                  '<iframe src="about:blank" loading="lazy" scrolling="no" allow="encrypted-media" ' +
+                    'allowfullscreen title="Video de la sala"></iframe></div>';
+            }).join('');
           })(s.vid) +
           /* el respaldo en estudios: el texto trae <b> a propósito, por eso no va por esc() */
           (s.evi && s.evi.length
@@ -1033,13 +1035,23 @@ html{scroll-behavior:smooth}
         bloqueMateriales(p) +
         (p.fuente === 'pendiente'
           ? '<div class="seccion"><div class="pendiente">La descripción de este producto todavía se está preparando.</div></div>' : '') +
-      '</div></div>';
+      '</div></details>';
   }
 
   document.getElementById('mFecha').textContent = fecha();
 })();
 </script>
 <script>
+document.addEventListener('click',function(ev){
+  var b=ev.target.closest && ev.target.closest('.invita-btn[data-id]');
+  if(!b) return;
+  var m=document.getElementById(b.dataset.id);
+  if(!m) return;
+  var i=m.querySelector('iframe');
+  if(i.src.indexOf('http')!==0) i.src=b.dataset.src;
+  m.hidden=false; b.textContent='Video abierto'; b.disabled=true;
+  m.scrollIntoView({behavior:'smooth',block:'nearest'});
+});
 function abrirVideoIntro(){
   var m=document.getElementById('marcoVideo'), i=m.querySelector('iframe');
   if(i.src==='about:blank'||!i.src.includes('instagram')) i.src=i.dataset.src;

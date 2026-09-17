@@ -175,7 +175,17 @@ body{margin:0;background:#EEF1F5;font-family:'Open Sans',system-ui,sans-serif;co
 .comp{
   border:1.5px solid var(--navy);border-radius:10px;padding:15px 16px;background:#fcfdff;
   display:flex;flex-direction:column;gap:3px;
+  /* la tarjeta entera es el enlace a su sala */
+  text-decoration:none;color:inherit;transition:box-shadow .15s,transform .15s;
 }
+.comp:hover{box-shadow:0 6px 18px rgba(0,26,96,.16);transform:translateY(-2px);background:#fff}
+.comp-ir{
+  margin-top:8px;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--sky);
+}
+html{scroll-behavior:smooth}
+.op{scroll-margin-top:14px}
+@media print{ .comp-ir{display:none} }
 .comp-letra{
   font-family:'Montserrat',sans-serif;font-size:9.5px;font-weight:700;letter-spacing:.11em;
   text-transform:uppercase;color:var(--sky);
@@ -288,6 +298,25 @@ body{margin:0;background:#EEF1F5;font-family:'Open Sans',system-ui,sans-serif;co
 
 .cierre{text-align:center;padding:34px 54px 10px;color:var(--suave);font-size:11.5px;border-top:1px solid #E5E9F0;margin-top:30px}
 
+/* ── La firma, calcada de la del cotizador ───────────────── */
+.firma{padding:6px 54px 8px}
+.exec-card{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  background:linear-gradient(135deg,#001a60 0%,#002a90 100%);
+  border-radius:8px;padding:11px 16px;break-inside:avoid;
+}
+.exec-avatar{
+  width:38px;height:38px;border-radius:50%;background:var(--sky);flex:none;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Open Sans',sans-serif;font-size:13px;font-weight:800;color:#fff;
+}
+.exec-info{flex:1;min-width:0}
+.exec-name{font-size:13px;font-weight:700;color:#fff;line-height:1.25}
+.exec-role{font-size:10.5px;color:var(--sky);line-height:1.25}
+.exec-dept{font-size:9.5px;color:rgba(255,255,255,.45);line-height:1.25}
+.exec-contacts{display:flex;flex-direction:column;gap:3px;align-items:flex-end;flex:none}
+.exec-contact{font-size:10.5px;color:rgba(255,255,255,.85);display:flex;align-items:center;gap:5px}
+
 @media print{
   @page{size:letter;margin:14mm 0}
   body{background:#fff}
@@ -393,8 +422,24 @@ body{margin:0;background:#EEF1F5;font-family:'Open Sans',system-ui,sans-serif;co
 
   <div class="cierre">
     <b>Valores válidos hasta el 31 de diciembre de 2026</b>, con IVA incluido y con la rebaja del
-    10% aplicada. No incluyen transporte, instalación ni capacitación.<br>
-    OpenCluster Technologies · Construyendo Inclusión · www.opencluster-tech.cl
+    10% aplicada. No incluyen transporte, instalación ni capacitación.
+  </div>
+
+  <!-- La firma, la misma del cotizador -->
+  <div class="firma">
+    <div class="exec-card">
+      <div class="exec-avatar">RO</div>
+      <div class="exec-info">
+        <div class="exec-name">Rayen Ogalde</div>
+        <div class="exec-role">Encargada de Difusión y Vínculos Institucionales</div>
+        <div class="exec-dept">Departamento Comercial — OpenCluster Tech</div>
+      </div>
+      <div class="exec-contacts">
+        <div class="exec-contact"><span>📞</span> <span>+56 9 5629 4723</span></div>
+        <div class="exec-contact"><span>✉️</span> <span>rayen.ogalde@opencluster-tech.cl</span></div>
+        <div class="exec-contact"><span>🌐</span> <span>www.opencluster-tech.cl</span></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -514,20 +559,22 @@ body{margin:0;background:#EEF1F5;font-family:'Open Sans',system-ui,sans-serif;co
       'del 10% ya aplicada</b>. Más abajo va el detalle de cada una, producto por producto. ' +
       'Los valores no contemplan transporte, instalación ni capacitación: ese costo se agrega ' +
       'en la cotización final según el lugar donde se implemente la sala.</p>' +
+      /* Rayen, 16-sep-2026: «quiero que sean clickeables, para ir directo a la opción que busco» */
       '<div class="comparar">' + SALAS.map(function(s, k){
-        return '<div class="comp">' +
+        return '<a class="comp" href="#opcion-' + LETRA[k] + '">' +
           '<div class="comp-letra">Opción ' + LETRA[k] + '</div>' +
           '<div class="comp-n">' + esc(s.n) + '</div>' +
           '<div class="comp-p">' + esc(s.para) + '</div>' +
           '<div class="comp-antes">' + pesos(s.total) + '</div>' +
           '<div class="comp-v">' + pesos(totalConDto(s)) + '<span class="badge">−10%</span></div>' +
           '<div class="comp-iva">IVA incluido · ' + s.items.length + ' productos</div>' +
-        '</div>';
+          '<div class="comp-ir">Ver esta sala →</div>' +
+        '</a>';
       }).join('') + '</div></div>';
 
     /* 2 · Cada opción: lo que logra, su valor, y después sus productos uno por uno */
     SALAS.forEach(function(s, k){
-      hs += '<div class="op">' +
+      hs += '<div class="op" id="opcion-' + LETRA[k] + '">' +
         '<div class="op-cab">' +
           '<div class="op-letra">' + LETRA[k] + '</div>' +
           '<div class="op-tit"><h3>' + esc(s.n) + '</h3><div class="op-para">' + esc(s.para) + '</div></div>' +

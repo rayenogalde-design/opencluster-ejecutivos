@@ -318,21 +318,41 @@ body{margin:0;background:#EEF1F5;font-family:'Open Sans',system-ui,sans-serif;co
   display:block;font-family:'Montserrat',sans-serif;font-size:10.5px;font-weight:700;
   letter-spacing:.015em;color:var(--sky);margin-bottom:2px;
 }
-.invita-btn{
-  flex:none;cursor:pointer;font-family:'Montserrat',sans-serif;font-size:12.5px;font-weight:800;
-  color:#fff;background:var(--naranja);border:0;border-radius:999px;padding:11px 20px;
-  box-shadow:0 4px 14px rgba(255,126,0,.35);display:flex;align-items:center;gap:8px;white-space:nowrap;
-  transition:transform .15s,box-shadow .15s,background .15s;
+  margin-top:20px;border-top:1px solid #E5E9F0;padding-top:14px;break-inside:avoid;
 }
-.invita-btn::before{content:'▶';font-size:10px}
-.invita-btn:hover{transform:translateY(-2px);box-shadow:0 7px 18px rgba(255,126,0,.45)}
-.invita-btn:disabled{background:var(--navy);box-shadow:none;transform:none;cursor:default}
-.invita-marco{margin-top:12px;display:flex;justify-content:center}
+.vitrina-rot{
+  font-family:'Montserrat',sans-serif;font-size:11px;font-weight:700;letter-spacing:.015em;
+  color:var(--sky);margin-bottom:8px;
+}
+.vitrina-fila{
+  display:flex;align-items:center;gap:15px;width:100%;text-align:left;
+  background:none;border:0;padding:8px 0;cursor:pointer;font:inherit;color:inherit;
+}
+.vitrina-fila + .vitrina-fila{border-top:1px solid #F1F5F9}
+.vitrina-foto{
+  position:relative;flex:none;width:104px;height:68px;border-radius:6px;overflow:hidden;display:block;
+  background:#0A0F1E;
+}
+.vitrina-foto img{width:100%;height:100%;object-fit:cover;display:block;opacity:.92;transition:opacity .2s}
+.vitrina-foto::before{
+  content:'';position:absolute;left:50%;top:50%;width:32px;height:32px;margin:-16px 0 0 -16px;
+  border-radius:50%;background:rgba(255,255,255,.22);border:1.5px solid rgba(255,255,255,.85);
+  transition:background .2s;
+}
+.vitrina-foto::after{
+  content:'';position:absolute;left:50%;top:50%;transform:translate(-44%,-50%);
+  width:0;height:0;border-left:10px solid #fff;border-top:6.5px solid transparent;border-bottom:6.5px solid transparent;
+}
+.vitrina-fila:hover .vitrina-foto img{opacity:1}
+.vitrina-fila:hover .vitrina-foto::before{background:rgba(255,255,255,.38)}
+.vitrina-t{font-size:12.6px;line-height:1.6;color:#334155;flex:1}
+.vitrina-fila[disabled]{opacity:.5;cursor:default}
+.invita-marco{margin:2px 0 10px;display:flex;justify-content:center}
 .invita-marco[hidden]{display:none}
 .invita-marco iframe{width:560px;max-width:100%;height:auto;aspect-ratio:16/9;border:0;border-radius:10px;background:#F4F7FC}
 .invita-vert iframe{width:322px;aspect-ratio:9/16}
 .invita-marco iframe{width:326px;max-width:100%;height:560px;border:0;border-radius:10px;background:#fafafa}
-@media(max-width:560px){ .invita{flex-wrap:wrap} .invita-btn{width:100%} }
+
 @media print{ .invita,.invita-marco{display:none} }
 /* un video grabado con el teléfono es vertical: marco angosto, sin franjas negras a los lados */
 .video-c-vert .video-marco{width:322px;max-width:100%}
@@ -638,17 +658,17 @@ html{scroll-behavior:smooth}
       realizado una rebaja del 10% en nuestros valores. Por lo tanto, esta propuesta contempla los
       valores finales, luego de haberse aplicado esa reducción.</p>
     <div class="invita" id="invitaVideo">
-      <img class="invita-mini" src="SalasMultisensoriales_Recortadas/video-portada-sala.jpg"
-        alt="Sala multisensorial" loading="lazy">
-      <div class="invita-t">
-        <span class="invita-rot">Un minuto de video</span>
-        Los invitamos a revisar este video sobre salas multisensoriales.
-      </div>
-      <button type="button" class="invita-btn" onclick="abrirVideoIntro()">Ver el video</button>
+    <div class="vitrina">
+      <div class="vitrina-rot">Para empezar</div>
+      <button type="button" class="vitrina-fila" data-video="marcoVideo"
+        data-src="https://www.instagram.com/p/DbwQFPURW0-/embed/">
+        <span class="vitrina-foto"><img src="SalasMultisensoriales_Recortadas/video-portada-sala.jpg" alt="" loading="lazy"></span>
+        <span class="vitrina-t">Los invitamos a ver este video sobre las salas multisensoriales que implementamos.</span>
+      </button>
     </div>
-    <div class="invita-marco" id="marcoVideo" hidden>
-      <iframe src="about:blank" data-src="https://www.instagram.com/p/DbwQFPURW0-/embed/"
-        loading="lazy" scrolling="no" allow="encrypted-media" title="Sala multisensorial"></iframe>
+    <div class="invita-marco invita-vert" id="marcoVideo" hidden>
+      <iframe src="about:blank" loading="lazy" scrolling="no" allow="encrypted-media"
+        title="Sala multisensorial"></iframe>
     </div>
 
     <p class="intro-nota">Nos indicaron que cada espacio se implementaría por separado en un
@@ -887,21 +907,23 @@ html{scroll-behavior:smooth}
             if (!v) return '';
             var lista = (Array.isArray(v) ? v : [v]).filter(function (x) { return x && (x.ig || x.drive || x.yt); });
             if (!lista.length) return '';
-            return lista.map(function (x, k) {
-              window.__nv = (window.__nv || 0) + 1;
-              var id = 'vid' + window.__nv;
-              var fuente = x.drive ? 'https://drive.google.com/file/d/' + esc(x.drive) + '/preview'
-                : x.yt ? 'https://www.youtube-nocookie.com/embed/' + esc(x.yt)
-                : 'https://www.instagram.com/p/' + esc(x.ig) + '/embed/';
-              return '<div class="invita">' +
-                  (x.mini ? '<img class="invita-mini" src="' + esc(x.mini) + '" alt="" loading="lazy">' : '') +
-                  '<div class="invita-t"><span class="invita-rot">Un minuto de video</span>' + esc(x.txt) + '</div>' +
-                  '<button type="button" class="invita-btn" data-id="' + id + '" data-src="' + fuente + '">Ver el video</button>' +
-                '</div>' +
-                '<div class="invita-marco' + ((x.ig || x.vert) ? ' invita-vert' : '') + '" id="' + id + '" hidden>' +
-                  '<iframe src="about:blank" loading="lazy" scrolling="no" allow="encrypted-media" ' +
-                    'allowfullscreen title="Video de la sala"></iframe></div>';
-            }).join('');
+            return '<div class="vitrina">' +
+              '<div class="vitrina-rot">' + (lista.length > 1 ? 'Dos videos para verla funcionando' : 'Para verla funcionando') + '</div>' +
+              lista.map(function (x) {
+                window.__nv = (window.__nv || 0) + 1;
+                var id = 'vid' + window.__nv;
+                var fuente = x.drive ? 'https://drive.google.com/file/d/' + esc(x.drive) + '/preview'
+                  : x.yt ? 'https://www.youtube-nocookie.com/embed/' + esc(x.yt)
+                  : 'https://www.instagram.com/p/' + esc(x.ig) + '/embed/';
+                return '<button type="button" class="vitrina-fila" data-video="' + id + '" data-src="' + fuente + '">' +
+                    (x.mini ? '<span class="vitrina-foto"><img src="' + esc(x.mini) + '" alt="" loading="lazy"></span>' : '') +
+                    '<span class="vitrina-t">' + esc(x.txt) + '</span>' +
+                  '</button>' +
+                  '<div class="invita-marco' + ((x.ig || x.vert) ? ' invita-vert' : '') + '" id="' + id + '" hidden>' +
+                    '<iframe src="about:blank" loading="lazy" scrolling="no" allow="encrypted-media" ' +
+                      'allowfullscreen title="Video de la sala"></iframe></div>';
+              }).join('') +
+            '</div>';
           })(s.vid) +
           /* el respaldo en estudios: el texto trae <b> a propósito, por eso no va por esc() */
           (s.evi && s.evi.length
@@ -1045,22 +1067,15 @@ html{scroll-behavior:smooth}
 </script>
 <script>
 document.addEventListener('click',function(ev){
-  var b=ev.target.closest && ev.target.closest('.invita-btn[data-id]');
+  var b=ev.target.closest && ev.target.closest('[data-video]');
   if(!b) return;
-  var m=document.getElementById(b.dataset.id);
+  var m=document.getElementById(b.dataset.video);
   if(!m) return;
   var i=m.querySelector('iframe');
   if(i.src.indexOf('http')!==0) i.src=b.dataset.src;
-  m.hidden=false; b.textContent='Video abierto'; b.disabled=true;
+  m.hidden=false; b.disabled=true;
   m.scrollIntoView({behavior:'smooth',block:'nearest'});
 });
-function abrirVideoIntro(){
-  var m=document.getElementById('marcoVideo'), i=m.querySelector('iframe');
-  if(i.src==='about:blank'||!i.src.includes('instagram')) i.src=i.dataset.src;
-  m.hidden=false;
-  document.getElementById('invitaVideo').querySelector('.invita-btn').textContent='Video abierto';
-  m.scrollIntoView({behavior:'smooth',block:'nearest'});
-}
 </script>
 <a href="#opciones" class="subir" id="btnSubir"><span class="flecha">↑</span> Ver las opciones de sala</a>
 <script>

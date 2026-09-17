@@ -170,22 +170,50 @@ body{margin:0;background:#EEF1F5;font-family:'Open Sans',system-ui,sans-serif;co
 }
 .salas-intro .prox b{color:var(--navy)}
 
-/* Las tres opciones, una al lado de la otra */
-.comparar{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:20px}
+/* Las cuatro opciones, una al lado de la otra */
+.comparar{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:11px;margin-top:20px}
 .comp{
   border:1.5px solid var(--navy);border-radius:10px;padding:15px 16px;background:#fcfdff;
   display:flex;flex-direction:column;gap:3px;
   /* la tarjeta entera es el enlace a su sala */
-  text-decoration:none;color:inherit;transition:box-shadow .15s,transform .15s;
+  text-decoration:none;color:inherit;cursor:pointer;position:relative;
+  transition:box-shadow .18s,transform .18s,border-color .18s,background .18s;
 }
-.comp:hover{box-shadow:0 6px 18px rgba(0,26,96,.16);transform:translateY(-2px);background:#fff}
+/* Rayen, 17-sep-2026: «que se destaque más cuando le pones el cursor encima, para que sea
+   muy evidente que puede usarlas para desplazarse a lo largo del documento». */
+.comp:hover{
+  border-color:var(--naranja);background:#fff;
+  box-shadow:0 12px 28px rgba(0,26,96,.22);transform:translateY(-5px);
+}
+.comp:hover .comp-ir{color:#fff;background:var(--naranja);border-color:var(--naranja)}
+.comp:hover .comp-letra{color:var(--naranja)}
+.comp:active{transform:translateY(-2px)}
 .comp-ir{
-  margin-top:8px;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;
+  margin-top:10px;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;
   letter-spacing:.06em;text-transform:uppercase;color:var(--sky);
+  border:1.5px solid var(--linea);border-radius:999px;padding:6px 12px;text-align:center;
+  transition:background .18s,color .18s,border-color .18s;
 }
 html{scroll-behavior:smooth}
 .op{scroll-margin-top:14px}
-@media print{ .comp-ir{display:none} }
+#opciones{scroll-margin-top:14px}
+/* Rayen, 17-sep-2026: «un botón que les permita volver arriba, a donde aparecen las opciones
+   de salas, siempre en pantalla, para que no tengan que hacer tanto scrolling». */
+.subir{
+  position:fixed;right:22px;bottom:22px;z-index:50;
+  display:flex;align-items:center;gap:8px;
+  font-family:'Montserrat',sans-serif;font-size:11.5px;font-weight:700;letter-spacing:.04em;
+  text-decoration:none;color:#fff;background:var(--navy);
+  border:2px solid #fff;border-radius:999px;padding:12px 18px;
+  box-shadow:0 8px 24px rgba(0,26,96,.32);
+  opacity:0;transform:translateY(12px);pointer-events:none;
+  transition:opacity .2s,transform .2s,background .2s;
+}
+.subir.on{opacity:1;transform:translateY(0);pointer-events:auto}
+.subir:hover{background:var(--naranja)}
+.subir .flecha{font-size:14px;line-height:1}
+@media(max-width:640px){ .subir{right:12px;bottom:12px;padding:11px 15px;font-size:11px} }
+@media print{ .comp-ir{display:none} .subir{display:none} }
 .comp-letra{
   font-family:'Montserrat',sans-serif;font-size:9.5px;font-weight:700;letter-spacing:.11em;
   text-transform:uppercase;color:var(--sky);
@@ -343,7 +371,7 @@ html{scroll-behavior:smooth}
     <div class="epi">Propuesta de colaboración</div>
     <h1>Espacios Multisensoriales</h1>
     <span class="estilo">Preparado para REKREALAB</span>
-    <p class="bajada">Tres propuestas de espacio con su valor cerrado, el detalle de cada elemento
+    <p class="bajada">Cuatro propuestas de espacio con su valor cerrado, el detalle de cada elemento
       que las compone y la forma en que trabajamos un proyecto de principio a fin.</p>
     <div class="meta">
       <div><b>Para</b><span>María Trinidad Rendic</span></div>
@@ -551,9 +579,9 @@ html{scroll-behavior:smooth}
     '</div>';
   }
   if(SALAS.length){
-    /* 1 · Las tres opciones juntas, para decidir de una mirada */
+    /* 1 · Las cuatro opciones juntas, para decidir de una mirada */
     var hs = '<div class="salas-intro">' +
-      '<div class="rot">Cuatro formas de armar el espacio</div>' +
+      '<div class="rot" id="opciones">Cuatro formas de armar el espacio</div>' +
       '<h2>Las opciones</h2>' +
       '<p>Cada una responde a una necesidad distinta y tiene un valor cerrado, <b>con la rebaja ' +
       'del 10% ya aplicada</b>. Más abajo va el detalle de cada una, producto por producto. ' +
@@ -709,6 +737,22 @@ html{scroll-behavior:smooth}
   }
 
   document.getElementById('mFecha').textContent = fecha();
+})();
+</script>
+<a href="#opciones" class="subir" id="btnSubir"><span class="flecha">↑</span> Ver las opciones de sala</a>
+<script>
+(function(){
+  var b=document.getElementById('btnSubir');
+  function ver(){
+    var a=document.getElementById('opciones');
+    /* aparece apenas el bloque de las opciones queda arriba de la pantalla */
+    var c=document.querySelector('.comparar')||a;
+    var y=c?c.getBoundingClientRect().bottom:0;
+    if(a && y<0) b.classList.add('on'); else b.classList.remove('on');
+  }
+  window.addEventListener('scroll',ver,{passive:true});
+  window.addEventListener('resize',ver);
+  setTimeout(ver,300);
 })();
 </script>
 </body>

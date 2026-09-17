@@ -255,6 +255,36 @@ body{margin:0;background:#EEF1F5;font-family:'Open Sans',system-ui,sans-serif;co
 .video-ancho .video-marco iframe{height:auto;aspect-ratio:16/9}
 @media(max-width:820px){ .video-c{flex-direction:column} .video-marco{width:100%} }
 @media print{ .video{display:none} }
+/* La foto de referencia que abre cada sala */
+.op-foto{margin:0 0 16px;border-radius:10px;overflow:hidden;border:1px solid var(--linea);background:#F4F9FF}
+.op-foto-fila{display:flex}
+.op-foto-fila img{display:block;width:100%;height:auto;min-width:0}
+.op-foto-dos .op-foto-fila{gap:2px}
+.op-foto-dos .op-foto-fila img{width:50%;object-fit:cover;aspect-ratio:4/3}
+@media(max-width:560px){ .op-foto-dos .op-foto-fila{flex-direction:column;gap:6px}
+  .op-foto-dos .op-foto-fila img{width:100%;aspect-ratio:auto} }
+.op-foto .pie{
+  display:block;padding:7px 12px;font-size:10.5px;color:var(--suave);font-style:italic;
+  border-top:1px solid var(--linea);background:#fff;
+}
+/* Rayen, 17-sep-2026: «que el detalle de productos no aparezca todo hacia abajo como un archivo;
+   un botoncito, y si lo quieren ver se abre». */
+.plegable{margin-top:16px;border:1.5px solid var(--linea);border-radius:10px;background:#fff;overflow:hidden}
+.plegable>summary{
+  list-style:none;cursor:pointer;padding:12px 16px;display:flex;align-items:center;gap:10px;
+  font-family:'Montserrat',sans-serif;font-size:12px;font-weight:600;color:var(--navy);
+  background:#F4F9FF;transition:background .15s;
+}
+.plegable>summary::-webkit-details-marker{display:none}
+.plegable>summary:hover{background:#E8F3FF}
+.plegable>summary .flecha{
+  width:20px;height:20px;border-radius:50%;background:var(--navy);color:#fff;flex:none;
+  display:flex;align-items:center;justify-content:center;font-size:11px;transition:transform .2s;
+}
+.plegable[open]>summary .flecha{transform:rotate(180deg)}
+.plegable>summary .cuantos{margin-left:auto;font-weight:400;color:var(--suave);font-size:11px}
+.plegable .adentro{padding:14px 16px 16px}
+@media print{ .plegable>summary{display:none} .plegable .adentro{padding:0} }
 html{scroll-behavior:smooth}
 .op{scroll-margin-top:14px}
 #opciones{scroll-margin-top:14px}
@@ -720,6 +750,17 @@ html{scroll-behavior:smooth}
             '<span class="iva">IVA incluido · con la rebaja del 10%</span></div>' +
         '</div>' +
         '<div class="op-cuerpo">' +
+          (function (im) {
+            if (!im) return '';
+            var fotos = Array.isArray(im) ? im : [im];
+            return '<div class="op-foto' + (fotos.length > 1 ? ' op-foto-dos' : '') + '">' +
+              '<div class="op-foto-fila">' + fotos.map(function (f) {
+                return '<img src="' + esc(f) + '" alt="Sala multisensorial ' + esc(s.n) + '" loading="lazy">';
+              }).join('') + '</div>' +
+              '<span class="pie">' + esc(s.imgPie || ('Imagen de referencia de una sala equivalente, ' +
+                'montada por Qinera, nuestro partner europeo. La distribución final se define en el ' +
+                'proyecto.')) + '</span></div>';
+          })(s.img) +
           '<p class="op-txt">' + esc(s.txt) + '</p>' +
           '<div class="op-cols">' +
             (s.foco ? '<div><div class="et">En qué está enfocada</div>' + listaChips(s.foco) + '</div>' : '') +
@@ -766,9 +807,11 @@ html{scroll-behavior:smooth}
               '</div>'
             : '') +
           (s.nota ? '<div class="op-nota">' + esc(s.nota) + '</div>' : '') +
-          '<div class="op-lo">' +
-            '<div class="et" style="font-family:\'Montserrat\',sans-serif;font-size:11px;font-weight:700;letter-spacing:.015em;color:var(--sky)">Todo lo que incluye</div>' +
-            '<div class="op-grid">' + s.items.map(tarjeta).join('') + '</div>' +
+'<details class="plegable">' +
+            '<summary><span class="flecha">▾</span> Ver todo lo que incluye esta sala' +
+              '<span class="cuantos">' + s.items.length + ' productos</span></summary>' +
+            '<div class="adentro"><div class="op-grid">' + s.items.map(tarjeta).join('') + '</div></div>' +
+          '</details>' +
           '</div>' +
           AVISO_TRANSPORTE +
         '</div>' +

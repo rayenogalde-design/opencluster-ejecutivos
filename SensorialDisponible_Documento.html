@@ -437,6 +437,33 @@ html{scroll-behavior:smooth}
 .comp-antes s{text-decoration:line-through}
 .comp-iva{font-size:10px;color:var(--suave)}
 
+/* ── Qué permite trabajar cada sala ───────────────────── */
+.cuadro-env{margin-top:26px;overflow-x:auto}
+.cuadro{width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px;min-width:520px}
+.cuadro th,.cuadro td{padding:9px 10px;text-align:center;border-bottom:1px solid #EDF1F7}
+.cuadro thead th{
+  vertical-align:bottom;font-family:'Montserrat',sans-serif;font-size:11.5px;font-weight:700;
+  color:var(--navy);line-height:1.25;border-bottom:2px solid var(--navy);padding-bottom:11px;
+}
+.cuadro thead th:first-child{
+  text-align:left;font-weight:400;font-size:10.5px;color:var(--suave);font-family:'Open Sans',sans-serif;
+}
+.cuadro .cu-l{
+  display:block;font-size:10px;color:var(--sky);letter-spacing:.06em;margin-bottom:3px;
+}
+.cuadro tbody td:first-child{text-align:left;color:#334155;width:42%}
+.cuadro tbody tr:nth-child(even) td{background:#FAFCFF}
+.cuadro tbody tr:hover td{background:#F2F8FF}
+.cuadro td.si{color:var(--navy);font-weight:700;font-size:15px}
+.cuadro td.no{color:#CBD5E1}
+/* la columna de la sala más completa, marcada sin gritar */
+.cuadro th:last-child,.cuadro td:last-child{background:#F4F9FF}
+.cuadro thead th:last-child{border-bottom-color:var(--sky)}
+.cuadro-pie{
+  margin:12px 0 0;font-size:12px;line-height:1.6;color:var(--suave);max-width:640px;
+}
+@media(max-width:560px){ .cuadro{font-size:11.5px} .cuadro th,.cuadro td{padding:7px 6px} }
+
 /* El valor de antes, tachado. Va en todas partes donde se muestra la rebaja del 10%. */
 .antes{text-decoration:line-through;opacity:.62;font-weight:400;margin-right:6px;font-size:.78em}
 .antes-bloque{
@@ -856,6 +883,23 @@ html{scroll-behavior:smooth}
       (it.con ? '<div class="tcon">' + esc(it.con) + '</div>' : '') +
     '</div>';
   }
+  /* El orden de las columnas es el de SALAS (de menor a mayor valor): Calma · Luminea ·
+     Integración Sensorial · Full SHX. Cada ✓ está comprobado contra la lista de productos. */
+  var CAPACIDADES = [
+    ['Bajar la activación y volver a la calma',            1, 1, 1, 1],
+    ['Vibración de la música en el cuerpo',                1, 1, 0, 1],
+    ['Luz y color que cambian',                            1, 1, 0, 1],
+    ['Aroma para anticipar y cerrar la sesión',            1, 1, 0, 1],
+    ['Luz ultravioleta y material que brilla',             0, 1, 0, 1],
+    ['Movimiento: columpios, trepa y equilibrio',          0, 0, 1, 0],
+    ['Presión profunda: mantas y chalecos de peso',        0, 0, 1, 0],
+    ['Trabajo frente al espejo',                           0, 1, 1, 1],
+    ['Causa-efecto con un pulsador',                       0, 1, 0, 1],
+    ['Toda la sala gobernada desde una tableta',           0, 0, 0, 1],
+    ['Encenderla con la voz o acercando un objeto',        0, 0, 0, 1],
+    ['Cabe en un rincón, sin obra',                        1, 0, 0, 0],
+    ['Necesita anclaje al techo o un pórtico',             0, 0, 1, 0]
+  ];
   if(SALAS.length){
     /* 1 · Las cuatro opciones juntas, para decidir de una mirada */
     var hs = '<div class="salas-intro">' +
@@ -876,7 +920,28 @@ html{scroll-behavior:smooth}
           '<div class="comp-iva">IVA incluido · ' + s.items.length + ' productos</div>' +
           '<div class="comp-ir">Ver esta sala →</div>' +
         '</a>';
-      }).join('') + '</div></div>';
+      }).join('') + '</div>' +
+
+      /* qué sabe hacer cada sala: una fila por capacidad, verificada producto por producto */
+      '<div class="cuadro-env"><table class="cuadro">' +
+        '<thead><tr><th>Qué permite trabajar</th>' +
+          SALAS.map(function (x, k) {
+            return '<th><span class="cu-l">' + LETRA[k] + '</span>' + esc(x.n.replace(' Inmersión', '')) + '</th>';
+          }).join('') +
+        '</tr></thead><tbody>' +
+        CAPACIDADES.map(function (f) {
+          return '<tr><td>' + esc(f[0]) + '</td>' +
+            f.slice(1).map(function (v) {
+              return v
+                ? '<td class="si"><span aria-label="sí">✓</span></td>'
+                : '<td class="no"><span aria-label="no">·</span></td>';
+            }).join('') + '</tr>';
+        }).join('') +
+        '</tbody></table></div>' +
+        '<p class="cuadro-pie">Las cuatro regulan. La diferencia está en por dónde entran: ' +
+        'la Calma y la Luminea por la vibración y la luz, la de Integración Sensorial por el ' +
+        'movimiento, y la Full SHX porque la persona gobierna la sala entera.</p>' +
+      '</div>';
 
     /* 2 · Cada opción: lo que logra, su valor, y después sus productos uno por uno */
     SALAS.forEach(function(s, k){

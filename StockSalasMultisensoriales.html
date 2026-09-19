@@ -69,6 +69,10 @@
   .stock-hero-label { font-size:0.86rem; font-weight:700; color:#EFFFF5; }
   .stock-hero-sub { font-size:0.74rem; color:rgba(239,255,245,0.6); }
   .stock-hero-chips { display:flex; gap:0.6rem; flex-wrap:wrap; }
+  .stock-hero-chip.chip-link { cursor:pointer; transition:.15s; }
+  .stock-hero-chip.chip-link:hover { background:rgba(239,255,245,0.18); border-color:rgba(239,255,245,0.38); transform:translateY(-1px); }
+  .stock-hero-chip.chip-link:focus-visible { outline:2px solid #7FE0A8; outline-offset:2px; }
+  .stock-hero-chip .chip-ir { font-size:0.68rem; opacity:.7; margin-left:0.1rem; }
   .stock-hero-chip { display:flex; align-items:center; gap:0.4rem; font-size:0.78rem; color:#EFFFF5; background:rgba(239,255,245,0.08); border:1px solid rgba(239,255,245,0.16); border-radius:999px; padding:0.35rem 0.75rem; }
   .stock-hero-dot { width:0.55rem; height:0.55rem; border-radius:50%; flex:none; }
   .stock-hero-dot.dot-bodega { background:#4FD88A; }
@@ -794,8 +798,8 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
       </div>
     </div>
     <div class="stock-hero-chips">
-      <div class="stock-hero-chip" title="Lo que hay hoy en bodega, según el stock vivo del CRM (el inicial menos lo vendido)."><span class="stock-hero-dot dot-bodega"></span><b id="heroBodega">204</b> en bodega</div>
-      <div class="stock-hero-chip" title="Las unidades de la OC 432/2026, emitida el 21-ago-2026. Todavía no están en bodega."><span class="stock-hero-dot dot-camino"></span><b>143</b> en camino (OC 432)</div>
+      <div class="stock-hero-chip chip-link" role="button" tabindex="0" data-ir="stock-bodega" title="Lo que hay hoy en bodega, según el stock vivo del CRM (el inicial menos lo vendido). Ábrelo para ver el detalle."><span class="stock-hero-dot dot-bodega"></span><b id="heroBodega">204</b> en bodega <span class="chip-ir">ver</span></div>
+      <div class="stock-hero-chip chip-link" role="button" tabindex="0" data-ir="stock-pedido2" title="Las unidades de la OC 432/2026, emitida el 21-ago-2026. Todavía no están en bodega. Ábrelo para ver qué viene y cuánto de cada cosa."><span class="stock-hero-dot dot-camino"></span><b>143</b> en camino (OC 432) <span class="chip-ir">ver</span></div>
     </div>
   </div><button class="tabbtn grp-stock active" data-tab="stock-bodega">Bodega</button><button class="tabbtn grp-stock" data-tab="stock-camino">Pedido 1er semestre (llegó)</button><button class="tabbtn grp-stock" data-tab="stock-pedido2">Pedido 2º semestre (en camino)</button><button class="tabbtn grp-stock" data-tab="stock-combinado">Combinado</button><button class="tabbtn grp-stock" data-tab="stock-porpedir">Por pedir</button><button class="tabbtn grp-stock" data-tab="stock-comparar">Comparar cotizaciones</button><button class="tabbtn grp-stock" data-tab="stock-importar">¿Qué puedo importar?</button><button class="tabbtn grp-stock" data-tab="stock-margenes">Costo y margen</button><button class="tabbtn grp-stock" data-tab="stock-vendidas">Vendidas</button></div></div>
 <main>
@@ -3548,6 +3552,26 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
    del CRM que usan las tablas. El chip de "en camino" no se toca: son las unidades de la
    OC 432/2026, que el CRM todavía no conoce. Rayen, 19-sep-2026: "¿de dónde sacaste el conteo
    de lo que está en bodega?". */
+/* Los chips del encabezado abren su pestaña. Se dispara el click del botón que ya existe para
+   no duplicar la lógica de las pestañas (activar el panel, pintar lo que haga falta). */
+function _wireChipsHero(){
+  document.querySelectorAll('.stock-hero-chip.chip-link').forEach(function(chip){
+    if (chip.dataset.wired) return;
+    chip.dataset.wired = '1';
+    var ir = function(){
+      var btn = document.querySelector('.tabbtn[data-tab="' + chip.dataset.ir + '"]');
+      if (!btn) return;
+      btn.click();
+      var panel = document.getElementById('panel-' + chip.dataset.ir);
+      if (panel && panel.scrollIntoView) panel.scrollIntoView({ behavior:'smooth', block:'start' });
+    };
+    chip.addEventListener('click', ir);
+    chip.addEventListener('keydown', function(e){
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ir(); }
+    });
+  });
+}
+
 function _pintarHeroStock(){
   try {
     if (typeof FICHAS !== 'object' || !FICHAS) return;
@@ -3567,6 +3591,7 @@ function _pintarHeroStock(){
 
 function _refrescarVistasStock(){
   try { _pintarHeroStock(); } catch(e){}
+  try { _wireChipsHero(); } catch(e){}
     try { renderComparacionCotizaciones(); } catch(e){}
     try { ['bajo','alto'].forEach(s => { actualizarResumenStock(s); renderIncluidos(s); }); } catch(e){}
     // La pestaña "¿Qué puedo importar?" muestra cuánto hay de cada uno: se repinta con el stock

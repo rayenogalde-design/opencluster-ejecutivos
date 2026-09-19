@@ -787,15 +787,15 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
   <div class="stock-hero">
     <div class="stock-hero-kicker">Tu stock, en un vistazo — no tiene nada que ver con el armado de salas de arriba</div>
     <div class="stock-hero-main">
-      <div class="stock-hero-numero">204</div>
+      <div class="stock-hero-numero" id="heroUnidades">204</div>
       <div class="stock-hero-texto">
         <div class="stock-hero-label">unidades disponibles</div>
-        <div class="stock-hero-sub">64 productos distintos con stock</div>
+        <div class="stock-hero-sub" id="heroProductos">64 productos distintos con stock</div>
       </div>
     </div>
     <div class="stock-hero-chips">
-      <div class="stock-hero-chip"><span class="stock-hero-dot dot-bodega"></span><b>204</b> en bodega</div>
-      <div class="stock-hero-chip"><span class="stock-hero-dot dot-camino"></span><b>143</b> en camino (OC 432)</div>
+      <div class="stock-hero-chip" title="Lo que hay hoy en bodega, según el stock vivo del CRM (el inicial menos lo vendido)."><span class="stock-hero-dot dot-bodega"></span><b id="heroBodega">204</b> en bodega</div>
+      <div class="stock-hero-chip" title="Las unidades de la OC 432/2026, emitida el 21-ago-2026. Todavía no están en bodega."><span class="stock-hero-dot dot-camino"></span><b>143</b> en camino (OC 432)</div>
     </div>
   </div><button class="tabbtn grp-stock active" data-tab="stock-bodega">Bodega</button><button class="tabbtn grp-stock" data-tab="stock-camino">Pedido 1er semestre (llegó)</button><button class="tabbtn grp-stock" data-tab="stock-pedido2">Pedido 2º semestre (en camino)</button><button class="tabbtn grp-stock" data-tab="stock-combinado">Combinado</button><button class="tabbtn grp-stock" data-tab="stock-porpedir">Por pedir</button><button class="tabbtn grp-stock" data-tab="stock-comparar">Comparar cotizaciones</button><button class="tabbtn grp-stock" data-tab="stock-importar">¿Qué puedo importar?</button><button class="tabbtn grp-stock" data-tab="stock-margenes">Costo y margen</button><button class="tabbtn grp-stock" data-tab="stock-vendidas">Vendidas</button></div></div>
 <main>
@@ -3542,7 +3542,31 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
   function _quienSoy(){ return localStorage.getItem('salas_quien_eres') || 'Rayen'; }
   // Vuelve a pintar todo lo que muestra números de stock, sin recargar la página
   // (recargar borraría las cotizaciones que tenga marcadas para comparar).
-  function _refrescarVistasStock(){
+  /* El encabezado era texto fijo escrito a mano y por eso mentía: se quedó semanas diciendo
+   "147 en camino" de un contenedor que ya había llegado, y "204 en bodega", que era el stock
+   INICIAL del archivo y no lo que quedaba después de vender. Ahora sale del mismo stock vivo
+   del CRM que usan las tablas. El chip de "en camino" no se toca: son las unidades de la
+   OC 432/2026, que el CRM todavía no conoce. Rayen, 19-sep-2026: "¿de dónde sacaste el conteo
+   de lo que está en bodega?". */
+function _pintarHeroStock(){
+  try {
+    if (typeof FICHAS !== 'object' || !FICHAS) return;
+    var unidades = 0, productos = 0;
+    Object.keys(FICHAS).forEach(function(sku){
+      var n = Number(FICHAS[sku] && FICHAS[sku].stockBodega) || 0;
+      if (n > 0) { unidades += n; productos++; }
+    });
+    var elN = document.getElementById('heroUnidades');
+    var elP = document.getElementById('heroProductos');
+    var elB = document.getElementById('heroBodega');
+    if (elN) elN.textContent = unidades;
+    if (elB) elB.textContent = unidades;
+    if (elP) elP.textContent = productos + ' producto' + (productos === 1 ? '' : 's') + ' distinto' + (productos === 1 ? '' : 's') + ' con stock';
+  } catch(e) { console.warn('No pude repintar el encabezado de stock:', e); }
+}
+
+function _refrescarVistasStock(){
+  try { _pintarHeroStock(); } catch(e){}
     try { renderComparacionCotizaciones(); } catch(e){}
     try { ['bajo','alto'].forEach(s => { actualizarResumenStock(s); renderIncluidos(s); }); } catch(e){}
     // La pestaña "¿Qué puedo importar?" muestra cuánto hay de cada uno: se repinta con el stock

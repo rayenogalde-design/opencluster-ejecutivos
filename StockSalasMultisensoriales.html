@@ -682,15 +682,62 @@
   .cp-pie { display:flex; gap:0.5rem; padding:0.8rem 1rem; border-top:1px solid var(--line,#E3E7EC); }
   .cp-pie button { flex:1 1 auto; }
   /* Con el panel abierto los botones flotantes se corren a su izquierda: antes quedaban encima
-     del total y de los botones de abajo. Rayen: "me tapa la info en varias cosas esto". */
-  body.cp-abierto #salaEnviarCotiz,
-  body.cp-abierto #salaSpecsBtn,
-  body.cp-abierto #salaVerPanel { right: calc(min(430px,94vw) + 18px) !important; transition:right 0.18s ease; }
+     del total y de los botones de abajo. Rayen: "me tapa la info en varias cosas esto".
+     Desde el 21-sep-2026 los cuatro botones viven dentro de #salaFabDock, asi que se corre el
+     grupo entero y no cada boton por separado. */
+  body.cp-abierto #salaFabDock { right: calc(min(430px,94vw) + 14px); }
   @media (max-width:640px){
     /* En pantalla chica el panel ocupa casi todo: los botones estorban, se esconden. */
-    body.cp-abierto #salaEnviarCotiz,
-    body.cp-abierto #salaSpecsBtn,
-    body.cp-abierto #salaVerPanel { display:none !important; }
+    body.cp-abierto #salaFabDock { display:none !important; }
+  }
+
+  /* ══ Botones flotantes plegables (Rayen, 21-sep-2026) ═══════════════════════════════════
+     "No puedo ver el precio gracias a esos link o bullets que aparecen abajo. Que sean
+     retractiles: si yo los toco, que se amplien, que sean solo un signo."
+     Plegado (asi arranca) solo se ve el circulo chico pegado a la esquina; abierto salen los
+     cuatro botones de siempre, con su mismo id, su mismo texto y su mismo onclick. */
+  #salaFabDock { position:fixed; right:14px; bottom:14px; z-index:99999;
+                 display:flex; flex-direction:column; align-items:flex-end; gap:8px;
+                 font-family:'Montserrat',Arial,sans-serif;
+                 transition:right 0.18s ease; }
+  #salaFabItems { display:flex; flex-direction:column; align-items:stretch; gap:8px;
+                  padding:8px; border:1px solid var(--line,rgba(0,26,96,0.14)); border-radius:14px;
+                  background:var(--card,#fff);
+                  box-shadow:0 18px 44px -18px rgba(0,26,96,0.55);
+                  max-width:min(300px,86vw); }
+  #salaFabDock.plegado #salaFabItems { display:none; }
+  /* Los botones conservan su color y su texto: solo dejan de flotar cada uno por su lado. */
+  #salaFabItems > button { position:static !important; right:auto !important; left:auto !important;
+                  top:auto !important; bottom:auto !important; margin:0 !important;
+                  width:100%; justify-content:flex-start;
+                  border-radius:8px !important; box-shadow:none !important;
+                  font-family:'Montserrat',Arial,sans-serif !important; font-size:13px !important;
+                  padding:11px 14px !important;
+                  transition:filter 0.15s ease, transform 0.15s ease; }
+  #salaFabItems > button:hover { filter:brightness(1.1); transform:translateY(-1px); }
+  #salaFabToggle { width:46px; height:46px; padding:0; border-radius:50%;
+                   border:1px solid var(--navy,#001A60); background:var(--navy,#001A60); color:#fff;
+                   cursor:pointer; display:flex; align-items:center; justify-content:center;
+                   box-shadow:0 12px 26px -10px rgba(0,26,96,0.65);
+                   transition:background 0.15s ease, border-color 0.15s ease, transform 0.15s ease; }
+  #salaFabToggle:hover { background:var(--sky,#06B3FD); border-color:var(--sky,#06B3FD); transform:translateY(-1px); }
+  #salaFabToggle svg { width:22px; height:22px; display:block; }
+  #salaFabDock.plegado #salaFabToggle .fab-cerrar,
+  #salaFabDock:not(.plegado) #salaFabToggle .fab-abrir { display:none; }
+  /* Un punto naranja avisa que hay productos marcados aunque este plegado. */
+  #salaFabToggle .fab-punto { position:absolute; top:-2px; right:-2px; width:11px; height:11px;
+                   border-radius:50%; background:var(--orange,#FF7E00); border:2px solid var(--paper,#F3F6FA);
+                   display:none; }
+  #salaFabToggle { position:relative; }
+  #salaFabDock.hay-marcados.plegado #salaFabToggle .fab-punto { display:block; }
+  @media (max-width:560px){
+    /* En el telefono la tabla ocupa todo el ancho: el circulo se va al borde IZQUIERDO, que es
+       donde esta la casilla, para no taparle nunca la columna del precio (va a la derecha). */
+    #salaFabDock { right:auto; left:10px; bottom:10px; align-items:flex-start; }
+    body.cp-abierto #salaFabDock { right:auto; left:10px; }
+    #salaFabToggle { width:40px; height:40px; }
+    #salaFabToggle svg { width:20px; height:20px; }
+    body { padding-bottom:64px; }
   }
   @media (prefers-color-scheme: dark) {
     #cotiz-panel { background:#111a2e; }
@@ -4069,7 +4116,8 @@ function _refrescarVistasStock(){
       if (panel.contains(ev.target)) return;
       var t = ev.target;
       if (t.closest && (t.closest('.sala-pick') || t.closest('.sala-pick-card') ||
-                        t.closest('#salaVerPanel') || t.closest('#salaEnviarCotiz') || t.closest('#salaSpecsBtn'))) return;
+                        t.closest('#salaVerPanel') || t.closest('#salaEnviarCotiz') || t.closest('#salaSpecsBtn') ||
+                        t.closest('#salaFabToggle'))) return;
       abrir(false);
     });
     document.addEventListener('keydown', function(ev){ if (ev.key === 'Escape') abrir(false); });
@@ -7510,5 +7558,96 @@ function _refrescarVistasStock(){
   updCount();
 })();
 </script>
+
+<!-- ══ Los botones flotantes, agrupados en un bloque plegable (Rayen, 21-sep-2026) ══════════
+     "No puedo ver el precio gracias a esos link o bullets que aparecen abajo. Que sean
+     retractiles: si yo los toco, que se amplien, que sean solo un signo."
+     Aqui NO se cambia lo que hace ningun boton: se mueven tal cual (mismo id, misma clase,
+     mismo texto y los mismos listeners que ya tienen puestos) adentro de #salaFabItems. -->
+<script>
+(function(){
+  "use strict";
+  // De arriba hacia abajo, en el mismo orden en que se veian antes flotando.
+  var IDS  = ["salaAnexoBtn", "salaVerPanel", "salaSpecsBtn", "salaEnviarCotiz"];
+  var LLAVE = "salasFabAbierto";
+  var dock = null, items = null, tog = null;
+
+  function vivos(){
+    var out = [];
+    for (var i = 0; i < IDS.length; i++){
+      var b = document.getElementById(IDS[i]);
+      // Si la pagina escondio un boton (pasa cuando no hay tabla de stock), no se trae.
+      if (b && b.style.display !== "none") out.push(b);
+    }
+    return out;
+  }
+
+  function construir(){
+    dock = document.createElement("div");
+    dock.id = "salaFabDock";
+    dock.className = "plegado";
+
+    items = document.createElement("div");
+    items.id = "salaFabItems";
+
+    tog = document.createElement("button");
+    tog.id = "salaFabToggle";
+    tog.type = "button";
+    tog.title = "Mostrar u ocultar los botones";
+    tog.setAttribute("aria-label", "Mostrar u ocultar los botones");
+    tog.setAttribute("aria-expanded", "false");
+    tog.setAttribute("aria-controls", "salaFabItems");
+    tog.innerHTML =
+      '<svg class="fab-abrir" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>' +
+      '<svg class="fab-cerrar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>' +
+      '<span class="fab-punto"></span>';
+
+    dock.appendChild(items);
+    dock.appendChild(tog);
+    document.body.appendChild(dock);
+
+    tog.addEventListener("click", function(){
+      var abrir = dock.classList.contains("plegado");
+      pintar(abrir);
+      try { localStorage.setItem(LLAVE, abrir ? "1" : "0"); } catch(e){}
+    });
+
+    // El punto naranja avisa que hay productos marcados aunque el bloque este plegado.
+    document.addEventListener("change", function(e){
+      if (e.target && e.target.classList && e.target.classList.contains("sala-pick")) punto();
+    });
+  }
+
+  function pintar(abierto){
+    dock.classList.toggle("plegado", !abierto);
+    tog.setAttribute("aria-expanded", abierto ? "true" : "false");
+  }
+
+  function punto(){
+    if (!dock) return;
+    var n = document.querySelectorAll("input.sala-pick:checked").length;
+    dock.classList.toggle("hay-marcados", n > 0);
+  }
+
+  function acomodar(){
+    var bs = vivos();
+    if (!bs.length) return;
+    if (!dock) {
+      construir();
+      var abierto = false;
+      try { abierto = localStorage.getItem(LLAVE) === "1"; } catch(e){}
+      pintar(abierto);   // por defecto: plegado
+    }
+    // appendChild mueve: deja siempre el mismo orden, aunque algun boton se cree despues.
+    for (var i = 0; i < bs.length; i++) items.appendChild(bs[i]);
+    punto();
+  }
+
+  acomodar();
+  // Por si algun script crea su boton mas tarde.
+  [200, 800, 2500].forEach(function(ms){ setTimeout(acomodar, ms); });
+})();
+</script>
+
 </body>
 </html>

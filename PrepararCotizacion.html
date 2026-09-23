@@ -297,7 +297,7 @@ button.sec.peligro:hover{background:#FDECEA}
 // a un archivo chico que se pide SIN caché; si no calza con la que trae adentro, se
 // recarga sola con una dirección nueva y esa sí llega fresca.
 // AL PUBLICAR UN CAMBIO: subir VERSION acá Y en version.json (el mismo número).
-var VERSION = "2026-09-23-05";
+var VERSION = "2026-09-23-06";
 
 (function comprobarVersion(){
   fetch("version.json?t=" + Date.now(), { cache:"no-store" })
@@ -579,6 +579,29 @@ function nombreCompleto(p){
   return p.nombre;
 }
 
+// Stock REAL de Salas (Rayen 23-sep-2026): StockSalas.js es el stock INICIAL y no resta lo vendido.
+// El CRM (crm_stock_salas) devuelve bodega ya descontada; la columna Stock se corrige al llegar.
+var CRM_STOCK_URL = 'https://script.google.com/macros/s/AKfycbz3Vscxz-OlTHehsnEqqTD1qfql4xzstgWM81RG79P5IiLTkRvaYTU2sNoWV_QpceeowA/exec?accion=crm_stock_salas';
+var STOCK_VIVO = null;
+function stockVivo(){
+  if (STOCK_VIVO) return Promise.resolve(STOCK_VIVO);
+  return fetch(CRM_STOCK_URL).then(function(r){ return r.json(); }).then(function(j){
+    if (j && j.ok && j.stock) STOCK_VIVO = j.stock; return STOCK_VIVO;
+  }).catch(function(){ return null; });
+}
+function aplicarStockVivo(){
+  if (!LINEAS.some(function(L){ return L.esSala; })) return;
+  stockVivo().then(function(st){
+    if (!st) return;
+    var cambio = false;
+    LINEAS.forEach(function(L){
+      if (!L.esSala || !L.sku || !st[L.sku]) return;
+      L.stock = { n: Number(st[L.sku].bodega) || 0 }; cambio = true;
+    });
+    if (cambio) refrescar();
+  });
+}
+
 function pintar(datos){
   var cat = window.SALAS_CATALOGO || {};
   DATOS = datos;
@@ -619,6 +642,7 @@ function pintar(datos){
     return linea;
   });
   refrescar();
+  aplicarStockVivo();
 }
 
 function refrescar(){

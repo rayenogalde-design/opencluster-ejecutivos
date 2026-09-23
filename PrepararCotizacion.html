@@ -283,6 +283,7 @@ button.sec.peligro:hover{background:#FDECEA}
 <script src="SalasACotizacion.js"></script>
 <script src="CostosSalasCifrados.js"></script>
 <script src="SalasDescripciones.js"></script>
+<script src="StockSalas.js"></script>
 <script>
 // ── Página que deja una cotización lista para el Cotizador ─────────────
 // Uso: PrepararCotizacion.html?d=<nombre>  →  lee CotizacionesPreparadas/<nombre>.json
@@ -296,7 +297,7 @@ button.sec.peligro:hover{background:#FDECEA}
 // a un archivo chico que se pide SIN caché; si no calza con la que trae adentro, se
 // recarga sola con una dirección nueva y esa sí llega fresca.
 // AL PUBLICAR UN CAMBIO: subir VERSION acá Y en version.json (el mismo número).
-var VERSION = "2026-09-23-02";
+var VERSION = "2026-09-23-03";
 
 (function comprobarVersion(){
   fetch("version.json?t=" + Date.now(), { cache:"no-store" })
@@ -596,7 +597,10 @@ function pintar(datos){
       // precio de la competencia para ESE producto, si el pedido lo trae:
       // { precio: 42990, quien: "Deltamed" }. Los pedidos normales no lo llevan.
       comp:   p.comp || null,
-      stock:  p.stock || null,
+      // Sala: el stock sale de la bodega de salas (StockSalas.js), no de la planilla INVENTARIO,
+      // que es de ayudas técnicas. Antes todos decían "confirmar". [[en-salas-manda-bodega]]
+      stock:  p.stock || ((c && window.STOCK_SALAS && window.STOCK_SALAS[p.sku])
+                ? { n: Number(window.STOCK_SALAS[p.sku].bodega) || 0 } : null),
       lp:     p.lp || (p.precio ? [] : []),
       precioFijo: (p.precio != null && p.precio !== "") ? Number(p.precio)
                 : (c ? Number(c.p || 0) : 0),
@@ -782,6 +786,21 @@ function refrescar(){
   });
 
   [].forEach.call(document.querySelectorAll(".cant-in"), function(inp){
+    // Rayen 23-sep-2026: "no me permite poner cantidad". Sí la tomaba, pero solo al salir de la
+    // casilla: mientras escribía el total no se movía. Ahora se recalcula al escribir y la casilla
+    // conserva el foco para seguir escribiendo.
+    inp.addEventListener("input", function(){
+      clearTimeout(window._tCant);
+      window._tCant = setTimeout(function(){
+        var i = Number(inp.getAttribute("data-i"));
+        var v = Math.round(Number(inp.value));
+        if (!isFinite(v) || v < 1 || v > 9999 || v === LINEAS[i].cant) return;
+        LINEAS[i].cant = v;
+        refrescar();
+        var nuevo = document.querySelector('.cant-in[data-i="' + i + '"]');
+        if (nuevo) nuevo.focus();
+      }, 500);
+    });
     inp.addEventListener("change", function(){
       var i = Number(inp.getAttribute("data-i"));
       var v = Math.round(Number(inp.value));

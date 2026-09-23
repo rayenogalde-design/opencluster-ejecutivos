@@ -235,6 +235,7 @@ button.sec.peligro:hover{background:#FDECEA}
     </div>
     <div class="totales" id="bloqueTotales">
       <div><span>Neto productos</span><span id="tNeto">—</span></div>
+      <div id="filaInst" style="display:none"><span id="tInstLbl">Instalación, transporte y capacitación</span><span id="tInst">—</span></div>
       <div><span>IVA 19%</span><span id="tIva">—</span></div>
       <div class="big"><span>Total con IVA</span><span id="tTotal">—</span></div>
       <div id="filaCosto" style="display:none"><span>Costo con IVA</span><span id="tCosto">—</span></div>
@@ -297,7 +298,7 @@ button.sec.peligro:hover{background:#FDECEA}
 // a un archivo chico que se pide SIN caché; si no calza con la que trae adentro, se
 // recarga sola con una dirección nueva y esa sí llega fresca.
 // AL PUBLICAR UN CAMBIO: subir VERSION acá Y en version.json (el mismo número).
-var VERSION = "2026-09-23-07";
+var VERSION = "2026-09-23-08";
 
 (function comprobarVersion(){
   fetch("version.json?t=" + Date.now(), { cache:"no-store" })
@@ -859,8 +860,20 @@ function refrescar(){
   });
 
   document.getElementById("tNeto").textContent  = CLP(subNeto);
-  document.getElementById("tIva").textContent   = CLP(subNeto * 0.19);
-  document.getElementById("tTotal").textContent = CLP(subNeto * 1.19);
+  // Rayen 23-sep-2026: «siempre pónmelo así, porque de lo contrario me confundo»: en las precotizaciones
+  // de sala la instalación, transporte y capacitación de la región va en los totales, y el total es el
+  // mismo que va a dar el Cotizador (allá la carga salaRegion).
+  var inst = (DATOS && Number(DATOS.salaValorNeto)) || 0;
+  var fi = document.getElementById("filaInst");
+  if (fi) {
+    fi.style.display = inst ? "" : "none";
+    if (inst) {
+      document.getElementById("tInstLbl").textContent = "Instalación, transporte y capacitación" + (DATOS.salaRegion ? " · " + DATOS.salaRegion : "") + " (neto)";
+      document.getElementById("tInst").textContent = CLP(inst);
+    }
+  }
+  document.getElementById("tIva").textContent   = CLP((subNeto + inst) * 0.19);
+  document.getElementById("tTotal").textContent = CLP((subNeto + inst) * 1.19);
   // Costo y margen de la cotización completa: solo cuando se abrieron los costos de sala.
   var verMg = !!COSTOS_SALA && MOSTRAR_COSTO && subCosto > 0;
   ["filaCosto", "filaMargen"].forEach(function(id){

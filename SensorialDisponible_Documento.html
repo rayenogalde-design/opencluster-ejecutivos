@@ -1262,6 +1262,88 @@ details.op:not([open])::before{display:none}
   .tarj .tf img{max-height:64px}
 }
 </style>
+<style id="papel-pdf">
+/* ══ EL PDF: LAS HOJAS LAS ARMAMOS NOSOTROS (Rayen, 23-sep-2026) ══════════════
+   Mismo método que la propuesta de NeuroMed y que el cotizador: cada bloque se
+   mide al ancho real del papel y se va llenando hoja por hoja. Va en su propio
+   <style> para que el generador de propuestas, que copia el primero, no lo arrastre.
+   Las reglas cuelgan de .pg y no de @media print: al imprimir la hoja mide menos
+   de 820 px y se activarían los cortes de tableta, así que aquí se fija todo. */
+.btn-pdf{position:fixed;left:22px;bottom:22px;z-index:60;display:flex;align-items:center;gap:8px;
+  font-family:'Montserrat',sans-serif;font-size:11.5px;font-weight:700;letter-spacing:.03em;
+  color:#fff;background:var(--navy);border:2px solid #fff;border-radius:999px;padding:12px 18px;
+  box-shadow:0 8px 24px rgba(0,26,96,.32);cursor:pointer}
+.btn-pdf:hover{background:var(--naranja)}
+.btn-pdf[disabled]{opacity:.6;cursor:wait}
+.btn-pdf svg{width:15px;height:15px}
+@media(max-width:640px){ .btn-pdf{left:12px;bottom:12px;padding:11px 15px;font-size:11px} }
+
+#impresion{position:absolute;left:-20000px;top:0;width:210mm;background:#fff}
+body.ver-hojas .hoja,body.ver-hojas .btn-pdf,body.ver-hojas .subir{display:none !important}
+body.ver-hojas #impresion{position:static;left:auto;margin:0 auto}
+body.ver-hojas .pg{margin:0 auto 14px;box-shadow:0 2px 14px rgba(0,26,96,.18)}
+.pg{width:210mm;height:297mm;padding:0 10mm 12mm;box-sizing:border-box;
+  display:flex;flex-direction:column;overflow:hidden;background:#fff}
+.pg .filo{margin:0 -10mm 0}
+.pg-final>.firma{margin-top:auto}
+
+/* dentro de la hoja el margen lo pone .pg */
+.pg .intro,.pg .servicios,.pg .obra,.pg .salas-intro,.pg .portada-pie,.pg .cierre,.pg .firma{
+  padding-left:0;padding-right:0}
+.pg .seg{margin-left:0;margin-right:0;padding:22px 24px 20px}
+.pg .portada{height:300px;padding:0}
+.pg .portada h1{font-size:30px}
+.pg .portada img.logo{height:78px;margin-bottom:14px}
+
+/* los cortes de tableta, desarmados a mano */
+.pg .serv-grid{display:flex;flex-wrap:wrap;gap:9px}
+.pg .serv-grid .serv{width:calc(33.333% - 6px);box-sizing:border-box}
+.pg .seg-grid{display:flex;flex-wrap:wrap;gap:9px}
+.pg .seg-grid .seg-c{width:calc(50% - 5px);box-sizing:border-box}
+.pg .seg-grid .seg-ancha{width:100%}
+.pg .obra-grid{display:flex;flex-wrap:wrap;gap:8px}
+.pg .obra-grid .obra-c{width:calc(25% - 6px);box-sizing:border-box}
+.pg .obra-c .obra-que{font-size:8.5px;line-height:1.35;padding:6px 8px 8px}
+.pg .puerta{display:grid;grid-template-columns:200px minmax(0,1fr);gap:16px;padding:14px}
+.pg .puerta-foto{max-width:200px}
+.pg .puerta-tx h3{font-size:15px}
+.pg .puerta-tx p{font-size:10.5px}
+.pg .g2{display:flex;flex-wrap:wrap;gap:9px}
+.pg .g2 .p2{width:calc(50% - 5px);box-sizing:border-box}
+.pg .c2-lista{grid-template-columns:repeat(2,minmax(0,1fr))}
+
+/* cada opción de sala, abierta y sin sus productos (Rayen, 23-sep) */
+.pg .op-trozo{padding:0;display:flow-root}
+.pg .op-trozo .op-cuerpo{display:flow-root}
+/* la tabla partida: un solo recuadro visual aunque vaya en trozos */
+.pg .q1-trozo{margin-top:14px}
+.pg .q1-sigue{margin-top:0 !important}
+.pg .q1-corta{border-bottom:0;border-bottom-left-radius:0;border-bottom-right-radius:0}
+.pg .q1-sigue{border-top:0;border-top-left-radius:0;border-top-right-radius:0}
+.pg .q1-map{display:none !important}
+.pg .salas-intro{display:flow-root}
+.pg .op-trozo .op-cuerpo{border:0;border-radius:0;box-shadow:none;padding:10px 0 0}
+.pg .op-trozo.op-arriba{margin-top:18px}
+.pg .op-trozo .op-cab{border-radius:10px}
+
+/* lo que en papel no sirve */
+.pg .puerta-play,.pg .puerta-dura,.pg .obra-play,.pg .op-plegar,.pg .volver,
+.pg .invita-marco,.pg .video,.pg .vid-lista,.pg .comp-ir,.pg .p2-ir{display:none !important}
+
+@media print{
+  @page{size:A4;margin:0}
+  body{background:#fff}
+  body.imprimiendo .hoja{display:none !important}
+  #impresion{position:static;left:auto;top:auto;width:auto}
+  .pg{page-break-after:always;break-after:page}
+  .pg:last-child{page-break-after:avoid;break-after:avoid}
+  .btn-pdf,.subir{display:none !important}
+  .fx,.lb{display:none !important}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .portada{break-after:auto !important;page-break-after:auto !important}
+}
+</style>
+
 </head>
 <body>
 <div class="hoja">
@@ -2070,6 +2152,261 @@ document.addEventListener('click',function(ev){
     if(ev.target===lb || (ev.target.closest && ev.target.closest('#lbX'))) cerrar();
   });
   document.addEventListener('keydown',function(ev){ if(ev.key==='Escape') cerrar(); });
+})();
+</script>
+<button type="button" class="btn-pdf" id="btnPdf">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+  Descargar en PDF
+</button>
+<script>
+/* ══ EL PDF (Rayen, 23-sep-2026) ═════════════════════════════════════════════
+   El mismo método de la propuesta de NeuroMed: las hojas las armamos nosotros.
+   Se mide cada bloque al ancho real del papel y se va llenando hoja por hoja;
+   la firma entra en la última y se empuja al fondo con margin-top:auto.
+   Las opciones de sala van ABIERTAS y SIN las tarjetas de productos: así lo
+   pidió Rayen para el PDF. */
+(function(){
+  var HOLGURA = 12;   /* px de aire al pie por si el papel redondea distinto */
+
+  /* Parte un bloque con una grilla adentro: lo de antes, una pieza por fila y lo de después. */
+  function partirPorGrilla(el, selGrilla, porFila){
+    var grid = el.querySelector(selGrilla);
+    if (!grid || grid.children.length <= porFila) return null;
+    var hijos = [].slice.call(grid.children), piezas = [];
+    function caja(sinAire){
+      var c = el.cloneNode(false);
+      c.removeAttribute('id');
+      if (sinAire){ c.style.paddingTop = '0'; c.style.paddingBottom = '0'; c.style.marginTop = '0'; }
+      return c;
+    }
+    var antes = caja(false), hayAntes = false;
+    for (var n = el.firstChild; n && n !== grid; n = n.nextSibling){ antes.appendChild(n.cloneNode(true)); hayAntes = true; }
+    if (hayAntes){ antes.style.paddingBottom = '0'; piezas.push(antes); }
+    for (var i = 0; i < hijos.length; i += porFila){
+      var c = caja(true), fila = grid.cloneNode(false);
+      hijos.slice(i, i + porFila).forEach(function(x){ fila.appendChild(x.cloneNode(true)); });
+      c.style.marginTop = '9px';
+      c.appendChild(fila); piezas.push(c);
+    }
+    var desp = caja(true), hayDesp = false;
+    for (var m = grid.nextSibling; m; m = m.nextSibling){ desp.appendChild(m.cloneNode(true)); hayDesp = true; }
+    if (hayDesp){ desp.style.marginTop = '9px'; piezas.push(desp); }
+    return piezas;
+  }
+
+  /* Una opción de sala: abierta, sin productos, partida en trozos que caben en una hoja. */
+  function partirOpcion(det){
+    var d = det.cloneNode(true);
+    [].forEach.call(d.querySelectorAll('.op-lo,.volver,.op-plegar,.invita-marco'), function(x){ x.remove(); });
+    var cab = d.querySelector(':scope > .op-cab'), cuerpo = d.querySelector(':scope > .op-cuerpo');
+    var piezas = [];
+    function trozo(){ var t = document.createElement('div'); t.className = 'op-trozo'; return t; }
+    function enCuerpo(x){ var t = trozo(), c = document.createElement('div'); c.className = 'op-cuerpo'; c.appendChild(x); t.appendChild(c); return t; }
+    /* el encabezado va con lo primero del cuerpo, para que no quede solo */
+    var hijos = cuerpo ? [].slice.call(cuerpo.children) : [];
+    var primero = trozo(); primero.classList.add('op-arriba');
+    if (cab){ var c2 = document.createElement('div'); c2.className = cab.className; c2.innerHTML = cab.innerHTML; primero.appendChild(c2); }
+    if (hijos.length){ var c3 = document.createElement('div'); c3.className = 'op-cuerpo'; c3.appendChild(hijos.shift()); primero.appendChild(c3); }
+    piezas.push(primero);
+    hijos.forEach(function(x){ piezas.push(enCuerpo(x)); });
+    /* lo que va después del cuerpo (el aviso de lo que no incluye el valor) */
+    for (var n = (cuerpo || cab).nextSibling; n; n = n.nextSibling){
+      if (n.nodeType === 1) { var t = trozo(); t.appendChild(n.cloneNode(true)); piezas.push(t); }
+    }
+    return piezas;
+  }
+
+  function atomos(hoja){
+    var lista = [];
+    [].forEach.call(hoja.children, function(el){
+      if (el.classList.contains('filo')) return;
+      if (el.classList.contains('mas')) return;           /* en papel no se muestra */
+      if (el.classList.contains('intro')){ lista.push.apply(lista, partirHijos(el, 3)); return; }
+      if (el.classList.contains('servicios')){ var a = partirPorGrilla(el, '.serv-grid', 3); if (a){ lista.push.apply(lista, a); return; } }
+      if (el.classList.contains('obra')){ var b = partirPorGrilla(el, '.obra-grid', 4); if (b){ lista.push.apply(lista, b); return; } }
+      if (el.classList.contains('seg')){ var c = partirPorGrilla(el, '.seg-grid', 2); if (c){ lista.push.apply(lista, c); return; } }
+      if (el.id === 'salas'){
+        [].forEach.call(el.children, function(s){
+          if (s.classList.contains('salas-intro')){
+            var p = partirPorGrilla(s, '.g2', 2);
+            if (p){
+              /* la última pieza trae la tabla: esa se parte por grupos de filas */
+              var ult = p[p.length - 1], q = ult.querySelector('.q1');
+              if (q && ult.children.length === 1){ p.pop(); p = p.concat(partirTabla(q)); }
+              lista.push.apply(lista, p);
+              return;
+            }
+          }
+          if (s.matches('details.op')){ lista.push.apply(lista, partirOpcion(s)); return; }
+          lista.push(s.cloneNode(true));
+        });
+        return;
+      }
+      lista.push(el.cloneNode(true));
+    });
+    return lista;
+  }
+
+  /* Un bloque que es solo título no se queda solo al pie de la hoja. */
+  function esTitulo(p){
+    return p.querySelector && !!p.querySelector('h2,.op-cab') &&
+      !p.querySelector('.g2,.serv-grid,.obra-grid,.seg-grid,.puerta,table') && p.offsetHeight < 320;
+  }
+
+  /* Un bloque de texto largo (la introducción) va en trozos: uno por hijo. */
+  function partirHijos(el, juntosAlInicio){
+    var hijos = [].slice.call(el.children), piezas = [];
+    var c = el.cloneNode(false); c.removeAttribute('id'); c.style.paddingBottom = '0';
+    hijos.slice(0, juntosAlInicio).forEach(function(x){ c.appendChild(x.cloneNode(true)); });
+    piezas.push(c);
+    hijos.slice(juntosAlInicio).forEach(function(x, k, arr){
+      var t = el.cloneNode(false); t.removeAttribute('id');
+      t.style.paddingTop = '0'; t.style.borderTop = '0';
+      if (k < arr.length - 1){ t.style.paddingBottom = '0'; t.style.borderBottom = '0'; }
+      t.appendChild(x.cloneNode(true)); piezas.push(t);
+    });
+    return piezas;
+  }
+
+  /* La tabla «Qué permite trabajar» va en trozos, uno por grupo de filas. */
+  function partirTabla(q){
+    var tabla = q.querySelector('table.t1');
+    if (!tabla) return [q.cloneNode(true)];
+    var filas = [].slice.call(tabla.tBodies[0].rows), grupos = [];
+    filas.forEach(function(r){
+      if (r.classList.contains('t1-g') || !grupos.length) grupos.push([]);
+      grupos[grupos.length - 1].push(r);
+    });
+    return grupos.map(function(g, k){
+      var c = q.cloneNode(k === 0);
+      if (k === 0){
+        var tb = c.querySelector('table.t1').tBodies[0];
+        tb.innerHTML = ''; g.forEach(function(r){ tb.appendChild(r.cloneNode(true)); });
+      } else {
+        var env = document.createElement('div'); env.className = 'q1-env';
+        var t = tabla.cloneNode(false);
+        if (tabla.querySelector('colgroup')) t.appendChild(tabla.querySelector('colgroup').cloneNode(true));
+        var tb2 = document.createElement('tbody'); g.forEach(function(r){ tb2.appendChild(r.cloneNode(true)); });
+        t.appendChild(tb2); env.appendChild(t); c.appendChild(env);
+      }
+      c.classList.add('q1-trozo');
+      if (k > 0) c.classList.add('q1-sigue');
+      if (k < grupos.length - 1) c.classList.add('q1-corta');
+      return c;
+    });
+  }
+
+  function paginar(){
+    var viejo = document.getElementById('impresion');
+    if (viejo) viejo.parentNode.removeChild(viejo);
+    var cont = document.createElement('div');
+    cont.id = 'impresion';
+    document.body.appendChild(cont);
+
+    var piezas = atomos(document.querySelector('.hoja'));
+    /* todo lo plegable, abierto (p. ej. las explicaciones dentro de Materiales) */
+    piezas.forEach(function(p){
+      if (p.matches && p.matches('details')) p.open = true;
+      [].forEach.call(p.querySelectorAll ? p.querySelectorAll('details') : [], function(d){ d.open = true; });
+    });
+
+    var pagina = null;
+    function nuevaHoja(){
+      pagina = document.createElement('div');
+      pagina.className = 'pg';
+      var filo = document.createElement('div');
+      filo.className = 'filo';
+      pagina.appendChild(filo);
+      cont.appendChild(pagina);
+    }
+    nuevaHoja();
+
+    /* No se suman altos: se pone la pieza en la hoja y se mira si la hoja se
+       desborda. Así cuentan también los márgenes de abajo, que al sumar se
+       perdían y el texto quedaba cortado al pie. */
+    function desborda(){
+      var ult = pagina.lastElementChild, cs = getComputedStyle(pagina);
+      var fin = ult.getBoundingClientRect().bottom - pagina.getBoundingClientRect().top +
+        (parseFloat(getComputedStyle(ult).marginBottom) || 0);
+      var tope = pagina.clientHeight - (parseFloat(cs.paddingBottom) || 0) - HOLGURA;
+      return fin > tope;
+    }
+    function sola(){ return pagina.children.length <= 2; }   /* el filo + esta pieza */
+
+    piezas.forEach(function(p, i){
+      pagina.appendChild(p);
+      /* un título se va junto con lo que sigue, si no quedaría solo al pie */
+      if (esTitulo(p) && piezas[i + 1] && !sola()){
+        var sig = piezas[i + 1];
+        pagina.appendChild(sig);
+        var noCaben = desborda();
+        pagina.removeChild(sig);
+        if (noCaben){ nuevaHoja(); pagina.appendChild(p); return; }
+      }
+      if (desborda() && !sola()){
+        /* la firma no se va sola: se lleva el cierre que tiene arriba */
+        var previo = p.classList.contains('firma') ? p.previousElementSibling : null;
+        nuevaHoja();
+        if (previo && previo.classList.contains('cierre')) pagina.appendChild(previo);
+        pagina.appendChild(p);
+      }
+    });
+
+    if (cont.lastChild) cont.lastChild.classList.add('pg-final');
+    /* con loading="lazy" las fotos de las hojas nunca cargan: nadie hace scroll hasta ellas */
+    [].forEach.call(cont.querySelectorAll('img'), function(im){ im.loading = 'eager'; });
+    [].forEach.call(cont.querySelectorAll('iframe'), function(x){ x.remove(); });
+    return cont;
+  }
+
+  /* Espera a que todas las fotos de las hojas estén cargadas (máx. 10 s). */
+  function fotosListas(cont){
+    var imgs = [].slice.call(cont.querySelectorAll('img'));
+    return Promise.race([
+      Promise.all(imgs.map(function(im){
+        if (im.complete && im.naturalWidth) return Promise.resolve();
+        return new Promise(function(ok){ im.addEventListener('load', ok); im.addEventListener('error', ok); });
+      })),
+      new Promise(function(ok){ setTimeout(ok, 10000); })
+    ]);
+  }
+
+  var bp = document.getElementById('btnPdf');
+  if (bp) bp.addEventListener('click', function(){
+    var f = document.getElementById('fx'), l = document.getElementById('lb');
+    if (f) f.hidden = true;
+    if (l) { l.hidden = true; var lc = document.getElementById('lbCuerpo'); if (lc) lc.innerHTML = ''; }
+    document.body.style.overflow = '';
+    document.body.classList.add('imprimiendo');
+    bp.disabled = true;
+    armarHojas().then(function(){ bp.disabled = false; window.print(); });
+  });
+
+  /* Las fotos se cargan ANTES de medir: si llegan después, empujan el texto y
+     lo que cabía en la hoja queda cortado al pie. */
+  function armarHojas(){
+    var hoja = document.querySelector('.hoja');
+    [].forEach.call(hoja.querySelectorAll('img'), function(im){ im.loading = 'eager'; });
+    return fotosListas(hoja).then(function(){ return fotosListas(paginar()); });
+  }
+  window.addEventListener('afterprint', function(){
+    document.body.classList.remove('imprimiendo');
+    var c = document.getElementById('impresion');
+    if (c) c.parentNode.removeChild(c);
+  });
+  /* Si alguien imprime con Ctrl+P sin pasar por el botón, igual se pagina. */
+  window.addEventListener('beforeprint', function(){
+    if (document.getElementById('impresion')) return;
+    document.body.classList.add('imprimiendo');
+    paginar();
+  });
+  /* ?imprimir=1 deja la página ya paginada: sirve para generar el PDF desde fuera
+     y para revisar las hojas en pantalla antes de publicar. */
+  if (/[?&]imprimir=1/.test(location.search)){
+    document.body.classList.add('imprimiendo', 'ver-hojas');
+    armarHojas();
+  }
 })();
 </script>
 </body>

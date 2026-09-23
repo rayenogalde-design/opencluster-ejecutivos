@@ -61060,7 +61060,7 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
     }
     let costo = 0, sinCosto = 0, marcados = 0;
     document.querySelectorAll('input.inc[data-sala="' + sala + '"]').forEach(function(chk){
-      if (!chk.checked) return;
+      if (!chk.checked || _fueraDeCotizacion(sala, chk.dataset.sku)) return;
       const qty = Number(qtyInputDe(chk).value) || 1;
       marcados++;
       const f = FICHAS[chk.dataset.sku];
@@ -61081,6 +61081,11 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
       (sinCosto ? '<div class="margenaviso">' + sinCosto + ' producto' + (sinCosto === 1 ? '' : 's') +
         ' sin costo en tu archivo: la ganancia sale más alta que la real.</div>' : '');
   }
+  // La casilla de la tabla "Productos de esta sala". Con try: al arrancar, recalcular() corre
+  // antes de que exista cotOff (let, más abajo) y leerlo tiraría ReferenceError.
+  function _fueraDeCotizacion(sala, sku) {
+    try { return cotExcluido(sala, sku); } catch (e) { return false; }
+  }
   function recalcular(sala) {
     // Guarda de seguridad: esta función se llama para TODAS las salas al cargar la página (ver
     // bucle clavesRecalc más abajo) — si esta página no tiene esa sala (ej. la página de Stock,
@@ -61090,7 +61095,10 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
     if (!elTotal || !elCount) return;
     let total = 0, count = 0;
     document.querySelectorAll('input.inc[data-sala="' + sala + '"]').forEach(chk => {
-      if (chk.checked) {
+      // Rayen 23-sep-2026: "quiero ir viendo el cambio de valores para ver qué productos saco,
+      // pero aunque desmarque no disminuye el valor". Lo desmarcado en "Productos de esta sala"
+      // ya no cuenta en el total ni en la ganancia.
+      if (chk.checked && !_fueraDeCotizacion(sala, chk.dataset.sku)) {
         const qty = Number(qtyInputDe(chk).value) || 1;
         total += Number(chk.dataset.precio) * qty;
         count += qty;
@@ -61201,7 +61209,7 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
     tbody.querySelectorAll('.cotpick').forEach(pick => {
       pick.addEventListener('change', () => {
         setCotExcluido(sala, pick.dataset.sku, !pick.checked);
-        if (typeof window.SM_actualizarContadorCotizacion === 'function') window.SM_actualizarContadorCotizacion();
+        recalcular(sala);
       });
     });
     tbody.querySelectorAll('.btn-quitar').forEach(btn => {

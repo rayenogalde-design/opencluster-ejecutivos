@@ -1251,6 +1251,12 @@ details.op:not([open])::before{display:none}
    parejos en toda la fila. */
 .tarj .ttx{flex-grow:1}
 .tarj:not(:has(.ttx)) .tver{margin-top:auto}
+/* Rayen, 22-sep-2026: la quinta tarjeta va a lo ancho, «que no se expanda tanto esa sección». */
+.seg-c.seg-ancha{grid-column:1/-1}
+.tsello{gap:8px}
+.tsello>span{display:flex}
+.ic-uv{color:#6D28D9}
+.mat-uv{margin-top:8px}
 @media print{
   .tarj .tf{height:74px;padding:4px;margin-bottom:5px}
   .tarj .tf img{max-height:64px}
@@ -1444,8 +1450,8 @@ details.op:not([open])::before{display:none}
       <div class="seg-c">
         <div class="seg-t"><span class="seg-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.6s5.4 5.9 5.4 9.4a5.4 5.4 0 0 1-10.8 0C6.6 9.5 12 3.6 12 3.6z"/><path d="M4.5 19.5L19.5 4.5"/></svg></span>Tejido</div>
         <p>Impermeable a líquidos, incluidas la transpiración, la saliva, la orina y la sangre ·
-          Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio
-          europeo.</p>
+        Apto para el contacto directo con la piel · Comportamiento al fuego ensayado · Las tres
+        propiedades verificadas en laboratorio europeo.</p>
       </div>
       <div class="seg-c">
         <div class="seg-t"><span class="seg-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.2l8 4.1-8 4.1-8-4.1 8-4.1z"/><path d="M4 12.1l8 4.1 8-4.1"/><path d="M4 16.6l8 4.1 8-4.1"/></svg></span>Espuma</div>
@@ -1461,6 +1467,11 @@ details.op:not([open])::before{display:none}
         <div class="seg-t"><span class="seg-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.4 3L6.2 13.6h5L10.6 21l7.2-10.6h-5L13.4 3z"/></svg></span>Seguridad eléctrica</div>
         <p>Marcado CE de la Unión Europea en seguridad eléctrica y compatibilidad
           electromagnética.</p>
+      </div>
+      <div class="seg-c seg-ancha">
+        <div class="seg-t"><span class="seg-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="13" width="7.5" height="7.5" rx="1.2"/><rect x="13" y="13" width="7.5" height="7.5" rx="1.2"/><path d="M12 3.5l4.3 7H7.7z"/></svg></span>Seguridad de juguetes</div>
+        <p>Tejido conforme a la norma europea de seguridad de juguetes, sin ftalatos ni metales
+        pesados, con plastificantes aptos para el contacto con alimentos y para artículos de bebé.</p>
       </div>
     </div>
 
@@ -1539,7 +1550,10 @@ details.op:not([open])::before{display:none}
   function bloqueMateriales(p){
     /* basta con que tenga sellos: hay productos cuyo ignífugo y antimicótico vienen de las
        características del fabricante y no traen texto de materialidad aparte */
-    if(!p.mat && !(p.sellos && p.sellos.length)) return '';
+    var uv = esUV(p) ? '<div class="mat mat-linea mat-uv"><span class="mat-esc">' + OJO + '</span>' +
+      '<span><b>Luz ultravioleta segura.</b> Seguridad de la luz para la vista y la piel, y de exposición ' +
+      'a campos electromagnéticos, según norma europea · Declarada por su fabricante alemán.</span></div>' : '';
+    if(!p.mat && !(p.sellos && p.sellos.length)) return uv;
     var lineas = String(p.mat || '').split('\n').filter(Boolean).map(function(l){
       var i = l.indexOf(':');
       return i > 0
@@ -1551,8 +1565,9 @@ details.op:not([open])::before{display:none}
     return '<div class="mat mat-linea">' +
       '<span class="mat-esc">' + ESCUDO + '</span>' +
       '<span>Cumple la normativa europea de materiales y cuenta con certificación de materialidad ' +
-      'segura al contacto. <a href="#materiales">Ver el detalle</a>.</span>' +
-    '</div>';
+      'segura al contacto.' + (esJuguete(p) ? ' Cumple además la norma europea de seguridad de juguetes.' : '') +
+      ' <a href="#materiales">Ver el detalle</a>.</span>' +
+    '</div>' + uv;
   }
 
   /* ── Las 3 salas, antes de los productos ───────────────────── */
@@ -1587,6 +1602,15 @@ details.op:not([open])::before{display:none}
     'ítems aparte en la cotización final, según el lugar donde se implemente la sala. ' +
     'Valores válidos hasta el 31 de diciembre de 2026.</div>';
   var numFicha = 0;                       /* la numeración corre por todo el documento */
+  /* Rayen, 22-sep-2026: el Foco UV lleva un icono propio, un ojo con destello. Su fabricante
+     declara la seguridad de la luz para la vista y la piel (declaración Thomann, 3-abr-2023).
+     El suelto y el SHX son la misma lámpara; el SHX trae además el receptor. */
+  var OJO = '<svg class="ic ic-uv" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M2.5 13s3.4-5.6 9.5-5.6 9.5 5.6 9.5 5.6-3.4 5.6-9.5 5.6S2.5 13 2.5 13z"/>' +
+    '<circle cx="12" cy="13" r="2.5"/><path d="M19.5 1.8v3.6M17.7 3.6h3.6"/></svg>';
+  function esUV(p){ return /^Foco de luz UV LED( SHX)?$/.test((p && p.n) || ''); }
+  function esJuguete(p){ return ((p && p.sellos) || []).some(function(s){ return /EN 71-3/.test(s); }); }
   function buscaProd(nombre){ return P.filter(function(x){ return x.n === nombre; })[0]; }
   /* La línea corta de la tarjeta del combo: la primera frase de «qué es», que habla de ESE
      producto. El «fun» no sirve aquí: es genérico por tipo de estímulo y sale repetido en
@@ -1617,8 +1641,10 @@ details.op:not([open])::before{display:none}
         : 'A consultar') + '</div>' +
       (corto(p) ? '<div class="ttx">' + esc(corto(p)) + '</div>' : '') +
       (it.con ? '<div class="tcon">' + esc(it.con) + '</div>' : '') +
-      ((p.sellos && p.sellos.length) ? '<span class="tsello" title="Materiales con respaldo europeo">' +
-        ESCUDO + '</span>' : '') +
+      (((p.sellos && p.sellos.length) || esUV(p)) ? '<span class="tsello">' +
+        ((p.sellos && p.sellos.length) ? '<span title="Materiales con respaldo europeo">' + ESCUDO + '</span>' : '') +
+        (esUV(p) ? '<span title="Seguridad de la luz para la vista y la piel">' + OJO + '</span>' : '') +
+        '</span>' : '') +
       '<span class="tver">Ver la ficha' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" ' +
         'stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>' +

@@ -282,6 +282,7 @@ button.sec.peligro:hover{background:#FDECEA}
 
 <script src="SalasACotizacion.js"></script>
 <script src="CostosSalasCifrados.js"></script>
+<script src="SalasDescripciones.js"></script>
 <script>
 // ── Página que deja una cotización lista para el Cotizador ─────────────
 // Uso: PrepararCotizacion.html?d=<nombre>  →  lee CotizacionesPreparadas/<nombre>.json
@@ -295,7 +296,7 @@ button.sec.peligro:hover{background:#FDECEA}
 // a un archivo chico que se pide SIN caché; si no calza con la que trae adentro, se
 // recarga sola con una dirección nueva y esa sí llega fresca.
 // AL PUBLICAR UN CAMBIO: subir VERSION acá Y en version.json (el mismo número).
-var VERSION = "2026-09-22-01";
+var VERSION = "2026-09-23-01";
 
 (function comprobarVersion(){
   fetch("version.json?t=" + Date.now(), { cache:"no-store" })
@@ -586,7 +587,9 @@ function pintar(datos){
       ck:     p.ck || "",
       sku:    p.sku || "",
       nombre: p.nombre || (c && c.n) || "(producto sin nombre)",
-      desc:   p.desc || "",
+      // Rayen 23-sep-2026: un producto de sala NUNCA va sin descripcion. Si la linea llega sin
+      // ella, se pone la de SalasDescripciones.js (escrita a mano o sacada de la ficha).
+      desc:   p.desc || (c && window.SALAS_DESC && window.SALAS_DESC[p.sku]) || "",
       cant:   Number(p.cant || 1),
       img:    p.img || (c && c.img) || "",
       web:    p.web || null,

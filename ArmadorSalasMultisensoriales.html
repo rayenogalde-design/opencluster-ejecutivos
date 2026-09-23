@@ -62436,6 +62436,7 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
   // sala", solo los que tienen la casilla "Cotizar" activada. Deduplica por SKU sumando cantidades.
   function gather(){
     var sala = salaActiva(); if(!sala) return [];
+    if(sala === "hernan" && typeof window.SM_hernanElegidos === "function") return window.SM_hernanElegidos();
     var vistos = {};
     document.querySelectorAll('input.inc[data-sala="' + sala + '"]').forEach(function(chk){
       if(!chk.checked) return;
@@ -62473,6 +62474,7 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
         : "Abre una pestaña de sala y marca los productos que quieres cotizar.");
       return;
     }
+    if(salaActiva() === "hernan" && typeof window.SM_hernanAPrecotizador === "function") { window.SM_hernanAPrecotizador(); return; }
     window.SALAS_enviarACotizacion(items);
   });
   // Ya cargados el archivo de fichas y la lista de precios, se completan las fotos que faltaban
@@ -62897,20 +62899,38 @@ window.OCT_VENTA_APARTE = {
       });
       const cot = cont.querySelector('#hs-cotizar');
       if (cot) cot.addEventListener('click', function(){
-        // Se marcan las casillas de siempre (sala-pick) para que la sala entre por el mismo
-        // camino que cualquier otra cotización.
-        const sinAhora = fuera[salaActual] || {};
-        let n = 0;
-        itemsDe(salaActual).forEach(function(x){
-          if (sinAhora[x.sku]) return;
-          document.querySelectorAll('input.sala-pick[data-sku="' + x.sku.replace(/"/g, '\\"') + '"]').forEach(function(cb){
-            if (!cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change', { bubbles: true })); n++; }
-          });
-        });
-        alert(n ? ('Listo: ' + n + ' producto(s) marcado(s). Abre "Enviar a cotización" para terminar.')
-                : 'No pude marcar los productos: esta pantalla no tiene sus casillas. Usa el Stock de Salas para armar la cotización.');
+        // Rayen 22-sep-2026: antes buscaba casillas "sala-pick" que en el Armador no existen y
+        // siempre decía "No pude marcar los productos". Ahora la sala pasa al PRECOTIZADOR, donde
+        // ella ve el costo con IVA, mueve el margen o escribe el precio, y de ahí al Cotizador.
+        aPrecotizador();
+      });
+      if (window.SM_actualizarContadorCotizacion) { try { window.SM_actualizarContadorCotizacion(); } catch(e){} }
+    }
+
+    // Los productos que quedan marcados en una sala de Hernán, listos para el Cotizador.
+    function elegidosDe(id){
+      const sinAhora = fuera[id] || {};
+      return itemsDe(id).filter(function(x){ return !sinAhora[x.sku]; }).map(function(x){
+        return { sku: x.sku, cant: 1, precio: x.precio, nombre: x.nombre, img: x.img };
       });
     }
+    // El botón flotante "Enviar a cotización" también sirve en esta pestaña.
+    window.SM_hernanElegidos = function(){ return elegidosDe(salaActual); };
+    function aPrecotizador(){
+      const items = elegidosDe(salaActual);
+      if (!items.length) { alert('Esta sala no tiene productos marcados.'); return; }
+      const sala = SALAS.find(function(s){ return s.id === salaActual; }) || {};
+      const agregados = (extra[salaActual] || []).length;
+      const payload = {
+        titulo: (sala.n || 'Sala de Hernán') + (agregados ? ' + ' + agregados + ' agregado' + (agregados > 1 ? 's' : '') : ''),
+        subtitulo: items.length + ' productos, en el orden de importancia de Hernán.',
+        productos: items.map(function(x){ return { sku: x.sku, cant: 1 }; })
+      };
+      try { localStorage.setItem('oc_precotizacion', JSON.stringify(payload)); }
+      catch(e){ alert('No se pudo preparar la cotización (memoria del navegador llena).'); return; }
+      window.open('PrepararCotizacion.html?d=seleccion', '_blank');
+    }
+    window.SM_hernanAPrecotizador = aPrecotizador;
 
     // Lista para autocompletar al agregar productos.
     const dl = document.createElement('datalist');

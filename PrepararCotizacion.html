@@ -117,6 +117,7 @@ a.sec:hover,button.sec:hover{transform:translateY(-1px);box-shadow:0 4px 12px rg
    las celdas nuevas volvían a nacer ocultas, con lo que la fila quedaba corrida y el
    precio de la web se salía de la tabla. */
 .col-costo{display:none}
+.dato-sub.costo-iva{color:var(--navy);font-weight:700}
 body.con-costos .col-costo{display:table-cell}
 .web-si{font-weight:700;color:var(--navy);text-decoration:none;border-bottom:1px dotted var(--sky)}
 .web-no{font-size:11.5px;color:#98A2B3}
@@ -236,6 +237,8 @@ button.sec.peligro:hover{background:#FDECEA}
       <div><span>Neto productos</span><span id="tNeto">—</span></div>
       <div><span>IVA 19%</span><span id="tIva">—</span></div>
       <div class="big"><span>Total con IVA</span><span id="tTotal">—</span></div>
+      <div id="filaCosto" style="display:none"><span>Costo con IVA</span><span id="tCosto">—</span></div>
+      <div id="filaMargen" style="display:none"><span>Margen</span><span id="tMargen">—</span></div>
     </div>
   </div>
 
@@ -278,6 +281,7 @@ button.sec.peligro:hover{background:#FDECEA}
 </div>
 
 <script src="SalasACotizacion.js"></script>
+<script src="CostosSalasCifrados.js"></script>
 <script>
 // ── Página que deja una cotización lista para el Cotizador ─────────────
 // Uso: PrepararCotizacion.html?d=<nombre>  →  lee CotizacionesPreparadas/<nombre>.json
@@ -291,7 +295,7 @@ button.sec.peligro:hover{background:#FDECEA}
 // a un archivo chico que se pide SIN caché; si no calza con la que trae adentro, se
 // recarga sola con una dirección nueva y esa sí llega fresca.
 // AL PUBLICAR UN CAMBIO: subir VERSION acá Y en version.json (el mismo número).
-var VERSION = "2026-09-21-01";
+var VERSION = "2026-09-22-01";
 
 (function comprobarVersion(){
   fetch("version.json?t=" + Date.now(), { cache:"no-store" })
@@ -309,6 +313,8 @@ var VERSION = "2026-09-21-01";
 })();
 
 var PREPARADAS = [
+  // Sala Manual Luminea B de Hernan + 4 agregados (22-sep-2026), para ver el margen.
+  { id:"manual-luminea-b-hernan", titulo:"Manual Luminea B (Hernán) + 4 agregados" },
   // NeuroMed Solutions SpA (21-sep-2026): solicitud de Alejandro Zuleta que llego a contacto@ y
   // reenvio Mario. Sala TEA con Tecnologia SHX de la web + fibra optica 3 m, baldosas de gel,
   // difusor y kit de aromaterapia. Falta que Rayen cargue despacho a Iquique, instalacion y
@@ -436,7 +442,110 @@ function calcula(L){
 // margen quedó cuando ella escribe el precio a mano.
 // El costo de una linea. Los productos nuestros van por su codigo; lo que se compra afuera
 // no tiene codigo y viaja bajo una clave propia (#1, #2...). Ver [[precotizador-preparar-cotizacion]].
-function costoDe(L){ return COSTOS ? Number(COSTOS[L.ck || L.codigo] || 0) : 0; }
+function costoDe(L){
+  // Los productos de SALA tienen su costo en otro paquete (ver abrirCostosSala).
+  if (L.esSala && COSTOS_SALA) {
+    var cs = COSTOS_SALA.sku[L.sku] || COSTOS_SALA.oc[L.codigo || codigoSala(L)] || 0;
+    if (cs) return cs;
+  }
+  return COSTOS ? Number(COSTOS[L.ck || L.codigo] || 0) : 0;
+}
+function codigoSala(L){
+  return (L.sku && typeof window.SALAS_codigoDe === "function") ? window.SALAS_codigoDe(L.sku) : "";
+}
+
+// ── Costos de SALA, solo para Rayen (22-sep-2026) ─────────────────────────
+// Rayen: "me tiene que mostrar a mí únicamente a mí el costo con IVA del producto... y luego
+// que yo pueda seleccionar el margen y ver el valor del que lo estoy vendiendo, y modificar el
+// margen y también el valor". Los costos son los MISMOS que usa la página de Stock:
+// CostosSalasCifrados.js, cerrado con la clave de su vista de administradora. Quien no tiene
+// esa clave (Hernán, los ejecutivos) no ve ningún costo: la página queda igual que antes.
+var COSTOS_SALA = null;   // { sku: {SKU: costo neto}, oc: {OC-####: costo neto} }
+async function abrirCostosSala(clave){
+  var p = window.OCT_COSTOS_SALAS;
+  if (!clave || !p || !p.datos || !window.crypto || !crypto.subtle) return false;
+  var mat = await crypto.subtle.importKey("raw", new TextEncoder().encode(clave), "PBKDF2", false, ["deriveKey"]);
+  var llave = await crypto.subtle.deriveKey(
+    { name:"PBKDF2", salt:b64(p.sal), iterations:p.iter, hash:"SHA-256" },
+    mat, { name:"AES-GCM", length:256 }, false, ["decrypt"]);
+  var d = JSON.parse(new TextDecoder().decode(
+    await crypto.subtle.decrypt({ name:"AES-GCM", iv:b64(p.iv) }, llave, b64(p.datos))));
+  var num = function(s){ return Number(String(s == null ? "" : s).replace(/[$\s]/g, "").replace(/,/g, "")) || 0; };
+  var porSku = {}, porOc = {};
+  // 1. Tarifa de Qinera. "Costo en Chile" viene CON IVA solo en la vía marítima; la de
+  //    transporte incluido es neta. Misma regla que _costoNetoDe() de la página de Stock.
+  String(d.tarifa || "").split(/\r?\n/).forEach(function(linea){
+    var c = linea.split("\t").map(function(x){ return String(x).trim(); });
+    if (c.length < 4 || !/^[A-Z0-9]+-[A-Z0-9-]+$/i.test(c[0])) return;
+    var exw = num(c[2]), puesto = num(c[3]);
+    if (!exw || !puesto) return;
+    var via = String(c[6] || "").toLowerCase();
+    var maritimo = via.indexOf("maritimo") >= 0 || (!via && puesto / exw > 1.2);
+    porSku[c[0]] = Math.round(maritimo ? puesto / 1.19 : puesto);
+  });
+  // 2. Los que no están en la tarifa (columpios, escalera, bola de espejos): ya vienen netos.
+  if (/COSTOS OCT\s*[—-]\s*FUERA DE LA TARIFA/i.test(String(d.fuera || ""))) {
+    String(d.fuera).split(/\r?\n/).forEach(function(linea){
+      var c = linea.split("\t").map(function(x){ return String(x).trim(); });
+      if (c.length < 3 || !num(c[2])) return;
+      if (/^OC-\d{3,5}$/i.test(c[0])) porOc[c[0].toUpperCase()] = Math.round(num(c[2]));
+      else if (/^[A-Z]{2,}[-0-9]/i.test(c[0]) && !porSku[c[0]]) porSku[c[0]] = Math.round(num(c[2]));
+    });
+  }
+  // 3. Su vista de administradora, por código OC (lo que viene de la web y del maestro).
+  var i = String(d.adm || "").indexOf("const DATA = [");
+  if (i >= 0) {
+    try {
+      var m = d.adm.slice(i).match(/^const DATA = (\[[\s\S]*\]);?\s*$/);
+      (m ? JSON.parse(m[1]) : []).forEach(function(x){
+        var oc = String(x && x.codigo || "").trim();
+        if (/^OC-\d{3,5}$/.test(oc) && Number(x.costoNeto) && !porOc[oc]) porOc[oc] = Math.round(Number(x.costoNeto));
+      });
+    } catch(e){}
+  }
+  COSTOS_SALA = { sku:porSku, oc:porOc };
+  document.body.classList.add("con-costos");
+  var barra = document.getElementById("barraClave");
+  barra.style.display = ""; barra.classList.add("abierta"); barra.classList.remove("mala");
+  document.getElementById("formClave").style.display = "none";
+  document.getElementById("bcTitulo").textContent = "Listo: ves el costo con IVA y puedes cambiar el margen o el precio de cada producto.";
+  document.getElementById("bcPie").textContent = "El precio arranca en el de la lista de Salas. Si cambias el margen, el precio se calcula desde el costo; si escribes el precio, el margen se calcula solo.";
+  refrescar();
+  return true;
+}
+function haySala(){ return LINEAS.some(function(L){ return L.esSala; }); }
+// Con la clave ya guardada en este computador se abre solo. Si no está, deja el cuadro de la
+// clave a la vista (solo en su pantalla: la de un ejecutivo no pide nada).
+function costosSalaAlAbrir(){
+  if (!MOSTRAR_COSTO || !haySala()) return;
+  var g = null;
+  try { g = localStorage.getItem(RECUERDO_ADM); } catch(e){}
+  abrirCostosSala(g).then(function(ok){ if (!ok) pedirClaveSala(); })
+                    .catch(function(){ pedirClaveSala(); });
+}
+function pedirClaveSala(){
+  if (COSTOS_SALA) return;
+  var barra = document.getElementById("barraClave"), form = document.getElementById("formClave");
+  barra.style.display = ""; barra.classList.remove("abierta");
+  form.style.display = "";
+  document.getElementById("bcTitulo").textContent = "Escribe tu clave para ver el costo de los productos de sala.";
+  document.getElementById("bcPie").textContent = "Es la misma de tu lista de administradora. Queda guardada en este computador y no te la vuelvo a pedir.";
+  if (form.dataset.sala) return;
+  form.dataset.sala = "1";
+  form.addEventListener("submit", async function(e){
+    e.preventDefault();
+    var inp = document.getElementById("inClave");
+    if (!inp.value || COSTOS_SALA) return;
+    var ok = false;
+    try { ok = await abrirCostosSala(inp.value); } catch(err){ ok = false; }
+    if (ok) { try { localStorage.setItem(RECUERDO_ADM, inp.value); } catch(e2){} }
+    else if (!(DATOS && DATOS.secreto)) {
+      barra.classList.add("mala");
+      document.getElementById("bcPie").textContent = "Esa clave no es. Es la misma de tu lista de administradora.";
+      inp.value = ""; inp.focus();
+    }
+  });
+}
 
 function margenImplicito(L, neto){
   var costo = costoDe(L);
@@ -475,6 +584,7 @@ function pintar(datos){
     var linea = {
       codigo: p.codigo || "",
       ck:     p.ck || "",
+      sku:    p.sku || "",
       nombre: p.nombre || (c && c.n) || "(producto sin nombre)",
       desc:   p.desc || "",
       cant:   Number(p.cant || 1),
@@ -505,7 +615,7 @@ function pintar(datos){
 function refrescar(){
   var tb = document.getElementById("tbody");
   var sinPrecio = [], sinFoto = [], desconocidos = [], bajoElMinimo = 0;
-  var subNeto = 0;
+  var subNeto = 0, subCosto = 0;
   FILAS = [];
   tb.innerHTML = "";
 
@@ -523,10 +633,14 @@ function refrescar(){
     subNeto += netoUn * L.cant;
 
     var costo = costoDe(L);
-    var puedeMover = !!COSTOS && (L.lp.length > 0 || costo > 0);
+    var puedeMover = (!!COSTOS || !!COSTOS_SALA) && (L.lp.length > 0 || costo > 0);
 
     // Cuando el precio lo escribió ella, el margen se muestra sacado del costo, en gris.
-    var mMostrar = (L.precioManual != null) ? margenImplicito(L, netoUn) : L.margen;
+    // En sala el precio arranca en el de la lista (sin margen elegido): el margen se muestra
+    // calculado desde el costo, igual que cuando ella escribe el precio.
+    var mCalculado = (L.precioManual != null) || (L.margen == null && costo > 0);
+    var mMostrar = mCalculado ? margenImplicito(L, netoUn) : L.margen;
+    if (costo && netoUn) { subCosto += costo * L.cant; }
     // Bajo el mínimo cuenta igual si el margen lo escribió él o si quedó así por haber
     // escrito el precio final a mano: es el mismo caso visto por el otro lado.
     // Se compara con el número que se VE en la casilla (un decimal): así nunca pasa que la
@@ -540,7 +654,7 @@ function refrescar(){
       ? '<td class="margen-cell"><span class="candado">' + (MOSTRAR_COSTO ? 'con tu clave' : '—') + '</span></td>'
       : '<td class="margen-cell">' +
           // Si el precio escrito a mano queda bajo el costo, el margen sale negativo y en rojo.
-          '<input class="margen-in' + (L.precioManual != null ? ' calculado' : '') +
+          '<input class="margen-in' + (mCalculado ? ' calculado' : '') +
                  (mMostrar < 0 ? ' perdida' : '') + (bajoMin ? ' bajo-min' : '') + '" ' +
                  'type="number" step="0.5" min="0" max="90" ' +
                  'data-i="' + i + '" value="' + (Math.round(mMostrar * 1000) / 10) + '"' +
@@ -575,7 +689,13 @@ function refrescar(){
     // Debajo del precio unitario van, chiquitos, el neto y —solo con la clave— el costo.
     // Antes eran tres columnas propias y la tabla no cabía en la pantalla.
     var bajoPrecio = netoUn
-      ? '<span class="dato-sub">neto ' + CLP(netoUn) + '</span>' + ((costo && MOSTRAR_COSTO) ? '<span class="dato-sub">costo ' + CLP(costo) + '</span>' : '')
+      ? '<span class="dato-sub">neto ' + CLP(netoUn) + '</span>' + ((costo && MOSTRAR_COSTO)
+          ? (L.esSala && COSTOS_SALA
+              // Sala: lo que pidió Rayen es el costo CON IVA; el neto va debajo, más chico.
+              ? '<span class="dato-sub costo-iva">costo c/IVA ' + CLP(costo * 1.19) + '</span>' +
+                '<span class="dato-sub">costo neto ' + CLP(costo) + '</span>'
+              : '<span class="dato-sub">costo ' + CLP(costo) + '</span>')
+          : '')
       : '';
 
     // Precio de la COMPETENCIA, justo debajo del precio que se está cobrando, para poder
@@ -602,7 +722,7 @@ function refrescar(){
                : '<div class="sinfoto">sin foto</div>') +
         '<div class="prod-txt">' +
           '<div class="linea-cod"><span class="num">' + (i + 1) + '</span>' +
-            (L.codigo ? '<span class="cod">' + L.codigo + '</span>' : '') +
+            ((L.codigo || codigoSala(L)) ? '<span class="cod">' + (L.codigo || codigoSala(L)) + '</span>' : '') +
             (L.deCotizacion ? '<span class="ya-venia">ya estaba en la cotizaci\u00f3n</span>' : '') + '</div>' +
           '<div class="nom">' + L.nombre + '</div>' +
           (L.desc ? '<div class="desc">' + L.desc + '</div>' : '') +
@@ -623,7 +743,7 @@ function refrescar(){
       '<td class="n">' + celdaStock + '</td>';
     tb.appendChild(tr);
 
-    FILAS.push({ nombre:nombreCompleto(L), codigo:L.codigo, desc:L.desc, cant:String(L.cant),
+    FILAS.push({ nombre:nombreCompleto(L), codigo:L.codigo || codigoSala(L), desc:L.desc, cant:String(L.cant),
                  precio:String(netoUn), modo:"neto", img:L.img });
   });
 
@@ -692,6 +812,16 @@ function refrescar(){
   document.getElementById("tNeto").textContent  = CLP(subNeto);
   document.getElementById("tIva").textContent   = CLP(subNeto * 0.19);
   document.getElementById("tTotal").textContent = CLP(subNeto * 1.19);
+  // Costo y margen de la cotización completa: solo cuando se abrieron los costos de sala.
+  var verMg = !!COSTOS_SALA && MOSTRAR_COSTO && subCosto > 0;
+  ["filaCosto", "filaMargen"].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.style.display = verMg ? "" : "none";
+  });
+  if (verMg) {
+    document.getElementById("tCosto").textContent = CLP(subCosto * 1.19) + " (neto " + CLP(subCosto) + ")";
+    document.getElementById("tMargen").textContent = CLP(subNeto - subCosto) + " neto · " +
+      (subNeto ? (Math.round((1 - subCosto / subNeto) * 1000) / 10).toString().replace(".", ",") : "0") + "%";
+  }
   document.getElementById("cardTabla").style.display = "block";
   document.getElementById("cardAcciones").style.display = "block";
 
@@ -877,6 +1007,7 @@ function cargarSeleccion(){
     : "Si el margen que eliges es el de una lista publicada, se usa ese precio tal cual; si no, se calcula desde el costo.";
 
   pintar(datos);
+  costosSalaAlAbrir();
 }
 
 /* Una cotización PREPARADA que viene marcada con sin_costos:true se abre igual que la
@@ -1056,6 +1187,7 @@ document.addEventListener("DOMContentLoaded", function(){
       if (datos.sin_costos) { abreSinCostos(datos); return; }
       pintar(datos);
       prepararClave();
+      costosSalaAlAbrir();
     })
     .catch(function(e){
       msg("error", "No se encontró la cotización preparada <strong>" + d + "</strong>. (" + e.message + ")");

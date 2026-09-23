@@ -5016,10 +5016,17 @@ window.addEventListener("DOMContentLoaded", () => {
         // OJO: SOLO cuando el origen es Salas. Los productos que llegan de la lista de precios
         // de administradora (_origen "lista-adm") o de PrepararCotizacion ("preparada") NO son
         // sala y tienen que seguir saliendo -AT.
-        const _esSala = (_d._origen === "salas") || !!_d.sala;
+        const _esSala = (_d._origen === "salas") || !!_d.sala || !!_d.salaRegion;
         if (_esSala) {
           const _rSi = document.querySelector('input[name="salaMulti"][value="si"]');
           if (_rSi && !_rSi.checked) { _rSi.checked = true; switchSalaMulti("si"); }
+        }
+        // Rayen 23-sep-2026: la precotización de sala llega con su región y la instalación/transporte/
+        // capacitación queda cargada sola (la misma tabla del selector), sin elegirla a mano.
+        if (_d.salaRegion) {
+          const _sr = document.getElementById("salaRegion");
+          const _op = _sr ? [].find.call(_sr.options, o => o.text.trim() === _d.salaRegion) : null;
+          if (_op) { _sr.value = _op.value; onSalaRegionChange(); }
         }
         // La cotización viene armada desde otra pantalla: se le pre-carga el correlativo REAL
         // del registro (no un número inventado). Se hace más abajo, después de limpiar el campo.

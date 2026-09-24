@@ -52,7 +52,7 @@ window.SALAS_ESPECIFICACIONES = {
   "tec": "Dimensiones externas de 540 × 430 × 560 mm. Alimentación de 230 V 50 Hz. Consumo máximo total de 2.300 W. Equipo informático integrado: procesador de cuatro núcleos a 2,70 GHz, 32 GB de memoria, 240 GB en estado sólido más 1 TB de respaldo, sistema operativo de 64 bits. Amplificación de 2+2 salidas de vibración de 50 W por canal y 2 canales de altavoz de 80 W por canal. Control por radiofrecuencia de 433 MHz con 30 m de alcance. Salidas DMX, HDMI, D-Sub y DVI-D. Soporte para una y para doble proyección.",
   "cat": "Ordenador servidor SHX · Software de control · Tableta con control inalámbrico · Proyector de corta distancia · Sistema de sonido integrado · Amplificador de vibración de 2x2 salidas · Rack con todas las conexiones · Mueble con cerradura de 90 x 62 x 57 cm · Más de 150 escenas incluidas · Personalización ilimitada",
   "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa",
-  "logro": "Deja la sala completa gobernada desde un solo mueble cerrado, con más de 150 escenas ya incluidas.",
+  "logro": "Deja la sala completa controlada desde un solo mueble cerrado, con más de 150 escenas ya incluidas.",
   "unico": "Integra el equipo, la amplificación y las conexiones en un rack con cerradura, y admite doble proyección."
  },
  "BJ-LPIS-V": {
@@ -101,7 +101,7 @@ window.SALAS_ESPECIFICACIONES = {
   "n": "Rincón Luminea con tablet",
   "oc": "OC-2435",
   "fam": "Rincón Luminea",
-  "que": "La versión del Rincón Luminea que trae su propia tableta de control incorporada, para gobernarlo sin depender de la unidad central de la sala.",
+  "que": "La versión del Rincón Luminea que trae su propia tableta de control incorporada, para controlarlo sin depender de la unidad central de la sala.",
   "trab": "Estimulación visual · Regulación sensorial · Causa-efecto · Relajación · Atención · Interacción · Actividades personalizadas · Juegos interactivos",
   "ind": "Parálisis cerebral · Trastorno del espectro autista · Daño cerebral · Discapacidad intelectual · Personas mayores · Discapacidad visual · Atención temprana",
   "inc": "Se entrega con tubo de burbujas luminea.",
@@ -317,7 +317,7 @@ window.SALAS_ESPECIFICACIONES = {
   "oc": "OC-0413",
   "fam": "Button 6",
   "que": "Mando de seis botones que permite controlar de forma sencilla los dispositivos de la sala multisensorial: tubos de burbujas, fibras ópticas o piscinas de bolas. Compatible con el Sistema SHX para activar escenas sincronizadas de luz, sonido, imagen y efectos.",
-  "trab": "Causa-efecto, elección entre alternativas, anticipación y autonomía. Sus seis entradas de conmutador permiten conectar cualquier pulsador adaptado, de modo que una persona con control motor muy reducido pueda gobernar la sala por sí misma.",
+  "trab": "Causa-efecto, elección entre alternativas, anticipación y autonomía. Sus seis entradas de conmutador permiten conectar cualquier pulsador adaptado, de modo que una persona con control motor muy reducido pueda controlar la sala por sí misma.",
   "ind": "Parálisis cerebral · Trastorno del espectro autista · Daño cerebral · Discapacidad intelectual · Personas mayores · Discapacidad visual",
   "inc": "Mando con batería recargable y su cargador.",
   "tec": "Dimensiones de 290 × 220 × 120 mm. Seis pulsadores retroiluminados y seis entradas de conmutador para acceso adaptado. Batería de litio-polímero de 3,7 V y 2.400 mAh, con carga por USB de 5 V – 1 A en 5 horas. Comunicación por radiofrecuencia de 433 MHz en banda ISM.",

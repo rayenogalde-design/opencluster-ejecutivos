@@ -298,7 +298,7 @@ button.sec.peligro:hover{background:#FDECEA}
 // a un archivo chico que se pide SIN caché; si no calza con la que trae adentro, se
 // recarga sola con una dirección nueva y esa sí llega fresca.
 // AL PUBLICAR UN CAMBIO: subir VERSION acá Y en version.json (el mismo número).
-var VERSION = "2026-09-25-03";
+var VERSION = "2026-09-25-04";
 
 (function comprobarVersion(){
   fetch("version.json?t=" + Date.now(), { cache:"no-store" })
@@ -1163,12 +1163,14 @@ function abrirEnCotizador(){
     payload._sigue = true;
   }
   try {
+    if (haySala() && payload.sala == null) payload.sala = true; // lo entiende también un Cotizador viejo
     localStorage.setItem("oc_sala_pendiente", JSON.stringify(payload));
   } catch(e) {
     msg("error", "No se pudo preparar la cotización: la memoria del navegador está llena.");
     return;
   }
-  window.open("CotizadorOpenCluster.html", "_blank");
+  // Con ?_v= el navegador no usa un Cotizador guardado (GitHub lo deja 10 minutos en caché).
+  window.open("CotizadorOpenCluster.html?_v=" + VERSION, "_blank");
 }
 
 // Las que ya mandó quedan marcadas en ESTE navegador (localStorage), con la fecha.

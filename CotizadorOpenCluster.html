@@ -1338,6 +1338,10 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
         <label><input type="radio" name="salaMulti" value="si" onchange="switchSalaMulti('si')"> Sí</label>
       </div>
       <div id="panelSalaMulti" style="display:none;margin-top:10px;">
+        <!-- Rayen 25-sep-2026: en sala la sección de envío se esconde; esta casilla deja el retiro en bodega (banner + nota). -->
+        <label style="display:flex;align-items:center;gap:7px;padding:7px 9px;margin-bottom:9px;border:1.5px solid #c8d8f8;border-radius:6px;background:#f4f8ff;cursor:pointer;font-size:10.5px;font-weight:700;color:var(--navy);">
+          <input type="checkbox" id="chkSalaRetiro" onchange="onSalaRetiroChange()"> 📦 El cliente retira en nuestra bodega (Quilpué) — sin despacho
+        </label>
         <span class="elabel">¿A qué región vas?</span>
         <select id="salaRegion" onchange="onSalaRegionChange()"
           style="width:100%;padding:6px 9px;border:1.5px solid #ffd199;border-radius:6px;font-family:'Open Sans',sans-serif;font-size:11.5px;margin-bottom:8px;background:white;outline:none;box-sizing:border-box;">
@@ -3226,7 +3230,9 @@ function upd() {
   if(notaAd) condLines.push("Nota: "+notaAd);
   // Tipo de envío — _envioTipo ya está declarado más abajo, así que lo leemos aquí directamente
   const _envTipoFinal = (document.querySelector('input[name="envioTipo"]:checked')?.value || "noincluido");
-  if(_envTipoFinal === "retiro")   condLines.push("Cliente retira productos directamente desde nuestras bodegas ubicadas en Quilpué, V Región, Chile. Sin costo de envío.");
+  const _salaRet = document.querySelector('input[name="salaMulti"]:checked')?.value === "si";
+  if(_envTipoFinal === "retiro" && _salaRet) condLines.push("El despacho no está incluido, porque el cliente solicita retirar en nuestra bodega, ubicada en Quilpué, V Región de Chile.");
+  else if(_envTipoFinal === "retiro") condLines.push("Cliente retira productos directamente desde nuestras bodegas ubicadas en Quilpué, V Región, Chile. Sin costo de envío.");
   if(_envTipoFinal === "propio")   condLines.push("Costo de envío — Incluido: Logística propia.");
   if(_envTipoFinal === "courrier") condLines.push("Costo de envío — Incluido: Courrier externo.");
   const condHTML=condLines.map(l=>`<div>${l}</div>`).join("");
@@ -3797,6 +3803,13 @@ function onSalaRegionChange() {
 
 let _salaModo = "neto";
 
+function onSalaRetiroChange() {
+  const on = !!document.getElementById("chkSalaRetiro")?.checked;
+  const r = document.querySelector(`input[name="envioTipo"][value="${on ? "retiro" : "noincluido"}"]`);
+  if(r) { r.checked = true; switchEnvio(on ? "retiro" : "noincluido"); }
+  upd();
+}
+
 function switchSalaMulti(val) {
   const panel = document.getElementById("panelSalaMulti");
   if(panel) panel.style.display = val === "si" ? "block" : "none";
@@ -3805,8 +3818,10 @@ function switchSalaMulti(val) {
   const envioSec = envioBox ? envioBox.previousElementSibling : null;
   if(val === "si") {
     // Forzar tipo envío a "noincluido"
-    const rNoInc = document.querySelector('input[name="envioTipo"][value="noincluido"]');
-    if(rNoInc) { rNoInc.checked = true; switchEnvio("noincluido"); }
+    // Salvo que esté marcado el retiro en bodega de la sala.
+    const _ret = !!document.getElementById("chkSalaRetiro")?.checked;
+    const rNoInc = document.querySelector(`input[name="envioTipo"][value="${_ret ? "retiro" : "noincluido"}"]`);
+    if(rNoInc) { rNoInc.checked = true; switchEnvio(_ret ? "retiro" : "noincluido"); }
     // Ocultar toda la sección de envío
     if(envioBox) envioBox.style.display = "none";
     if(envioSec) envioSec.style.display = "none";
@@ -4566,6 +4581,7 @@ async function guardarCotizacion() {
       activa: document.querySelector('input[name="salaMulti"]:checked')?.value === "si",
       valor:  document.getElementById("eSalaVal")?.value || "",
       modo:   _salaModo || "neto",
+      retiro: !!document.getElementById("chkSalaRetiro")?.checked,
     },
     // Ítems adicionales
     itemsAdicionales: itemsAdicionales.map(i => ({
@@ -4747,6 +4763,7 @@ function aplicarCotizacion(d) {
       }
       // Cargar sala multisensorial
       if(d.sala) {
+        const _cr = document.getElementById("chkSalaRetiro"); if(_cr) _cr.checked = !!d.sala.retiro;
         const rSala = document.querySelector(`input[name="salaMulti"][value="${d.sala.activa ? 'si' : 'no'}"]`);
         if(rSala) { rSala.checked = true; switchSalaMulti(d.sala.activa ? 'si' : 'no'); }
         if(d.sala.activa && d.sala.valor) {
@@ -5019,7 +5036,9 @@ window.addEventListener("DOMContentLoaded", () => {
         const _esSala = (_d._origen === "salas") || !!_d.sala || !!_d.salaRegion || !!_d.esSala;
         if (_esSala) {
           const _rSi = document.querySelector('input[name="salaMulti"][value="si"]');
+          if (_d.retiro) { const _cr = document.getElementById("chkSalaRetiro"); if (_cr) _cr.checked = true; }
           if (_rSi && !_rSi.checked) { _rSi.checked = true; switchSalaMulti("si"); }
+          else if (_d.retiro) onSalaRetiroChange();
         }
         // Rayen 23-sep-2026: la precotización de sala llega con su región y la instalación/transporte/
         // capacitación queda cargada sola (la misma tabla del selector), sin elegirla a mano.

@@ -2944,7 +2944,9 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
       }
       let key = _smProdNorm(rawName);
       if(_SM_PROD_ALIAS[key]) key = _SM_PROD_ALIAS[key];
-      if(vistos.has(key)) return;
+      // El mismo producto en dos líneas (ej. un Enabler Socket+ para el difusor y otro para la piscina, 28-sep-2026):
+      // se SUMAN las cantidades. Antes la segunda línea se descartaba y el pedido contaba uno de menos.
+      if(vistos.has(key)){ const _p = out.find(function(o){ return o.key === key; }); if(_p) _p.qty += qty; return; }
       vistos.add(key);
       out.push({ key, display: rawName, qty, oc: _cods[_i] || '' });
     });

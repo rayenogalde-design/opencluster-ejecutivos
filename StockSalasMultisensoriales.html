@@ -2901,6 +2901,9 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
   Object.values(STOCK_COMBINADO).forEach(p => {
     let k = _smProdNorm(p.item);
     if (_SM_PROD_ALIAS[k]) k = _SM_PROD_ALIAS[k];
+    // Una ficha sin SKU (las «Hosp. R. del Río») no pisa a la del mismo nombre que sí lo
+    // tiene: el Espejo recto grande se descuenta del BJ-EEGR de bodega (Rayen, 29-sep-2026).
+    if (STOCK_SM[k] && STOCK_SM[k].sku && !p.sku) return;
     STOCK_SM[k] = p;
   });
   // Extrae {key, display, qty} de un string de productos tipo "Nombre x Cant, Nombre2 x Cant2".
@@ -3984,12 +3987,17 @@ function _refrescarVistasStock(){
   }
   // Los productos de una cotización cruzados con el stock, tal como los espera el
   // generador de Excel. Lo usan el Excel de una cotización y las pestañas del de varias.
+  // SKU para mostrar: el de la ficha de stock y, si no hay ficha con SKU (el ComuniQa con
+  // TD Snap no tiene stock), el que corresponde a su código OC.
+  function _skuDeLinea(p, s){
+    return (s && s.sku) || (p.oc && _ocASku()[p.oc]) || '';
+  }
   function _filasStockDeCotizacion(c){
     return _smExtraerProductos(c.productos, c.codigos).map(p => {
       const s = STOCK_SM[p.key];
       const d = _stockPartido(p.qty, s);
       return {
-        sku: (s && s.sku) || '—',
+        sku: _skuDeLinea(p, s) || '—',
         nombre: (s && s.item) || p.display,
         pide: p.qty,
         bodega: d.sinDato ? 0 : d.bod,
@@ -4058,9 +4066,10 @@ function _refrescarVistasStock(){
     const matriz = {};
     seleccionadas.forEach(c => {
       _smExtraerProductos(c.productos, c.codigos).forEach(p => {
-        if (!matriz[p.key]) matriz[p.key] = { display: p.display, porCotiz: {}, total: 0 };
+        if (!matriz[p.key]) matriz[p.key] = { display: p.display, porCotiz: {}, total: 0, oc: '' };
         matriz[p.key].porCotiz[c.cotizacion] = (matriz[p.key].porCotiz[c.cotizacion] || 0) + p.qty;
         matriz[p.key].total += p.qty;
+        if (!matriz[p.key].oc) matriz[p.key].oc = p.oc || '';
       });
     });
     const filas = Object.keys(matriz)
@@ -4070,7 +4079,7 @@ function _refrescarVistasStock(){
         const s = STOCK_SM[key];
         const d = _stockPartido(m.total, s);
         return {
-          sku: (s && s.sku) || '—',
+          sku: _skuDeLinea(m, s) || '—',
           nombre: (s && s.item) || m.display,
           porCotiz: m.porCotiz,
           total: m.total,
@@ -4126,7 +4135,7 @@ function _refrescarVistasStock(){
   function _especificacionesDeCotizacion(c){
     var items = _smExtraerProductos(c.productos, c.codigos).map(function(p){
       var s = STOCK_SM[p.key];
-      return { sku: (s && s.sku) || '', nombre: p.display, cantidad: p.qty };
+      return { sku: _skuDeLinea(p, s), nombre: p.display, cantidad: p.qty };
     });
     _docEspecificaciones(items, { institucion: c.institucion, cotizacion: c.cotizacion });
   }

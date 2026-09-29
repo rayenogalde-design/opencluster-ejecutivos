@@ -589,6 +589,8 @@
   .cotiz-card-acciones .cca-vendida { background:rgba(22,163,74,0.12); border-color:rgba(22,163,74,0.4); color:#12833C; }
   .venta-excel { display:block; width:100%; margin-top:0.5rem; padding:0.6rem 1rem; border:1px solid var(--line,#E3E7EC); border-radius:10px; background:var(--card,#fff); color:var(--ink,#0d1b2a); font-size:0.83rem; font-weight:700; cursor:pointer; }
   .venta-excel:hover { background:var(--paper,#F7F9FB); }
+  button.xls-bajando, button.xls-bajando:hover { background:#08ACF2 !important; border-color:#08ACF2 !important; color:#fff !important; cursor:progress; }
+  button.xls-listo, button.xls-listo:hover { background:#2E7D32 !important; border-color:#2E7D32 !important; color:#fff !important; cursor:default; }
   .venta-msg { margin-top:0.6rem; font-size:0.8rem; font-weight:700; }
   .venta-msg.err { color:#DC2626; }
 
@@ -3674,7 +3676,7 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
     const sel = cotizOrdenPrioridad
       .map(num => COTIZ_SM_TODAS.find(c => c.cotizacion === num))
       .filter(Boolean);
-    _excelGanancias(sel);
+    _botonDescarga(_btnGan, () => _excelGanancias(sel));
   });
 
   let COTIZ_SM_TODAS = [];
@@ -4015,6 +4017,36 @@ function _refrescarVistasStock(){
   // Excel de TODAS las cotizaciones marcadas juntas — la misma tabla "lado a lado"
   // que se ve en pantalla (pedido de Rayen 2026-07-30), y detrás UNA PESTAÑA POR
   // COTIZACIÓN con su detalle completo (pedido de Rayen 2026-08-17).
+  // Aviso en los botones de Excel (pedido de Rayen 29-sep-2026): armar el archivo congela la
+  // página unos segundos y el botón no decía nada, así que lo apretaba varias veces y bajaban
+  // 10 copias. Ahora se pone celeste con "Descargando…", queda bloqueado mientras arma, después
+  // dice "✓ Descargado" y recién ahí se puede volver a apretar. Los clics repetidos se ignoran.
+  function _botonDescarga(btn, fn){
+    if (!btn || btn.dataset.descargando === '1') return;
+    const corto = btn.classList.contains('cca-excel');
+    const original = btn.innerHTML;
+    btn.dataset.descargando = '1';
+    btn.disabled = true;
+    btn.classList.add('xls-bajando');
+    btn.textContent = corto ? 'Bajando…' : 'Descargando Excel… espera, no vuelvas a apretar';
+    // Esperar un cuadro para que el navegador alcance a pintar el celeste antes de congelarse.
+    requestAnimationFrame(() => setTimeout(() => {
+      let ok = false;
+      try { ok = fn() === true; } catch(e) { alert('No pude generar el Excel: ' + e.message); }
+      btn.classList.remove('xls-bajando');
+      if (ok) {
+        btn.classList.add('xls-listo');
+        btn.textContent = corto ? '✓ Listo' : '✓ Excel descargado — revisa tu carpeta Descargas';
+      }
+      setTimeout(() => {
+        btn.classList.remove('xls-listo');
+        btn.innerHTML = original;
+        btn.disabled = false;
+        delete btn.dataset.descargando;
+      }, ok ? 5000 : 0);
+    }, 40));
+  }
+
   function _descargarExcelComparacion(seleccionadas){
     if (!window.OCT_excelComparacion || !window.OCT_descargar) {
       alert('No se pudo cargar el generador de Excel. Recarga la página con Ctrl+Shift+R.');
@@ -4055,6 +4087,7 @@ function _refrescarVistasStock(){
     const detalles = seleccionadas.map(c => _detalleCotizParaExcel(c, fecha));
     const blob = window.OCT_excelComparacion({ fecha: fecha }, nums, filas, detalles);
     window.OCT_descargar(blob, 'Cotizaciones lado a lado (' + nums.length + ') - stock.xlsx');
+    return true;
   }
 
   // Excel de la cotización que se está mirando: lo que pide cruzado con el stock
@@ -4074,6 +4107,7 @@ function _refrescarVistasStock(){
     const blob = window.OCT_excelCotizacion(_detalleCotizParaExcel(c, fecha), filas);
     const limpio = String(c.cotizacion).replace(/[\\/:*?"<>|]/g, '-');
     window.OCT_descargar(blob, 'Cotizacion ' + limpio + ' - stock.xlsx');
+    return true;
   }
 
 
@@ -4144,7 +4178,7 @@ function _refrescarVistasStock(){
     btnXls.type = 'button';
     btnXls.className = 'venta-excel';
     btnXls.textContent = 'Descargar Excel de esta cotización';
-    btnXls.addEventListener('click', () => _descargarExcelCotizacion(c));
+    btnXls.addEventListener('click', () => _botonDescarga(btnXls, () => _descargarExcelCotizacion(c)));
     caja.appendChild(btnXls);
     const btnSpec = document.createElement('button');
     btnSpec.type = 'button';
@@ -4308,6 +4342,7 @@ function _refrescarVistasStock(){
       anchos: [16, 46, 22, 8, 15, 15, 15, 10, 18]
     }, cols, filas);
     window.OCT_descargar(blob, 'Ganancias_Salas_' + fecha.replace(/\//g, '-') + '.xlsx');
+    return true;
   }
 
   // ── PANEL DE LA COTIZACIÓN EN CURSO (Rayen 01-sep-2026) ───────────────────
@@ -6133,11 +6168,11 @@ function _refrescarVistasStock(){
       b.addEventListener('click', (ev) => {
         ev.stopPropagation();
         const cc = COTIZ_SM_TODAS.find(x => x.cotizacion === b.dataset.excelcotiz);
-        if (cc) _descargarExcelCotizacion(cc);
+        if (cc) _botonDescarga(b, () => _descargarExcelCotizacion(cc));
       });
     });
     const btnXlsComp = document.getElementById('btn-excel-comparacion');
-    if (btnXlsComp) btnXlsComp.addEventListener('click', () => _descargarExcelComparacion(seleccionadas));
+    if (btnXlsComp) btnXlsComp.addEventListener('click', () => _botonDescarga(btnXlsComp, () => _descargarExcelComparacion(seleccionadas)));
     const btnCorreo = document.getElementById('btn-correo-faltantes');
     if (btnCorreo) btnCorreo.addEventListener('click', () => _abrirBorradorFaltantes(seleccionadas));
   }

@@ -10164,6 +10164,10 @@ function _detalleCotHTML(c){
     if(!c.cerrada && diasTxt) partes.push(diasTxt);
     det += '<div style="'+SEC+'background:#FAFBFF;"><div style="'+LBL+'">Resumen</div><div style="font-size:12.5px;color:#1a2440;line-height:1.6;">' + esc(partes.join(' · ')) + '</div></div>';
   }
+  // Venta por licitación: con quién se comparte la comisión.
+  if(c.ganada && c.licitacion){
+    det += '<div style="'+SEC+'background:#F5F3FF;border-color:#DDD6FE;"><div style="'+LBL+'">Venta por licitación</div><div style="font-size:12.5px;color:#1a2440;line-height:1.6;">La trabajó <b>'+esc(c.licitacion.licitador||'')+'</b> · comisión del ejecutivo <b>'+String(Math.round((c.licitacion.pct||0)*10000)/100).replace('.',',')+'%</b></div></div>';
+  }
   // Pagos en partes: lista de pagos, saldo y botón para registrar el siguiente.
   if(c.ganada && c.pagos_info){
     const pi = c.pagos_info;
@@ -10890,6 +10894,7 @@ function _pintarVentasMes(){
       html += '<div style="padding:10px 16px;border-top:1px solid var(--smoke,#f1f1f4);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">'+
         '<div style="min-width:0;"><div style="font-weight:700;color:var(--ink);font-size:13.5px;">'+esc(v.institucion||v.cliente||'(sin nombre)')+'</div>'+
           '<div style="font-size:12px;color:var(--subtle);margin-top:2px;">'+esc(v.cotizacion||'')+(v.productos?(' · '+esc(v.productos)):'')+'</div>'+
+          (v.licitacion ? '<div style="font-size:11.5px;font-weight:700;color:#5B21B6;margin-top:3px;">Licitación con '+esc(v.licitacion.licitador||'')+' · comisión del ejecutivo '+String(Math.round((v.licitacion.pct||0)*10000)/100).replace('.',',')+'%</div>' : '')+
           (_tienePagos(v) ? '<div style="font-size:11.5px;font-weight:700;color:#92400E;margin-top:3px;">Pago en partes · este mes cuenta el '+(Math.round(_fracVentaMes(v, VENTASMES_MES)*1000)/10).toLocaleString('es-CL')+'% · '+((v.pagos_info&&v.pagos_info.saldo>0)?('saldo pendiente '+fmtCLP(v.pagos_info.saldo)):'pagada completa')+'</div>' : '')+
         '</div>'+
         '<div style="font-weight:700;color:var(--gold-dk);white-space:nowrap;">'+fmtCLP(Math.round((v.monto||v.neto||0)*_fracVentaMes(v, VENTASMES_MES)))+'</div>'+
@@ -10898,14 +10903,6 @@ function _pintarVentasMes(){
     html += '</div>';
   });
   body.innerHTML = html;
-}
-async function enviarResumenVentasMario(){
-  if(!VENTASMES_MES){ alert('Elige un mes primero.'); return; }
-  const mesLbl = _MES_NOMBRE[parseInt(VENTASMES_MES.split('-')[1],10)-1]+' '+VENTASMES_MES.split('-')[0];
-  if(!confirm('¿Enviar a Mario el resumen de ventas de '+mesLbl+'?\n(Va sin montos. Te llega una copia a ti para tu registro.)')) return;
-  const r = await fetchAPI('crm_resumen_ventas_mes', { solicitante: USUARIO, mes: VENTASMES_MES });
-  if(r && r.ok){ alert('Resumen de '+mesLbl+' enviado a Mario, con copia a ti. ('+(r.cantidad||0)+' ventas).'); }
-  else { alert('No se pudo enviar: '+((r&&r.error)||'error')); }
 }
 // ── Costos pendientes + Extraer planilla (comisiones del mes) ──
 async function abrirCostosPendientes(){
@@ -14601,6 +14598,8 @@ function _fracVentaAnio(c, anio){
   return String(c.mes_cierre||c.mes||'').substring(0,4)===anio ? 1 : 0;
 }
 function _mesesDeVenta(c){ return _tienePagos(c) ? Object.keys(c.pagos_mes) : [String(c.mes_cierre||c.mes||'')]; }
+function _vcEsLicit(){ return ((document.querySelector('input[name="vc-licit"]:checked')||{}).value) === 'si'; }
+function _vcToggleLicit(){ var b = document.getElementById('vc-licit-campos'); if(b) b.style.display = _vcEsLicit() ? '' : 'none'; }
 function _vcTipoPago(){ return (document.querySelector('input[name="vc-tipo-pago"]:checked')||{}).value || 'completo'; }
 function _vcToggleTipoPago(){
   var parcial = _vcTipoPago()==='parcial';
@@ -14770,6 +14769,18 @@ function abrirPanelCierreVenta(num, contacto){
         '<div style="margin-bottom:16px;"><label id="vc-monto-lbl" style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:4px;">Monto recibido</label>' +
           '<input id="vc-monto" type="text" placeholder="$0" value="' + _mtPrefill + '" oninput="_vcValidarMonto()" onblur="_vcFmtMonto(this)" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;">' +
           '<div id="vc-monto-msg" style="font-size:12px;margin-top:4px;color:#6b7280;"></div></div>' +
+        // Venta por licitación: la comisión se comparte con quien la trabajó del equipo de licitaciones.
+        '<div style="margin-bottom:16px;border:1px solid #DDD6FE;background:#F5F3FF;border-radius:12px;padding:12px 14px;">' +
+          '<label style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:6px;">¿Esta venta se hizo por licitación?</label>' +
+          '<label style="margin-right:18px;font-size:14px;cursor:pointer;"><input type="radio" name="vc-licit" value="no" checked onchange="_vcToggleLicit()"> No</label>' +
+          '<label style="font-size:14px;cursor:pointer;"><input type="radio" name="vc-licit" value="si" onchange="_vcToggleLicit()"> Sí, por licitación</label>' +
+          '<div id="vc-licit-campos" style="display:none;margin-top:10px;">' +
+            '<label style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:4px;">Porcentaje de comisión que te corresponde (%)</label>' +
+            '<input id="vc-licit-pct" type="text" inputmode="decimal" placeholder="Ej: 2" style="width:120px;padding:9px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;"> <span style="font-size:14px;color:#374151;">%</span>' +
+            '<div style="font-size:11.5px;color:#6b7280;margin:3px 0 10px;">Solo tu parte. La otra parte la informa quien trabajó la licitación.</div>' +
+            '<label style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:4px;">Nombre de quien trabajó la licitación</label>' +
+            '<input id="vc-licit-nombre" type="text" placeholder="Nombre y apellido" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;">' +
+          '</div></div>' +
         // Productos de la cotización (solo lectura) — para revisar sin tener que abrir la cotización.
         '<div style="margin-bottom:16px;"><label style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:4px;">Productos de la cotización</label>' +
           '<div style="background:#F9FAFB;border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;font-size:13px;color:#374151;line-height:1.45;white-space:pre-wrap;max-height:150px;overflow:auto;">' + (c.__productos ? e2(c.__productos) : '<span style="color:#9ca3af;">(la cotización no trae el detalle de productos)</span>') + '</div></div>' +
@@ -14910,6 +14921,14 @@ async function guardarCierreVenta(){
   // Monto obligatorio SIEMPRE (también en venta tardía): lo trae la cotización, pero no se guarda vacío.
   var _montoVal = String((document.getElementById('vc-monto')||{}).value||'').replace(/[^0-9]/g,'');
   if(!_montoVal){ alert('El monto recibido es obligatorio. Lo trae la cotización; revísalo si hace falta.'); var _m=document.getElementById('vc-monto'); if(_m) _m.focus(); return; }
+  var _esLicit = _vcEsLicit();
+  var _licPct = String((document.getElementById('vc-licit-pct')||{}).value||'').replace('%','').trim();
+  var _licNom = String((document.getElementById('vc-licit-nombre')||{}).value||'').trim();
+  if(_esLicit){
+    var _lp = parseFloat(_licPct.replace(',','.'));
+    if(!(_lp > 0 && _lp <= 100)){ alert('Escribe el porcentaje de comisión que te corresponde en esta licitación (ej: 2).'); var _e1=document.getElementById('vc-licit-pct'); if(_e1) _e1.focus(); return; }
+    if(!_licNom){ alert('Escribe el nombre de quien trabajó la licitación.'); var _e2=document.getElementById('vc-licit-nombre'); if(_e2) _e2.focus(); return; }
+  }
   var _tipoPago = _vcTipoPago();
   var _totalVenta = String((document.getElementById('vc-total-venta')||{}).value||'').replace(/[^0-9]/g,'');
   if(_tipoPago==='parcial' && (!_totalVenta || Number(_montoVal) >= Number(_totalVenta))){
@@ -14925,6 +14944,9 @@ async function guardarCierreVenta(){
     fecha_venta: (document.getElementById('vc-fecha-venta')||{}).value || '',
     monto_recibido: _montoVal,
     tipo_pago: _tipoPago,
+    licitacion: _esLicit,
+    pct_comision_licitacion: _esLicit ? _licPct : '',
+    licitador: _esLicit ? _licNom : '',
     total_venta: _tipoPago==='parcial' ? _totalVenta : '',
     documento: docSel ? docSel.value : 'Factura',
     forma_envio: (document.getElementById('vc-forma')||{}).value || '',

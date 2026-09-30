@@ -2874,7 +2874,7 @@ body{
       <div class="view" id="vVentasMes">
         <div class="sec-head">
           <h1>Ventas del Mes</h1>
-          <p>Ventas ganadas por el mes en que se CERRARON (la fecha en que se marcaron Ganadas) — para comisiones. Elige el mes y el ejecutivo.</p>
+          <p>Ventas ganadas por el mes en que se CERRARON (la fecha en que se marcaron Ganadas) — para comisiones. Si el cliente paga en partes, cada pago cuenta en el mes en que entró. Elige el mes y el ejecutivo.</p>
         </div>
         <div id="ventasMesBar" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:14px 0;"></div>
         <div id="ventasMesBody"><div class="loading-state"><div class="spinner"></div>Cargando…</div></div>
@@ -4407,6 +4407,7 @@ function cerrarRecordatorioDiesel(){
 
 // Lista de acciones write: SIEMPRE van por POST aunque el caller las llame con params
 const ACCIONES_POST = [
+  'crm_registrar_pago',
   'crm_crear_contacto','crm_editar_contacto','crm_eliminar_contacto',
   'crm_agregar_interaccion','crm_editar_interaccion','crm_eliminar_interaccion',
   'crm_crear_tarea','crm_editar_tarea','crm_completar_tarea','crm_eliminar_tarea',
@@ -9748,7 +9749,11 @@ function _kpisDeMisCot(arr, anio){
   let t=0,g=0,s=0,m=0,mg=0;
   (arr||[]).forEach(c=>{
     if(enPerCot(c)){ t++; m += (c.monto||0); }
-    if(enPerGan(c) && c.ganada && c.tipo_venta!=='persona'){ g++; mg += (c.neto || c.monto || 0); }
+    if(c.ganada && c.tipo_venta!=='persona'){
+      if(enPerGan(c)) g++;
+      const fr = (per==='anio') ? _fracVentaAnio(c, anio) : _fracVentaMes(c, per);   // pagos en partes
+      mg += (c.neto || c.monto || 0) * fr;
+    }
     if(!c.cerrada && (c.estado_seguimiento==='pendiente'||c.estado_seguimiento==='vencido')) s++;
   });
   return {total_anio:t, ganadas_anio:g, sin_seguimiento:s, monto_cotizado_anio:m, monto_ganado:mg};
@@ -9797,7 +9802,7 @@ function renderMetaBarMisCot(base, anio){
   else { const quien = ejecSel || (USUARIO||'').split(' ')[0]; meta = _metaDeEjec(quien); titulo = 'META MENSUAL DE VENTAS · ' + quien.toUpperCase(); }
   if(!meta) return '';
   // Vendido = neto GANADO cuyo mes de CIERRE es el mes actual (no la fecha de la cotización).
-  const vendido = (base||[]).filter(c => c.ganada && ((c.mes_cierre||c.mes)===mesHoy)).reduce((s,c)=> s + (c.neto || c.monto || 0), 0);
+  const vendido = Math.round((base||[]).filter(c => c.ganada).reduce((s,c)=> s + (c.neto || c.monto || 0) * _fracVentaMes(c, mesHoy), 0));
   const pct = meta>0 ? Math.min(100, Math.round(vendido/meta*100)) : 0;
   const falta = Math.max(0, meta - vendido);
   // Barra de progreso con el diseño de siempre de OpenCluster: azul oscuro → azul claro.
@@ -10159,6 +10164,18 @@ function _detalleCotHTML(c){
     if(!c.cerrada && diasTxt) partes.push(diasTxt);
     det += '<div style="'+SEC+'background:#FAFBFF;"><div style="'+LBL+'">Resumen</div><div style="font-size:12.5px;color:#1a2440;line-height:1.6;">' + esc(partes.join(' · ')) + '</div></div>';
   }
+  // Pagos en partes: lista de pagos, saldo y botón para registrar el siguiente.
+  if(c.ganada && c.pagos_info){
+    const pi = c.pagos_info;
+    const filasP = (pi.pagos||[]).map(p => '<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:2px 0;"><span>Pago '+p.n+' · '+esc(p.fecha||'')+(p.url?' · <a href="'+esc(p.url)+'" target="_blank" rel="noopener" style="color:#16A34A;">comprobante</a>':'')+'</span><b>'+fmtCLP(p.monto||0)+'</b></div>').join('');
+    det += '<div style="'+SEC+(pi.saldo>0?'background:#FFFBEB;border-color:#FCD34D;':'background:#F0FDF4;')+'"><div style="'+LBL+'">Pagos</div>' + filasP +
+      '<div style="border-top:1px solid #E6E8EF;margin-top:6px;padding-top:6px;font-size:12.5px;display:flex;justify-content:space-between;"><span>Total de la venta</span><b>'+fmtCLP(pi.total_venta||0)+'</b></div>' +
+      (pi.saldo>0
+        ? '<div style="font-size:13px;display:flex;justify-content:space-between;color:#B45309;"><b>Saldo pendiente</b><b>'+fmtCLP(pi.saldo)+'</b></div>' +
+          '<button onclick="event.stopPropagation();abrirRegistrarPago(\''+numJS+'\')" style="margin-top:10px;background:#16A34A;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;">Registrar siguiente pago</button>'
+        : '<div style="font-size:13px;color:#047857;font-weight:800;">✓ Pagada completa</div>') +
+      '</div>';
+  }
   // Probabilidad de cierre — mismo mecanismo que ya usaba Sala Multisensorial (_smSetProb),
   // ahora disponible en todo el pipeline. Solo tiene sentido mientras la cotización sigue abierta.
   if(!c.cerrada){
@@ -10272,6 +10289,7 @@ function _mcFilaConSemaforo(c){
     '<span style="flex:0 0 175px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'+
       '<span style="font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:999px;background:'+sem.bg+';color:'+sem.color+';white-space:nowrap;">'+esc(sem.txt)+'</span>'+
       (diasTxt?'<span style="font-size:10.5px;color:'+_MC_GRIS+';">'+diasTxt+'</span>':'')+
+      ((c.ganada && c.pagos_info && c.pagos_info.saldo>0)?'<span title="Pago en partes" style="font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:999px;background:#FEF3C7;color:#92400E;white-space:nowrap;">Saldo '+fmtCLP(c.pagos_info.saldo)+'</span>':'')+
     '</span>'+
     '<span style="flex:0 0 100px;text-align:right;font-weight:700;color:var(--ink);">'+((c.monto&&c.monto>0)?fmtCLP(c.monto):'—')+'</span>' +
   '</div>';
@@ -10812,12 +10830,14 @@ async function marcarXR(id, tipo){
 /* ════ VENTAS DEL MES — ganadas por fecha de CIERRE (para comisiones) ════ */
 let VENTASMES_MES = '';   // 'YYYY-MM' del mes de cierre elegido
 let VENTASMES_EJEC = '';  // primer nombre del ejecutivo filtrado; '' = todos
-async function cargarVentasMes(){
+async function cargarVentasMes(forzar){
   const cont = document.getElementById('ventasMesBody');
   if(window.__VENTASMES_DATA){ try { _pintarVentasMes(); } catch(e){} }
   else cont.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando…</div>';
   const esAdmin = (typeof ROL!=='undefined' && ROL==='admin');
-  const r = await fetchAPI('crm_mis_cotizaciones', { ejecutivo: esAdmin ? 'Rayen Ogalde' : (USUARIO||''), modo_vista: esAdmin ? 'admin' : 'ejecutiva' });
+  const _pVM = { ejecutivo: esAdmin ? 'Rayen Ogalde' : (USUARIO||''), modo_vista: esAdmin ? 'admin' : 'ejecutiva' };
+  if(forzar) _pVM.forzar = 1;
+  const r = await fetchAPI('crm_mis_cotizaciones', _pVM);
   if(!r || !r.ok){ cont.innerHTML = '<div class="error-state">No se pudieron cargar las ventas.</div>'; return; }
   let _vm = (r.cotizaciones||[]).filter(c => c.ganada);
   if(esAdmin) _vm = _vm.filter(c => String(c.tipo_venta||'') !== 'persona');  // Rayen no ve ventas a personas (Ximena)
@@ -10833,11 +10853,11 @@ function _pintarVentasMes(){
   if(!bar || !body) return;
   const esAdmin = (typeof ROL!=='undefined' && ROL==='admin');
   const ventas = window.__VENTASMES_DATA || [];
-  const meses = Array.from(new Set(ventas.map(_mesCierreDe).filter(m=>m.indexOf('-')>0))).sort().reverse();
+  const meses = Array.from(new Set([].concat.apply([], ventas.map(_mesesDeVenta)).filter(m=>m.indexOf('-')>0))).sort().reverse();
   const ahoraYM = (new Date()).getFullYear() + '-' + String((new Date()).getMonth()+1).padStart(2,'0');
   if(!VENTASMES_MES) VENTASMES_MES = (meses.indexOf(ahoraYM)>=0) ? ahoraYM : (meses[0]||ahoraYM);
   const chip = (val,txt)=> '<button onclick="setVentasMesMes(\''+val+'\')" style="padding:6px 13px;border:1px solid var(--smoke,#e5e7eb);background:'+(VENTASMES_MES===val?'#16A34A':'#fff')+';color:'+(VENTASMES_MES===val?'#fff':'var(--subtle)')+';font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;">'+txt+'</button>';
-  let barH = '<span style="font-size:12px;font-weight:700;color:var(--mist,#9aa3af);">Mes de cierre:</span>';
+  let barH = '<span style="font-size:12px;font-weight:700;color:var(--mist,#9aa3af);">Mes:</span>';
   meses.forEach(ym=>{ const mi=parseInt(ym.split('-')[1],10)-1; barH += chip(ym, (_MES_NOMBRE[mi]||'').substring(0,3)+' '+ym.split('-')[0].substring(2)); });
   if(!meses.length) barH += '<span style="font-size:12.5px;color:var(--subtle);">Sin ventas ganadas registradas todavía.</span>';
   if(esAdmin){
@@ -10850,17 +10870,17 @@ function _pintarVentasMes(){
       '</span>';
   }
   bar.innerHTML = barH;
-  let delMes = ventas.filter(v => _mesCierreDe(v) === VENTASMES_MES);
+  let delMes = ventas.filter(v => _fracVentaMes(v, VENTASMES_MES) > 0);   // pagos en partes: cada pago en su mes
   if(VENTASMES_EJEC) delMes = delMes.filter(v => _busqNorm(String(v.ejecutivo||'').split(' ')[0]) === _busqNorm(VENTASMES_EJEC));
   const mesLbl = (VENTASMES_MES.indexOf('-')>0) ? (_MES_NOMBRE[parseInt(VENTASMES_MES.split('-')[1],10)-1]+' '+VENTASMES_MES.split('-')[0]) : VENTASMES_MES;
   if(!delMes.length){ body.innerHTML = '<div class="loading-state" style="padding:30px;">No hay ventas cerradas en '+esc(mesLbl)+(VENTASMES_EJEC?(' para '+esc(VENTASMES_EJEC)):'')+'.</div>'; return; }
   const porEj = {};
   delMes.forEach(v=>{ const e=String(v.ejecutivo||'(sin ejecutivo)').trim(); (porEj[e]=porEj[e]||[]).push(v); });
-  const totMes = delMes.reduce((s,v)=>s+(v.neto||v.monto||0),0);
+  const totMes = Math.round(delMes.reduce((s,v)=>s+(v.neto||v.monto||0)*_fracVentaMes(v, VENTASMES_MES),0));
   let html = '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:#16A34A;text-transform:uppercase;letter-spacing:.06em;margin:6px 0 14px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;"><span>'+delMes.length+' venta'+(delMes.length===1?'':'s')+' cerrada'+(delMes.length===1?'':'s')+' en '+esc(mesLbl)+'</span><span style="color:#047857;">'+fmtCLP(totMes)+'</span></div>';
   Object.keys(porEj).sort((a,b)=>porEj[b].length-porEj[a].length).forEach(ej=>{
     const arr = porEj[ej];
-    const total = arr.reduce((s,v)=>s+(v.neto||v.monto||0),0);
+    const total = Math.round(arr.reduce((s,v)=>s+(v.neto||v.monto||0)*_fracVentaMes(v, VENTASMES_MES),0));
     html += '<div style="border:1px solid var(--smoke,#e5e7eb);border-radius:12px;margin-bottom:12px;overflow:hidden;">'+
       '<div style="background:#F0FDF4;padding:11px 16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">'+
         '<span style="font-weight:800;color:#065F46;font-size:14px;">'+esc(ej.split(' ')[0])+' · '+arr.length+' venta'+(arr.length===1?'':'s')+'</span>'+
@@ -10869,8 +10889,10 @@ function _pintarVentasMes(){
     arr.forEach(v=>{
       html += '<div style="padding:10px 16px;border-top:1px solid var(--smoke,#f1f1f4);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">'+
         '<div style="min-width:0;"><div style="font-weight:700;color:var(--ink);font-size:13.5px;">'+esc(v.institucion||v.cliente||'(sin nombre)')+'</div>'+
-          '<div style="font-size:12px;color:var(--subtle);margin-top:2px;">'+esc(v.cotizacion||'')+(v.productos?(' · '+esc(v.productos)):'')+'</div></div>'+
-        '<div style="font-weight:700;color:var(--gold-dk);white-space:nowrap;">'+fmtCLP(v.monto||v.neto||0)+'</div>'+
+          '<div style="font-size:12px;color:var(--subtle);margin-top:2px;">'+esc(v.cotizacion||'')+(v.productos?(' · '+esc(v.productos)):'')+'</div>'+
+          (_tienePagos(v) ? '<div style="font-size:11.5px;font-weight:700;color:#92400E;margin-top:3px;">Pago en partes · este mes cuenta el '+(Math.round(_fracVentaMes(v, VENTASMES_MES)*1000)/10).toLocaleString('es-CL')+'% · '+((v.pagos_info&&v.pagos_info.saldo>0)?('saldo pendiente '+fmtCLP(v.pagos_info.saldo)):'pagada completa')+'</div>' : '')+
+        '</div>'+
+        '<div style="font-weight:700;color:var(--gold-dk);white-space:nowrap;">'+fmtCLP(Math.round((v.monto||v.neto||0)*_fracVentaMes(v, VENTASMES_MES)))+'</div>'+
       '</div>';
     });
     html += '</div>';
@@ -14564,11 +14586,47 @@ function _vcSubirImagen(key, input){
   };
   fr.readAsDataURL(f);
 }
+// ── PAGOS EN PARTES (Rayen, 30-sep-2026) ─────────────────────────────────────
+// Una venta se puede pagar en 2 o 3 pagos. Cada pago cuenta en Ventas del Mes y en las
+// comisiones del mes en que entró (la parte pagada ÷ total, aplicada al neto). El backend
+// devuelve c.pagos_mes = { 'YYYY-MM': fracción } y c.pagos_info (pagos, pagado, saldo).
+// Una venta sin pagos registrados cuenta entera en su mes de cierre, como siempre.
+function _tienePagos(c){ return !!(c && c.pagos_info && c.pagos_mes && Object.keys(c.pagos_mes).length); }
+function _fracVentaMes(c, ym){
+  if(_tienePagos(c)) return Number(c.pagos_mes[ym]||0);
+  return (String(c.mes_cierre||c.mes||'')===ym) ? 1 : 0;
+}
+function _fracVentaAnio(c, anio){
+  if(_tienePagos(c)){ let f=0; for(const k in c.pagos_mes){ if(k.substring(0,4)===anio) f += Number(c.pagos_mes[k]||0); } return f; }
+  return String(c.mes_cierre||c.mes||'').substring(0,4)===anio ? 1 : 0;
+}
+function _mesesDeVenta(c){ return _tienePagos(c) ? Object.keys(c.pagos_mes) : [String(c.mes_cierre||c.mes||'')]; }
+function _vcTipoPago(){ return (document.querySelector('input[name="vc-tipo-pago"]:checked')||{}).value || 'completo'; }
+function _vcToggleTipoPago(){
+  var parcial = _vcTipoPago()==='parcial';
+  var box = document.getElementById('vc-total-box'); if(box) box.style.display = parcial ? '' : 'none';
+  var lbl = document.getElementById('vc-monto-lbl'); if(lbl) lbl.textContent = parcial ? 'Monto de este primer pago' : 'Monto recibido';
+  var el = document.getElementById('vc-monto');
+  if(el){
+    var v = Number(String(el.value||'').replace(/[^0-9]/g,''));
+    var tot = Number(String((document.getElementById('vc-total-venta')||{}).value||'').replace(/[^0-9]/g,''));
+    if(parcial && v && tot && v >= tot){ el.value=''; el.focus(); }
+    if(!parcial && !el.value && window.__vcTotalCot>0) el.value = (typeof fmtCLP==='function' ? fmtCLP(window.__vcTotalCot) : String(window.__vcTotalCot));
+  }
+  _vcValidarMonto();
+}
 function _vcValidarMonto(){
   var el = document.getElementById('vc-monto'); var msg = document.getElementById('vc-monto-msg');
   if(!el||!msg) return;
   var v = Number(String(el.value||'').replace(/[^0-9]/g,''));
   var total = Number(window.__vcTotalCot||0);
+  if(_vcTipoPago()==='parcial'){
+    var tp = Number(String((document.getElementById('vc-total-venta')||{}).value||'').replace(/[^0-9]/g,''));
+    if(!v || !tp){ msg.textContent = 'Escribe el monto de este pago y el total de la venta.'; msg.style.color = '#6b7280'; return; }
+    if(v >= tp){ msg.textContent = '⚠ En un pago parcial el monto tiene que ser menor que el total de la venta.'; msg.style.color = '#B91C1C'; return; }
+    msg.textContent = '✓ Pago 1: $' + v.toLocaleString('es-CL') + ' · Queda pendiente: $' + (tp - v).toLocaleString('es-CL');
+    msg.style.color = '#047857'; return;
+  }
   if(!v){ msg.textContent=''; return; }
   if(total){
     if(v === total){ msg.textContent = '✓ Coincide con el total de la cotización.'; msg.style.color = '#047857'; }
@@ -14703,7 +14761,13 @@ function abrirPanelCierreVenta(num, contacto){
           '<input id="vc-fecha-venta" type="date" value="'+_hoyISO()+'" style="padding:9px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;">' +
           '<div style="font-size:11.5px;color:#6b7280;margin-top:3px;">Por defecto hoy. Cámbiala si la venta se cerró en otro mes — la venta cuenta en el mes que pongas aquí.</div></div>' +
         // Monto recibido: SIEMPRE visible (también en modo "ya procesada"). Autocompletado con el total de la cotización.
-        '<div style="margin-bottom:16px;"><label style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:4px;">Monto recibido</label>' +
+        '<div style="margin-bottom:12px;"><label style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:6px;">¿Cómo paga el cliente?</label>' +
+          '<label style="margin-right:18px;font-size:14px;cursor:pointer;"><input type="radio" name="vc-tipo-pago" value="completo" checked onchange="_vcToggleTipoPago()"> Pago completo</label>' +
+          '<label style="font-size:14px;cursor:pointer;"><input type="radio" name="vc-tipo-pago" value="parcial" onchange="_vcToggleTipoPago()"> Pago parcial (paga en 2 o 3 pagos)</label></div>' +
+        '<div id="vc-total-box" style="display:none;margin-bottom:12px;"><label style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:4px;">Total de la venta</label>' +
+          '<input id="vc-total-venta" type="text" placeholder="$0" value="' + _mtPrefill + '" oninput="_vcValidarMonto()" onblur="_vcFmtMonto(this)" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;">' +
+          '<div style="font-size:11.5px;color:#6b7280;margin-top:3px;">Lo que el cliente pagará en total, sumando todos los pagos. Viene de la cotización.</div></div>' +
+        '<div style="margin-bottom:16px;"><label id="vc-monto-lbl" style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:4px;">Monto recibido</label>' +
           '<input id="vc-monto" type="text" placeholder="$0" value="' + _mtPrefill + '" oninput="_vcValidarMonto()" onblur="_vcFmtMonto(this)" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;">' +
           '<div id="vc-monto-msg" style="font-size:12px;margin-top:4px;color:#6b7280;"></div></div>' +
         // Productos de la cotización (solo lectura) — para revisar sin tener que abrir la cotización.
@@ -14764,12 +14828,93 @@ function abrirPanelCierreVenta(num, contacto){
   } catch(e){}
   _vcToggleEtiquetas(); _vcChk(); _vcValidarMonto();
 }
+function _buscarCotPorNum(num){
+  var n = String(num||'').trim().toUpperCase();
+  var fuentes = [(typeof CACHE!=='undefined' && CACHE.vMisCot) || [], window.__VENTASMES_DATA || []];
+  for(var i=0;i<fuentes.length;i++){ for(var j=0;j<fuentes[i].length;j++){ if(String(fuentes[i][j].cotizacion||'').trim().toUpperCase()===n) return fuentes[i][j]; } }
+  return null;
+}
+function abrirRegistrarPago(num){
+  if(document.getElementById('panelRegPago')) return;
+  var c = _buscarCotPorNum(num) || {};
+  var pi = c.pagos_info || {};
+  var saldo = Number(pi.saldo||0);
+  var nSig = (pi.pagos ? pi.pagos.length : 0) + 1;
+  window.__vcImgTransf = null; window.__rpNum = num; window.__rpSaldo = saldo;
+  var lista = (pi.pagos||[]).map(function(p){ return '<div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0;"><span>Pago '+p.n+' · '+esc(p.fecha||'')+'</span><b>'+fmtCLP(p.monto||0)+'</b></div>'; }).join('');
+  var ov = document.createElement('div');
+  ov.id = 'panelRegPago';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:2147483600;background:rgba(0,0,0,.55);display:flex;align-items:flex-start;justify-content:center;padding:24px;overflow:auto;font-family:inherit;';
+  ov.innerHTML =
+    '<div style="background:#fff;border-radius:18px;max-width:520px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,.4);overflow:hidden;margin:auto;">' +
+      '<div style="background:#16A34A;color:#fff;padding:18px 24px;">' +
+        '<div style="font-size:11.5px;font-weight:800;letter-spacing:.08em;opacity:.92;">REGISTRAR PAGO '+nSig+'</div>' +
+        '<div style="font-size:19px;font-weight:800;margin-top:2px;">Cotización ' + esc(num) + (c.institucion||c.cliente ? ' · ' + esc(c.institucion||c.cliente) : '') + '</div>' +
+      '</div>' +
+      '<div style="padding:20px 24px;">' +
+        '<div style="background:#F9FAFB;border:1px solid #e5e7eb;border-radius:10px;padding:10px 14px;margin-bottom:16px;">' + lista +
+          '<div style="border-top:1px solid #e5e7eb;margin-top:6px;padding-top:6px;display:flex;justify-content:space-between;font-size:13.5px;"><span>Total de la venta</span><b>'+fmtCLP(pi.total_venta||0)+'</b></div>' +
+          '<div style="display:flex;justify-content:space-between;font-size:14px;color:#B45309;"><span><b>Saldo pendiente</b></span><b>'+fmtCLP(saldo)+'</b></div></div>' +
+        '<label style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:4px;">Fecha del pago</label>' +
+        '<input id="rp-fecha" type="date" value="'+_hoyISO()+'" style="padding:9px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;margin-bottom:4px;">' +
+        '<div style="font-size:11.5px;color:#6b7280;margin-bottom:14px;">Este pago cuenta en Ventas del Mes y en la comisión del mes de esta fecha.</div>' +
+        '<label style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:4px;">Monto de este pago</label>' +
+        '<input id="rp-monto" type="text" value="'+(saldo>0?fmtCLP(saldo):'')+'" oninput="_rpValidar()" onblur="_vcFmtMonto(this);_rpValidar()" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;">' +
+        '<div id="rp-msg" style="font-size:12px;margin:4px 0 12px;color:#6b7280;"></div>' +
+        '<label style="display:flex;align-items:center;gap:8px;font-size:13.5px;margin-bottom:14px;cursor:pointer;"><input type="checkbox" id="rp-final" style="width:16px;height:16px;accent-color:#16A34A;"> Es el último pago (la venta queda pagada completa)</label>' +
+        '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;">' + _vcUploadBox('transf','Comprobante de pago') + '</div>' +
+        '<label style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:4px;">Nota <span style="font-weight:400;color:#6b7280;">(opcional)</span></label>' +
+        '<input id="rp-nota" type="text" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;">' +
+      '</div>' +
+      '<div style="padding:16px 24px;border-top:1px solid #eee;display:flex;gap:10px;justify-content:flex-end;">' +
+        '<button onclick="_rpCerrar()" style="background:#f3f4f6;color:#374151;border:none;border-radius:9px;padding:11px 18px;font-weight:700;cursor:pointer;font-family:inherit;">Cancelar</button>' +
+        '<button id="rp-enviar" onclick="guardarRegistroPago()" style="background:#16A34A;color:#fff;border:none;border-radius:9px;padding:11px 20px;font-weight:800;cursor:pointer;font-family:inherit;">Guardar pago</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(ov);
+  _rpValidar();
+}
+function _rpCerrar(){ var o=document.getElementById('panelRegPago'); if(o) o.remove(); }
+function _rpValidar(){
+  var v = Number(String((document.getElementById('rp-monto')||{}).value||'').replace(/[^0-9]/g,''));
+  var saldo = Number(window.__rpSaldo||0), msg = document.getElementById('rp-msg'), fin = document.getElementById('rp-final');
+  if(!msg) return;
+  if(!v){ msg.textContent=''; return; }
+  if(v >= saldo){ if(fin) fin.checked = true; msg.textContent = (v > saldo ? '⚠ Es más que el saldo pendiente ($'+saldo.toLocaleString('es-CL')+'). Revísalo. ' : '✓ ') + 'Con este pago la venta queda pagada completa.'; msg.style.color = v > saldo ? '#B45309' : '#047857'; }
+  else { if(fin) fin.checked = false; msg.textContent = 'Después de este pago quedará pendiente: $' + (saldo - v).toLocaleString('es-CL'); msg.style.color = '#6b7280'; }
+}
+async function guardarRegistroPago(){
+  var monto = String((document.getElementById('rp-monto')||{}).value||'').replace(/[^0-9]/g,'');
+  if(!monto){ alert('Escribe el monto de este pago.'); return; }
+  var btn = document.getElementById('rp-enviar'); if(btn){ btn.disabled = true; btn.textContent = 'Guardando…'; }
+  var r;
+  try {
+    r = await fetchAPI('crm_registrar_pago', {
+      solicitante: USUARIO, num: window.__rpNum, monto: monto,
+      fecha_pago: (document.getElementById('rp-fecha')||{}).value || '',
+      final: !!(document.getElementById('rp-final')||{}).checked,
+      nota: (document.getElementById('rp-nota')||{}).value || '',
+      imagen_transferencia: window.__vcImgTransf || null
+    });
+  } catch(e){ r = { ok:false, error: e.message }; }
+  if(!r || !r.ok){ alert('No se pudo guardar el pago: ' + ((r&&r.error)||'error')); if(btn){ btn.disabled=false; btn.textContent='Guardar pago'; } return; }
+  _rpCerrar();
+  try { _cerrarCotModal(); } catch(e){}
+  alert('Pago ' + r.n_pago + ' guardado y avisado a Finanzas.\n\n' + (r.completa ? 'La venta quedó PAGADA COMPLETA.' : 'Queda pendiente: $' + Number(r.saldo||0).toLocaleString('es-CL') + '.'));
+  try { window.__VENTASMES_DATA = null; if(document.getElementById('ventasMesBody') && document.getElementById('ventasMesBody').offsetParent) cargarVentasMes(true); } catch(e){}
+  try { if(document.getElementById('listMisCot')) cargarMisCotizaciones(true); } catch(e){}
+}
 async function guardarCierreVenta(){
   var noViarly = (document.getElementById('vc-no-viarly')||{}).checked;
   var dir = (document.getElementById('vc-direccion')||{}).value || '';
   // Monto obligatorio SIEMPRE (también en venta tardía): lo trae la cotización, pero no se guarda vacío.
   var _montoVal = String((document.getElementById('vc-monto')||{}).value||'').replace(/[^0-9]/g,'');
   if(!_montoVal){ alert('El monto recibido es obligatorio. Lo trae la cotización; revísalo si hace falta.'); var _m=document.getElementById('vc-monto'); if(_m) _m.focus(); return; }
+  var _tipoPago = _vcTipoPago();
+  var _totalVenta = String((document.getElementById('vc-total-venta')||{}).value||'').replace(/[^0-9]/g,'');
+  if(_tipoPago==='parcial' && (!_totalVenta || Number(_montoVal) >= Number(_totalVenta))){
+    alert('En un pago parcial, el monto de este pago tiene que ser menor que el total de la venta. Revisa los dos montos.'); return;
+  }
   if(!noViarly && dir.trim().length < 4){ alert('La dirección de despacho es obligatoria.'); return; }
   var btn = document.getElementById('vc-enviar'); if(btn){ btn.disabled = true; btn.textContent = 'Enviando…'; }
   var docSel = document.querySelector('input[name="vc-doc"]:checked');
@@ -14779,6 +14924,8 @@ async function guardarCierreVenta(){
     cliente: (window.__vcContacto||{}).nombre || '', institucion: (window.__vcContacto||{}).institucion || '',
     fecha_venta: (document.getElementById('vc-fecha-venta')||{}).value || '',
     monto_recibido: _montoVal,
+    tipo_pago: _tipoPago,
+    total_venta: _tipoPago==='parcial' ? _totalVenta : '',
     documento: docSel ? docSel.value : 'Factura',
     forma_envio: (document.getElementById('vc-forma')||{}).value || '',
     costo_envio: String((document.getElementById('vc-costo-envio')||{}).value||'').replace(/[^0-9]/g,''),
@@ -14803,9 +14950,11 @@ async function guardarCierreVenta(){
     if(_fv){ try{ await fetchAPI('crm_marcar_cotizacion', { solicitante:USUARIO, num: window.__vcNum, estado:'Ganada', fecha_ganada:_fv }); }catch(e){} }
     _vcCerrar();
     try { celebrarVenta(Number(payload.monto_recibido) || window.__vcTotalCot || 0); } catch(e){}
-    alert(noViarly
+    alert((noViarly
       ? 'Venta registrada como ganada.\n\nNO se avisó a Viarly (la venta ya estaba procesada). Te llegó el correo a ti con la nota.'
-      : 'Venta guardada y enviada a Finanzas (correo automático a Viarly y Rayen' + (quiereEtq ? ', y etiquetas a Ximena' : '') + ').\n\nSi quieres, manda también los WhatsApp con los botones del panel.');
+      : 'Venta guardada y enviada a Finanzas (correo automático a Viarly y Rayen' + (quiereEtq ? ', y etiquetas a Ximena' : '') + ').\n\nSi quieres, manda también los WhatsApp con los botones del panel.')
+      + (_tipoPago==='parcial' ? '\n\nPAGO PARCIAL: queda pendiente $' + (Number(_totalVenta) - Number(_montoVal)).toLocaleString('es-CL') + '. Cuando llegue el siguiente pago, abre la cotización y usa «Registrar siguiente pago».' : ''));
+    try { window.__VENTASMES_DATA = null; } catch(e){}
     var cid = (window.__vcContacto||{}).id; if(cid) abrirFichaModal(cid, true);
   } catch(e){ alert('Error: ' + e.message); if(btn){ btn.disabled=false; btn.textContent='Enviar a Finanzas'; } }
 }

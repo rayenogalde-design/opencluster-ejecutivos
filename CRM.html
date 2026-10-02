@@ -496,7 +496,7 @@ input,select,textarea{font-family:inherit; font-size:14px;}
   width:120px; text-align:right; font-variant-numeric:tabular-nums;
   font-weight:800; font-size:12.5px; color:var(--oct-navy,#001A60); flex-shrink:0;
 }
-/* Columna "Precio público referencial" (solo distribuidor/surterapia/clickmedical) — atenuada, es referencia */
+/* Columna "Precio público referencial" (solo distribuidor) — atenuada, es referencia */
 .lp-pub{ width:82px; text-align:right; font-variant-numeric:tabular-nums; font-weight:600; font-size:12px; color:#9a93a8; flex-shrink:0; }
 .lp-colhead-3{ grid-template-columns:repeat(3,82px); }
 .lp-colhead-2p{ grid-template-columns:82px 120px; }
@@ -18299,8 +18299,6 @@ function formatearPrecioCLP(v){
    lista que corresponde a SU segmento, con SU tipo de precio:
    - retail (Rayen·AdultoMayor, Germán, Maximiliano, William): tramos 1-10 / 11+
    - margen (Roberto): margen de distribución por volumen
-   - distribuidor (Rayen·Surterapia): valor distribuidor único
-   Rayen ve DOS listas: Adulto Mayor + Distribuidor Surterapia.
    ═══════════════════════════════════════════════════════════════ */
 window.__PRECIOS_SEG = {};
 window.__PRECIOS_SEG_LOADED = false;
@@ -18311,7 +18309,7 @@ const SEG_POR_EJEC = {
   'Germán':['rehabilitacion','adulto_mayor'], 'German':['rehabilitacion','adulto_mayor'],
   'Maximiliano':['mutuales'],
   'Roberto':['distribucion'],
-  'Rayen':['surterapia','clickmedical'], 'Rayen Ogalde':['surterapia','clickmedical']
+  'Rayen':[], 'Rayen Ogalde':[]
 };
 function _segKeysParaEjec(nombre){
   if(!nombre) return [];
@@ -18385,14 +18383,13 @@ function _lpToggleBar(){
 }
 function _lpRenderCards(keys){
   if(window.__LP_VER_TODO){
-    // "Todo el catálogo" consciente del canal: Roberto y Surterapia ven los 118 con SUS precios;
-    // los retail ven el catálogo estándar (unión retail). distribucion_todo/surterapia_todo vienen del JSON.
+    // "Todo el catálogo" consciente del canal: Roberto ve los 118 con SUS precios;
+    // los retail ven el catálogo estándar (unión retail). distribucion_todo viene del JSON.
     var P = window.__PRECIOS_SEG || {};
     var cards = [], seen = {};
     keys.forEach(function(k){
       var target;
       if(k==='distribucion' && P['distribucion_todo']) target='distribucion_todo';
-      else if(k==='surterapia' && P['surterapia_todo']) target='surterapia_todo';
       else { _lpCatalogoSeg(); target='__catalogo'; }
       if(seen[target]) return; seen[target]=1;
       cards.push(renderListaPreciosCard(target));
@@ -18408,7 +18405,7 @@ function lpSetVerTodo(v){
 }
 
 // ── Pestañas por ejecutivo: "Mi catálogo · {segmento}" + "Resto de productos de campaña" ──
-var _LP_SEG_LABEL = { educacion:'Escuelas', adulto_mayor:'Hogares de Adulto Mayor', rehabilitacion:'Rehabilitación', mutuales:'Mutuales', distribucion:'Distribuidor', surterapia:'Surterapia', clickmedical:'ClickMedical' };
+var _LP_SEG_LABEL = { educacion:'Escuelas', adulto_mayor:'Hogares de Adulto Mayor', rehabilitacion:'Rehabilitación', mutuales:'Mutuales', distribucion:'Distribuidor' };
 function _lpSegLabel(k){ return _LP_SEG_LABEL[k] || (((window.__PRECIOS_SEG||{})[k]||{}).segmento) || k; }
 // ── Listas de DESCUENTOS por segmento (uso interno) descargables en PDF ──
 var _LP_DESC_PDF = {
@@ -18416,9 +18413,7 @@ var _LP_DESC_PDF = {
   adulto_mayor:'listas-descuento/Descuento_Hogares_Rayen.pdf',
   rehabilitacion:'listas-descuento/Descuento_Rehabilitacion_German.pdf',
   mutuales:'listas-descuento/Descuento_Mutuales_Maximiliano.pdf',
-  distribucion:'listas-descuento/Descuento_Distribuidor_Roberto.pdf',
-  surterapia:'listas-descuento/Descuento_Surterapia.pdf',
-  clickmedical:'listas-descuento/Descuento_ClickMedical.pdf'
+  distribucion:'listas-descuento/Descuento_Distribuidor_Roberto.pdf'
 };
 var _SVG_DL = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
 function _lpDescuentoBox(segs){
@@ -18442,8 +18437,6 @@ function _lpRestoSeg(segKey){
   var curated = P[segKey]; if(!curated || !Array.isArray(curated.familias)) return null;
   var todo;
   if(segKey==='distribucion') todo = P['distribucion_todo'];
-  else if(segKey==='surterapia') todo = P['surterapia_todo'];
-  else if(segKey==='clickmedical') todo = P['clickmedical'];
   else todo = _lpInstSeg(); // universo institución (mismo precio para los 4 retail)
   if(!todo || !Array.isArray(todo.familias)) return null;
   var inCur = {};
@@ -18487,7 +18480,7 @@ function lpSetEjecTab(id){
 }
 
 // ── Vista ADMIN de Lista de Precios: pestañas por canal (solo Rayen/admin) ──
-// Instituciones (catálogo institución) · ClickMedical · Distribuidor (Roberto) · Surterapia
+// Instituciones (catálogo institución) · Distribuidor (Roberto)
 function _lpInstSeg(){
   var P = window.__PRECIOS_SEG || {};
   if(P['__instituciones']) return P['__instituciones'];
@@ -18496,7 +18489,7 @@ function _lpInstSeg(){
   return P['__instituciones'];
 }
 try{ window.__LP_ADMIN_TAB = localStorage.getItem('crm_lp_admintab') || 'instituciones'; }catch(e){ window.__LP_ADMIN_TAB = 'instituciones'; }
-var _LP_ADMIN_TABS = [['instituciones','Instituciones'],['clickmedical','ClickMedical'],['distribucion','Distribuidor'],['surterapia','Surterapia']];
+var _LP_ADMIN_TABS = [['instituciones','Instituciones'],['distribucion','Distribuidor']];
 function _lpAdminTabsBar(){
   var act = window.__LP_ADMIN_TAB || 'instituciones';
   return '<div class="lp-toggle" role="tablist">' + _LP_ADMIN_TABS.map(function(t){
@@ -18514,9 +18507,8 @@ function _lpAdminRender(){
   var segKey;
   if(act==='instituciones'){ _lpInstSeg(); segKey = '__instituciones'; }       // todo el catálogo institución
   else if(act==='distribucion') segKey = P['distribucion_todo'] ? 'distribucion_todo' : 'distribucion';
-  else if(act==='surterapia')   segKey = P['surterapia_todo'] ? 'surterapia_todo' : 'surterapia';
-  else segKey = act; // clickmedical ya trae todo el catálogo
-  return _lpDescuentoBox(['educacion','adulto_mayor','rehabilitacion','mutuales','distribucion','surterapia','clickmedical']) + _lpAdminTabsBar() + renderListaPreciosCard(segKey);
+  else segKey = act;
+  return _lpDescuentoBox(['educacion','adulto_mayor','rehabilitacion','mutuales','distribucion']) + _lpAdminTabsBar() + renderListaPreciosCard(segKey);
 }
 
 function renderListaPreciosCard(segKey){
@@ -18529,7 +18521,7 @@ function renderListaPreciosCard(segKey){
              : tipo==='distribuidor' ? 'Valor distribuidor · IVA incluido'
              : 'Precio por volumen · IVA incluido';
   // Columna "Precio público referencial" (transferencia) para canales de distribución — herramienta del vendedor
-  const pub = /(distribucion|surterapia|clickmedical)/.test(segKey);
+  const pub = /distribucion/.test(segKey);
   const pubH = pub ? '<span>Público ref.</span>' : '';
   const head = tipo==='distribuidor'
     ? '<div class="lp-colhead ' + (pub?'lp-colhead-2p':'lp-colhead-1') + '">' + pubH + '<span>Valor distrib.</span></div>'

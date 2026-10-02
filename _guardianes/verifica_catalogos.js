@@ -88,7 +88,7 @@ if (rotos) {
   console.error('');
   console.error('  Como se arregla: en la linea larga de la caja, todo </ va escrito <' + BS + 'u002F.');
   console.error('  El cierre correcto se ve asi: ' + ESCAPE_BUENO);
-  console.error('  Referencia sana: CatalogoClickMedical.html');
+  console.error('  Referencia sana: CatalogoEscuelas_PIE.html');
   console.error('  Comprobar despues que JSON.parse de la linea vieja y la nueva dan el MISMO texto,');
   console.error('  para no cambiar ningun producto, precio ni foto.');
   process.exit(1);

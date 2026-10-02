@@ -4409,6 +4409,7 @@ function cerrarRecordatorioDiesel(){
 // Lista de acciones write: SIEMPRE van por POST aunque el caller las llame con params
 const ACCIONES_POST = [
   'crm_registrar_pago',
+  'crm_venta_licitacion',
   'crm_crear_contacto','crm_editar_contacto','crm_eliminar_contacto',
   'crm_agregar_interaccion','crm_editar_interaccion','crm_eliminar_interaccion',
   'crm_crear_tarea','crm_editar_tarea','crm_completar_tarea','crm_eliminar_tarea',
@@ -10166,8 +10167,10 @@ function _detalleCotHTML(c){
     det += '<div style="'+SEC+'background:#FAFBFF;"><div style="'+LBL+'">Resumen</div><div style="font-size:12.5px;color:#1a2440;line-height:1.6;">' + esc(partes.join(' · ')) + '</div></div>';
   }
   // Venta por licitación: con quién se comparte la comisión.
-  if(c.ganada && c.licitacion){
-    det += '<div style="'+SEC+'background:#F5F3FF;border-color:#DDD6FE;"><div style="'+LBL+'">Venta por licitación</div><div style="font-size:12.5px;color:#1a2440;line-height:1.6;">La trabajó <b>'+esc(c.licitacion.licitador||'')+'</b> · comisión del ejecutivo <b>'+String(Math.round((c.licitacion.pct||0)*10000)/100).replace('.',',')+'%</b></div></div>';
+  if(c.ganada){
+    det += '<div style="'+SEC+(c.licitacion?'background:#F5F3FF;border-color:#DDD6FE;':'')+'"><div style="'+LBL+'">Venta por licitación</div><div style="font-size:12.5px;color:#1a2440;line-height:1.6;">' +
+      (c.licitacion ? 'La trabajó <b>'+esc(c.licitacion.licitador||'')+'</b> · comisión del ejecutivo <b>'+String(Math.round((c.licitacion.pct||0)*10000)/100).replace('.',',')+'%</b>' : 'No fue por licitación.') +
+      '</div><button onclick="event.stopPropagation();abrirEditarLicitacion(\''+numJS+'\')" style="margin-top:8px;background:#fff;color:#5B21B6;border:1px solid #DDD6FE;border-radius:8px;padding:6px 12px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">Editar</button></div>';
   }
   // Pagos en partes: lista de pagos, saldo y botón para registrar el siguiente.
   if(c.ganada && c.pagos_info){
@@ -14673,6 +14676,7 @@ function _vcValidarMonto(){
   var total = Number(window.__vcTotalCot||0);
   if(_vcTipoPago()==='parcial'){
     var tp = Number(String((document.getElementById('vc-total-venta')||{}).value||'').replace(/[^0-9]/g,''));
+    var _mb = document.getElementById('vc-motivo-box'); if(_mb) _mb.style.display = (tp && window.__vcTotalCot > 0 && tp !== Number(window.__vcTotalCot)) ? '' : 'none';
     if(!v || !tp){ msg.textContent = 'Escribe el monto de este pago y el total de la venta.'; msg.style.color = '#6b7280'; return; }
     if(v >= tp){ msg.textContent = '⚠ En un pago parcial el monto tiene que ser menor que el total de la venta.'; msg.style.color = '#B91C1C'; return; }
     msg.textContent = '✓ Pago 1: $' + v.toLocaleString('es-CL') + ' · Queda pendiente: $' + (tp - v).toLocaleString('es-CL');
@@ -14817,7 +14821,9 @@ function abrirPanelCierreVenta(num, contacto){
           '<label style="font-size:14px;cursor:pointer;"><input type="radio" name="vc-tipo-pago" value="parcial" onchange="_vcToggleTipoPago()"> Pago parcial (paga en 2 o 3 pagos)</label></div>' +
         '<div id="vc-total-box" style="display:none;margin-bottom:12px;"><label style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:4px;">Total de la venta</label>' +
           '<input id="vc-total-venta" type="text" placeholder="$0" value="' + _mtPrefill + '" oninput="_vcValidarMonto()" onblur="_vcFmtMonto(this)" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;">' +
-          '<div style="font-size:11.5px;color:#6b7280;margin-top:3px;">Lo que el cliente pagará en total, sumando todos los pagos. Viene de la cotización.</div></div>' +
+          '<div style="font-size:11.5px;color:#6b7280;margin-top:3px;">Lo que el cliente pagará en total, sumando todos los pagos. Viene de la cotización.</div>' +
+          '<div id="vc-motivo-box" style="display:none;margin-top:10px;"><label style="font-size:13px;font-weight:700;color:#B45309;display:block;margin-bottom:4px;">El total no coincide con la cotización. ¿Por qué?</label>' +
+            '<input id="vc-motivo" type="text" placeholder="Ej: se agregaron productos sensoriales por $600.000" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #FCD34D;border-radius:8px;font-size:14px;"></div></div>' +
         '<div style="margin-bottom:16px;"><label id="vc-monto-lbl" style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:4px;">Monto recibido</label>' +
           '<input id="vc-monto" type="text" placeholder="$0" value="' + _mtPrefill + '" oninput="_vcValidarMonto()" onblur="_vcFmtMonto(this)" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;">' +
           '<div id="vc-monto-msg" style="font-size:12px;margin-top:4px;color:#6b7280;"></div></div>' +
@@ -14937,6 +14943,43 @@ function abrirRegistrarPago(num){
   document.body.appendChild(ov);
   _rpValidar();
 }
+function abrirEditarLicitacion(num){
+  if(document.getElementById('panelLicit')) return;
+  var c = _buscarCotPorNum(num) || {}; var L = c.licitacion || null;
+  window.__elNum = num;
+  var ov = document.createElement('div'); ov.id = 'panelLicit';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:2147483600;background:rgba(0,0,0,.55);display:flex;align-items:flex-start;justify-content:center;padding:24px;overflow:auto;font-family:inherit;';
+  ov.innerHTML = '<div style="background:#fff;border-radius:18px;max-width:460px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,.4);overflow:hidden;margin:auto;">' +
+    '<div style="background:#5B21B6;color:#fff;padding:16px 22px;"><div style="font-size:11.5px;font-weight:800;letter-spacing:.08em;opacity:.9;">VENTA POR LICITACIÓN</div><div style="font-size:18px;font-weight:800;margin-top:2px;">Cotización '+esc(num)+'</div></div>' +
+    '<div style="padding:18px 22px;">' +
+      '<label style="margin-right:18px;font-size:14px;cursor:pointer;"><input type="radio" name="el-licit" value="no"'+(L?'':' checked')+' onchange="_elToggle()"> No</label>' +
+      '<label style="font-size:14px;cursor:pointer;"><input type="radio" name="el-licit" value="si"'+(L?' checked':'')+' onchange="_elToggle()"> Sí, por licitación</label>' +
+      '<div id="el-campos" style="margin-top:12px;'+(L?'':'display:none;')+'">' +
+        '<label style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:4px;">Porcentaje de comisión del ejecutivo (%)</label>' +
+        '<input id="el-pct" type="text" inputmode="decimal" value="'+(L?String(Math.round((L.pct||0)*10000)/100).replace('.',','):'')+'" placeholder="Ej: 3" style="width:120px;padding:9px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;"> %' +
+        '<label style="font-size:13px;font-weight:700;color:#374151;display:block;margin:12px 0 4px;">Nombre de quien trabajó la licitación</label>' +
+        '<input id="el-nombre" type="text" value="'+esc(L?L.licitador:'')+'" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;">' +
+      '</div></div>' +
+    '<div style="padding:14px 22px;border-top:1px solid #eee;display:flex;gap:10px;justify-content:flex-end;">' +
+      '<button onclick="var o=document.getElementById(\'panelLicit\');if(o)o.remove();" style="background:#f3f4f6;color:#374151;border:none;border-radius:9px;padding:10px 16px;font-weight:700;cursor:pointer;font-family:inherit;">Cancelar</button>' +
+      '<button id="el-guardar" onclick="guardarEditarLicitacion()" style="background:#5B21B6;color:#fff;border:none;border-radius:9px;padding:10px 18px;font-weight:800;cursor:pointer;font-family:inherit;">Guardar</button></div></div>';
+  document.body.appendChild(ov);
+}
+function _elToggle(){ var si = ((document.querySelector('input[name="el-licit"]:checked')||{}).value)==='si'; var b=document.getElementById('el-campos'); if(b) b.style.display = si ? '' : 'none'; }
+async function guardarEditarLicitacion(){
+  var si = ((document.querySelector('input[name="el-licit"]:checked')||{}).value)==='si';
+  var pct = String((document.getElementById('el-pct')||{}).value||'').replace('%','').trim();
+  var nom = String((document.getElementById('el-nombre')||{}).value||'').trim();
+  if(si){ var p = parseFloat(pct.replace(',','.')); if(!(p>0 && p<=100)){ alert('Escribe el porcentaje de comisión del ejecutivo (ej: 3).'); return; } if(!nom){ alert('Escribe el nombre de quien trabajó la licitación.'); return; } }
+  var btn = document.getElementById('el-guardar'); if(btn){ btn.disabled=true; btn.textContent='Guardando…'; }
+  var r; try { r = await fetchAPI('crm_venta_licitacion', { solicitante: USUARIO, num: window.__elNum, licitacion: si, pct_comision_licitacion: si?pct:'', licitador: si?nom:'' }); } catch(e){ r = { ok:false, error:e.message }; }
+  if(!r || !r.ok){ alert('No se pudo guardar: ' + ((r&&r.error)||'error')); if(btn){ btn.disabled=false; btn.textContent='Guardar'; } return; }
+  var o = document.getElementById('panelLicit'); if(o) o.remove();
+  try { _cerrarCotModal(); } catch(e){}
+  alert(si ? 'Guardado: venta por licitación con ' + nom + ' (' + pct + '% para el ejecutivo).' : 'Guardado: la venta no fue por licitación.');
+  try { window.__VENTASMES_DATA = null; if(document.getElementById('ventasMesBody') && document.getElementById('ventasMesBody').offsetParent) cargarVentasMes(true); } catch(e){}
+  try { if(document.getElementById('listMisCot')) cargarMisCotizaciones(true); } catch(e){}
+}
 function _rpCerrar(){ var o=document.getElementById('panelRegPago'); if(o) o.remove(); }
 function _rpValidar(){
   var v = Number(String((document.getElementById('rp-monto')||{}).value||'').replace(/[^0-9]/g,''));
@@ -14986,6 +15029,10 @@ async function guardarCierreVenta(){
   if(_tipoPago==='parcial' && (!_totalVenta || Number(_montoVal) >= Number(_totalVenta))){
     alert('En un pago parcial, el monto de este pago tiene que ser menor que el total de la venta. Revisa los dos montos.'); return;
   }
+  var _motivo = String((document.getElementById('vc-motivo')||{}).value||'').trim();
+  if(_tipoPago==='parcial' && window.__vcTotalCot > 0 && Number(_totalVenta) !== Number(window.__vcTotalCot) && !_motivo){
+    alert('El total de la venta no coincide con el de la cotización ($' + Number(window.__vcTotalCot).toLocaleString('es-CL') + '). Escribe el motivo de la diferencia.'); var _em=document.getElementById('vc-motivo'); if(_em) _em.focus(); return;
+  }
   if(!noViarly && dir.trim().length < 4){ alert('La dirección de despacho es obligatoria.'); return; }
   var btn = document.getElementById('vc-enviar'); if(btn){ btn.disabled = true; btn.textContent = 'Enviando…'; }
   var docSel = document.querySelector('input[name="vc-doc"]:checked');
@@ -15000,6 +15047,7 @@ async function guardarCierreVenta(){
     pct_comision_licitacion: _esLicit ? _licPct : '',
     licitador: _esLicit ? _licNom : '',
     total_venta: _tipoPago==='parcial' ? _totalVenta : '',
+    motivo_diferencia: (_tipoPago==='parcial' && window.__vcTotalCot > 0 && Number(_totalVenta) !== Number(window.__vcTotalCot)) ? _motivo : '',
     documento: docSel ? docSel.value : 'Factura',
     forma_envio: (document.getElementById('vc-forma')||{}).value || '',
     costo_envio: String((document.getElementById('vc-costo-envio')||{}).value||'').replace(/[^0-9]/g,''),

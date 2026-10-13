@@ -3851,7 +3851,9 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
         const bod = Number(v.bodega) || 0, cam = Number(v.camino) || 0;
         let k = _smProdNorm(v.item);
         if (_SM_PROD_ALIAS[k]) k = _SM_PROD_ALIAS[k];
-        const s = STOCK_SM[k];
+        // Las «Hosp. R. del Río» van en el CRM con su clave RDR-xx (13-oct-2026): se cruzan por
+        // esa clave y no por nombre, que en el CRM lleva «(Hosp. R. del Río)» al final.
+        const s = /^RDR-/.test(sku) ? STOCK_COMBINADO[sku] : STOCK_SM[k];
         if (s) { s.bodega = bod; s.camino = cam; s.total = bod + cam; }
         const f = FICHAS[sku];
         if (f) { f.stockBodega = bod; f.stockCamino = cam; f.stock = bod + cam; }
@@ -3891,12 +3893,14 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
           return;
         }
       }
-      if (!s || !s.sku) { sinBodega.push(p.display); return; }
+      // Las «Hosp. R. del Río» no tienen SKU: se descuentan en el CRM con su clave RDR-xx.
+      const _skuS = s ? (s.sku || (/^RDR-/.test(s.claveFicha || '') ? s.claveFicha : '')) : '';
+      if (!_skuS) { sinBodega.push(p.display); return; }
       const bod = Number(s.bodega) || 0, cam = Number(s.camino) || 0;
       const deBodega = Math.min(bod, p.qty);
       const deCamino = Math.min(cam, p.qty - deBodega);
       lineas.push({
-        sku: s.sku, producto: s.item, display: p.display, cantidad: p.qty,
+        sku: _skuS, producto: s.item, display: p.display, cantidad: p.qty,
         deBodega: deBodega, deCamino: deCamino,
         falta: p.qty - deBodega - deCamino,
         quedan: (bod + cam) - deBodega - deCamino,

@@ -73,14 +73,14 @@ window.SALAS_ESPECIFICACIONES = {
   "n": "Puff transformable vibroacústico",
   "oc": "OC-1577",
   "fam": "Puff transformable vibroacústico",
-  "que": "Asiento adaptable que combina la flexibilidad del puff transformable con una experiencia vibroacústica capaz de convertir el sonido en vibración corporal. Gracias a su relleno de pequeñas bolas, el puff se moldea a la forma y a la posición del usuario, proporcionando apoyo y distribución del peso según las necesidades de cada persona.",
-  "trab": "Descanso, relajación, estimulación sensorial, regulación emocional, conciencia corporal e intervenciones de musicoterapia. Permite adoptar distintas posiciones de sedestación y decúbito, y está indicado para perfiles de espasticidad y de bajo tono muscular.",
-  "ind": "Discapacidad física (lesión medular, esclerosis múltiple, ELA, enfermedades neuromusculares) · Parálisis cerebral · Trastorno del espectro autista · Daño cerebral (ictus, traumatismo craneoencefálico) · Discapacidad intelectual · Discapacidad visual",
-  "inc": "Puff transformable con módulo vibroacústico integrado. La vibración requiere el amplificador vibroacústico, el kit vibroacústico inalámbrico o la unidad central del sistema.",
-  "tec": "Medidas de 140 × 180 cm. Módulo de vibración de 16 Ω de impedancia, 100 W máximos y 50 W continuos, con frecuencia máxima de 120 Hz. Tejido de peso total 620 g/m² y espesor de 0,5 a 1 mm.",
-  "cat": "Medidas 140 x 180 cm · Tejido vinílico antimicrobiano, antibacteriano y antimicótico · Alta resistencia a la abrasión · Resistente a transpiración, saliva, orina y sangre · Peso del tejido 620 g/m² · Espesor de 0,5 a 1 mm · Cumple el reglamento REACH · Material ignífugo, clasificación M2 · Cumple la norma EN 71-3 de seguridad de juguetes · Excelente resistencia solar · Espumas de poliuretano y polietileno normalizadas según estándares europeos · Disponible en 12 colores",
+  "que": "Asiento adaptable que combina la flexibilidad del puff transformable con una experiencia vibroacústica que convierte el sonido en vibración corporal. Su relleno de pequeñas bolas se adapta a la postura de cada persona y reparte su peso según sus necesidades.",
+  "trab": "Descanso, relajación, estimulación sensorial, regulación emocional, conciencia corporal e intervenciones de musicoterapia. Permite usarlo sentado, semisentado o acostado, y está indicado para personas con espasticidad y con bajo tono muscular.",
+  "ind": "Discapacidad física (lesión medular, esclerosis múltiple, ELA, enfermedades neuromusculares) · Parálisis cerebral · Trastorno del espectro autista · Daño cerebral (accidente cerebrovascular, traumatismo encéfalo craneano) · Discapacidad intelectual · Discapacidad visual",
+  "inc": "Puff transformable con módulo de vibración integrado y su cable de 15 m. Funciona conectado a la unidad central de la sala o al amplificador vibroacústico.",
+  "tec": "Medidas: 140 × 180 cm. Vibración: potencia de 50 W continuos (hasta 100 W). Tejido vinílico grueso, de 0,5 a 1 mm.",
+  "cat": "Tejido con protección contra bacterias y hongos · Muy resistente al roce · No deja pasar sudor, saliva, orina ni sangre · Sin las sustancias químicas restringidas en Europa · Seguro aunque se lo lleven a la boca: cumple el límite europeo de metales pesados exigido a los juguetes · Tejido difícilmente inflamable · Muy resistente al sol · Color a elegir entre 12",
   "mat": "Tejido: Apto para el contacto directo con la piel · Verificado en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa",
-  "logro": "Se moldea a la postura de cada persona, sentada o tendida, y le transmite la música por el cuerpo.",
+  "logro": "Le transmite la música por el cuerpo, sentada o tendida.",
   "unico": "Cambia de forma según se use como asiento o tendido, y trae el módulo vibroacústico integrado en el propio puff."
  },
  "BJ-LRIN": {
@@ -101,15 +101,15 @@ window.SALAS_ESPECIFICACIONES = {
   "n": "Rincón Luminea con tablet",
   "oc": "OC-2435",
   "fam": "Rincón Luminea",
-  "que": "La versión del Rincón Luminea que trae su propia tableta de control incorporada, para controlarlo sin depender de la unidad central de la sala.",
-  "trab": "Estimulación visual · Regulación sensorial · Causa-efecto · Relajación · Atención · Interacción · Actividades personalizadas · Juegos interactivos",
+  "que": "La versión del Rincón Luminea que trae incluida su tableta de control, ya configurada con la aplicación.",
+  "trab": "Estimulación visual · Regulación sensorial · Causa-efecto · Relajación · Atención · Interacción",
   "ind": "Parálisis cerebral · Trastorno del espectro autista · Daño cerebral · Discapacidad intelectual · Personas mayores · Discapacidad visual · Atención temprana",
-  "inc": "Se entrega con tubo de burbujas luminea.",
-  "tec": "Altura total de 180 cm, con 110 × 110 cm de ancho y profundidad. Requiere una toma de 230 V. Genera su propia red WiFi. Esta versión incluye su propia tableta de control.",
-  "cat": "Altura 180 cm · Ancho y profundidad 110 x 110 cm · Incluye tubo de burbujas Luminea · Fibra óptica de 2 m · Tableta de control con la aplicación para Android · Base intercambiable en PVC o en tacto piel · Punto de acceso · Fijación a pared · Elementos sincronizables entre sí",
+  "inc": "Tubo de burbujas Luminea, Fibra óptica Luminea de 2 m, Base para el tubo, Tableta de control con su aplicación, Equipo de red inalámbrica propio, Fijación a pared, Regleta de enchufes, Libro de actividades.",
+  "tec": "Medidas: 180 cm de alto y 110 × 110 cm de ancho y fondo. Alimentación: un enchufe de 230 V. Fibra óptica: 2 m.",
+  "cat": "Trae su propia red inalámbrica, sin depender de la red del lugar · Base del tubo a elegir en PVC o en tela tacto piel, en el color que se elija · Compatible con los demás equipos Luminea",
   "mat": "Tejido: Impermeable a líquidos, incluidas la transpiración, la saliva, la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa\nDeclaración del fabricante: Tratamiento antimicrobiano incorporado al tejido desde su fabricación · Sin las sustancias químicas restringidas en Europa",
-  "logro": "Arma un espacio multisensorial en cualquier rincón, sin obra y sin dedicarle una sala entera, y se maneja desde su propia tableta.",
-  "unico": "Trae su propia tableta de control, así que funciona sin depender de la unidad central de la sala."
+  "logro": "Arma un espacio multisensorial en cualquier rincón, sin obra y sin dedicarle una sala entera.",
+  "unico": "Viene con su propia tableta de control, lista para usar desde el primer día."
  },
  "BJ-EMCV": {
   "n": "Cojín vibroacústico",
@@ -198,10 +198,10 @@ window.SALAS_ESPECIFICACIONES = {
   "fam": "Espejo recto / curvo",
   "que": "Espejo pensado para potenciar la experiencia visual y sensorial de la sala. Combinado con el tubo de burbujas amplía visualmente el espacio y multiplica los efectos de luz y de movimiento.",
   "trab": "Reconocimiento, imagen corporal, atención conjunta y trabajo frente al espejo con acompañamiento del profesional.",
-  "ind": "Parálisis cerebral · Trastorno del espectro autista · Daño cerebral · Discapacidad intelectual · Personas mayores · Discapacidad visual · Profesionales de educación especial, fisioterapia y terapia ocupacional",
-  "inc": "Espejo con perfil de PVC flexible en los bordes y elementos de fijación mural.",
-  "tec": "Medidas 110 cm de ancho por 115 cm de alto. Acrílico espejado de 3 mm sobre panel trasero de madera de 8 mm, con bordes de perfil de PVC flexible. Fijación con dos anclajes y dos tornillos, con taladro de 6 mm.",
-  "cat": "Espejo grande recto de 110 cm de ancho por 115 cm de alto · Material acrílico reforzado sobre tablero de madera · Protección perimetral para mayor durabilidad y seguridad"
+  "ind": "Parálisis cerebral · Trastorno del espectro autista · Daño cerebral · Discapacidad intelectual · Personas mayores · Discapacidad visual",
+  "inc": "Espejo con refuerzo trasero de madera y sistema para colgarlo, y perfil de PVC flexible que protege los bordes.",
+  "tec": "Medidas: 110 cm de ancho por 115 cm de alto. Material: espejo acrílico, más seguro que el vidrio, reforzado con un tablero de madera. Instalación: se cuelga en el muro con dos tarugos y dos tornillos (no incluidos).",
+  "cat": "Bordes protegidos en todo su contorno con perfil de PVC flexible"
  },
  "BJ-EEGC": {
   "n": "Espejo grande curvo",
@@ -330,14 +330,14 @@ window.SALAS_ESPECIFICACIONES = {
   "n": "Button 1",
   "oc": "OC-0412",
   "fam": "Button 1",
-  "que": "Pulsador inalámbrico que controla los elementos de la sala multisensorial. Permite cambiar colores, activar escenas y transformar el entorno de forma accesible, favoreciendo la participación activa y la relación causa-efecto.",
-  "trab": "Causa-efecto con un único movimiento voluntario. El modo de barrido permite recorrer las opciones y elegir con una sola pulsación, y el modo secuencial permite avanzar paso a paso por los elementos de la sala.",
+  "que": "Pulsador inalámbrico que controla los elementos de la sala multisensorial. Permite cambiar colores, activar escenas y transformar el entorno de forma accesible, favoreciendo la participación activa.",
+  "trab": "Causa-efecto con un único movimiento voluntario. En las salas SHX, el modo de barrido va recorriendo las opciones y la persona elige pulsando cuando llega la que quiere; el modo secuencial avanza paso a paso, cambiando de color o pasando a la siguiente acción de la escena.",
   "ind": "Discapacidad física (lesión medular, esclerosis múltiple, ELA) · Parálisis cerebral · Trastorno del espectro autista · Daño cerebral · Discapacidad intelectual · Personas mayores · Discapacidad visual · Atención temprana",
-  "inc": "Pulsador con alimentación por pilas.",
-  "tec": "Superficie de activación de 125 mm de diámetro. Alimentación con dos pilas AAA y ahorro automático de energía. Alcance de hasta 25 m. Modos de funcionamiento independientes para la columna de burbujas, para los haces de fibra óptica, para el resto de los elementos de iluminación, para el gobierno de la sala completa, y un modo combinado que acciona todos los dispositivos de iluminación a la vez.",
-  "cat": "Inalámbrico · Las pilas soportan 100.000 pulsaciones · Se configura por la parte posterior · Pantalla indicadora · Compatible con los dispositivos Luminea y con las salas SHX · Incluye dos pilas AAA",
-  "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa\nSeguridad eléctrica: Marcado CE de la Unión Europea en seguridad eléctrica y compatibilidad electromagnética",
-  "logro": "Una sola pulsación enciende la escena: es el mando para empezar a trabajar causa y efecto, sin opciones que administrar.",
+  "inc": "Pulsador inalámbrico con sus dos pilas AAA.",
+  "tec": "Superficie de activación de 12,5 cm de diámetro. Alimentación con dos pilas AAA y ahorro automático de energía. Alcance de hasta 25 m. Se configura para manejar el tubo de burbujas, la fibra óptica, el resto de los equipos de luz, todos ellos a la vez, o las escenas de la sala SHX.",
+  "cat": "Inalámbrico · Las pilas soportan 100.000 pulsaciones · Se configura por la parte posterior · Indicador en la parte posterior que muestra el equipo y la función elegidos · Compatible con los equipos Luminea y con las salas SHX",
+  "mat": "Seguridad eléctrica: Cumple las reglas europeas para funcionar sin interferir con otros aparatos",
+  "logro": "Con una sola pulsación la persona cambia el color, enciende las burbujas o activa una escena: es el mando para empezar a trabajar causa y efecto.",
   "unico": "Un único botón grande e inalámbrico, con pilas para 100.000 pulsaciones."
  },
  "BJ-EIFUVLX": {
@@ -346,11 +346,11 @@ window.SALAS_ESPECIFICACIONES = {
   "fam": "Foco de luz UV LED SHX",
   "que": "Foco que realza los materiales blancos y fluorescentes para crear experiencias visuales intensas. Favorece la atención y la exploración sensorial, y permite enriquecer las actividades con material reactivo a la luz ultravioleta.",
   "trab": "Estimulación visual de alto contraste, atención y seguimiento. Bajo luz ultravioleta los materiales reactivos destacan sobre un fondo oscuro, lo que facilita la fijación de la mirada en personas con baja visión o con dificultad de atención.",
-  "ind": "Discapacidad física (lesión medular, esclerosis múltiple, ELA) · Parálisis cerebral · Trastorno del espectro autista · Daño cerebral (ictus, traumatismo craneoencefálico) · Discapacidad intelectual · Personas mayores · Discapacidad visual",
-  "inc": "Proyector con su alimentación.",
-  "tec": "Dimensiones de 120 × 120 × 190 mm. Alimentación de 220 a 240 V AC 50/60 Hz. Potencia de 8 W. Peso de 0,9 kg.",
-  "cat": "Lámpara DMX de 55 LED · Funciona a 230 V · Compatible con el Sistema SHX · Incluye el receptor de radiofrecuencia Enabler Socket+",
-  "mat": "Declaración del fabricante: Sin las sustancias químicas restringidas en Europa\nSeguridad eléctrica: Marcado CE de la Unión Europea en seguridad eléctrica y compatibilidad electromagnética"
+  "ind": "Discapacidad física (lesión medular, esclerosis múltiple, ELA) · Parálisis cerebral · Trastorno del espectro autista · Daño cerebral (accidente cerebrovascular, traumatismo encéfalo craneano) · Discapacidad intelectual · Personas mayores · Discapacidad visual",
+  "inc": "Foco de luz ultravioleta y su receptor inalámbrico, que lo conecta a la sala SHX.",
+  "tec": "Medidas: 18 × 17,5 × 11,4 cm (22,8 × 22,7 × 11,2 cm con su soporte). Funciona con un enchufe común, de 100 a 240 V. Consumo de 20 W. Peso de 1,1 kg.",
+  "cat": "Compatible con el Sistema SHX: se enciende junto con las escenas de la sala o con un pulsador",
+  "mat": "Seguridad eléctrica: Cumple las reglas europeas para funcionar sin interferir con otros aparatos"
  },
  "BJ-EX47": {
   "n": "Estrellas SHX",
@@ -561,10 +561,10 @@ window.SALAS_ESPECIFICACIONES = {
   "fam": "Kit de material ultravioleta",
   "que": "Conjunto de objetos fluorescentes que brillan bajo la luz ultravioleta y crean experiencias sensoriales llamativas y motivadoras. Pensado para estimular la atención visual y la exploración.",
   "trab": "Manipulación, alcance, atención y seguimiento visual bajo luz ultravioleta.",
-  "ind": "Parálisis cerebral · Trastorno del espectro autista · Daño cerebral · Discapacidad intelectual · Personas mayores · Baja visión · Atención temprana",
-  "inc": "Surtido de elementos reactivos a la luz ultravioleta.",
+  "ind": "Parálisis cerebral · Trastorno del espectro autista · Daño cerebral · Discapacidad intelectual · Personas mayores · Discapacidad visual · Atención temprana",
+  "inc": "Trompo giratorio ultravioleta, Guante de texturas, Dos maracas, Pañuelos de malabares, Resorte de colores gigante, Pelota flexible, Tiras elásticas, Tubos sonoros, Tubos que se estiran en dos tamaños, Manopla con pelota, Seis pelotas surtidas, Bolsa de almacenaje.",
   "tec": "",
-  "cat": "Spinner ultravioleta · Guante de textura · Dos maracas · Pañuelos de malabares · Muelle Rainbow Springy · Flexiball · Spaghetti · Tubos sonoros · Dos tamaños de pop tube · Manopla con pelota de tenis · Seis pelotas surtidas · Bolsa de almacenaje"
+  "cat": "El contenido puede variar levemente según la disponibilidad del fabricante"
  },
  "BJ-E16807": {
   "n": "Conjunto de discos táctiles para pies y manos",

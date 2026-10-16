@@ -1517,6 +1517,28 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
       </label>
     </div>
 
+    <!-- Rayen 15-oct-2026: banner «Envío no incluido», igual a Oferta especial y Envío gratuito. -->
+    <div style="margin-top:8px;margin-bottom:10px;">
+      <label style="
+        display:flex; align-items:center; gap:12px;
+        background:linear-gradient(135deg, var(--navy), #0A2E8A);
+        border-radius:10px; padding:12px 16px; cursor:pointer;
+        box-shadow:0 4px 14px rgba(0,26,96,0.35);
+        transition:all .2s;
+      " onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='1'">
+        <input type="checkbox" id="chkEnvioNoIncluido" onchange="onEnvioNoIncluido()"
+          style="width:20px;height:20px;cursor:pointer;accent-color:white;flex-shrink:0;">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+            <span style="font-family:'Montserrat',sans-serif;font-size:12px;font-weight:800;color:white;letter-spacing:1px;text-transform:uppercase;">Envío no incluido</span>
+          </div>
+          <div style="font-size:9.5px;color:rgba(255,255,255,0.85);margin-top:2px;">
+            Activa para indicar que el costo de envío no está incluido
+          </div>
+        </div>
+      </label>
+    </div>
     <div class="sec" style="margin-top:4px">Condiciones</div>
 
     <div class="cond-block">
@@ -3432,6 +3454,7 @@ function upd() {
   const totalesHTML = `<div class="ptot-wrap">
     ${esOfertaEspecial ? `<div class="oferta-especial-banner"><span class="oe-icon">✦</span> OFERTA ESPECIAL &nbsp;·&nbsp; VÁLIDA POR ${validez} DÍAS <span class="oe-icon">✦</span></div>` : ""}
     ${document.getElementById("chkEnvioGratuito")?.checked ? `<div style="background:linear-gradient(90deg,#06b3fd,#0090cc);color:white;text-align:center;font-family:'Montserrat',sans-serif;font-size:7.5pt;font-weight:700;padding:5px 12px;border-radius:4px;margin-bottom:8px;letter-spacing:2px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:6px;"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> ENVÍO GRATUITO · DESPACHO SIN COSTO INCLUIDO</div>` : ""}
+    ${document.getElementById("chkEnvioNoIncluido")?.checked ? `<div style="background:linear-gradient(90deg,#001a60,#0A2E8A);color:white;text-align:center;font-family:'Montserrat',sans-serif;font-size:7.5pt;font-weight:700;padding:5px 12px;border-radius:4px;margin-bottom:8px;letter-spacing:2px;">ENVÍO NO INCLUIDO · EL COSTO DE DESPACHO NO ESTÁ INCLUIDO EN ESTA COTIZACIÓN</div>` : ""}
     ${document.querySelector('input[name="envioTipo"]:checked')?.value==="retiro" ? `<div style="background:linear-gradient(90deg,#06b3fd,#001a60);color:white;text-align:center;font-family:'Open Sans',sans-serif;font-size:8pt;font-weight:700;padding:5px 12px;border-radius:4px;margin-bottom:8px;letter-spacing:0.3px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:6px;"><path d="M3 21h18"/><path d="M3 7v14"/><path d="M21 7v14"/><path d="M3 7l9-4 9 4"/><path d="M9 21V11h6v10"/><path d="M1 21h22"/></svg> PRODUCTOS SE RETIRAN EN BODEGA &nbsp;·&nbsp; QUILPUÉ, V REGIÓN, CHILE</div>` : ""}
     <table class="${esOfertaEspecial ? 'ptot oferta-table' : 'ptot'}">
       <tr><td class="tl">SUBTOTAL PRODUCTOS</td><td class="tv">${CLP(sub)}</td></tr>
@@ -3444,7 +3467,7 @@ function upd() {
       <tr class="sep"><td colspan="2"></td></tr>
       <tr class="gr${esOfertaEspecial ? " oferta" : ""}"><td class="tl">${esOfertaEspecial ? "VALOR OFERTA ESPECIAL  ·  IVA incluido" : "TOTAL IVA INCLUIDO"}</td><td class="tv">${CLP(tt)}</td></tr>
     </table>
-    ${(envNoIncluido && !salaActiva && !document.getElementById("chkEnvioGratuito")?.checked) ? `<div class="env-no-inc">★★ ESTA COTIZACIÓN NO INCLUYE EL COSTO DE ENVÍO ★★</div>` : ""}
+    ${(envNoIncluido && !salaActiva && !document.getElementById("chkEnvioGratuito")?.checked && !document.getElementById("chkEnvioNoIncluido")?.checked) ? `<div class="env-no-inc">★★ ESTA COTIZACIÓN NO INCLUYE EL COSTO DE ENVÍO ★★</div>` : ""}
   </div>`;
 
   const footerRow1HTML = `<div class="pfooter-row">
@@ -3855,10 +3878,25 @@ function getSalaValNeto() {
   return _salaModo === "iva" ? val / 1.19 : val;
 }
 
+function onEnvioNoIncluido() {
+  const chk = document.getElementById("chkEnvioNoIncluido");
+  const noEnvio = document.getElementById("chkNoEnvio");
+  if(chk && chk.checked) {
+    ["chkEnvioGratuito","chkEnvioIncluido"].forEach(id => { const e = document.getElementById(id); if(e) e.checked = false; });
+    if(noEnvio) noEnvio.checked = true;
+    const r = document.querySelector('input[name="envioTipo"][value="noincluido"]');
+    if(r && !r.checked) { r.checked = true; switchEnvio("noincluido"); }
+    const secEnvio = document.getElementById("seccionEnvio");
+    if(secEnvio) secEnvio.style.display = "block";
+  } else if(noEnvio) noEnvio.checked = false;
+  upd();
+}
+
 function onEnvioGratuito() {
   const chk = document.getElementById("chkEnvioGratuito");
   const secEnvio = document.getElementById("seccionEnvio");
   if(chk && chk.checked) {
+    const noInc = document.getElementById("chkEnvioNoIncluido"); if(noInc) noInc.checked = false;
     // Desmarcar "no contempla envío" y "envío incluido"
     const noEnvio = document.getElementById("chkNoEnvio");
     const envioInc = document.getElementById("chkEnvioIncluido");
@@ -4565,6 +4603,7 @@ async function guardarCotizacion() {
       plazo_otro: document.getElementById("otroPlazo")?.value || "",
       nota:      document.getElementById("condNotaAdicional")?.value || "",
       no_envio:  document.getElementById("chkNoEnvio")?.checked || false,
+      envio_no_incluido: document.getElementById("chkEnvioNoIncluido")?.checked || false,
       envio_incluido: document.getElementById("chkEnvioIncluido")?.checked || false,
       envio_starken: document.getElementById("chkEnvioStarken")?.checked || false,
       oferta:    document.getElementById("chkOfertaEspecial")?.checked || false,
@@ -4731,6 +4770,7 @@ function aplicarCotizacion(d) {
         if(cn.plazo_otro)     document.getElementById("otroPlazo").value       = cn.plazo_otro;
         if(cn.nota)           document.getElementById("condNotaAdicional").value = cn.nota;
         if(document.getElementById("chkNoEnvio"))       document.getElementById("chkNoEnvio").checked       = cn.no_envio || false;
+        if(document.getElementById("chkEnvioNoIncluido")) document.getElementById("chkEnvioNoIncluido").checked = cn.envio_no_incluido || false;
         if(document.getElementById("chkEnvioIncluido")) document.getElementById("chkEnvioIncluido").checked = cn.envio_incluido || false;
         if(document.getElementById("chkEnvioStarken"))  document.getElementById("chkEnvioStarken").checked  = cn.envio_starken || false;
         if(document.getElementById("chkOfertaEspecial")) document.getElementById("chkOfertaEspecial").checked = cn.oferta || false;

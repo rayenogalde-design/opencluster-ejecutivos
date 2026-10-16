@@ -289,7 +289,7 @@ window.SALAS_OC = {
   "BJ-LPIS-V":"OC-1494",
   "BJ-LPLNT":"OC-2342",
   "BJ-LPLNTP":"OC-2343",
-  "BJ-LRIN":"OC-1622",
+  "BJ-LRIN":"OC-2372",
   "BJ-LRIN23":"OC-2435",
   "BJ-LTUB":"OC-2425",
   "BJ-LWAP":"OC-2373",

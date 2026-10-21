@@ -1111,7 +1111,7 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
               </div>
               <div class="calc-field">
                 <label>Destino final</label>
-                <input type="text" id="calcDestino" value="Santiago" placeholder="Ej: Santiago" oninput="calcLogisticaDebounced()" list="lista-ciudades" autocomplete="off">
+                <input type="text" id="calcDestino" value="Santiago" placeholder="Ej: Santiago" oninput="window._choferesManual=false;calcLogisticaDebounced()" list="lista-ciudades" autocomplete="off">
               </div>
             </div>
           </div>
@@ -1198,27 +1198,27 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
 
             <!-- Alojamiento -->
             <div class="calc-row" id="rowAloj" style="display:none">
-              <span class="calc-row-label">Alojamiento conductor<span class="calc-row-sub" id="rowAlojSub" style="display:block"></span></span>
+              <span class="calc-row-label">Alojamiento (choferes y pionetas)<span class="calc-row-sub" id="rowAlojSub" style="display:block"></span></span>
               <span class="calc-row-val" id="crAloj">—</span>
               <button class="calc-rem-btn" onclick="toggleAloj()" id="btnRemAloj">Remover</button>
             </div>
 
             <!-- Sueldo -->
             <div class="calc-row" id="rowSueldo">
-              <span class="calc-row-label">Logística</span>
+              <span class="calc-row-label">Choferes y pionetas</span>
               <span class="calc-row-val" id="crSueldo">—</span>
               <button class="calc-rem-btn" onclick="toggleSueldo()" id="btnRemSueldo">Remover</button>
             </div>
 
             <!-- Viático -->
             <div id="rowViatico" style="display:none;border-bottom:1px solid #f0ece4;padding:6px 10px 8px;">
-              <div style="font-size:9.5px;color:#444;margin-bottom:3px;">Viático conductor</div>
+              <div style="font-size:9.5px;color:#444;margin-bottom:3px;">Viático (choferes y pionetas) — choferes: automático según horas de manejo</div>
               <div style="display:flex;flex-direction:column;gap:2px;margin-bottom:4px;">
                 <label style="font-size:8.5px;cursor:pointer;display:flex;align-items:center;gap:4px">
-                  <input type="radio" name="nChoferes" value="1" checked onchange="calcLogistica()" style="accent-color:var(--sky)"> 1 conductor
+                  <input type="radio" name="nChoferes" value="1" checked onchange="window._choferesManual=true;calcLogistica()" style="accent-color:var(--sky)"> 1 conductor
                 </label>
                 <label style="font-size:8.5px;cursor:pointer;display:flex;align-items:center;gap:4px">
-                  <input type="radio" name="nChoferes" value="2" onchange="calcLogistica()" style="accent-color:var(--sky)"> 2 conductores
+                  <input type="radio" name="nChoferes" value="2" onchange="window._choferesManual=true;calcLogistica()" style="accent-color:var(--sky)"> 2 conductores
                 </label>
               </div>
               <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -1305,7 +1305,7 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
         <span class="tv" id="eAloj">$0</span>
       </div>
       <div class="trow" id="rSueldo">
-        <span class="tl">👷 Sueldo logística
+        <span class="tl">👷 Choferes y pionetas
           <button onclick="toggleSueldo()" id="btnRemSueldo2"
             style="margin-left:5px;font-size:7.5px;padding:1px 5px;border:1px solid rgba(255,255,255,0.3);border-radius:3px;background:transparent;cursor:pointer;color:#f99;">
             Remover
@@ -2464,17 +2464,36 @@ async function calcLogistica() {
   const diasRuta   = Math.ceil(distIV / 500);
   const nochesAloj = diasRuta - 1;
 
-  // Alojamiento: aplica si hay más de 1 día, multiplicado por noches
+  // Tripulación (Rayen, 21-oct-2026): horas de manejo a 70 km/h.
+  //   Choferes: un chofer no maneja más de 5 h → 2 choferes si la IDA pasa de 5 h (se puede cambiar a mano).
+  //   Pionetas: 1, o 2 si el viaje ida+vuelta pasa de 8 h. Se pagan por cada tramo de 8 h del viaje ida+vuelta.
+  const VEL_KMH       = 70;
+  const horasIda      = distKm / VEL_KMH;
+  const horasIV       = distIV / VEL_KMH;
+  const autoChoferes  = horasIda > 5 ? 2 : 1;
+  if(!window._choferesManual) {
+    const rCh = document.querySelector(`input[name="nChoferes"][value="${autoChoferes}"]`);
+    if(rCh) rCh.checked = true;
+  }
+  const nChoferes = parseInt(document.querySelector('input[name="nChoferes"]:checked')?.value || autoChoferes);
+  const nPionetas = horasIV > 8 ? 2 : 1;
+  const tramos8h  = Math.max(1, Math.ceil(horasIV / 8));
+  const nPersonas = nChoferes + nPionetas;
+
+  // Alojamiento: aplica si hay más de 1 día, por noche y por persona (choferes y pionetas)
   const ALOJ_VAL     = 42050;
   const needAloj     = nochesAloj > 0;
   const alojRemovido = window._alojRemovido || false;
   const incluirAloj  = needAloj && !alojRemovido;
-  const alojCost     = incluirAloj ? ALOJ_VAL * nochesAloj : 0;
+  const alojCost     = incluirAloj ? ALOJ_VAL * nochesAloj * nPersonas : 0;
 
-  // Sueldo logística: siempre, multiplicado por días en ruta
-  const SUELDO_VAL     = 50420;
-  const sueldoRemovido = window._sueldoRemovido || false;
-  const sueldoCost     = sueldoRemovido ? 0 : SUELDO_VAL * diasRuta;
+  // Choferes $60.000 por día en ruta cada uno + pionetas $40.000 por tramo de 8 h cada uno
+  const CHOFER_DIA      = 60000;
+  const PIONETA_TRAMO   = 40000;
+  const sueldoRemovido  = window._sueldoRemovido || false;
+  const sueldoChoferes  = CHOFER_DIA * diasRuta * nChoferes;
+  const sueldoPionetas  = PIONETA_TRAMO * tramos8h * nPionetas;
+  const sueldoCost      = sueldoRemovido ? 0 : sueldoChoferes + sueldoPionetas;
 
   // Viático: automático si destino fuera de quinta región, multiplicado por días y conductores
   const VIATICO_VAL     = 30000;
@@ -2486,11 +2505,10 @@ async function calcLogistica() {
   const fueraV5         = !quintaRegion.includes(destNorm);
   const viaticoRemovido = window._viaticoRemovido || false;
   const incluirViatico  = fueraV5 && !viaticoRemovido;
-  const nChoferes       = parseInt(document.querySelector('input[name="nChoferes"]:checked')?.value || 1);
   const VIATICO_V5_VAL  = 10000; // viático dentro de V Región o Santiago
   const viaticoCost     = incluirViatico
-    ? VIATICO_VAL * nChoferes * diasRuta
-    : (!viaticoRemovido ? VIATICO_V5_VAL * nChoferes : 0);
+    ? VIATICO_VAL * nPersonas * diasRuta
+    : (!viaticoRemovido ? VIATICO_V5_VAL * nPersonas : 0);
 
   // Retiro en bodega (SIEMPRE en Santiago — es solo el costo del retiro)
   const retiro = getRetiroCosto();
@@ -2572,7 +2590,7 @@ async function calcLogistica() {
   if(rowAloj) {
     rowAloj.style.display = "flex";
     if(needAloj) {
-      document.getElementById("crAloj").textContent = incluirAloj ? `$${alojCost.toLocaleString("es-CL")} (${nochesAloj} noche${nochesAloj>1?"s":""})` : "Removido";
+      document.getElementById("crAloj").textContent = incluirAloj ? `$${alojCost.toLocaleString("es-CL")} (${nochesAloj} noche${nochesAloj>1?"s":""} × ${nPersonas} pers.)` : "Removido";
       const sub = document.getElementById("rowAlojSub");
       if(sub) sub.textContent = incluirAloj ? `${diasRuta} días en ruta — ${nochesAloj} noche${nochesAloj>1?"s":""} de alojamiento` : "";
       const b = document.getElementById("btnRemAloj");
@@ -2591,7 +2609,7 @@ async function calcLogistica() {
   const rowSueldo = document.getElementById("rowSueldo");
   if(rowSueldo) {
     rowSueldo.style.display = "flex";
-    document.getElementById("crSueldo").textContent = sueldoRemovido ? "Removido" : `$${sueldoCost.toLocaleString("es-CL")} (${diasRuta} día${diasRuta>1?"s":""})`;
+    document.getElementById("crSueldo").textContent = sueldoRemovido ? "Removido" : `$${sueldoCost.toLocaleString("es-CL")} (${nChoferes} chofer${nChoferes>1?"es":""} × ${diasRuta} día${diasRuta>1?"s":""} + ${nPionetas} pioneta${nPionetas>1?"s":""} × ${tramos8h} tramo${tramos8h>1?"s":""} de 8 h)`;
     const b = document.getElementById("btnRemSueldo");
     if(b) { b.textContent = sueldoRemovido ? "Restaurar" : "Remover"; b.classList.toggle("restored", sueldoRemovido); }
   }
@@ -2602,15 +2620,15 @@ async function calcLogistica() {
     rowViatico.style.display = "flex";
     if(fueraV5) {
       document.getElementById("crViatico").textContent = incluirViatico
-        ? `$${viaticoCost.toLocaleString("es-CL")} (${diasRuta} día${diasRuta>1?"s":""} × ${nChoferes} cond.)`
+        ? `$${viaticoCost.toLocaleString("es-CL")} (${diasRuta} día${diasRuta>1?"s":""} × ${nPersonas} pers.)`
         : "Removido";
       const b = document.getElementById("btnRemViatico");
       if(b) { b.textContent = viaticoRemovido ? "Restaurar" : "Remover"; b.classList.toggle("restored", viaticoRemovido); }
     } else {
-      const v5Cost = 10000 * nChoferes;
+      const v5Cost = 10000 * nPersonas;
       document.getElementById("crViatico").textContent = viaticoRemovido
         ? "Removido"
-        : `$${v5Cost.toLocaleString("es-CL")} (V Región × ${nChoferes} cond.)`;
+        : `$${v5Cost.toLocaleString("es-CL")} (V Región × ${nPersonas} pers.)`;
       const b = document.getElementById("btnRemViatico");
       if(b) { b.style.display = "inline"; b.textContent = viaticoRemovido ? "Restaurar" : "Remover"; b.classList.toggle("restored", viaticoRemovido); }
     }

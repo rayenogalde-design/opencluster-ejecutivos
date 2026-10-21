@@ -79,7 +79,7 @@ window.SALAS_ESPECIFICACIONES = {
   "inc": "Puff transformable con módulo de vibración integrado y su cable de 15 m. Se conecta a la salida de vibración del Sistema SHX Compact, o al amplificador vibroacústico o al kit vibroacústico inalámbrico (no incluidos).",
   "tec": "Medidas: 140 × 180 cm. Vibración: potencia de 50 W continuos (hasta 100 W). Tejido vinílico, de 0,5 a 1 mm de espesor.",
   "cat": "Tejido con protección contra bacterias y hongos · Muy resistente al roce · Resistente a la transpiración, la saliva, la orina y la sangre · Cumple el reglamento europeo de sustancias químicas, según su fabricante · Cumple el límite europeo de metales pesados exigido a los juguetes, pensado para cuando un niño se lleva un objeto a la boca · Tejido difícilmente inflamable · Muy resistente al sol · Color a elegir entre 12",
-  "mat": "Tejido: Ensayado en laboratorio europeo: cumple el requisito de seguridad para formaldehído, plomo, cadmio y ftalatos · Las costuras no son impermeables: secar los líquidos de inmediato\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa",
+  "mat": "Tejido: Ensayado en laboratorio europeo: cumple el requisito de seguridad para formaldehído, plomo, cadmio y ftalatos\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa",
   "logro": "Transmite la música por el cuerpo de la persona, en la postura que le resulte más cómoda.",
   "unico": "Se moldea a la postura de cada persona y trae el módulo vibroacústico integrado en el propio puff."
  },
@@ -93,7 +93,7 @@ window.SALAS_ESPECIFICACIONES = {
   "inc": "Tubo de burbujas Luminea, Fibra óptica Luminea de 2 m, Base para el tubo, Aplicación Luminea para Android, Equipo de red inalámbrica propio, Fijación a pared, Alargador (zapatilla) de enchufes, Libro de actividades.",
   "tec": "Medidas: 180 cm de alto y 110 × 110 cm de ancho y fondo. Alimentación: un enchufe de 230 V. Fibra óptica: 2 m.",
   "cat": "Trae su propia red inalámbrica, sin depender de la red del lugar · Base del tubo a elegir en vinilo o en tela tacto piel, en el color que se elija · Se maneja también con pulsadores como el Button 1 y se puede integrar al Sistema SHX · La tableta Android no viene incluida",
-  "mat": "Tejido: No deja pasar la orina ni la sangre, verificado en laboratorio europeo · Las costuras no son impermeables: secar los líquidos de inmediato · Resistente a la transpiración y la saliva · Ensayado en laboratorio europeo: cumple el requisito de seguridad para formaldehído, plomo, cadmio y ftalatos\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa\nDeclaración del fabricante: Tratamiento antimicrobiano incorporado al tejido desde su fabricación",
+  "mat": "Tejido: No deja pasar la orina ni la sangre, verificado en laboratorio europeo · Resistente a la transpiración y la saliva · Ensayado en laboratorio europeo: cumple el requisito de seguridad para formaldehído, plomo, cadmio y ftalatos\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa\nDeclaración del fabricante: Tratamiento antimicrobiano incorporado al tejido desde su fabricación",
   "logro": "Arma un espacio multisensorial en cualquier rincón, sin obra y sin dedicarle una sala entera.",
   "unico": "Reúne el tubo de burbujas y la fibra óptica en un solo conjunto que se instala sin obra."
  },
@@ -107,7 +107,7 @@ window.SALAS_ESPECIFICACIONES = {
   "inc": "Tubo de burbujas Luminea, Fibra óptica Luminea de 2 m, Base para el tubo, Tableta de control con su aplicación, Equipo de red inalámbrica propio, Fijación a pared, Alargador (zapatilla) de enchufes, Libro de actividades.",
   "tec": "Medidas: 180 cm de alto y 110 × 110 cm de ancho y fondo. Alimentación: un enchufe de 230 V. Fibra óptica: 2 m.",
   "cat": "Trae su propia red inalámbrica, sin depender de la red del lugar · Base del tubo a elegir en vinilo o en tela tacto piel, en el color que se elija · Se maneja también con pulsadores como el Button 1 y se puede integrar al Sistema SHX",
-  "mat": "Tejido: No deja pasar la orina ni la sangre, verificado en laboratorio europeo · Las costuras no son impermeables: secar los líquidos de inmediato · Resistente a la transpiración y la saliva · Ensayado en laboratorio europeo: cumple el requisito de seguridad para formaldehído, plomo, cadmio y ftalatos\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa\nDeclaración del fabricante: Tratamiento antimicrobiano incorporado al tejido desde su fabricación",
+  "mat": "Tejido: No deja pasar la orina ni la sangre, verificado en laboratorio europeo · Resistente a la transpiración y la saliva · Ensayado en laboratorio europeo: cumple el requisito de seguridad para formaldehído, plomo, cadmio y ftalatos\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa\nDeclaración del fabricante: Tratamiento antimicrobiano incorporado al tejido desde su fabricación",
   "logro": "Arma un espacio multisensorial en cualquier rincón, sin obra y sin dedicarle una sala entera.",
   "unico": "Viene con su propia tableta de control, lista para usar desde el primer día."
  },
@@ -349,7 +349,7 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Discapacidad física (lesión medular, esclerosis múltiple, esclerosis lateral amiotrófica, enfermedades neuromusculares) · Parálisis cerebral · Trastorno del espectro autista · Daño cerebral (accidente cerebrovascular, traumatismo encefalocraneano) · Discapacidad intelectual · Personas mayores · Discapacidad visual",
   "inc": "Foco de luz ultravioleta y su receptor inalámbrico, que lo conecta a la sala SHX.",
   "tec": "Medidas: 18 × 17,5 × 11,4 cm (22,8 × 22,7 × 11,2 cm con su soporte). Funciona con un enchufe común, de 100 a 240 V. Consumo de 20 W. Peso de 1,1 kg.",
-  "cat": "Compatible con el Sistema SHX: se enciende desde la aplicación de la sala SHX o con un pulsador · Se fija al muro con un tornillo, un tarugo y una golilla (no incluidos) · Distancia de instalación: mínimo 50 cm de la superficie que ilumina; el fabricante recomienda entre 2 y 2,5 m · No se debe mirar directo a la luz, porque puede dañar la vista",
+  "cat": "Compatible con el Sistema SHX: se enciende desde la aplicación de la sala SHX o con un pulsador · Se fija al muro con un tornillo, un tarugo y una golilla (no incluidos) · Distancia de instalación: mínimo 50 cm de la superficie que ilumina; el fabricante recomienda entre 2 y 2,5 m",
   "mat": "Seguridad eléctrica: Cumple las reglas europeas para funcionar sin interferir con otros aparatos"
  },
  "BJ-EX47": {
@@ -564,7 +564,7 @@ window.SALAS_ESPECIFICACIONES = {
   "ind": "Parálisis cerebral · Trastorno del espectro autista · Daño cerebral · Discapacidad intelectual · Personas mayores · Discapacidad visual · Atención temprana",
   "inc": "Spinner ultravioleta (juguete giratorio), Guante de texturas, Dos maracas, Pañuelos de malabares, Resorte de colores gigante, Pelota flexible, Tiras elásticas, Tubos sonoros, Tubos que se estiran en dos tamaños, Manopla con pelota, Seis pelotas surtidas, Bolsa de almacenaje.",
   "tec": "",
-  "cat": "El contenido puede cambiar según disponibilidad"
+  "cat": ""
  },
  "BJ-E16807": {
   "n": "Conjunto de discos táctiles para pies y manos",

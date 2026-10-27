@@ -48,6 +48,13 @@
   .com{ border-radius:10px; padding:9px 14px; font-size:13px; margin:4px 0 10px; font-weight:500; }
   .com.sola{ background:#F0FDF4; border:1px solid #BBF7D0; color:#166534; }
   .com.compartida{ background:#FFF7ED; border:1px solid #FED7AA; color:#9A3412; }
+  .montos{ border:1px solid #BFDBFE; background:#EFF6FF; border-radius:10px; padding:9px 14px; margin:4px 0 10px; font-size:13px; color:#001A60; }
+  .montos .k{ font-size:11px; color:var(--sub); text-transform:uppercase; letter-spacing:.04em; font-weight:700; margin-bottom:4px; }
+  .montos .fila{ display:flex; justify-content:space-between; gap:10px; padding:2px 0; }
+  .montos .fila b{ white-space:nowrap; }
+  .montos .nota{ font-size:11.5px; color:#92400E; font-weight:700; }
+  .montos.pend{ border-style:dashed; background:#fff; color:var(--sub); }
+  .tit-res{ font-size:12px; font-weight:800; color:var(--navy); text-transform:uppercase; letter-spacing:.05em; padding:8px 14px 2px; }
   .aviso-dup{ background:#FEF2F2; border:1px solid #FECACA; color:#991B1B; border-radius:10px; padding:8px 12px; font-size:12.5px; font-weight:700; display:inline-block; margin-bottom:8px; }
   @media (max-width:600px){ .filtros select{ min-width:0; width:100%; } .filtros label{ flex:1 1 100%; } }
 </style>
@@ -103,13 +110,16 @@
 
   function pill(estado){ var c=COLORES[estado]||{bg:'#eee',c:'#555'}; return '<span class="pill" style="background:'+c.bg+';color:'+c.c+';">'+esc(estado)+'</span>'; }
 
-  var VENTAS = [], COTIS = {};
+  var VENTAS = [], COTIS = {}, COMS = [];
   var MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   function num(n){ return Number(String(n==null?'':n).replace(/[^0-9]/g,''))||0; }
   function clpN(n){ return '$'+Math.round(n||0).toLocaleString('es-CL'); }
   function nombre(e){ return String(e||'').trim().split(/\s+/).slice(0,2).join(' ') || '(sin ejecutivo)'; }
   function mesDe(v){ return String(v.fecha||'').slice(0,7); }
   function mesTxt(m){ var p=m.split('-'); return MESES[Number(p[1])-1]+' '+p[0]; }
+  function pnom(e){ return String(e||'').trim().split(/s+/)[0].toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''); }
+  // Comisiones cargadas en el CRM (pestaña Comisiones) para un mes ('' = todos) y, si se da, una cotización
+  function comsDe(m, numCot){ return COMS.filter(function(x){ return (!m || x.mes===m) && (!numCot || x.num===numCot); }); }
   function pct(x){ x=Number(x)||0; if(x>0 && x<1) x=x*100; return (Math.round(x*10)/10).toString().replace('.',',')+'%'; }
 
   function llenarFiltros(){
@@ -142,7 +152,20 @@
     var filas = ks.map(function(k){ var p=por[k]; t.n+=p.n; t.rec+=p.rec; t.neto+=p.neto; t.comp+=p.comp;
       return '<tr><td>'+esc(k)+'</td><td class="n">'+p.n+'</td><td class="n">'+p.comp+'</td><td class="n">'+clpN(p.neto)+'</td><td class="n">'+clpN(p.rec)+'</td></tr>'; }).join('');
     box.innerHTML = '<div class="resumen"><table><thead><tr><th>Ejecutivo</th><th class="n">Ventas</th><th class="n">Comisión compartida</th><th class="n">Neto productos pagado</th><th class="n">Monto recibido (c/IVA)</th></tr></thead><tbody>'+filas+
-      (ks.length>1?'<tr class="tot"><td>Total</td><td class="n">'+t.n+'</td><td class="n">'+t.comp+'</td><td class="n">'+clpN(t.neto)+'</td><td class="n">'+clpN(t.rec)+'</td></tr>':'')+'</tbody></table></div>';
+      (ks.length>1?'<tr class="tot"><td>Total</td><td class="n">'+t.n+'</td><td class="n">'+t.comp+'</td><td class="n">'+clpN(t.neto)+'</td><td class="n">'+clpN(t.rec)+'</td></tr>':'')+'</tbody></table></div>' +
+      resumenComisiones(m, e);
+  }
+  // Total de comisiones por persona del mes elegido (incluye a Hernán y los ajustes de meses anteriores)
+  function resumenComisiones(m, e){
+    var rows = comsDe(m).filter(function(x){ return !e || pnom(x.ejecutivo)===pnom(e); });
+    var tit = '<div class="tit-res">Comisiones'+(m?' de '+mesTxt(m):'')+'</div>';
+    if(!rows.length) return '<div class="resumen">'+tit+'<div style="padding:8px 14px;font-size:13px;color:var(--sub);">Por calcular.</div></div>';
+    var por = {};
+    rows.forEach(function(x){ var k=x.ejecutivo||'(sin nombre)'; por[k]=por[k]||{n:0,c:0}; por[k].n++; por[k].c+=Number(x.comision)||0; });
+    var ks = Object.keys(por).sort(), tot = 0;
+    var filas = ks.map(function(k){ tot += por[k].c; return '<tr><td>'+esc(k)+'</td><td class="n">'+por[k].n+'</td><td class="n"><b>'+clpN(por[k].c)+'</b></td></tr>'; }).join('');
+    return '<div class="resumen">'+tit+'<table><thead><tr><th>Persona</th><th class="n">Ítems</th><th class="n">Comisión</th></tr></thead><tbody>'+filas+
+      (ks.length>1?'<tr class="tot"><td>Total a pagar</td><td class="n"></td><td class="n">'+clpN(tot)+'</td></tr>':'')+'</tbody></table></div>';
   }
   window.pintar = pintar;
 
@@ -173,6 +196,16 @@
         (otro && !esElMismo ? ' · la comparte con <b>'+esc(otro)+'</b> (equipo de licitaciones)' : ' · no la comparte')+'.</div>';
     }
     return '<div class="com sola">Comisión no compartida: va completa a '+esc(nombre(v.ejecutivo))+'.</div>';
+  }
+  // Montos de comisión de ESTA venta en el mes elegido
+  function bloqueMontos(v){
+    var m = document.getElementById('fMes').value;
+    var rows = comsDe(m || mesDe(v), v.num);
+    if(!rows.length) return '<div class="montos pend">Monto de comisión: por calcular.</div>';
+    return '<div class="montos"><div class="k">Comisión de esta venta</div>' + rows.map(function(x){
+      return '<div class="fila"><span>'+esc(x.ejecutivo)+(x.pct?' · '+pct(x.pct):' · monto fijo')+'</span><b>'+clpN(x.comision)+'</b></div>'+
+        (x.nota?'<div class="nota">'+esc(x.nota)+'</div>':'');
+    }).join('') + '</div>';
   }
   function bloquePago(v){
     var c = COTIS[v.num]; if(!c || !c.pagos_info) return '';
@@ -206,6 +239,7 @@
         '</div>' +
         (noCalza(v)?'<div class="aviso-dup">El monto recibido no calza con la cotización: revisar la orden de compra</div>':'') +
         bloqueComision(v) +
+        bloqueMontos(v) +
         bloqueProductos(v) +
         '<div class="f"><div class="k">Dirección de despacho</div><div class="v">'+esc(v.direccion_despacho||'—')+'</div></div>' +
         (imgs?'<div class="imgs">'+imgs+'</div>':'') +
@@ -221,12 +255,15 @@
     // Productos, neto y pagos de cada cotización (si falla, la página igual muestra las ventas)
     var pC = fetch(CRM_API + '?accion=crm_mis_cotizaciones&solicitante=' + encodeURIComponent('Rayen Ogalde'))
       .then(function(r){ return r.json(); }).catch(function(){ return {}; });
-    Promise.all([pV, pC])
+    var pK = fetch(CRM_API + '?accion=crm_mis_comisiones&solicitante=' + encodeURIComponent('Rayen Ogalde'))
+      .then(function(r){ return r.json(); }).catch(function(){ return {}; });
+    Promise.all([pV, pC, pK])
       .then(function(res){
         if(!res[0].ok) throw new Error(res[0].error||'error');
         VENTAS = res[0].ventas || [];
         COTIS = {};
         ((res[1] && res[1].cotizaciones) || []).forEach(function(c){ if(c.cotizacion) COTIS[c.cotizacion] = c; });
+        COMS = (res[2] && res[2].comisiones) || [];
         llenarFiltros(); pintar();
       })
       .catch(function(e){ document.getElementById('lista').innerHTML = '<div class="muted">No se pudo cargar ('+e.message+').</div>'; });

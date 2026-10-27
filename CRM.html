@@ -14613,12 +14613,12 @@ async function marcarEstadoCotizacion(num, estado, btn, motivo){
 // PANEL DE CIERRE DE VENTA — al marcar Ganada (sube OC+transferencia, envío, etiquetas)
 // → llega a Finanzas y (si courier) a Ximena. Ver PROPUESTA_flujo_venta_ganada.md
 // ════════════════════════════════════════════════════════════════════════════
-function _vcUploadBox(key, label){
+function _vcUploadBox(key, label, accept, txt){
   return '<div style="flex:1;min-width:160px;">' +
     '<div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:4px;">' + label + '</div>' +
     '<label style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:2px dashed #cbd5e1;border-radius:10px;padding:14px;cursor:pointer;font-size:12px;color:#64748b;">' +
-      '<span id="vc-' + key + '-lbl">Subir imagen o PDF</span>' +
-      '<input type="file" accept="image/*,application/pdf,.pdf" onchange="_vcSubirImagen(\'' + key + '\', this)" style="display:none;">' +
+      '<span id="vc-' + key + '-lbl">' + (txt || 'Subir imagen o PDF') + '</span>' +
+      '<input type="file" accept="' + (accept || 'image/*,application/pdf,.pdf') + '" onchange="_vcSubirImagen(\'' + key + '\', this)" style="display:none;">' +
     '</label></div>';
 }
 function _vcCampo(id, label, val){
@@ -14632,7 +14632,10 @@ function _vcSubirImagen(key, input){
   fr.onload = function(){
     var res = String(fr.result||''); var comma = res.indexOf(',');
     var b64 = comma>=0 ? res.slice(comma+1) : res;
-    if(key==='oc'){ window.__vcImgOC = { data:b64, mime:f.type }; } else { window.__vcImgTransf = { data:b64, mime:f.type }; }
+    if(key==='cot'){
+      if(!/pdf/i.test(f.type) && !/\.pdf$/i.test(f.name)){ alert('La cotización tiene que ser el PDF que le enviaste al cliente.'); return; }
+      window.__vcPdfCot = { data:b64, mime:'application/pdf' };
+    } else if(key==='oc'){ window.__vcImgOC = { data:b64, mime:f.type }; } else { window.__vcImgTransf = { data:b64, mime:f.type }; }
     var lbl = document.getElementById('vc-'+key+'-lbl'); if(lbl){ lbl.textContent = '✓ ' + f.name.slice(0,18); lbl.style.color = '#047857'; }
     _vcChk();
   };
@@ -14653,6 +14656,37 @@ function _fracVentaAnio(c, anio){
   return String(c.mes_cierre||c.mes||'').substring(0,4)===anio ? 1 : 0;
 }
 function _mesesDeVenta(c){ return _tienePagos(c) ? Object.keys(c.pagos_mes) : [String(c.mes_cierre||c.mes||'')]; }
+// Venta por licitación: el ejecutivo declara el costo de compra de cada producto (Rayen, 27-oct-2026),
+// porque a veces cotiza con otro proveedor o con otro costo que el de la lista.
+function _vcCostosLicitHTML(productos){
+  var items = String(productos||'').match(/[^,\s][\s\S]*?x\s?\d+(?=\s*,|\s*$)/g) || [];
+  var filas = items.map(function(p){ var m = p.trim().match(/^([\s\S]*?)\s*x\s?(\d+)$/); return m ? { n:m[1], q:m[2] } : { n:p.trim(), q:'1' }; });
+  if(!filas.length) filas = [{ n:'', q:'1' }];
+  return '<div style="margin-top:14px;border-top:1px dashed #C4B5FD;padding-top:12px;">' +
+    '<label style="font-size:13px;font-weight:800;color:#5B21B6;display:block;margin-bottom:2px;">Costo de compra de los productos <span style="color:#DC2626;">*</span></label>' +
+    '<div style="font-size:11.5px;color:#6b7280;margin-bottom:8px;">Costo NETO (sin IVA) por unidad, el que pagaremos al proveedor. Con esto se calcula el margen y tu comisión.</div>' +
+    '<div id="vc-costos">' + filas.map(_vcCostoFila).join('') + '</div>' +
+    '<button type="button" onclick="_vcAgregarCosto()" style="margin-top:4px;background:#fff;border:1px solid #C4B5FD;color:#5B21B6;border-radius:8px;padding:6px 12px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">+ Agregar producto</button>' +
+  '</div>';
+}
+function _vcAgregarCosto(){ var b = document.getElementById('vc-costos'); if(b) b.insertAdjacentHTML('beforeend', _vcCostoFila({ n:'', q:'1' })); }
+function _vcCostoFila(f){
+  var e2 = (typeof esc==='function') ? esc : function(s){ return String(s==null?'':s); };
+  var I = 'box-sizing:border-box;padding:8px 9px;border:1px solid #d1d5db;border-radius:7px;font-size:13px;font-family:inherit;';
+  return '<div class="vc-costo-fila" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;align-items:center;">' +
+    '<input class="vc-c-prod" value="' + e2(f.n) + '" placeholder="Producto" style="' + I + 'flex:1 1 220px;min-width:0;">' +
+    '<input class="vc-c-cant" value="' + e2(f.q) + '" inputmode="numeric" title="Cantidad" style="' + I + 'width:52px;text-align:center;">' +
+    '<input class="vc-c-costo" placeholder="Costo neto c/u" inputmode="numeric" onblur="_vcFmtMonto(this)" style="' + I + 'width:130px;">' +
+    '<input class="vc-c-prov" placeholder="Proveedor" style="' + I + 'width:130px;">' +
+  '</div>';
+}
+function _vcCostosLicit(){
+  return Array.prototype.map.call(document.querySelectorAll('#vc-costos .vc-costo-fila'), function(r){
+    var g = function(c){ return String((r.querySelector(c)||{}).value||'').trim(); };
+    return { producto: g('.vc-c-prod'), cantidad: Number(g('.vc-c-cant').replace(/[^0-9]/g,'')) || 0,
+      costo_unit: Number(g('.vc-c-costo').replace(/[^0-9]/g,'')) || 0, proveedor: g('.vc-c-prov') };
+  }).filter(function(x){ return x.producto || x.costo_unit; });
+}
 function _vcEsLicit(){ return ((document.querySelector('input[name="vc-licit"]:checked')||{}).value) === 'si'; }
 function _vcToggleLicit(){ var b = document.getElementById('vc-licit-campos'); if(b) b.style.display = _vcEsLicit() ? '' : 'none'; }
 function _vcTipoPago(){ return (document.querySelector('input[name="vc-tipo-pago"]:checked')||{}).value || 'completo'; }
@@ -14791,7 +14825,7 @@ function abrirPanelCierreVenta(num, contacto){
   if(document.getElementById('panelCierreVenta')) return;
   var c = contacto || window.__CONTACTO_ACTIVO || {};
   var e2 = (typeof esc==='function') ? esc : function(s){ return String(s==null?'':s); };
-  window.__vcImgOC = null; window.__vcImgTransf = null; window.__vcNum = num; window.__vcContacto = c;
+  window.__vcImgOC = null; window.__vcImgTransf = null; window.__vcPdfCot = null; window.__vcNum = num; window.__vcContacto = c;
   window.__vcTotalCot = Number(c.__totalCotActiva || 0);
   var _mtPrefill = window.__vcTotalCot > 0 ? (typeof fmtCLP==='function' ? fmtCLP(window.__vcTotalCot) : String(window.__vcTotalCot)) : '';
   var ov = document.createElement('div');
@@ -14838,7 +14872,11 @@ function abrirPanelCierreVenta(num, contacto){
             '<div style="font-size:11.5px;color:#6b7280;margin:3px 0 10px;">Solo tu parte. La otra parte la informa quien trabajó la licitación.</div>' +
             '<label style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:4px;">Nombre de quien trabajó la licitación</label>' +
             '<input id="vc-licit-nombre" type="text" placeholder="Nombre y apellido" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;">' +
+            _vcCostosLicitHTML(c.__productos) +
           '</div></div>' +
+        // PDF de la cotización que se envió al cliente: obligatorio (Rayen, 27-oct-2026)
+        '<div style="margin-bottom:16px;"><div style="display:flex;gap:12px;flex-wrap:wrap;">' + _vcUploadBox('cot','PDF de la cotización enviada al cliente <span style="color:#DC2626;">*</span>', 'application/pdf,.pdf', 'Subir PDF') + '</div>' +
+          '<div style="font-size:11.5px;color:#6b7280;margin-top:3px;">Obligatorio: el mismo PDF que le mandaste al cliente.</div></div>' +
         // Productos de la cotización (solo lectura) — para revisar sin tener que abrir la cotización.
         '<div style="margin-bottom:16px;"><label style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:4px;">Productos de la cotización</label>' +
           '<div style="background:#F9FAFB;border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;font-size:13px;color:#374151;line-height:1.45;white-space:pre-wrap;max-height:150px;overflow:auto;">' + (c.__productos ? e2(c.__productos) : '<span style="color:#9ca3af;">(la cotización no trae el detalle de productos)</span>') + '</div></div>' +
@@ -15023,7 +15061,12 @@ async function guardarCierreVenta(){
     var _lp = parseFloat(_licPct.replace(',','.'));
     if(!(_lp > 0 && _lp <= 100)){ alert('Escribe el porcentaje de comisión que te corresponde en esta licitación (ej: 2).'); var _e1=document.getElementById('vc-licit-pct'); if(_e1) _e1.focus(); return; }
     if(!_licNom){ alert('Escribe el nombre de quien trabajó la licitación.'); var _e2=document.getElementById('vc-licit-nombre'); if(_e2) _e2.focus(); return; }
+    var _cl = _vcCostosLicit();
+    if(!_cl.length || _cl.some(function(x){ return !x.producto || !x.cantidad || !x.costo_unit; })){
+      alert('Completa el costo de compra de cada producto: nombre, cantidad y costo neto por unidad.'); return;
+    }
   }
+  if(!window.__vcPdfCot){ alert('Sube el PDF de la cotización que le enviaste al cliente.'); return; }
   var _tipoPago = _vcTipoPago();
   var _totalVenta = String((document.getElementById('vc-total-venta')||{}).value||'').replace(/[^0-9]/g,'');
   if(_tipoPago==='parcial' && (!_totalVenta || Number(_montoVal) >= Number(_totalVenta))){
@@ -15046,6 +15089,8 @@ async function guardarCierreVenta(){
     licitacion: _esLicit,
     pct_comision_licitacion: _esLicit ? _licPct : '',
     licitador: _esLicit ? _licNom : '',
+    costos_licitacion: _esLicit ? _vcCostosLicit() : [],
+    pdf_cotizacion: window.__vcPdfCot || null,
     total_venta: _tipoPago==='parcial' ? _totalVenta : '',
     motivo_diferencia: (_tipoPago==='parcial' && window.__vcTotalCot > 0 && Number(_totalVenta) !== Number(window.__vcTotalCot)) ? _motivo : '',
     documento: docSel ? docSel.value : 'Factura',

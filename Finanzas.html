@@ -223,7 +223,32 @@
     return '<div class="montos"><div class="k">Comisión de esta venta</div>' + rows.map(function(x){
       return '<div class="fila"><span>'+esc(x.ejecutivo)+(x.pct?' · '+pct(x.pct):' · monto fijo')+'</span><b>'+clpN(x.comision)+'</b></div>'+
         (x.nota?'<div class="nota">'+esc(x.nota)+'</div>':'');
-    }).join('') + '</div>';
+    }).join('') + '</div>' + bloqueGanancia(v, rows);
+  }
+  // Ganancia del mes en esta venta (Rayen, 27-oct-2026): margen del mes menos todas sus comisiones.
+  // Venta, costo y margen salen de la fila del ejecutivo de la venta (en pagos parciales, ya vienen
+  // en la proporción pagada ese mes).
+  function bloqueGanancia(v, rows){
+    var base = rows.filter(function(x){ return pnom(x.ejecutivo) === pnom(v.ejecutivo); })[0] ||
+      rows.slice().sort(function(a,b){ return (Number(b.margen_neto)||0) - (Number(a.margen_neto)||0); })[0];
+    var margen = Number(base && base.margen_neto) || 0;
+    if(!margen) return '';
+    var coms = rows.reduce(function(s,x){ return s + (Number(x.comision)||0); }, 0);
+    var gan = margen - coms;
+    return '<div class="montos costos"><div class="k">Ganancia de esta venta en el mes</div>' +
+      (base.venta_neta ? '<div class="fila"><span>Venta neta</span><b>'+clpN(base.venta_neta)+'</b></div>' : '') +
+      (base.costo_neto ? '<div class="fila"><span>Costo</span><b>'+clpN(base.costo_neto)+'</b></div>' : '') +
+      (function(){
+        // Pago parcial: venta y costo son de la venta completa; el margen es solo la parte de este mes.
+        var total = (Number(base.venta_neta)||0) - (Number(base.costo_neto)||0);
+        if(base.venta_neta && base.costo_neto && total > 0 && Math.abs(total - margen) > 1)
+          return '<div class="fila"><span>Margen de la venta completa</span><b>'+clpN(total)+'</b></div>' +
+                 '<div class="fila"><span>Margen de este mes ('+pct(margen/total)+' de la venta)</span><b>'+clpN(margen)+'</b></div>';
+        return '<div class="fila"><span>Margen</span><b>'+clpN(margen)+'</b></div>';
+      })() +
+      '<div class="fila"><span>Comisiones</span><b>−'+clpN(coms)+'</b></div>' +
+      '<div class="fila" style="border-top:1px solid #d1d5db;margin-top:4px;padding-top:4px;"><span><b>Ganancia</b></span><b style="color:'+(gan<0?'#B91C1C':'#047857')+';">'+(gan<0?'−':'')+clpN(Math.abs(gan))+'</b></div>' +
+    '</div>';
   }
   function bloquePago(v){
     var c = COTIS[v.num]; if(!c || !c.pagos_info) return '';
@@ -270,8 +295,25 @@
     }).join('');
   }
 
+  // Los costos de licitación solo llegan con la clave de la vista de administradora de Rayen
+  // (la misma de «Mis costos y márgenes», guardada en este navegador). Sin clave, la página
+  // muestra todo lo demás y un botón para escribirla.
+  var K_CLAVE = 'oct_clave_MisCostosYMargenes_PRIVADA.html';
+  function claveAdm(){ try { return localStorage.getItem(K_CLAVE) || ''; } catch(e){ return ''; } }
+  function pedirClave(){
+    var c = prompt('Escribe tu clave de la vista de administradora para ver los costos:');
+    if(!c) return;
+    try { localStorage.setItem(K_CLAVE, c.trim()); } catch(e){}
+    cargar();
+  }
+  window.pedirClave = pedirClave;
+  function avisoClave(ok){
+    var b = document.getElementById('avisoClave');
+    if(!b){ b = document.createElement('div'); b.id = 'avisoClave'; var l = document.getElementById('lista'); l.parentNode.insertBefore(b, l); }
+    b.innerHTML = ok ? '' : '<div style="margin:0 0 12px;font-size:13px;color:#6b7280;">Los costos de licitación están ocultos. <button onclick="pedirClave()" style="background:#fff;border:1px solid #d1d5db;border-radius:8px;padding:5px 11px;font-weight:700;cursor:pointer;font-family:inherit;">Ver costos</button></div>';
+  }
   function cargar(){
-    var pV = fetch(CRM_API + '?accion=crm_ventas_finanzas').then(function(r){ return r.json(); });
+    var pV = fetch(CRM_API + '?accion=crm_ventas_finanzas&clave=' + encodeURIComponent(claveAdm())).then(function(r){ return r.json(); });
     // Productos, neto y pagos de cada cotización (si falla, la página igual muestra las ventas)
     var pC = fetch(CRM_API + '?accion=crm_mis_cotizaciones&solicitante=' + encodeURIComponent('Rayen Ogalde'))
       .then(function(r){ return r.json(); }).catch(function(){ return {}; });
@@ -281,6 +323,7 @@
       .then(function(res){
         if(!res[0].ok) throw new Error(res[0].error||'error');
         VENTAS = res[0].ventas || [];
+        avisoClave(res[0].costos_ok !== false);
         COTIS = {};
         ((res[1] && res[1].cotizaciones) || []).forEach(function(c){ if(c.cotizacion) COTIS[c.cotizacion] = c; });
         COMS = (res[2] && res[2].comisiones) || [];

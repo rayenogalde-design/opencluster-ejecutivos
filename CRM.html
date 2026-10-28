@@ -6805,6 +6805,14 @@ function renderKanbanCotizaciones(){
     '</div>';
   }).join('');
 }
+// Ganar una cotización = INFORMAR LA VENTA (Rayen, 28-oct-2026). Se abre el panel de cierre y la
+// cotización recién queda Ganada cuando la venta se guarda con OC + PDF. Si cierran el panel, no cambia nada.
+function _abrirCierreDesdeCot(num){
+  const cc = (CACHE.vMisCot||[]).find(x=>String(x.cotizacion)===String(num)) || {};
+  const totalNum = Number(String(cc.total!=null?cc.total:(cc.monto||'')).replace(/[^0-9]/g,''));
+  const _cont = (CACHE.vTodos||[]).find(x=>x.id===cc.contacto_id) || {};
+  abrirPanelCierreVenta(num, { id: cc.contacto_id||cc.id||'', nombre: cc.cliente||_cont.nombre||'', institucion: cc.institucion||_cont.institucion||'', email:_cont.email||'', rut:_cont.rut||'', __totalCotActiva: totalNum, __productos: cc.productos||'', __transporte: cc.transporte||'', __region: cc.region||'', __ciudad: cc.ciudad||'', __direccion: cc.direccion||'' });
+}
 async function dropEnKanbanCot(event, estadoDestino){
   event.preventDefault();
   const col = event.currentTarget;
@@ -6816,6 +6824,7 @@ async function dropEnKanbanCot(event, estadoDestino){
   // Perdida pide el motivo ANTES de mover nada (modal aparte) — se deja el flujo original,
   // que ya tiene su propio paso intermedio y no es lo que se sentía lento.
   if(estadoDestino === 'Perdida'){ await marcarEstadoCotMC(num, estadoDestino, null); renderKanbanCotizaciones(); return; }
+  if(estadoDestino === 'Ganada'){ _abrirCierreDesdeCot(num); return; }
   // Movimiento OPTIMISTA: la tarjeta se mueve de columna DE INMEDIATO en pantalla, sin
   // esperar el viaje de ida y vuelta al servidor (por eso se sentía "pegado" — antes
   // pasaba por marcarEstadoCotMC, que además recargaba TODAS las cotizaciones antes de
@@ -10561,6 +10570,7 @@ function _confirmarMotivoPerdida(){
 async function marcarEstadoCotMC(num, estado, btn, motivo){
   // Al marcar Perdida, pedir primero el motivo (modal); recién ahí continúa.
   if(estado==='Perdida' && !motivo){ pedirMotivoPerdida(function(m){ if(m) marcarEstadoCotMC(num, estado, btn, m); }); return; }
+  if(estado==='Ganada'){ try{ _cerrarCotModal(); }catch(e){} _abrirCierreDesdeCot(num); return; }
   // btn es opcional: el Kanban de cotizaciones llama a esta misma función al soltar una
   // tarjeta, sin un botón real de por medio.
   const prev = btn ? btn.textContent : '';
@@ -14633,6 +14643,7 @@ async function marcarEstadoCotizacion(num, estado, btn, motivo){
   // Al marcar Perdida, pedir el motivo primero.
   if(estado==='Perdida' && !motivo){ pedirMotivoPerdida(function(m){ if(m) marcarEstadoCotizacion(num, estado, btn, m); }); return; }
   const c = window.__CONTACTO_ACTIVO || {};
+  if(estado === 'Ganada'){ abrirPanelCierreVenta(num, c); return; }
   let prev = '';
   if(btn){ prev = btn.textContent; btn.disabled = true; btn.textContent = 'Guardando…'; }
   const r = await fetchAPI('crm_marcar_cotizacion', { solicitante: USUARIO, num: num, estado: estado, motivo_perdida: motivo||'' });
@@ -14885,7 +14896,7 @@ function abrirPanelCierreVenta(num, contacto){
         '</div>' +
         '<label style="display:flex;align-items:flex-start;gap:9px;background:#FFF7ED;border:1px solid #FED7AA;border-radius:12px;padding:12px 14px;margin-bottom:16px;cursor:pointer;">' +
           '<input type="checkbox" id="vc-no-viarly" onchange="_vcToggleNoViarly()" style="margin-top:2px;width:16px;height:16px;accent-color:#C2410C;">' +
-          '<span style="font-size:13px;color:#7C2D12;font-weight:600;line-height:1.4;">Esta venta <b>ya fue procesada</b> — la estoy marcando tarde.<br><span style="font-weight:400;color:#9A6A4A;font-size:12px;">Solo se registra como ganada, sin reenviar el aviso ni pedir comprobantes.</span></span>' +
+          '<span style="font-size:13px;color:#7C2D12;font-weight:600;line-height:1.4;">Esta venta <b>ya fue procesada</b> — la estoy marcando tarde.<br><span style="font-weight:400;color:#9A6A4A;font-size:12px;">No se le avisa a Viarly, pero igual tienes que subir la orden de compra y el PDF de la cotización.</span></span>' +
         '</label>' +
         '<div style="margin-bottom:16px;"><label style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:4px;">Fecha de la venta</label>' +
           '<input id="vc-fecha-venta" type="date" value="'+_hoyISO()+'" style="padding:9px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;">' +
@@ -14916,14 +14927,14 @@ function abrirPanelCierreVenta(num, contacto){
             _vcCostosLicitHTML(c.__productos) +
           '</div></div>' +
         // PDF de la cotización que se envió al cliente: obligatorio (Rayen, 27-oct-2026)
-        '<div style="margin-bottom:16px;"><div style="display:flex;gap:12px;flex-wrap:wrap;">' + _vcUploadBox('cot','PDF de la cotización enviada al cliente <span style="color:#DC2626;">*</span>', 'application/pdf,.pdf', 'Subir PDF') + '</div>' +
-          '<div style="font-size:11.5px;color:#6b7280;margin-top:3px;">Obligatorio: el mismo PDF que le mandaste al cliente.</div></div>' +
+        '<div style="margin-bottom:16px;"><div style="display:flex;gap:12px;flex-wrap:wrap;">' + _vcUploadBox('oc','Orden de compra <span style="color:#DC2626;">*</span>') + _vcUploadBox('cot','PDF de la cotización enviada al cliente <span style="color:#DC2626;">*</span>', 'application/pdf,.pdf', 'Subir PDF') + '</div>' +
+          '<div style="font-size:11.5px;color:#6b7280;margin-top:3px;">Obligatorios: la orden de compra del cliente y el mismo PDF que le mandaste. Sin ellos la cotización no queda ganada.</div></div>' +
         // Productos de la cotización (solo lectura) — para revisar sin tener que abrir la cotización.
         '<div style="margin-bottom:16px;"><label style="font-size:13px;font-weight:700;color:#374151;display:block;margin-bottom:4px;">Productos de la cotización</label>' +
           '<div style="background:#F9FAFB;border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;font-size:13px;color:#374151;line-height:1.45;white-space:pre-wrap;max-height:150px;overflow:auto;">' + (c.__productos ? e2(c.__productos) : '<span style="color:#9ca3af;">(la cotización no trae el detalle de productos)</span>') + '</div></div>' +
         '<div id="vc-detalle">' +
         '<div style="font-weight:800;color:#111;margin-bottom:8px;">1. Comprobantes</div>' +
-        '<div style="display:flex;gap:12px;flex-wrap:wrap;">' + _vcUploadBox('oc','Orden de compra') + _vcUploadBox('transf','Transferencia') + '</div>' +
+        '<div style="display:flex;gap:12px;flex-wrap:wrap;">' + _vcUploadBox('transf','Transferencia') + '</div>' +
         '<div style="font-weight:800;color:#111;margin:18px 0 8px;">2. Documento</div>' +
         '<label style="margin-right:18px;font-size:14px;"><input type="radio" name="vc-doc" value="Factura" checked> Factura</label>' +
         '<label style="font-size:14px;"><input type="radio" name="vc-doc" value="Boleta"> Boleta</label>' +
@@ -15107,6 +15118,7 @@ async function guardarCierreVenta(){
       alert('Completa el costo de compra de cada producto: nombre, cantidad y costo neto por unidad.'); return;
     }
   }
+  if(!window.__vcImgOC){ alert('Sube la orden de compra del cliente. Es obligatoria para informar la venta.'); return; }
   if(!window.__vcPdfCot){ alert('Sube el PDF de la cotización que le enviaste al cliente.'); return; }
   var _tipoPago = _vcTipoPago();
   var _totalVenta = String((document.getElementById('vc-total-venta')||{}).value||'').replace(/[^0-9]/g,'');
@@ -15154,8 +15166,11 @@ async function guardarCierreVenta(){
     var r = await fetchAPI('crm_venta_cerrar', payload);
     if(!r || !r.ok){ alert('No se pudo enviar a Finanzas: ' + ((r&&r.error)||'error')); if(btn){ btn.disabled=false; btn.textContent='Enviar a Finanzas'; } return; }
     // Fecha de la venta elegida → fija el mes en que cuenta la venta (re-estampa la fecha de cierre).
-    var _fv = (document.getElementById('vc-fecha-venta')||{}).value || '';
-    if(_fv){ try{ await fetchAPI('crm_marcar_cotizacion', { solicitante:USUARIO, num: window.__vcNum, estado:'Ganada', fecha_ganada:_fv }); }catch(e){} }
+    var _fv = (document.getElementById('vc-fecha-venta')||{}).value || _hoyISO();
+    var _rg = null; try{ _rg = await fetchAPI('crm_marcar_cotizacion', { solicitante:USUARIO, num: window.__vcNum, estado:'Ganada', fecha_ganada:_fv }); }catch(e){}
+    if(!_rg || !_rg.ok){ alert('La venta se guardó, pero la cotización no quedó marcada como ganada: ' + ((_rg&&_rg.error)||'error') + '. Avísale a Rayen.'); }
+    try { Object.keys(localStorage).forEach(function(k){ if(k.indexOf('crm_perfil_')===0||k.indexOf('crm_kpis_cache')===0||k.indexOf('crm_dash')===0) localStorage.removeItem(k); }); } catch(e){}
+    try { if(document.getElementById('listMisCot')) cargarMisCotizaciones(true); } catch(e){}
     _vcCerrar();
     try { celebrarVenta(Number(payload.monto_recibido) || window.__vcTotalCot || 0); } catch(e){}
     alert((noViarly

@@ -13,7 +13,26 @@
   .top{ background:var(--navy); color:#fff; padding:18px 24px; display:flex; align-items:center; gap:14px; }
   .top a{ color:#cdd7ff; text-decoration:none; font-size:13px; font-weight:500; }
   .top h1{ font-size:18px; font-weight:800; margin:0; }
-  .wrap{ max-width:920px; margin:0 auto; padding:24px 18px 60px; }
+  .wrap{ max-width:1120px; margin:0 auto; padding:24px 18px 60px; }
+  .tabla{ background:#fff; border:1px solid var(--border); border-radius:14px; overflow-x:auto; margin-bottom:18px; }
+  .tabla table{ width:100%; border-collapse:collapse; font-size:13px; }
+  .tabla th{ text-align:left; font-size:10.5px; color:var(--sub); text-transform:uppercase; letter-spacing:.04em; padding:10px 10px; font-weight:700; white-space:nowrap; }
+  .tabla td{ padding:8px 10px; border-top:1px solid var(--border); vertical-align:middle; }
+  .tabla .n{ text-align:right; white-space:nowrap; }
+  .tabla .fe{ white-space:nowrap; color:var(--sub); }
+  .vrow{ cursor:pointer; }
+  .vrow:hover{ background:#f8faff; }
+  .vrow.open{ background:#eef2ff; }
+  .vrow .cl{ font-weight:800; font-size:13.5px; }
+  .vrow .sub{ font-size:11.5px; color:var(--sub); margin-top:1px; }
+  .tag{ display:inline-block; font-size:10.5px; font-weight:800; padding:1px 7px; border-radius:999px; background:#EEF2FF; color:#3730A3; margin-left:6px; }
+  .tag.rojo{ background:#FEE2E2; color:#991B1B; }
+  .gan{ font-weight:800; color:#047857; }
+  .gan.neg{ color:#B91C1C; }
+  .pc{ color:var(--sub); font-size:12px; }
+  .tabla .pill{ font-size:10.5px; padding:3px 9px; white-space:nowrap; }
+  .det > td{ background:#fbfcff; padding:12px 18px 16px; }
+  .tabla tfoot td{ font-weight:800; color:var(--navy); border-top:2px solid var(--navy); }
   .intro{ color:var(--sub); font-size:14px; margin:6px 0 18px; }
   .kpis{ display:flex; gap:12px; flex-wrap:wrap; margin-bottom:18px; }
   .kpi{ background:#fff; border:1px solid var(--border); border-radius:14px; padding:14px 18px; flex:1; min-width:140px; }
@@ -61,7 +80,8 @@
   .montos.pend{ border-style:dashed; background:#fff; color:var(--sub); }
   .tit-res{ font-size:12px; font-weight:800; color:var(--navy); text-transform:uppercase; letter-spacing:.05em; padding:8px 14px 2px; }
   .aviso-dup{ background:#FEF2F2; border:1px solid #FECACA; color:#991B1B; border-radius:10px; padding:8px 12px; font-size:12.5px; font-weight:700; display:inline-block; margin-bottom:8px; }
-  @media (max-width:600px){ .filtros select{ min-width:0; width:100%; } .filtros label{ flex:1 1 100%; } }
+  @media (max-width:600px){ .filtros select{ min-width:0; width:100%; } .filtros label{ flex:1 1 100%; }
+    .wrap{ padding:16px 12px 40px; } .top h1{ font-size:15px; } .kpis{ gap:8px; } .kpi{ min-width:calc(50% - 4px); padding:10px 12px; } .kpi .n{ font-size:18px; } }
 </style>
 </head>
 <body>
@@ -70,18 +90,20 @@
     <h1>Finanzas — Ventas del equipo de difusión</h1>
   </div>
   <div class="wrap">
-    <div class="intro">Cada venta cerrada por un ejecutivo llega aquí con sus comprobantes. Revisa, descarga, y mueve el estado a medida que avanza.</div>
+    <div class="intro">Toca una venta para ver sus comprobantes, productos y estado.</div>
     <div class="filtros">
       <label>Mes<select id="fMes" onchange="pintar()"></select></label>
       <label>Ejecutivo<select id="fEje" onchange="pintar()"></select></label>
     </div>
     <div class="kpis">
-      <div class="kpi"><div class="n" id="kNuevas">0</div><div class="l">Por confirmar</div></div>
-      <div class="kpi"><div class="n" id="kProceso">0</div><div class="l">En proceso</div></div>
-      <div class="kpi"><div class="n" id="kEntregadas">0</div><div class="l">Entregadas</div></div>
+      <div class="kpi"><div class="n" id="kVentas">0</div><div class="l">Ventas</div></div>
+      <div class="kpi"><div class="n" id="kNeto">$0</div><div class="l">Venta neta</div></div>
+      <div class="kpi"><div class="n" id="kMargen">$0</div><div class="l" id="kMargenL">Margen</div></div>
+      <div class="kpi"><div class="n" id="kComs">$0</div><div class="l">Comisiones</div></div>
+      <div class="kpi"><div class="n" id="kGan" style="color:#047857;">$0</div><div class="l">Ganancia</div></div>
     </div>
-    <div id="resumen"></div>
     <div id="lista"><div class="muted">Cargando ventas…</div></div>
+    <div id="resumen"></div>
   </div>
 <script>
   var CRM_API = 'https://script.google.com/macros/s/AKfycbz3Vscxz-OlTHehsnEqqTD1qfql4xzstgWM81RG79P5IiLTkRvaYTU2sNoWV_QpceeowA/exec';
@@ -142,23 +164,7 @@
     var m = document.getElementById('fMes').value, e = document.getElementById('fEje').value;
     var lista = VENTAS.filter(function(v){ return (!m || mesDe(v)===m) && (!e || nombre(v.ejecutivo)===e); });
     render(lista);
-    // Resumen por ejecutivo del filtro elegido
-    var por = {};
-    lista.forEach(function(v){
-      var k = nombre(v.ejecutivo), c = COTIS[v.num] || {};
-      por[k] = por[k] || { n:0, rec:0, neto:0, comp:0 };
-      por[k].n++; por[k].rec += num(v.monto_recibido); por[k].neto += netoVenta(v);
-      if(v.licitacion) por[k].comp++;
-    });
-    var ks = Object.keys(por).sort();
-    var box = document.getElementById('resumen');
-    if(!ks.length){ box.innerHTML=''; return; }
-    var t = { n:0, rec:0, neto:0, comp:0 };
-    var filas = ks.map(function(k){ var p=por[k]; t.n+=p.n; t.rec+=p.rec; t.neto+=p.neto; t.comp+=p.comp;
-      return '<tr><td>'+esc(k)+'</td><td class="n">'+p.n+'</td><td class="n">'+p.comp+'</td><td class="n">'+clpN(p.neto)+'</td><td class="n">'+clpN(p.rec)+'</td></tr>'; }).join('');
-    box.innerHTML = '<div class="resumen"><table><thead><tr><th>Ejecutivo</th><th class="n">Ventas</th><th class="n">Comisión compartida</th><th class="n">Neto productos pagado</th><th class="n">Monto recibido (c/IVA)</th></tr></thead><tbody>'+filas+
-      (ks.length>1?'<tr class="tot"><td>Total</td><td class="n">'+t.n+'</td><td class="n">'+t.comp+'</td><td class="n">'+clpN(t.neto)+'</td><td class="n">'+clpN(t.rec)+'</td></tr>':'')+'</tbody></table></div>' +
-      resumenComisiones(m, e);
+    document.getElementById('resumen').innerHTML = lista.length ? resumenComisiones(m, e) : '';
   }
   // Total de comisiones por persona del mes elegido (incluye a Hernán y los ajustes de meses anteriores)
   function resumenComisiones(m, e){
@@ -223,32 +229,7 @@
     return '<div class="montos"><div class="k">Comisión de esta venta</div>' + rows.map(function(x){
       return '<div class="fila"><span>'+esc(x.ejecutivo)+(x.pct?' · '+pct(x.pct):' · monto fijo')+'</span><b>'+clpN(x.comision)+'</b></div>'+
         (x.nota?'<div class="nota">'+esc(x.nota)+'</div>':'');
-    }).join('') + '</div>' + bloqueGanancia(v, rows);
-  }
-  // Ganancia del mes en esta venta (Rayen, 27-oct-2026): margen del mes menos todas sus comisiones.
-  // Venta, costo y margen salen de la fila del ejecutivo de la venta (en pagos parciales, ya vienen
-  // en la proporción pagada ese mes).
-  function bloqueGanancia(v, rows){
-    var base = rows.filter(function(x){ return pnom(x.ejecutivo) === pnom(v.ejecutivo); })[0] ||
-      rows.slice().sort(function(a,b){ return (Number(b.margen_neto)||0) - (Number(a.margen_neto)||0); })[0];
-    var margen = Number(base && base.margen_neto) || 0;
-    if(!margen) return '';
-    var coms = rows.reduce(function(s,x){ return s + (Number(x.comision)||0); }, 0);
-    var gan = margen - coms;
-    return '<div class="montos costos"><div class="k">Ganancia de esta venta en el mes</div>' +
-      (base.venta_neta ? '<div class="fila"><span>Venta neta</span><b>'+clpN(base.venta_neta)+'</b></div>' : '') +
-      (base.costo_neto ? '<div class="fila"><span>Costo</span><b>'+clpN(base.costo_neto)+'</b></div>' : '') +
-      (function(){
-        // Pago parcial: venta y costo son de la venta completa; el margen es solo la parte de este mes.
-        var total = (Number(base.venta_neta)||0) - (Number(base.costo_neto)||0);
-        if(base.venta_neta && base.costo_neto && total > 0 && Math.abs(total - margen) > 1)
-          return '<div class="fila"><span>Margen de la venta completa</span><b>'+clpN(total)+'</b></div>' +
-                 '<div class="fila"><span>Margen de este mes ('+pct(margen/total)+' de la venta)</span><b>'+clpN(margen)+'</b></div>';
-        return '<div class="fila"><span>Margen</span><b>'+clpN(margen)+'</b></div>';
-      })() +
-      '<div class="fila"><span>Comisiones</span><b>−'+clpN(coms)+'</b></div>' +
-      '<div class="fila" style="border-top:1px solid #d1d5db;margin-top:4px;padding-top:4px;"><span><b>Ganancia</b></span><b style="color:'+(gan<0?'#B91C1C':'#047857')+';">'+(gan<0?'−':'')+clpN(Math.abs(gan))+'</b></div>' +
-    '</div>';
+    }).join('') + '</div>';
   }
   function bloquePago(v){
     var c = COTIS[v.num]; if(!c || !c.pagos_info) return '';
@@ -256,25 +237,76 @@
     return f('Pago', p.completa ? 'Completo' : 'Parcial: '+clpN(p.pagado)+' de '+clpN(p.total_venta)+' · saldo '+clpN(p.saldo));
   }
 
+  // Cifras de la venta en el mes (pestaña Comisiones): venta, costo, margen del mes, comisiones y ganancia.
+  // En pagos parciales venta y costo son de la venta completa y el margen es solo la parte pagada este mes.
+  function cifras(v){
+    var m = document.getElementById('fMes').value;
+    var rows = comsDe(m || mesDe(v), v.num);
+    var base = rows.filter(function(x){ return pnom(x.ejecutivo) === pnom(v.ejecutivo); })[0] ||
+      rows.slice().sort(function(a,b){ return (Number(b.margen_neto)||0) - (Number(a.margen_neto)||0); })[0];
+    var margen = Number(base && base.margen_neto) || 0;
+    if(!margen) return { venta: netoVenta(v), calc: false };
+    var coms = rows.reduce(function(s,x){ return s + (Number(x.comision)||0); }, 0);
+    var venta = Number(base.venta_neta) || netoVenta(v), costo = Number(base.costo_neto) || 0;
+    var p = (COTIS[v.num] || {}).pagos_info;
+    return { venta: venta, costo: costo, margen: margen, coms: coms, gan: margen - coms, calc: true,
+             parcial: (p && !p.completa && num(p.total_venta)) ? num(p.pagado) / num(p.total_venta) : 0 };
+  }
+  function fechaCorta(iso){ try{ return new Date(iso).toLocaleDateString('es-CL',{day:'2-digit',month:'short',timeZone:'America/Santiago'}); }catch(e){ return '—'; } }
+  function abrir(i){
+    var d = document.getElementById('det'+i), r = document.getElementById('row'+i);
+    var ver = d.style.display === 'none';
+    d.style.display = ver ? '' : 'none'; r.classList.toggle('open', ver);
+  }
+  window.abrir = abrir;
+
   function render(ventas){
     var dup = {}; ventas.forEach(function(v){ dup[v.num]=(dup[v.num]||0)+1; });
-    document.getElementById('kNuevas').textContent = ventas.filter(function(v){return v.estado==='Pago por confirmar';}).length;
-    document.getElementById('kProceso').textContent = ventas.filter(function(v){return ['Recibido por Finanzas','Preparación en bodega','Despachado'].indexOf(v.estado)>=0;}).length;
-    document.getElementById('kEntregadas').textContent = ventas.filter(function(v){return v.estado==='Entregado';}).length;
+    var T = { venta:0, margen:0, coms:0, gan:0, pend:0 };
     var cont = document.getElementById('lista');
+    var filas = ventas.map(function(v, i){
+      var c = cifras(v);
+      T.venta += c.venta || 0;
+      if(c.calc){ T.margen += c.margen; T.coms += c.coms; T.gan += c.gan; } else T.pend++;
+      var tags = (v.licitacion?'<span class="tag">licitación</span>':'') +
+        (dup[v.num]>1?'<span class="tag rojo">informada '+dup[v.num]+' veces</span>':'') +
+        (noCalza(v)?'<span class="tag rojo">monto no calza</span>':'');
+      var nd = '<td class="n pc">—</td>';
+      return '<tr class="vrow" id="row'+i+'" onclick="abrir('+i+')">' +
+          '<td class="fe">'+fechaCorta(v.fecha)+'</td>' +
+          '<td><div class="cl">'+esc(v.institucion||v.cliente||'(sin nombre)')+'</div><div class="sub">'+(v.institucion&&v.cliente?esc(v.cliente)+' · ':'')+esc(v.num||'—')+' · '+esc(String(v.ejecutivo||'').split(' ')[0])+tags+'</div></td>' +
+          '<td class="n">'+(c.venta?clpN(c.venta):'—')+'</td>' +
+          (c.calc ? '<td class="n">'+(c.costo?clpN(c.costo):'—')+'</td>' +
+                    '<td class="n">'+clpN(c.margen)+(c.parcial?'<div class="pc">'+pct(c.parcial)+' pagado</div>':'')+'</td>' +
+                    '<td class="n">−'+clpN(c.coms)+'</td>' +
+                    '<td class="n gan'+(c.gan<0?' neg':'')+'">'+(c.gan<0?'−':'')+clpN(Math.abs(c.gan))+'</td>'
+                  : nd + '<td class="n pc" colspan="3">por calcular</td>') +
+          '<td>'+pill(v.estado)+'</td>' +
+        '</tr>' +
+        '<tr class="det" id="det'+i+'" style="display:none"><td colspan="8">'+detalle(v)+'</td></tr>';
+    }).join('');
+    document.getElementById('kVentas').textContent = ventas.length;
+    document.getElementById('kNeto').textContent = clpN(T.venta);
+    document.getElementById('kMargen').textContent = clpN(T.margen);
+    document.getElementById('kMargenL').textContent = 'Margen' + (T.pend ? ' ('+T.pend+' por calcular)' : '');
+    document.getElementById('kComs').textContent = '−' + clpN(T.coms);
+    document.getElementById('kGan').textContent = (T.gan<0?'−':'') + clpN(Math.abs(T.gan));
     if(!ventas.length){ cont.innerHTML = '<div class="muted">No hay ventas para este filtro.</div>'; return; }
-    cont.innerHTML = ventas.map(function(v){
+    cont.innerHTML = '<div class="tabla"><table><thead><tr><th>Fecha</th><th>Venta</th><th class="n">Venta neta</th><th class="n">Costo</th><th class="n">Margen</th><th class="n">Comisiones</th><th class="n">Ganancia</th><th>Estado</th></tr></thead><tbody>' +
+      filas + '</tbody><tfoot><tr><td></td><td>Total ('+ventas.length+')</td><td class="n">'+clpN(T.venta)+'</td><td></td><td class="n">'+clpN(T.margen)+'</td><td class="n">−'+clpN(T.coms)+'</td><td class="n gan'+(T.gan<0?' neg':'')+'">'+(T.gan<0?'−':'')+clpN(Math.abs(T.gan))+'</td><td></td></tr></tfoot></table></div>';
+  }
+
+  // Lo que se ve al tocar una venta: comprobantes, comisión, costos, productos, despacho y estado
+  function detalle(v){
       var opts = ESTADOS.map(function(e){ return '<option value="'+esc(e)+'"'+(e===v.estado?' selected':'')+'>'+esc(e)+'</option>'; }).join('');
       var imgs = '';
       if(v.url_oc) imgs += '<a href="'+esc(v.url_oc)+'" target="_blank">Ver orden de compra</a>';
       if(v.url_transferencia) imgs += '<a href="'+esc(v.url_transferencia)+'" target="_blank">Ver transferencia</a>';
       if(v.url_cotizacion) imgs += '<a href="'+esc(v.url_cotizacion)+'" target="_blank">Ver cotización (PDF)</a>';
       (v.etiqueta_urls||[]).forEach(function(u,ix){ imgs += '<a href="'+esc(u)+'" target="_blank">Ver etiqueta '+(ix+1)+'</a>'; });
-      return '<div class="card">' +
-        (dup[v.num]>1?'<div class="aviso-dup">Esta cotización está informada '+dup[v.num]+' veces</div>':'') +
-        '<div class="hd"><div><div class="cli">'+esc(v.cliente||v.institucion||'(sin nombre)')+'</div>'+(v.institucion&&v.cliente?'<div class="inst">'+esc(v.institucion)+'</div>':'')+'</div>'+pill(v.estado)+'</div>' +
+      return '<div>' +
+        (imgs?'<div class="imgs">'+imgs+'</div>':'') +
         '<div class="grid">' +
-          f('Cotización N°', esc(v.num||'—')) + f('Ejecutivo', esc(String(v.ejecutivo||'').split(' ')[0])) +
           f('Monto recibido', clp(v.monto_recibido)) + f('Documento', esc(v.documento||'—')) +
           f('Forma de envío', esc(v.forma_envio||'—')) + f('Monto cotizado por envío', clp(v.costo_envio)) +
           f('Fecha', fmt(v.fecha)) +
@@ -287,12 +319,10 @@
         bloqueMontos(v) +
         bloqueProductos(v) +
         '<div class="f"><div class="k">Dirección de despacho</div><div class="v">'+esc(v.direccion_despacho||'—')+'</div></div>' +
-        (imgs?'<div class="imgs">'+imgs+'</div>':'') +
         (v.solicita_etiquetas==='Sí'?'<div class="etq">Pidió etiquetas a Ximena ('+esc(v.estado_etiqueta||'Pendiente')+')</div>':'') +
         (v.tracking?'<div class="f" style="margin-top:6px;"><div class="k">Datos de envío / seguimiento</div><div class="v">'+esc(v.tracking)+'</div></div>':'') +
         '<div class="row-acc"><span style="font-size:12px;color:#6b7280;">Estado:</span><select onchange="cambiarEstado(\''+esc(v.id)+'\',this.value,this)">'+opts+'</select></div>' +
       '</div>';
-    }).join('');
   }
 
   // Los costos de licitación solo llegan con la clave de la vista de administradora de Rayen

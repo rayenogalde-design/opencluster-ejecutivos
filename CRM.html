@@ -10171,6 +10171,8 @@ function _detalleCotHTML(c){
     det += '<div style="'+SEC+(c.licitacion?'background:#F5F3FF;border-color:#DDD6FE;':'')+'"><div style="'+LBL+'">Venta por licitación</div><div style="font-size:12.5px;color:#1a2440;line-height:1.6;">' +
       (c.licitacion ? 'La trabajó <b>'+esc(c.licitacion.licitador||'')+'</b> · comisión del ejecutivo <b>'+String(Math.round((c.licitacion.pct||0)*10000)/100).replace('.',',')+'%</b>' : 'No fue por licitación.') +
       '</div><button onclick="event.stopPropagation();abrirEditarLicitacion(\''+numJS+'\')" style="margin-top:8px;background:#fff;color:#5B21B6;border:1px solid #DDD6FE;border-radius:8px;padding:6px 12px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">Editar</button></div>';
+    // Si la venta quedó informada más de una vez, aquí aparecen los informes para anular el que sobra.
+    det += '<div id="cotInformesBox"></div>';
   }
   // Pagos en partes: lista de pagos, saldo y botón para registrar el siguiente.
   if(c.ganada && c.pagos_info){
@@ -10360,6 +10362,46 @@ function abrirCotModal(num){
     '</div>';
   if(!ov.parentNode) document.body.appendChild(ov);
   _cargarMensajesCotizacion(c.cotizacion);
+  if(c.ganada) _cargarInformesVenta(c.cotizacion);
+}
+// Venta informada dos veces (Rayen, 27-oct-2026): muestra cada informe y deja anular el que sobra.
+// Solo aparece cuando hay 2 o más informes vigentes de la misma cotización.
+function _numKeyVenta(n){ return String(n||'').toUpperCase().replace(/[^A-Z0-9]/g,''); }
+async function _cargarInformesVenta(num){
+  const box = document.getElementById('cotInformesBox');
+  if(!box) return;
+  const r = await fetchAPI('crm_ventas_finanzas', { solicitante: USUARIO });
+  if(!r || !r.ok || document.getElementById('cotInformesBox') !== box) return;
+  const k = _numKeyVenta(num);
+  const inf = (r.ventas||[]).filter(v => _numKeyVenta(v.num) === k);
+  if(inf.length < 2){ box.innerHTML = ''; return; }
+  const admin = (typeof esActuandoComoAdmin==='function' && esActuandoComoAdmin());
+  const numJS = String(num).replace(/'/g,"\\'");
+  inf.sort((a,b) => String(a.fecha).localeCompare(String(b.fecha)));
+  const filas = inf.map((v,i) => {
+    let f = ''; try { f = new Date(v.fecha).toLocaleString('es-CL',{ timeZone:'America/Santiago', day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }); } catch(e){ f = String(v.fecha||''); }
+    const lic = v.licitacion ? ('Sí · ' + String(Math.round((Number(v.pct_licitacion)||0)*10000)/100).replace('.',',') + '% · la trabajó ' + esc(v.licitador||'')) : 'No';
+    const puede = admin || String(v.ejecutivo||'') === String(USUARIO||'');
+    return '<div style="border:1px solid #E6E8EF;border-radius:9px;padding:10px 12px;margin-top:8px;background:#fff;font-size:12.5px;color:#1a2440;line-height:1.6;">' +
+      '<b>Informe ' + (i+1) + '</b> · ' + esc(f) + (v.ejecutivo ? ' · ' + esc(String(v.ejecutivo).split(' ')[0]) : '') + '<br>' +
+      'Monto: <b>' + fmtCLP(Number(v.monto_recibido)||0) + '</b> · Dirección: ' + esc(v.direccion_despacho||'—') + '<br>' +
+      'Licitación: ' + lic + ' · Orden de compra: ' + (v.url_oc ? 'Sí' : 'No') +
+      (puede ? '<div><button onclick="event.stopPropagation();_anularInformeVenta(\'' + esc(v.id) + '\',\'' + numJS + '\',this)" style="margin-top:8px;background:#fff;color:#B91C1C;border:1px solid #FCA5A5;border-radius:8px;padding:6px 12px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">Anular este informe</button></div>' : '') +
+    '</div>';
+  }).join('');
+  box.innerHTML = '<div style="border:1px solid #FCA5A5;border-radius:11px;padding:13px 15px;background:#FEF2F2;margin-bottom:13px;">' +
+    '<div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#B91C1C;margin-bottom:4px;">Esta venta está informada ' + inf.length + ' veces</div>' +
+    '<div style="font-size:12.5px;color:#7F1D1D;">Una venta se informa una sola vez. Revisa cuál es la correcta y anula el informe que sobra.</div>' +
+    filas + '</div>';
+}
+async function _anularInformeVenta(id, num, btn){
+  if(!confirm('¿Anular este informe?\n\nSale de Finanzas y no cuenta para comisiones. El otro informe queda tal cual.')) return;
+  if(btn){ btn.disabled = true; btn.textContent = 'Anulando…'; }
+  let r; try { r = await fetchAPI('crm_venta_estado', { id: id, estado: 'Anulada', solicitante: USUARIO }); } catch(e){ r = { ok:false, error: e.message }; }
+  if(!r || !r.ok){ alert('No se pudo anular: ' + ((r&&r.error)||'error')); if(btn){ btn.disabled = false; btn.textContent = 'Anular este informe'; } return; }
+  alert('Informe anulado.');
+  try { window.__VENTASMES_DATA = null; } catch(e){}
+  _cargarInformesVenta(num);
 }
 async function _cargarMensajesCotizacion(num){
   const box = document.getElementById('cotMsgBox');

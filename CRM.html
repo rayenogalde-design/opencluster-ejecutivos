@@ -10927,7 +10927,6 @@ async function _pintarComisionesMes(){
     box.innerHTML = titulo + '<div style="border:1px dashed #cbd5e1;border-radius:12px;padding:16px;font-size:13px;color:var(--subtle);">Por calcular. Las comisiones aparecen aquí cuando se cierra el informe del mes.</div>';
     return;
   }
-  const pctTxt = p => (Math.round((p||0)*10000)/100).toLocaleString('es-CL') + '%';
   const TH = 'padding:8px 10px;text-align:right;font-size:11px;font-weight:800;color:#475569;text-transform:uppercase;letter-spacing:.04em;background:#F1F5F9;white-space:nowrap;';
   const TD = 'padding:8px 10px;text-align:right;font-size:13px;border-top:1px solid #eef0f4;white-space:nowrap;';
   const porEj = {};
@@ -10941,15 +10940,15 @@ async function _pintarComisionesMes(){
         '<span style="font-weight:800;color:#001A60;font-size:14px;">' + esc(ej) + '</span>' +
         '<span style="font-weight:800;color:#001A60;font-size:14px;">Comisión total: ' + fmtCLP(Math.round(tot('comision'))) + '</span></div>' +
       '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">' +
-      '<tr><th style="'+TH+'text-align:left;">Cotización</th><th style="'+TH+'text-align:left;">Cliente</th><th style="'+TH+'">Venta neta</th><th style="'+TH+'">Costo neto</th><th style="'+TH+'">Margen neto</th><th style="'+TH+'">%</th><th style="'+TH+'">Comisión</th></tr>' +
+      '<tr><th style="'+TH+'text-align:left;">Cotización</th><th style="'+TH+'text-align:left;">Cliente</th><th style="'+TH+'">Venta neta</th><th style="'+TH+'">Costo neto</th><th style="'+TH+'">Margen neto</th><th style="'+TH+'">Comisión</th></tr>' +
       arr.map(f => '<tr><td style="'+TD+'text-align:left;font-family:Courier New,monospace;">' + esc(f.num||'') + '</td>' +
         '<td style="'+TD+'text-align:left;white-space:normal;">' + esc(f.cliente||'') + (f.nota ? '<div style="font-size:11.5px;color:#92400E;font-weight:700;">' + esc(f.nota) + '</div>' : '') + '</td>' +
         '<td style="'+TD+'">' + fmtCLP(Math.round(f.venta_neta||0)) + '</td><td style="'+TD+'">' + fmtCLP(Math.round(f.costo_neto||0)) + '</td>' +
-        '<td style="'+TD+'">' + fmtCLP(Math.round(f.margen_neto||0)) + '</td><td style="'+TD+'">' + pctTxt(f.pct) + '</td>' +
+        '<td style="'+TD+'">' + fmtCLP(Math.round(f.margen_neto||0)) + '</td>' +
         '<td style="'+TD+'font-weight:800;color:#047857;">' + fmtCLP(Math.round(f.comision||0)) + '</td></tr>').join('') +
       '<tr><td style="'+TD+'text-align:left;font-weight:800;" colspan="2">Total</td><td style="'+TD+'font-weight:800;">' + fmtCLP(Math.round(tot('venta_neta'))) + '</td>' +
         '<td style="'+TD+'font-weight:800;">' + fmtCLP(Math.round(tot('costo_neto'))) + '</td><td style="'+TD+'font-weight:800;">' + fmtCLP(Math.round(tot('margen_neto'))) + '</td>' +
-        '<td style="'+TD+'"></td><td style="'+TD+'font-weight:800;color:#047857;">' + fmtCLP(Math.round(tot('comision'))) + '</td></tr>' +
+        '<td style="'+TD+'font-weight:800;color:#047857;">' + fmtCLP(Math.round(tot('comision'))) + '</td></tr>' +
       '</table></div></div>';
   });
   box.innerHTML = html;
@@ -11001,7 +11000,7 @@ function _pintarVentasMes(){
       html += '<div style="padding:10px 16px;border-top:1px solid var(--smoke,#f1f1f4);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">'+
         '<div style="min-width:0;"><div style="font-weight:700;color:var(--ink);font-size:13.5px;">'+esc(v.institucion||v.cliente||'(sin nombre)')+'</div>'+
           '<div style="font-size:12px;color:var(--subtle);margin-top:2px;">'+esc(v.cotizacion||'')+(v.productos?(' · '+esc(v.productos)):'')+'</div>'+
-          (v.licitacion ? '<div style="font-size:11.5px;font-weight:700;color:#5B21B6;margin-top:3px;">Licitación con '+esc(v.licitacion.licitador||'')+' · comisión del ejecutivo '+String(Math.round((v.licitacion.pct||0)*10000)/100).replace('.',',')+'%</div>' : '')+
+          (v.licitacion ? '<div style="font-size:11.5px;font-weight:700;color:#5B21B6;margin-top:3px;">Licitación con '+esc(v.licitacion.licitador||'')+'</div>' : '')+
           (_tienePagos(v) ? '<div style="font-size:11.5px;font-weight:700;color:#92400E;margin-top:3px;">Pago en partes · este mes cuenta el '+(Math.round(_fracVentaMes(v, VENTASMES_MES)*1000)/10).toLocaleString('es-CL')+'% · '+((v.pagos_info&&v.pagos_info.saldo>0)?('saldo pendiente '+fmtCLP(v.pagos_info.saldo)):'pagada completa')+'</div>' : '')+
         '</div>'+
         '<div style="font-weight:700;color:var(--gold-dk);white-space:nowrap;">'+fmtCLP(Math.round((v.monto||v.neto||0)*_fracVentaMes(v, VENTASMES_MES)))+'</div>'+

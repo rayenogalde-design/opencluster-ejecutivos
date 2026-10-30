@@ -10908,50 +10908,105 @@ async function cargarVentasMes(forzar){
 // Salen del informe mensual cerrado, que Rayen carga en la pestaña "Comisiones". Cada ejecutivo ve
 // solo lo suyo (lo filtra el backend); la administradora ve todo y puede filtrar por ejecutivo.
 window.__COMISIONES_CACHE = {};
-async function _pintarComisionesMes(){
-  const box = document.getElementById('ventasMesCom'); if(!box) return;
-  const mes = VENTASMES_MES; if(!mes || mes.indexOf('-')<0){ box.innerHTML=''; return; }
-  const mesLbl = _MES_NOMBRE[parseInt(mes.split('-')[1],10)-1] + ' ' + mes.split('-')[0];
-  let data = window.__COMISIONES_CACHE[mes];
-  if(!data){
-    box.innerHTML = '<div style="font-size:12.5px;color:var(--subtle);padding:10px 0;">Cargando comisiones…</div>';
-    const r = await fetchAPI('crm_mis_comisiones', { solicitante: USUARIO, mes: mes });
-    if(!r || !r.ok){ box.innerHTML = '<div style="font-size:12.5px;color:#B91C1C;">No se pudieron cargar las comisiones.</div>'; return; }
-    data = window.__COMISIONES_CACHE[mes] = r;
-    if(VENTASMES_MES !== mes) return;   // cambió de mes mientras cargaba
-  }
-  let filas = data.comisiones || [];
-  if(data.es_admin && VENTASMES_EJEC) filas = filas.filter(f => _busqNorm(String(f.ejecutivo||'').split(' ')[0]) === _busqNorm(VENTASMES_EJEC));
-  const titulo = '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:#001A60;text-transform:uppercase;letter-spacing:.06em;margin:6px 0 12px;">Comisiones de ' + esc(mesLbl) + '</div>';
-  if(!filas.length){
-    box.innerHTML = titulo + '<div style="border:1px dashed #cbd5e1;border-radius:12px;padding:16px;font-size:13px;color:var(--subtle);">Por calcular. Las comisiones aparecen aquí cuando se cierra el informe del mes.</div>';
-    return;
-  }
-  const TH = 'padding:8px 10px;text-align:right;font-size:11px;font-weight:800;color:#475569;text-transform:uppercase;letter-spacing:.04em;background:#F1F5F9;white-space:nowrap;';
-  const TD = 'padding:8px 10px;text-align:right;font-size:13px;border-top:1px solid #eef0f4;white-space:nowrap;';
+async function _comisionesDelMes(mes){
+  if(window.__COMISIONES_CACHE[mes]) return window.__COMISIONES_CACHE[mes];
+  const r = await fetchAPI('crm_mis_comisiones', { solicitante: USUARIO, mes: mes });
+  if(!r || !r.ok) return null;
+  return (window.__COMISIONES_CACHE[mes] = r);
+}
+// Rediseño 30-oct (Rayen): una sola tabla por ejecutivo con cliente, venta, % y comisión; los productos se abren
+// con un botón; el margen lo ve solo la administradora. Arriba, cuánto se lleva cada persona en el mes.
+async function _pintarComisionesMes(){ const box = document.getElementById('ventasMesCom'); if(box) box.innerHTML = ''; }
+const _VM_CHEV = abrir => '<svg width="10" height="10" viewBox="0 0 10 10" style="margin-left:6px;vertical-align:middle;transform:rotate('+(abrir?0:180)+'deg);"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+function _vmToggleProd(id){
+  const f = document.getElementById(id); if(!f) return;
+  const abierto = f.style.display !== 'none';
+  f.style.display = abierto ? 'none' : 'table-row';
+  const b = document.getElementById(id+'-btn'); if(b) b.innerHTML = (abierto ? 'Ver productos' : 'Ocultar') + _VM_CHEV(abierto);
+}
+async function _pintarVentasMesCuerpo(delMes, mesLbl, esAdmin){
+  const body = document.getElementById('ventasMesBody'); if(!body) return;
+  const mes = VENTASMES_MES;
+  if(!window.__COMISIONES_CACHE[mes]) body.innerHTML = '<div class="loading-state"><div class="spinner"></div>Cargando…</div>';
+  const data = await _comisionesDelMes(mes);
+  if(VENTASMES_MES !== mes) return;   // cambió de mes mientras cargaba
+  let coms = (data && data.comisiones) || [];
+  if(esAdmin && VENTASMES_EJEC) coms = coms.filter(f => _busqNorm(String(f.ejecutivo||'').split(' ')[0]) === _busqNorm(VENTASMES_EJEC));
+  const nom = s => _busqNorm(String(s||'').trim().split(' ')[0]);
+  const ventaMes = v => Math.round((v.neto||v.monto||0)*_fracVentaMes(v, mes));
+  const pctTxt = p => (Math.round((p||0)*10000)/100).toLocaleString('es-CL') + '%';
+
+  // ── Resumen: comisión de cada persona en el mes ──
+  const porPersona = {};
+  coms.forEach(f => { const e = String(f.ejecutivo||'').trim().split(' ')[0] || '(sin nombre)'; porPersona[e] = (porPersona[e]||0) + (Number(f.comision)||0); });
+  const totCom = Object.keys(porPersona).reduce((s,k)=>s+porPersona[k],0);
+  const totVenta = delMes.reduce((s,v)=>s+ventaMes(v),0);
+  const caja = (lbl,val,color) => '<div style="flex:1 1 150px;background:#fff;border:1px solid var(--smoke,#e5e7eb);border-radius:12px;padding:12px 16px;">'+
+    '<div style="font-size:11px;font-weight:800;color:#64748B;text-transform:uppercase;letter-spacing:.05em;">'+esc(lbl)+'</div>'+
+    '<div style="font-family:Montserrat,sans-serif;font-size:20px;font-weight:800;color:'+color+';margin-top:3px;">'+val+'</div></div>';
+  let html = '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:#001A60;text-transform:uppercase;letter-spacing:.06em;margin:6px 0 10px;">'+esc(mesLbl)+'</div>';
+  html += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;">'+
+    caja(delMes.length+' venta'+(delMes.length===1?'':'s')+' · venta neta', fmtCLP(totVenta), '#001A60')+
+    (Object.keys(porPersona).length
+      ? Object.keys(porPersona).sort().map(p => caja('Comisión '+p, fmtCLP(Math.round(porPersona[p])), '#047857')).join('') +
+        (Object.keys(porPersona).length>1 ? caja('Total comisiones', fmtCLP(Math.round(totCom)), '#047857') : '')
+      : caja('Comisiones', '<span style="font-size:14px;color:#64748B;">Por calcular</span>', '#64748B'))+
+    '</div>';
+
+  // ── Una tabla por ejecutivo ──
+  const TH = 'padding:9px 12px;font-size:11px;font-weight:800;color:#475569;text-transform:uppercase;letter-spacing:.04em;background:#F8FAFC;white-space:nowrap;text-align:right;';
+  const TD = 'padding:10px 12px;font-size:13.5px;border-top:1px solid #eef0f4;white-space:nowrap;text-align:right;vertical-align:top;';
   const porEj = {};
-  filas.forEach(f => { const e = String(f.ejecutivo||'(sin ejecutivo)'); (porEj[e] = porEj[e] || []).push(f); });
-  let html = titulo;
-  Object.keys(porEj).sort().forEach(ej => {
+  delMes.forEach(v=>{ const e=String(v.ejecutivo||'(sin ejecutivo)').trim(); (porEj[e]=porEj[e]||[]).push(v); });
+  // Quien cobra comisión sin tener ventas propias en el mes (ej. Hernán por la instalación) también tiene su tarjeta.
+  Object.keys(porPersona).forEach(p => { if(!Object.keys(porEj).some(e => nom(e)===nom(p))) porEj[p] = []; });
+  const esLider = f => /^l[ií]der/i.test(String(f.nota||''));
+  let n = 0;
+  Object.keys(porEj).sort((a,b)=>porEj[b].length-porEj[a].length).forEach(ej=>{
     const arr = porEj[ej];
-    const tot = k => arr.reduce((s,f)=> s + (Number(f[k])||0), 0);
-    html += '<div style="border:1px solid var(--smoke,#e5e7eb);border-radius:12px;margin-bottom:12px;overflow:hidden;">' +
-      '<div style="background:#EFF6FF;padding:11px 16px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;">' +
-        '<span style="font-weight:800;color:#001A60;font-size:14px;">' + esc(ej) + '</span>' +
-        '<span style="font-weight:800;color:#001A60;font-size:14px;">Comisión total: ' + fmtCLP(Math.round(tot('comision'))) + '</span></div>' +
-      '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">' +
-      '<tr><th style="'+TH+'text-align:left;">Cotización</th><th style="'+TH+'text-align:left;">Cliente</th><th style="'+TH+'">Venta neta</th><th style="'+TH+'">Costo neto</th><th style="'+TH+'">Margen neto</th><th style="'+TH+'">Comisión</th></tr>' +
-      arr.map(f => '<tr><td style="'+TD+'text-align:left;font-family:Courier New,monospace;">' + esc(f.num||'') + '</td>' +
-        '<td style="'+TD+'text-align:left;white-space:normal;">' + esc(f.cliente||'') + (f.nota ? '<div style="font-size:11.5px;color:#92400E;font-weight:700;">' + esc(f.nota) + '</div>' : '') + '</td>' +
-        '<td style="'+TD+'">' + fmtCLP(Math.round(f.venta_neta||0)) + '</td><td style="'+TD+'">' + fmtCLP(Math.round(f.costo_neto||0)) + '</td>' +
-        '<td style="'+TD+'">' + fmtCLP(Math.round(f.margen_neto||0)) + '</td>' +
-        '<td style="'+TD+'font-weight:800;color:#047857;">' + fmtCLP(Math.round(f.comision||0)) + '</td></tr>').join('') +
-      '<tr><td style="'+TD+'text-align:left;font-weight:800;" colspan="2">Total</td><td style="'+TD+'font-weight:800;">' + fmtCLP(Math.round(tot('venta_neta'))) + '</td>' +
-        '<td style="'+TD+'font-weight:800;">' + fmtCLP(Math.round(tot('costo_neto'))) + '</td><td style="'+TD+'font-weight:800;">' + fmtCLP(Math.round(tot('margen_neto'))) + '</td>' +
-        '<td style="'+TD+'font-weight:800;color:#047857;">' + fmtCLP(Math.round(tot('comision'))) + '</td></tr>' +
+    const comDe = v => coms.find(f => nom(f.ejecutivo)===nom(ej) && String(f.num||'')===String(v.cotizacion||'') && !esLider(f));
+    const usadas = new Set(arr.map(comDe).filter(Boolean));
+    // Comisiones de la persona que no son de una venta suya: líder del equipo (en una sola línea), ajustes, instalación.
+    const otras = coms.filter(f => nom(f.ejecutivo)===nom(ej) && !usadas.has(f));
+    const lider = otras.filter(esLider), sueltas = otras.filter(f => !esLider(f));
+    const totV = arr.reduce((s,v)=>s+ventaMes(v),0);
+    const totC = arr.reduce((s,v)=>{ const c=comDe(v); return s+(c?Number(c.comision)||0:0); },0) + otras.reduce((s,f)=>s+(Number(f.comision)||0),0);
+    const totM = arr.reduce((s,v)=>{ const c=comDe(v); return s+(c?Number(c.margen_neto)||0:0); },0);
+    html += '<div style="border:1px solid var(--smoke,#e5e7eb);border-radius:12px;margin-bottom:14px;overflow:hidden;background:#fff;">'+
+      '<div style="background:#001A60;color:#fff;padding:11px 16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">'+
+        '<span style="font-weight:800;font-size:14.5px;">'+esc(ej.split(' ')[0])+(arr.length?' <span style="font-weight:600;opacity:.75;font-size:13px;">· '+arr.length+' venta'+(arr.length===1?'':'s')+'</span>':'')+'</span>'+
+        '<span style="font-size:13px;font-weight:600;">'+(arr.length?'Venta '+fmtCLP(totV)+' · ':'')+'<b>Comisión '+fmtCLP(Math.round(totC))+'</b></span>'+
+      '</div><div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">'+
+      '<tr><th style="'+TH+'text-align:left;">Cliente</th><th style="'+TH+'">Venta neta</th>'+(esAdmin?'<th style="'+TH+'">Margen</th>':'')+
+        '<th style="'+TH+'">%</th><th style="'+TH+'">Comisión</th><th style="'+TH+'"></th></tr>';
+    arr.forEach(v=>{
+      const c = comDe(v), id = 'vmp'+(n++);
+      const etiquetas = (v.licitacion ? '<span style="display:inline-block;margin:4px 6px 0 0;padding:1px 8px;border-radius:999px;background:#EDE9FE;color:#5B21B6;font-size:11px;font-weight:700;">Licitación</span>' : '')+
+        (_tienePagos(v) ? '<span style="display:inline-block;margin:4px 6px 0 0;padding:1px 8px;border-radius:999px;background:#E0F2FE;color:#075985;font-size:11px;font-weight:700;">Pago en partes · '+(Math.round(_fracVentaMes(v, mes)*1000)/10).toLocaleString('es-CL')+'% este mes</span>' : '');
+      html += '<tr><td style="'+TD+'text-align:left;white-space:normal;"><div style="font-weight:700;color:var(--ink);">'+esc(v.institucion||v.cliente||'(sin nombre)')+'</div>'+
+          '<div style="font-size:11.5px;color:#94A3B8;font-family:Courier New,monospace;">'+esc(v.cotizacion||'')+'</div>'+etiquetas+'</td>'+
+        '<td style="'+TD+'">'+fmtCLP(ventaMes(v))+'</td>'+
+        (esAdmin ? '<td style="'+TD+'color:#64748B;">'+(c?fmtCLP(Math.round(c.margen_neto||0)):'—')+'</td>' : '')+
+        '<td style="'+TD+'">'+(c?pctTxt(c.pct):'—')+'</td>'+
+        '<td style="'+TD+'font-weight:800;color:#047857;">'+(c?fmtCLP(Math.round(c.comision||0)):'<span style="font-weight:600;color:#94A3B8;">Por calcular</span>')+'</td>'+
+        '<td style="'+TD+'">'+(v.productos ? '<button id="'+id+'-btn" onclick="_vmToggleProd(\''+id+'\')" style="background:#fff;border:1px solid #CBD5E1;color:#334155;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">Ver productos'+_VM_CHEV(true)+'</button>' : '')+'</td></tr>'+
+        (v.productos ? '<tr id="'+id+'" style="display:none;"><td colspan="'+(esAdmin?6:5)+'" style="padding:2px 12px 12px;font-size:12.5px;color:#475569;line-height:1.55;">'+
+          esc(v.productos).split(', ').join('<br>')+
+          (_tienePagos(v) && v.pagos_info && v.pagos_info.saldo>0 ? '<div style="margin-top:6px;font-weight:700;color:#075985;">Saldo pendiente '+fmtCLP(v.pagos_info.saldo)+'</div>' : '')+
+          '</td></tr>' : '');
+    });
+    const filaOtra = (titulo, detalle, monto) => '<tr><td style="'+TD+'text-align:left;white-space:normal;"><div style="font-weight:700;color:var(--ink);">'+esc(titulo)+'</div>'+
+        (detalle ? '<div style="font-size:11.5px;color:#94A3B8;">'+esc(detalle)+'</div>' : '')+'</td>'+
+      '<td style="'+TD+'"></td>'+(esAdmin?'<td style="'+TD+'"></td>':'')+'<td style="'+TD+'"></td>'+
+      '<td style="'+TD+'font-weight:800;color:'+(monto<0?'#B91C1C':'#047857')+';">'+(monto<0?'−':'')+fmtCLP(Math.abs(Math.round(monto)))+'</td><td style="'+TD+'"></td></tr>';
+    if(lider.length) html += filaOtra('Comisión de líder del equipo', lider.length+' venta'+(lider.length===1?'':'s')+' del equipo', lider.reduce((s,f)=>s+(Number(f.comision)||0),0));
+    sueltas.forEach(f => { html += filaOtra(f.cliente||f.num||'Otra comisión', f.nota||'', Number(f.comision)||0); });
+    html += '<tr><td style="'+TD+'text-align:left;font-weight:800;background:#F8FAFC;">Total</td><td style="'+TD+'font-weight:800;background:#F8FAFC;">'+(arr.length?fmtCLP(totV):'')+'</td>'+
+      (esAdmin?'<td style="'+TD+'font-weight:800;background:#F8FAFC;color:#64748B;">'+(arr.length?fmtCLP(Math.round(totM)):'')+'</td>':'')+
+      '<td style="'+TD+'background:#F8FAFC;"></td><td style="'+TD+'font-weight:800;color:#047857;background:#F8FAFC;">'+fmtCLP(Math.round(totC))+'</td><td style="'+TD+'background:#F8FAFC;"></td></tr>'+
       '</table></div></div>';
   });
-  box.innerHTML = html;
+  body.innerHTML = html;
 }
 function _mesCierreDe(c){ return String(c.mes_cierre || c.mes || ''); }
 function setVentasMesMes(m){ VENTASMES_MES = m; _pintarVentasMes(); }
@@ -10984,31 +11039,7 @@ function _pintarVentasMes(){
   if(VENTASMES_EJEC) delMes = delMes.filter(v => _busqNorm(String(v.ejecutivo||'').split(' ')[0]) === _busqNorm(VENTASMES_EJEC));
   const mesLbl = (VENTASMES_MES.indexOf('-')>0) ? (_MES_NOMBRE[parseInt(VENTASMES_MES.split('-')[1],10)-1]+' '+VENTASMES_MES.split('-')[0]) : VENTASMES_MES;
   if(!delMes.length){ body.innerHTML = '<div class="loading-state" style="padding:30px;">No hay ventas cerradas en '+esc(mesLbl)+(VENTASMES_EJEC?(' para '+esc(VENTASMES_EJEC)):'')+'.</div>'; return; }
-  const porEj = {};
-  delMes.forEach(v=>{ const e=String(v.ejecutivo||'(sin ejecutivo)').trim(); (porEj[e]=porEj[e]||[]).push(v); });
-  const totMes = Math.round(delMes.reduce((s,v)=>s+(v.neto||v.monto||0)*_fracVentaMes(v, VENTASMES_MES),0));
-  let html = '<div style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:800;color:#16A34A;text-transform:uppercase;letter-spacing:.06em;margin:6px 0 14px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;"><span>'+delMes.length+' venta'+(delMes.length===1?'':'s')+' cerrada'+(delMes.length===1?'':'s')+' en '+esc(mesLbl)+'</span><span style="color:#047857;">'+fmtCLP(totMes)+'</span></div>';
-  Object.keys(porEj).sort((a,b)=>porEj[b].length-porEj[a].length).forEach(ej=>{
-    const arr = porEj[ej];
-    const total = Math.round(arr.reduce((s,v)=>s+(v.neto||v.monto||0)*_fracVentaMes(v, VENTASMES_MES),0));
-    html += '<div style="border:1px solid var(--smoke,#e5e7eb);border-radius:12px;margin-bottom:12px;overflow:hidden;">'+
-      '<div style="background:#F0FDF4;padding:11px 16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">'+
-        '<span style="font-weight:800;color:#065F46;font-size:14px;">'+esc(ej.split(' ')[0])+' · '+arr.length+' venta'+(arr.length===1?'':'s')+'</span>'+
-        '<span style="font-weight:800;color:#047857;font-size:13px;">'+fmtCLP(total)+'</span>'+
-      '</div>';
-    arr.forEach(v=>{
-      html += '<div style="padding:10px 16px;border-top:1px solid var(--smoke,#f1f1f4);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">'+
-        '<div style="min-width:0;"><div style="font-weight:700;color:var(--ink);font-size:13.5px;">'+esc(v.institucion||v.cliente||'(sin nombre)')+'</div>'+
-          '<div style="font-size:12px;color:var(--subtle);margin-top:2px;">'+esc(v.cotizacion||'')+(v.productos?(' · '+esc(v.productos)):'')+'</div>'+
-          (v.licitacion ? '<div style="font-size:11.5px;font-weight:700;color:#5B21B6;margin-top:3px;">Licitación con '+esc(v.licitacion.licitador||'')+'</div>' : '')+
-          (_tienePagos(v) ? '<div style="font-size:11.5px;font-weight:700;color:#92400E;margin-top:3px;">Pago en partes · este mes cuenta el '+(Math.round(_fracVentaMes(v, VENTASMES_MES)*1000)/10).toLocaleString('es-CL')+'% · '+((v.pagos_info&&v.pagos_info.saldo>0)?('saldo pendiente '+fmtCLP(v.pagos_info.saldo)):'pagada completa')+'</div>' : '')+
-        '</div>'+
-        '<div style="font-weight:700;color:var(--gold-dk);white-space:nowrap;">'+fmtCLP(Math.round((v.monto||v.neto||0)*_fracVentaMes(v, VENTASMES_MES)))+'</div>'+
-      '</div>';
-    });
-    html += '</div>';
-  });
-  body.innerHTML = html;
+  _pintarVentasMesCuerpo(delMes, mesLbl, esAdmin);
 }
 // ── Costos pendientes + Extraer planilla (comisiones del mes) ──
 async function abrirCostosPendientes(){

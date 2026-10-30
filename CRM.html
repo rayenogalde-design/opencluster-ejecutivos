@@ -10922,7 +10922,7 @@ function _vmToggleProd(id){
   const f = document.getElementById(id); if(!f) return;
   const abierto = f.style.display !== 'none';
   f.style.display = abierto ? 'none' : 'table-row';
-  const b = document.getElementById(id+'-btn'); if(b) b.innerHTML = (abierto ? 'Ver productos' : 'Ocultar') + _VM_CHEV(abierto);
+  const b = document.getElementById(id+'-btn'); if(b) b.innerHTML = (abierto ? (b.dataset.lbl||'Ver productos') : 'Ocultar') + _VM_CHEV(abierto);
 }
 async function _pintarVentasMesCuerpo(delMes, mesLbl, esAdmin){
   const body = document.getElementById('ventasMesBody'); if(!body) return;
@@ -10999,7 +10999,27 @@ async function _pintarVentasMesCuerpo(delMes, mesLbl, esAdmin){
         (detalle ? '<div style="font-size:11.5px;color:#94A3B8;">'+esc(detalle)+'</div>' : '')+'</td>'+
       '<td style="'+TD+'"></td>'+(esAdmin?'<td style="'+TD+'"></td>':'')+'<td style="'+TD+'"></td>'+
       '<td style="'+TD+'font-weight:800;color:'+(monto<0?'#B91C1C':'#047857')+';">'+(monto<0?'−':'')+fmtCLP(Math.abs(Math.round(monto)))+'</td><td style="'+TD+'"></td></tr>';
-    if(lider.length) html += filaOtra('Comisión de líder del equipo', lider.length+' venta'+(lider.length===1?'':'s')+' del equipo', lider.reduce((s,f)=>s+(Number(f.comision)||0),0));
+    // 30-oct (Rayen): el 2% de líder y el 3% por las salas son dos comisiones distintas; cada una con su detalle desplegable.
+    const filaGrupo = (titulo, detalle, filas) => {
+      const id = 'vmp'+(n++), monto = filas.reduce((s,f)=>s+(Number(f.comision)||0),0);
+      const tdD = 'padding:5px 8px;border-top:1px solid #eef0f4;white-space:nowrap;text-align:right;';
+      const sub = '<table style="width:100%;border-collapse:collapse;font-size:12.5px;color:#475569;">'+
+        '<tr style="font-weight:800;color:#64748B;"><td style="'+tdD+'text-align:left;">Cliente</td><td style="'+tdD+'text-align:left;">Ejecutivo</td><td style="'+tdD+'">Venta neta</td>'+(esAdmin?'<td style="'+tdD+'">Margen</td>':'')+'<td style="'+tdD+'">%</td><td style="'+tdD+'">Comisión</td></tr>'+
+        filas.map(f => { const m = String(f.nota||'').match(/venta (propia|de [^·]+)/i), quien = m ? (/propia/i.test(m[1]) ? 'Propia' : m[1].replace(/^de /i,'').trim()) : '';
+          return '<tr><td style="'+tdD+'text-align:left;white-space:normal;"><div style="font-weight:700;color:var(--ink);">'+esc(f.cliente||'')+'</div><div style="font-size:11px;color:#94A3B8;font-family:Courier New,monospace;">'+esc(f.num||'')+'</div></td>'+
+            '<td style="'+tdD+'text-align:left;">'+esc(quien)+'</td><td style="'+tdD+'">'+fmtCLP(Math.round(f.venta_neta||0))+'</td>'+
+            (esAdmin?'<td style="'+tdD+'">'+fmtCLP(Math.round(f.margen_neto||0))+'</td>':'')+'<td style="'+tdD+'">'+pctTxt(f.pct)+'</td>'+
+            '<td style="'+tdD+'font-weight:800;color:#047857;">'+fmtCLP(Math.round(f.comision||0))+'</td></tr>'; }).join('')+'</table>';
+      return '<tr><td style="'+TD+'text-align:left;white-space:normal;"><div style="font-weight:700;color:var(--ink);">'+esc(titulo)+'</div><div style="font-size:11.5px;color:#94A3B8;">'+esc(detalle)+'</div></td>'+
+        '<td style="'+TD+'"></td>'+(esAdmin?'<td style="'+TD+'"></td>':'')+'<td style="'+TD+'"></td>'+
+        '<td style="'+TD+'font-weight:800;color:#047857;">'+fmtCLP(Math.round(monto))+'</td>'+
+        '<td style="'+TD+'"><button id="'+id+'-btn" data-lbl="Ver detalle" onclick="_vmToggleProd(\''+id+'\')" style="background:#fff;border:1px solid #CBD5E1;color:#334155;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">Ver detalle'+_VM_CHEV(true)+'</button></td></tr>'+
+        '<tr id="'+id+'" style="display:none;"><td colspan="'+(esAdmin?6:5)+'" style="padding:2px 12px 12px;">'+sub+'</td></tr>';
+    };
+    const esSala = f => /-SM$/i.test(String(f.num||'').trim());
+    const liderEq = lider.filter(f => !esSala(f)), liderSala = lider.filter(esSala);
+    if(liderEq.length) html += filaGrupo('Comisión de líder del equipo', liderEq.length+' venta'+(liderEq.length===1?'':'s')+' del equipo', liderEq);
+    if(liderSala.length) html += filaGrupo('Comisión por salas multisensoriales', liderSala.length+' sala'+(liderSala.length===1?'':'s')+' del mes', liderSala);
     sueltas.forEach(f => { html += filaOtra(f.cliente||f.num||'Otra comisión', f.nota||'', Number(f.comision)||0); });
     html += '<tr><td style="'+TD+'text-align:left;font-weight:800;background:#F8FAFC;">Total</td><td style="'+TD+'font-weight:800;background:#F8FAFC;">'+(arr.length?fmtCLP(totV):'')+'</td>'+
       (esAdmin?'<td style="'+TD+'font-weight:800;background:#F8FAFC;color:#64748B;">'+(arr.length?fmtCLP(Math.round(totM)):'')+'</td>':'')+

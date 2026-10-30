@@ -4443,13 +4443,29 @@ async function fetchAPI(accion, params, body){
   try {
     if(body){
       // POST con text/plain (esquiva preflight CORS y evita el bug fire-and-forget)
-      const resp = await fetch(CRM_API, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(Object.assign({ accion: accion }, body))
-      });
-      if(!resp.ok) throw new Error('HTTP ' + resp.status);
-      return await resp.json();
+      // GUARDADO ÚNICO (30-oct-2026): Google a veces guarda bien pero la respuesta no llega, y el
+      // ejecutivo veía un error y volvía a guardar (duplicados). Ahora cada guardado lleva un req_id
+      // y, si la respuesta se pierde, se reintenta solo con el MISMO req_id: el servidor reconoce que
+      // ya lo guardó y devuelve el mismo resultado sin guardar otra vez.
+      const reqId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
+        : (Date.now().toString(36) + Math.random().toString(36).slice(2));
+      const cuerpo = JSON.stringify(Object.assign({ accion: accion, req_id: reqId }, body));
+      let ultimoErrorPost = null;
+      for(let intento = 1; intento <= 3; intento++){
+        try {
+          const resp = await fetch(CRM_API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: cuerpo
+          });
+          if(!resp.ok) throw new Error('HTTP ' + resp.status);
+          return await resp.json();
+        } catch(e){
+          ultimoErrorPost = e;
+          if(intento < 3) await new Promise(r => setTimeout(r, intento * 1500));
+        }
+      }
+      throw new Error('No se pudo confirmar si se guardó. Antes de volver a guardar, recarga la ficha y revisa si ya aparece. (' + String(ultimoErrorPost && ultimoErrorPost.message || ultimoErrorPost) + ')');
     } else {
       // GET con query params.
       // REINTENTOS (24-ago-2026): Google devuelve 404 de forma intermitente al entregar la
@@ -4457,9 +4473,8 @@ async function fetchAPI(accion, params, body){
       // la mitad de las veces en crm_mis_cotizaciones (302 KB). El script se ejecuta y COMPLETA
       // en 2 s (visto en el historial de Ejecuciones); lo que falla es la entrega. Con 3 intentos
       // la probabilidad de fallar las tres baja de 1/4 a ~1/64.
-      // Solo se reintentan los GET: son lecturas y repetirlas no cambia nada. Los POST NO se
-      // reintentan nunca, porque repetir una escritura puede duplicar una cotizacion o un
-      // seguimiento en la hoja.
+      // Los GET se reintentan libremente: son lecturas y repetirlas no cambia nada. Los POST se
+      // reintentan SOLO con el mismo req_id (ver arriba, 30-oct-2026), para no duplicar escrituras.
       const qs = new URLSearchParams(Object.assign({ accion: accion }, params || {})).toString();
       let ultimoError = null;
       for(let intento = 1; intento <= 3; intento++){

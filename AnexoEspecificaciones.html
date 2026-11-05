@@ -592,7 +592,8 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
      asi que en esos el marcado CE y lo de las sustancias se suman al final de sus caracteristicas,
      y la seccion no aparece. La seccion es del mobiliario. */
   function esMobiliario(filas){
-    return filas.some(function(x){ return /^(tejido|espuma)$/i.test(x[0]); });
+    /* 5-nov-2026: cada frase trae su propio título («Tela impermeable a fluidos», «Espuma apta para bebés»…). */
+    return filas.some(function(x){ return /^(tejido|tela|espuma)\b/i.test(x[0]); });
   }
   function materialidad(mat){
     var filas = matFilas(mat);
@@ -611,7 +612,8 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
   function matDeEquipo(mat){
     var filas = matFilas(mat);
     if(!filas.length || esMobiliario(filas)) return '';
-    return filas.map(function(x){ return x[1].replace(/\s*·\s*/g, '. '); }).join('. ');
+    /* Con su título, para que se entienda de qué habla cada certificado. */
+    return filas.map(function(x){ return x[0] + ': ' + x[1].replace(/\s*·\s*/g, '. '); }).join('. ');
   }
 
   function foto(sku,d){

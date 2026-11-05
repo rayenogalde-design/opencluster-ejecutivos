@@ -67,7 +67,7 @@ window.SALAS_ESPECIFICACIONES = {
   "inc": "Se entrega con sacos de bolas transparentes.",
   "tec": "Medidas de 145 × 145 × 70 cm. Entrada de 100 a 240 V 50/60 Hz, consumo de 70 W. Cable DMX de 6 m, dirección DMX 118. Módulo de vibración de 16 Ω de impedancia, 100 W máximos y 50 W continuos, frecuencia máxima de 120 Hz, con cable de 15 m y conector SpeakON macho.",
   "cat": "Medidas 145 x 145 x 70 cm · Incluye sacos de bolas transparentes · Sistema vibroacústico integrado · Compatible con el Sistema SHX · Funciona en automático · Entrada de conmutador · Control DMX · Doble WiFi · Compatible con la aplicación Luminea",
-  "mat": "Tejido: Impermeable a la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés",
+  "mat": "Tejido: Impermeable a la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa",
   "logro": "El cuerpo queda contenido entre las bolas mientras la música se siente como vibración: el contacto y el sonido a la vez, para trabajar el límite corporal.",
   "unico": "La vibración va sincronizada con la música y se controla desde el sistema de la sala: no es una piscina de bolas con luz."
  },
@@ -81,7 +81,7 @@ window.SALAS_ESPECIFICACIONES = {
   "inc": "Puff transformable con módulo de vibración integrado y su cable de 15 m. Se conecta a la salida de vibración del Sistema SHX Compact, o al amplificador vibroacústico o al kit vibroacústico inalámbrico (no incluidos).",
   "tec": "Medidas: 140 × 180 cm. Vibración: potencia de 50 W continuos (hasta 100 W). Tejido vinílico, de 0,5 a 1 mm de espesor.",
   "cat": "Tejido con protección contra bacterias y hongos · Cumple el reglamento europeo de sustancias químicas, según su fabricante · Tejido difícilmente inflamable · Muy resistente al sol · Color a elegir entre 12",
-  "mat": "Tejido: Ensayado en laboratorio europeo: cumple el requisito de seguridad para formaldehído, plomo, cadmio y ftalatos\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés",
+  "mat": "Tejido: Ensayado en laboratorio europeo: cumple el requisito de seguridad para formaldehído, plomo, cadmio y ftalatos\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa",
   "logro": "Transmite la música por el cuerpo de la persona, en la postura que le resulte más cómoda.",
   "unico": "Se moldea a la postura de cada persona y trae el módulo vibroacústico integrado en el propio puff."
  },
@@ -95,7 +95,7 @@ window.SALAS_ESPECIFICACIONES = {
   "inc": "Tubo de burbujas Luminea, Fibra óptica Luminea de 2 m, Base para el tubo, Aplicación Luminea para Android, Equipo de red inalámbrica propio, Fijación a pared, Alargador (zapatilla) de enchufes, Libro de actividades.",
   "tec": "Medidas: 180 cm de alto y 110 × 110 cm de ancho y fondo. Alimentación: un enchufe de 230 V. Fibra óptica: 2 m.",
   "cat": "Trae su propia red inalámbrica, sin depender de la red del lugar · Base del tubo a elegir en vinilo o en tela tacto piel, en el color que se elija · Se maneja también con pulsadores como el Button 1 y se puede integrar al Sistema SHX · La tableta Android no viene incluida",
-  "mat": "Tejido: No deja pasar la orina ni la sangre, verificado en laboratorio europeo · Ensayado en laboratorio europeo: cumple el requisito de seguridad para formaldehído, plomo, cadmio y ftalatos\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés\nDeclaración del fabricante: Tratamiento antimicrobiano incorporado al tejido desde su fabricación",
+  "mat": "Tejido: No deja pasar la orina ni la sangre, verificado en laboratorio europeo · Ensayado en laboratorio europeo: cumple el requisito de seguridad para formaldehído, plomo, cadmio y ftalatos\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa\nDeclaración del fabricante: Tratamiento antimicrobiano incorporado al tejido desde su fabricación",
   "logro": "Arma un espacio multisensorial en cualquier rincón, sin obra y sin dedicarle una sala entera.",
   "unico": "Reúne el tubo de burbujas y la fibra óptica en un solo conjunto que se instala sin obra."
  },
@@ -109,7 +109,7 @@ window.SALAS_ESPECIFICACIONES = {
   "inc": "Tubo de burbujas Luminea, Fibra óptica Luminea de 2 m, Base para el tubo, Tableta de control con su aplicación, Equipo de red inalámbrica propio, Fijación a pared, Alargador (zapatilla) de enchufes, Libro de actividades.",
   "tec": "Medidas: 180 cm de alto y 110 × 110 cm de ancho y fondo. Alimentación: un enchufe de 230 V. Fibra óptica: 2 m.",
   "cat": "Trae su propia red inalámbrica, sin depender de la red del lugar · Base del tubo a elegir en vinilo o en tela tacto piel, en el color que se elija · Se maneja también con pulsadores como el Button 1 y se puede integrar al Sistema SHX",
-  "mat": "Tejido: No deja pasar la orina ni la sangre, verificado en laboratorio europeo · Ensayado en laboratorio europeo: cumple el requisito de seguridad para formaldehído, plomo, cadmio y ftalatos\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés\nDeclaración del fabricante: Tratamiento antimicrobiano incorporado al tejido desde su fabricación",
+  "mat": "Tejido: No deja pasar la orina ni la sangre, verificado en laboratorio europeo · Ensayado en laboratorio europeo: cumple el requisito de seguridad para formaldehído, plomo, cadmio y ftalatos\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa\nDeclaración del fabricante: Tratamiento antimicrobiano incorporado al tejido desde su fabricación",
   "logro": "Arma un espacio multisensorial en cualquier rincón, sin obra y sin dedicarle una sala entera.",
   "unico": "Viene con su propia tableta de control, lista para usar desde el primer día."
  },
@@ -123,7 +123,7 @@ window.SALAS_ESPECIFICACIONES = {
   "inc": "",
   "tec": "Medidas de 40 × 40 cm. Módulo de vibración de 16 Ω de impedancia, 100 W máximos y 50 W continuos, con frecuencia máxima de 120 Hz. Espuma de poliuretano de 25 kg/m³.",
   "cat": "Medidas 40 x 40 cm · Se adapta a distintos usos corporales · Se conecta a fuentes de audio y de vídeo · Necesita amplificador vibroacústico, kit Bluetooth o Sistema SHX para funcionar",
-  "mat": "Tejido: Impermeable a la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés\nDeclaración del fabricante: Tratamiento antimicrobiano incorporado al tejido desde su fabricación · Sin las sustancias químicas restringidas en Europa",
+  "mat": "Tejido: Impermeable a la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa\nDeclaración del fabricante: Tratamiento antimicrobiano incorporado al tejido desde su fabricación · Sin las sustancias químicas restringidas en Europa",
   "logro": "Permite recibir la música por el cuerpo. Es la vía de entrada para quien no oye o no tolera el sonido fuerte.",
   "unico": "Se abraza, se pone en el regazo o bajo la espalda: la vibración llega donde la persona la acepta, y se mueve de una sala a otra."
  },
@@ -137,7 +137,7 @@ window.SALAS_ESPECIFICACIONES = {
   "inc": "",
   "tec": "Medidas 40 × 40 × 40 cm. Carga por USB de 5 V / 1.000 mA. Batería de litio-polímero de 3,7 V y 2.400 mAh. Comunicación por radiofrecuencia de 433 MHz.",
   "cat": "Medidas 40 × 40 × 40 cm · Compatible con el Sistema SHX y con Luminea · Configuración sencilla con un botón trasero · Tejido de 0,5 a 1 mm de espesor · Excelente resistencia solar",
-  "mat": "Tejido: Apto para el contacto directo con la piel · Verificado en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés",
+  "mat": "Tejido: Apto para el contacto directo con la piel · Verificado en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa",
   "logro": "Se lanza o se gira y cambia la luz de toda la sala: con 40 cm de lado, se usa de pie, en el suelo y entre varias personas.",
   "unico": "Es inalámbrico, se configura con un botón y funciona tanto con el Sistema SHX como con la línea Luminea."
  },
@@ -151,7 +151,7 @@ window.SALAS_ESPECIFICACIONES = {
   "inc": "",
   "tec": "Medidas 25 × 25 × 25 cm. Carga por USB de 5 V / 1.000 mA. Batería de litio-polímero de 3,7 V y 2.400 mAh. Comunicación por radiofrecuencia de 433 MHz.",
   "cat": "Medidas 25 x 25 cm · Tejido de 0,5 a 1 mm de espesor · Compatible con el Sistema SHX y con la aplicación Luminea",
-  "mat": "Tejido: Apto para el contacto directo con la piel · Verificado en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés",
+  "mat": "Tejido: Apto para el contacto directo con la piel · Verificado en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa",
   "logro": "Se lanza o se gira y cambia la luz de toda la sala: la persona controla el entorno con un gesto, sin aprender a usar un mando.",
   "unico": "Del tamaño de una mano, para trabajar sobre la mesa o en el regazo."
  },
@@ -190,7 +190,7 @@ window.SALAS_ESPECIFICACIONES = {
   "inc": "",
   "tec": "Medidas 110 x 210 x 40 cm. Calentador: alimentación 230 V 50 Hz, potencia 240 W. Vibrador: impedancia 16 Ω, potencia máxima 100 W, potencia continua 50 W AES, frecuencia máxima 120 Hz, cable de 15 m con conector SpeakON macho. Estructura construida sobre tablero fenólico marino de alta resistencia a la carga y a la humedad.",
   "cat": "Medidas 110 x 210 x 40 cm · Tablero fenólico marino · Calefacción a 230 V · Accesible para grúas de transferencia · Disponible en 12 colores",
-  "mat": "Tejido: Impermeable a la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés\nDeclaración del fabricante: Sin las sustancias químicas restringidas en Europa",
+  "mat": "Tejido: Impermeable a la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa\nDeclaración del fabricante: Sin las sustancias químicas restringidas en Europa",
   "logro": "Sostiene el cuerpo entero repartiendo el peso, con calor y con la vibración de la música: el estímulo táctil y el auditivo a la vez.",
   "unico": "Calefacción y vibración en la misma cama, construida sobre tablero fenólico marino y accesible para grúa de transferencia."
  },
@@ -392,7 +392,7 @@ window.SALAS_ESPECIFICACIONES = {
   "inc": "",
   "tec": "Las medidas están en la columna siguiente.",
   "cat": "Transportable con ruedas · Instalación inmediata, sin obra · Medidas del carro 46 x 96 x 130 cm · Tubo de burbujas de 120 cm · Fibra óptica de 3 m · Tableta con la aplicación preinstalada · Amplificador de sonido · Unidad de vibración · Estanterías con espacio de guardado · Componentes protegidos · Ampliable con elementos complementarios",
-  "mat": "Tejido: Impermeable a la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo · Cumple la norma europea de seguridad de juguetes (EN 71-3) · Autoextinguible\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Amortigua caídas de hasta 1,24 m, probado en laboratorio\nDeclaración del fabricante: Tratamiento antimicrobiano incorporado al tejido desde su fabricación · Sin las sustancias químicas restringidas en Europa\nSeguridad eléctrica: Marcado CE de la Unión Europea en seguridad eléctrica y compatibilidad electromagnética"
+  "mat": "Tejido: Impermeable a la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo · Cumple la norma europea de seguridad de juguetes (EN 71-3) · Autoextinguible\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa · Amortigua caídas de hasta 1,24 m, probado en laboratorio\nDeclaración del fabricante: Tratamiento antimicrobiano incorporado al tejido desde su fabricación · Sin las sustancias químicas restringidas en Europa\nSeguridad eléctrica: Marcado CE de la Unión Europea en seguridad eléctrica y compatibilidad electromagnética"
  },
  "BJ-SGSX": {
   "n": "Sensory Go SHX",
@@ -404,7 +404,7 @@ window.SALAS_ESPECIFICACIONES = {
   "inc": "",
   "tec": "Las medidas están en la columna siguiente.",
   "cat": "Medidas 46 x 96 x 130 cm · Carro con ruedas y estanterías · Unidad central SHX Compact con proyector · Tableta de control · Amplificador y altavoz integrados · Tubo de burbujas de 120 cm · Fibra óptica de 3 m · Unidad de vibración · Cojín vibroacústico · Button 6 y Button 1 · Sistema de reconocimiento de objetos",
-  "mat": "Tejido: Impermeable a la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo · Cumple la norma europea de seguridad de juguetes (EN 71-3) · Autoextinguible\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Amortigua caídas de hasta 1,24 m, probado en laboratorio\nDeclaración del fabricante: Tratamiento antimicrobiano incorporado al tejido desde su fabricación · Sin las sustancias químicas restringidas en Europa\nSeguridad eléctrica: Marcado CE de la Unión Europea en seguridad eléctrica y compatibilidad electromagnética"
+  "mat": "Tejido: Impermeable a la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo · Cumple la norma europea de seguridad de juguetes (EN 71-3) · Autoextinguible\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa · Amortigua caídas de hasta 1,24 m, probado en laboratorio\nDeclaración del fabricante: Tratamiento antimicrobiano incorporado al tejido desde su fabricación · Sin las sustancias químicas restringidas en Europa\nSeguridad eléctrica: Marcado CE de la Unión Europea en seguridad eléctrica y compatibilidad electromagnética"
  },
  "BJ-SGP": {
   "n": "Sensory Go Luminea Plus",
@@ -416,7 +416,7 @@ window.SALAS_ESPECIFICACIONES = {
   "inc": "Se entrega con punto de acceso.",
   "tec": "Las medidas están en la columna siguiente.",
   "cat": "Medidas 46 x 96 x 130 cm con el tubo montado · Carro con ruedas y estanterías · Tubo de burbujas de 120 cm · Fibra óptica de 3 m · Tableta con la aplicación preinstalada · Button 6 y Button 1 · Cojín vibroacústico · Difusor de aromaterapia · Foco ultravioleta · Kit de material UV y kit de masaje · Amplificador y altavoz integrados · Punto de acceso incluido",
-  "mat": "Tejido: Impermeable a la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo · Cumple la norma europea de seguridad de juguetes (EN 71-3) · Autoextinguible\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Amortigua caídas de hasta 1,24 m, probado en laboratorio\nDeclaración del fabricante: Tratamiento antimicrobiano incorporado al tejido desde su fabricación · Sin las sustancias químicas restringidas en Europa\nSeguridad eléctrica: Marcado CE de la Unión Europea en seguridad eléctrica y compatibilidad electromagnética"
+  "mat": "Tejido: Impermeable a la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo · Cumple la norma europea de seguridad de juguetes (EN 71-3) · Autoextinguible\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa · Amortigua caídas de hasta 1,24 m, probado en laboratorio\nDeclaración del fabricante: Tratamiento antimicrobiano incorporado al tejido desde su fabricación · Sin las sustancias químicas restringidas en Europa\nSeguridad eléctrica: Marcado CE de la Unión Europea en seguridad eléctrica y compatibilidad electromagnética"
  },
  "BJ-EXPRX": {
   "n": "SHX Proximity",
@@ -624,7 +624,7 @@ window.SALAS_ESPECIFICACIONES = {
   "inc": "",
   "tec": "Las medidas están en la columna siguiente.",
   "cat": "Medidas 130 x 87 x 80 cm · Peso 15 kg",
-  "mat": "Tejido: Impermeable a la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés",
+  "mat": "Tejido: Impermeable a la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa",
   "logro": "Une el balanceo con la vibración de la música: el movimiento del cuerpo y el sonido en la misma sesión.",
   "unico": "El balanceo lo da la propia persona y la vibración llega por el mismo mueble."
  },
@@ -638,7 +638,7 @@ window.SALAS_ESPECIFICACIONES = {
   "inc": "",
   "tec": "Las medidas están en la columna siguiente.",
   "cat": "Alto 100 cm · Ancho 70 cm · Grosor 5 cm",
-  "mat": "Tejido: Impermeable a la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés"
+  "mat": "Tejido: Impermeable a la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa"
  },
  "BJ-EMRX": {
   "n": "Respaldo foam convexo",
@@ -650,7 +650,7 @@ window.SALAS_ESPECIFICACIONES = {
   "inc": "",
   "tec": "Las medidas están en la columna siguiente.",
   "cat": "Alto 100 cm · Ancho 70 cm · Grosor 5 cm · Disponible en 12 colores",
-  "mat": "Tejido: Impermeable a la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés"
+  "mat": "Tejido: Impermeable a la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa"
  },
  "BJ-EKBE300": {
   "n": "Kit de bola de espejos mediana",
@@ -794,7 +794,7 @@ window.SALAS_ESPECIFICACIONES = {
   "inc": "",
   "tec": "Las medidas están en la columna siguiente.",
   "cat": "Medidas 120 x 100 x 3 cm por pieza · Fabricación a medida · Disponible en 12 colores",
-  "mat": "Tejido: Impermeable a la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés"
+  "mat": "Tejido: Impermeable a la orina y la sangre · Apto para el contacto directo con la piel · Ambas propiedades verificadas en laboratorio europeo\nEspuma: Espuma de poliuretano con certificación europea en su clase más exigente, la de artículos para bebés · Sin metales pesados ni aditivos contra el fuego restringidos en Europa"
  },
  "BJ-EMLPJ1": {
   "n": "Líquido para pompas de jabón 1 L",

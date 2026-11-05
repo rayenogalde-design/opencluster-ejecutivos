@@ -597,7 +597,9 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
   }
   function materialidad(mat){
     var filas = matFilas(mat);
-    if(!filas.length || !esMobiliario(filas)) return '';
+    /* 5-nov-2026: la sección pasó a ser «Certificaciones y requisitos que cumple», escrita como
+       requisito (qué cumple y con qué norma), así que va en TODOS los productos, también los equipos. */
+    if(!filas.length) return '';
     /* Va COMPACTA, como «Caracteristicas adicionales»: una linea por rotulo, sin recuadro ni
        relleno. Con la tabla de las especificaciones tecnicas el bloque pesaba tanto que empujaba
        al producto a una hoja nueva (medido: 6 productos pasaban de 7 a 10 hojas). */
@@ -611,6 +613,7 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
   /* Lo que se le suma a «Caracteristicas adicionales» cuando el producto es un equipo. */
   function matDeEquipo(mat){
     var filas = matFilas(mat);
+    return ''; /* 5-nov-2026: ya no se suma a las características; va en su propia sección */
     if(!filas.length || esMobiliario(filas)) return '';
     /* Con su título, para que se entienda de qué habla cada certificado. */
     return filas.map(function(x){ return x[0] + ': ' + x[1].replace(/\s*·\s*/g, '. '); }).join('. ');
@@ -677,7 +680,7 @@ body{margin:0;background:var(--mesa);color:var(--tinta);
                                       : '<p>'+esc(equipo)+'.</p>');
            return (tabla ? '<div class="campo ancho"><h4 class="tit-tec">Especificaciones técnicas</h4>'+tabla+'</div>' : '')+
                   (extra ? campo('Características adicionales', extra, 'ancho') : '')+
-                  (mat ? campo("Detalle de materialidad", mat, "ancho matbox") : "")+
+                  (mat ? campo("Certificaciones y requisitos que cumple", mat, "ancho matbox") : "")+
                   (d.unico ? '<div class="campo ancho matbox unico"><h4><span class="chip">Lo que lo distingue</span></h4>'+
                              '<p>'+esc(d.unico)+'</p></div>' : '');
          })()+

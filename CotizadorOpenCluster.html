@@ -961,6 +961,7 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="radio" name="cotDestino" value="otro" onchange="cambiarDestino('otro')"> Emitir cotización a OTRO nombre, email u otros datos</label>
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="radio" name="cotDestino" value="solo_inst" onchange="cambiarDestino('solo_inst')"> Solo a nombre de la institución (sin persona)</label>
       </div>
+      <div id="aviso-otro-paciente" style="display:none;margin-top:8px;font-size:11.5px;color:#1e3a8a;background:#f0f9ff;border:1px solid #93c5fd;border-radius:6px;padding:7px 10px;">Si la cotización es para un <b>paciente</b> de este profesional, no cambies el nombre aquí: deja al profesional y marca más abajo «Es para un paciente derivado».</div>
     </div>
 
     <!-- Campos editables, mostrados según el modo. -->
@@ -977,6 +978,18 @@ body { font-family:'Open Sans',sans-serif; background:#CBD5E1; overflow-y:auto; 
     <div class="f"><label>Email del cliente <span style="color:#e74c3c;font-weight:700;">*</span></label><input id="eCEmail" value="" placeholder="Auto" oninput="upd()" readonly style="background:#f5f5f5;border-color:#a0c8a0;"></div>
     <div class="g2">
       <div class="f"><label>ID CompraÁgil <span style="font-weight:400;color:#888">(opcional)</span></label><input id="eCompraAgil" value="" placeholder="Ej: CA-2024-XXXX" oninput="upd()"></div>
+    </div>
+    <!-- Paciente derivado (ACHS, mutuales, Teletón…): la cotización queda a nombre del profesional
+         y el paciente va en su propio campo (sale en el PDF y en el registro). Rayen 9-nov-2026. -->
+    <div id="paciente-box" style="background:#f0f9ff;border:1px solid #93c5fd;border-radius:8px;padding:10px 14px;margin:4px 0 12px;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;font-weight:700;color:#1e3a8a;"><input type="checkbox" id="chkPaciente" onchange="togglePaciente()"> Es para un paciente derivado por este profesional (ACHS, mutual, Teletón u otro)</label>
+      <div id="paciente-campos" style="display:none;margin-top:8px;">
+        <div style="font-size:11.5px;color:#1e40af;margin-bottom:6px;">La cotización y la ficha del CRM quedan a nombre del profesional. El paciente se anota aquí.</div>
+        <div class="g2">
+          <div class="f"><label>Nombre del paciente <span style="color:#e74c3c;font-weight:700;">*</span></label><input id="ePacNombre" value="" placeholder="Nombre y apellido" oninput="upd()"></div>
+          <div class="f"><label>RUT del paciente <span style="color:#e74c3c;font-weight:700;">*</span></label><input id="ePacRut" value="" placeholder="12.345.678-9" oninput="upd()"></div>
+        </div>
+      </div>
     </div>
 
     <div class="sec">✦ Productos</div>
@@ -3434,6 +3447,8 @@ function upd() {
     {label:"Teléfono",           val:normTel(ct)},
     {label:"Email",              val:ce},
     {label:"ID CompraÁgil",      val:eCA},
+    {label:"Paciente",           val:getPaciente().nombre},
+    {label:"RUT paciente",       val:getPaciente().rut},
   ].filter(f=>f.val);
 
   const clientHTML = clientFields.length ? `
@@ -4379,6 +4394,15 @@ async function registrarCotizacion() {
     liberar();
     return;
   }
+  if(document.getElementById("chkPaciente")?.checked) {
+    const _pac = getPaciente();
+    if(!_pac.nombre || !_pac.rut) {
+      alert("⚠️ Marcaste que es para un paciente derivado: falta el " + (!_pac.nombre ? "nombre" : "RUT") + " del paciente.");
+      document.getElementById(!_pac.nombre ? "ePacNombre" : "ePacRut")?.focus();
+      liberar();
+      return;
+    }
+  }
 
   // Anti-duplicado local — advertir si ya se registró este número
   const yaRegistrado = localStorage.getItem("oc_reg_" + num);
@@ -4430,7 +4454,9 @@ async function registrarCotizacion() {
         : "No incluido",
     productos: prods, codigos: codigos, sala: salaDesc, estado: "Enviada",
     fndr: getFndrData().esFndr ? "Sí" : "No",
-    fndr_region: getFndrData().region
+    fndr_region: getFndrData().region,
+    paciente: getPaciente().nombre,
+    paciente_rut: getPaciente().rut
   };
   if(esReemplazo) datosEnvio.accion='reemplazar_cotizacion';
 
@@ -4493,6 +4519,26 @@ async function registrarCotizacion() {
 
   // Éxito real confirmado por servidor → recién ahora marcamos localStorage y mostramos "registrada ✓"
   const numFinalConfirmado = respData.num || num;
+  // Paciente derivado → lo guarda el CRM en las columnas "Paciente" / "RUT Paciente" de esta cotización.
+  // En un reemplazo se manda siempre (si se desmarcó, lo borra).
+  const _pacReg = getPaciente();
+  if (_pacReg.nombre || _pacReg.rut || esReemplazo) {
+    let _pacOk = false;
+    for (let _i = 0; _i < 3 && !_pacOk; _i++) {
+      try {
+        const _rp = await fetch(CRM_API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ accion: "crm_cotizacion_paciente", num: numFinalConfirmado, paciente: _pacReg.nombre, paciente_rut: _pacReg.rut, solicitante: ejecutivo })
+        });
+        const _jp = await _rp.json();
+        _pacOk = !!(_jp && _jp.ok);
+      } catch (e) { /* reintenta: escribir el mismo paciente dos veces no duplica nada */ }
+    }
+    if (!_pacOk && (_pacReg.nombre || _pacReg.rut)) {
+      alert("⚠️ La cotización " + numFinalConfirmado + " quedó registrada, pero no se pudo guardar el paciente (" + _pacReg.nombre + ") en el CRM. Avísale a Rayen.");
+    }
+  }
   localStorage.setItem("oc_reg_" + numFinalConfirmado, new Date().toISOString());
   localStorage.setItem("oc_ultimo_registro_ms", String(Date.now()));
   // Log defensivo: queda registro local de TODAS las cotizaciones registradas exitosamente,
@@ -4600,6 +4646,8 @@ async function guardarCotizacion() {
       tel:         document.getElementById("eCTel")?.value || "",
       email:       document.getElementById("eCEmail")?.value || "",
       compraagil:  document.getElementById("eCompraAgil")?.value || "",
+      paciente:     getPaciente().nombre,
+      paciente_rut: getPaciente().rut,
     },
     // Ejecutivo
     ejecutivo: {
@@ -4761,6 +4809,7 @@ function aplicarCotizacion(d) {
         if(c.tel)         document.getElementById("eCTel").value         = c.tel;
         if(c.email)       document.getElementById("eCEmail").value       = c.email;
         if(c.compraagil)  document.getElementById("eCompraAgil").value   = c.compraagil;
+        setPaciente(c.paciente, c.paciente_rut);
       }
       // Ejecutivo
       if(d.ejecutivo) {
@@ -5062,6 +5111,7 @@ window.addEventListener("DOMContentLoaded", () => {
           const c = _d.cliente, sv = (id,v)=>{ const el=document.getElementById(id); if(el&&v) el.value=v; };
           sv("eCNombre",c.nombre); sv("eCInstitucion",c.institucion); sv("eCRut",c.rut);
           sv("eCCiudad",c.ciudad); sv("eCDireccion",c.direccion); sv("eCTel",c.tel); sv("eCEmail",c.email);
+          if (c.paciente || c.paciente_rut) setPaciente(c.paciente, c.paciente_rut);
         }
         // Condiciones que vengan armadas desde la precotización (garantía, validez, plazo,
         // forma de pago y la nota). Rayen 20-ago-2026: "las cotizaciones no tienen las
@@ -5666,7 +5716,34 @@ function limpiarContactoSeleccionado(){
   if (typeof upd === "function") upd();
 }
 
+// ── Paciente derivado (9-nov-2026) ──
+function getPaciente(){
+  const on = !!document.getElementById("chkPaciente")?.checked;
+  return {
+    nombre: on ? (document.getElementById("ePacNombre")?.value.trim() || "") : "",
+    rut:    on ? (document.getElementById("ePacRut")?.value.trim() || "") : ""
+  };
+}
+function togglePaciente(){
+  const on = !!document.getElementById("chkPaciente")?.checked;
+  const box = document.getElementById("paciente-campos");
+  if (box) box.style.display = on ? "" : "none";
+  if (on) setTimeout(() => document.getElementById("ePacNombre")?.focus(), 50);
+  if (typeof upd === "function") upd();
+}
+function setPaciente(nombre, rut){
+  const chk = document.getElementById("chkPaciente");
+  if (!chk) return;
+  document.getElementById("ePacNombre").value = nombre || "";
+  document.getElementById("ePacRut").value = rut || "";
+  chk.checked = !!(nombre || rut);
+  const box = document.getElementById("paciente-campos");
+  if (box) box.style.display = chk.checked ? "" : "none";
+}
 function cambiarDestino(modo){
+  // Aviso: el nombre del paciente NO va en «otro nombre» (crea fichas a nombre de pacientes en el CRM)
+  const _av = document.getElementById("aviso-otro-paciente");
+  if (_av) _av.style.display = (modo === "otro") ? "" : "none";
   if (modo === "mismo") {
     // Read-only, autollenados del contacto
     if (CONTACTO_SELECCIONADO) aplicarDatosContactoAlFormulario(CONTACTO_SELECCIONADO);

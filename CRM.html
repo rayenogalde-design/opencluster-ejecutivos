@@ -610,6 +610,14 @@ input,select,textarea{font-family:inherit; font-size:14px;}
   background:#5b21b6; color:white; border-color:#5b21b6;
 }
 
+/* ════ Sellos de ficha: FNDR y Gestor SENADIS ════ */
+.sello{ display:inline-flex; align-items:center; gap:5px; padding:4px 11px; border-radius:999px; font-size:11.5px; font-weight:800; letter-spacing:.2px; border:1px solid transparent; white-space:nowrap; }
+.sello-fndr-nuestro{ background:#5b21b6; color:#fff; border-color:#5b21b6; }
+.sello-fndr-ellos{ background:#f5f3ff; color:#5b21b6; border-color:#c4b5fd; }
+.sello-fndr{ background:#f5f3ff; color:#5b21b6; border-color:#c4b5fd; border-style:dashed; }
+.sello-gestor{ background:#e6f6f4; color:#0f766e; border-color:#99d8cf; }
+.sellos-ficha{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.nc-pill.sello-fndr-nuestro, .nc-pill.sello-fndr-ellos, .nc-pill.sello-fndr, .nc-pill.sello-gestor{ font-weight:800; }
 /* ════ Etiquetas ════ */
 .et-chip{
   display:inline-flex; align-items:center; gap:4px;
@@ -8855,8 +8863,9 @@ function renderTarjetaV2(c, view){
 
   // Pills: sub_categoría + etiquetas + monto
   var pills = '';
+  if(typeof sellosDeContacto === 'function') sellosDeContacto(c, null).forEach(function(x){ pills += '<span class="nc-pill ' + x.cls + '" title="' + esc(x.tip) + '">' + esc(x.txt) + '</span>'; });
   if(c.sub_categoria) pills += '<span class="nc-pill">' + esc(c.sub_categoria) + '</span>';
-  var tags = (typeof parsearEtiquetas === 'function') ? parsearEtiquetas(c.etiquetas) : [];
+  var tags = (typeof parsearEtiquetas === 'function') ? parsearEtiquetas(c.etiquetas).filter(function(t){ return typeof _esTagSello !== 'function' || !_esTagSello(t); }) : [];
   tags.slice(0, c.sub_categoria ? 2 : 3).forEach(function(t){ pills += '<span class="nc-pill">' + esc(t) + '</span>'; });
   if(hayCot && c.monto_cotizacion) pills += '<span class="nc-pill money">$ ' + esc(String(c.monto_cotizacion)) + '</span>';
   var tagsBlock = pills ? '<div class="nc-tags">' + pills + '</div>' : '';
@@ -13160,13 +13169,15 @@ function renderFicha(container, data){
   const icoPin = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
   const icoUser = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
 
+  const _esGestorSenadis = parsearEtiquetas(c.etiquetas).some(t => _selloNorm(t) === _selloNorm(SELLO_TAGS.gestor));
   // Banda + header v2 con los 3 botones de links nativos
   const headerV2 =
     '<div class="v2-detail">' +
-      '<div class="v2-detail-banda ' + gF.clase + '"><span><strong>' + gF.grupo + '</strong> · ' + esc(gF.etapa) + '</span>' + (c.sub_categoria ? '<span style="opacity:.85">' + esc(c.sub_categoria) + '</span>' : '') + '</div>' +
+      '<div class="v2-detail-banda ' + gF.clase + '"><span>' + (_esGestorSenadis ? '<strong>Gestor SENADIS</strong> · Capacitación' : '<strong>' + gF.grupo + '</strong> · ' + esc(gF.etapa)) + '</span>' + (c.sub_categoria ? '<span style="opacity:.85">' + esc(c.sub_categoria) + '</span>' : '') + '</div>' +
       '<div class="v2-detail-header">' +
         '<div class="v2-detail-title">' +
           '<h1 class="v2-detail-name">' + esc(c.nombre || c.institucion || '(sin nombre)') + '</h1>' +
+          renderSellosFicha(c, tl) +
           '<p class="v2-detail-sub">' + esc(c.institucion || '') + (c.cargo ? ' · ' + esc(c.cargo) : '') + (dir ? (c.institucion || c.cargo ? ' · ' : '') + esc(dir) : '') + '</p>' +
           '<div class="v2-detail-meta">' +
             (c.nombre && c.institucion ? '<span style="display:inline-flex;align-items:center;gap:4px">' + icoUser + esc(c.nombre) + (c.cargo ? ' · ' + esc(c.cargo) : '') + '</span>' : '') +
@@ -15805,6 +15816,25 @@ async function ejecutarImport(simular){
 // ════════════════════════════════════════════════════════════════════════════
 // ETIQUETAS LIBRES
 // ════════════════════════════════════════════════════════════════════════════
+// Sellos especiales: salen de etiquetas fijas y se muestran aparte, arriba en la ficha.
+const SELLO_TAGS = { fndr_nuestro:'FNDR proyecto nuestro', fndr_ellos:'FNDR postulan ellos', gestor:'Gestor SENADIS' };
+function _selloNorm(t){ return String(t||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ').trim(); }
+function _esTagSello(t){ const k=_selloNorm(t); return Object.values(SELLO_TAGS).some(v => _selloNorm(v)===k); }
+function sellosDeContacto(c, tl){
+  const tags = parsearEtiquetas(c && c.etiquetas).map(_selloNorm);
+  const out = [];
+  if(tags.indexOf(_selloNorm(SELLO_TAGS.fndr_nuestro))>=0) out.push({cls:'sello-fndr-nuestro', txt:'FNDR · Proyecto nuestro', tip:'Proyecto FNDR armado o postulado junto con OpenCluster'});
+  else if(tags.indexOf(_selloNorm(SELLO_TAGS.fndr_ellos))>=0) out.push({cls:'sello-fndr-ellos', txt:'FNDR · Postulan ellos', tip:'El cliente postula su propio proyecto FNDR; nosotros cotizamos'});
+  else if((tl||[]).some(t => /postulado a fndr|fndr\/concurso/i.test(String((t&&t.titulo)||'')+' '+String((t&&t.detalle)||'')+' '+String((t&&t.estado)||''))))
+    out.push({cls:'sello-fndr', txt:'FNDR · por clasificar', tip:'Tiene una cotización postulada a FNDR. Falta marcar si es proyecto nuestro o si postulan ellos (Etiquetas)'});
+  if(tags.indexOf(_selloNorm(SELLO_TAGS.gestor))>=0) out.push({cls:'sello-gestor', txt:'Gestor SENADIS · Capacitación', tip:'Gestor SENADIS: lo capacitamos, no es un cliente de cotización'});
+  return out;
+}
+function renderSellosFicha(c, tl){
+  const ss = sellosDeContacto(c, tl);
+  if(!ss.length) return '';
+  return '<div class="sellos-ficha">' + ss.map(x => '<span class="sello ' + x.cls + '" title="' + esc(x.tip) + '">' + esc(x.txt) + '</span>').join('') + '</div>';
+}
 function parsearEtiquetas(raw){
   if(!raw) return [];
   if(Array.isArray(raw)) return raw.map(t => String(t).trim()).filter(Boolean);
@@ -15812,7 +15842,7 @@ function parsearEtiquetas(raw){
 }
 function renderEtiquetasBloque(c, editable){
   const tags = parsearEtiquetas(c.etiquetas);
-  const chips = tags.map(t =>
+  const chips = tags.filter(t => !_esTagSello(t)).map(t =>
     '<span class="et-chip">' + esc(t) + '</span>'
   ).join('');
   const btn = editable
@@ -15869,12 +15899,16 @@ function cargarSugerenciasEtiquetas(){
     const k = t.toLowerCase();
     counter[k] = (counter[k] || 0) + 1;
   }));
-  const top = Object.entries(counter).sort((a,b) => b[1]-a[1]).slice(0, 10);
+  const fijas = Object.values(SELLO_TAGS);
+  const top = Object.entries(counter).filter(([k]) => !_esTagSello(k)).sort((a,b) => b[1]-a[1]).slice(0, 10);
+  const htmlFijas = '<div style="width:100%;font-size:11px;color:var(--text-3);margin:2px 0 2px;">Sellos de la ficha (FNDR: usar solo uno):</div>' +
+    fijas.map(tag => '<button class="et-suggest" style="font-weight:800;color:#5b21b6;border-color:#c4b5fd;" onclick="agregarChipEtiqueta(\'' + esc(tag) + '\')">' + esc(tag) + '</button>').join('') +
+    '<div style="width:100%;height:4px"></div>';
   if(!top.length){
-    cont.innerHTML = '<span style="font-size:11.5px;color:var(--text-3);">Aún no hay etiquetas en uso. Empieza creando una.</span>';
+    cont.innerHTML = htmlFijas + '<span style="font-size:11.5px;color:var(--text-3);">Aún no hay otras etiquetas en uso.</span>';
     return;
   }
-  cont.innerHTML = top.map(([tag, cnt]) =>
+  cont.innerHTML = htmlFijas + top.map(([tag, cnt]) =>
     '<button class="et-suggest" onclick="agregarChipEtiqueta(\'' + esc(tag).replace(/\\'/g, "\\\\'") + '\')">' +
       esc(tag) + ' <span style="opacity:.6;font-size:10px;">' + cnt + '</span>' +
     '</button>'

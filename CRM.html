@@ -3694,6 +3694,11 @@ body{
     </div>
     <div class="modal-body">
       <input type="hidden" id="ni-contacto-id">
+      <div id="ni-buscador-area" style="display:none;margin-bottom:14px;position:relative;">
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--text-2);margin-bottom:5px;">¿Con quién fue la gestión? <span style="color:var(--ruby);">*</span></label>
+        <input type="text" id="ni-buscador" oninput="buscarContactosGestion(this.value)" placeholder="Escribe nombre, institución o email…" style="width:100%;padding:10px 12px;border:1px solid var(--border-subtle);border-radius:8px;font-size:14px;">
+        <div id="ni-resultados" style="display:none;margin-top:4px;border:1px solid var(--border-subtle);border-radius:8px;max-height:260px;overflow:auto;background:#fff;"></div>
+      </div>
       <div id="ni-contacto-info" style="background:var(--surface-selected);border:1px solid var(--border-subtle);border-radius:10px;padding:11px 14px;margin-bottom:14px;font-size:13px;">
         <div style="color:var(--text-3);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Contacto</div>
         <div id="ni-contacto-nombre" style="font-family:var(--font-serif);font-size:17px;color:var(--text-1);font-weight:500;"></div>
@@ -6489,7 +6494,10 @@ function _gestTile(g){
       '<span style="font-size:17px;font-weight:800;color:#001a60;letter-spacing:-.015em;display:flex;align-items:center;gap:8px;">'+
         '<span style="display:inline-flex;width:26px;height:26px;border-radius:8px;background:#e6f7f5;align-items:center;justify-content:center;">'+_DV3.bars+'</span>'+
         'Gestiones del mes</span>'+
-      '<span style="font-size:32px;font-weight:800;color:#001a60;line-height:1;letter-spacing:-.02em;">'+total+'</span>'+
+      '<span style="display:flex;align-items:center;gap:10px;">'+
+        '<button onclick="abrirNuevaGestionDashboard()" title="Registrar una gestión" aria-label="Registrar una gestión" style="width:30px;height:30px;border-radius:50%;border:none;background:#0ea5a5;color:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;box-shadow:0 2px 6px rgba(14,165,165,.35);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>'+
+        '<span style="font-size:32px;font-weight:800;color:#001a60;line-height:1;letter-spacing:-.02em;">'+total+'</span>'+
+      '</span>'+
     '</div>'+
     ((typeof esActuandoComoAdmin==='function'&&esActuandoComoAdmin())?'<div onclick="abrirGestionesPorEjecutivo()" style="font-size:11px;font-weight:800;color:#0ea5a5;cursor:pointer;margin-bottom:6px;">Ver por ejecutivo →</div>':'')+
     rows+'</div>';
@@ -16122,6 +16130,7 @@ async function abrirModalNuevaInteraccion(contactoId){
   document.getElementById('ni-fecha').value = _hoyISO();
   document.getElementById('ni-contacto-nombre').textContent = 'Cargando…';
   document.getElementById('ni-contacto-inst').textContent = '';
+  _niModoBuscador(false);
   modal.classList.add('show');
 
   // Cargar info del contacto desde cache local
@@ -16148,6 +16157,81 @@ async function abrirModalNuevaInteraccion(contactoId){
 function cerrarModalNuevaInteraccion(){
   document.getElementById('modalNuevaInteraccion').classList.remove('show');
   NI_EDIT_ID = null;
+  _niModoBuscador(false);
+}
+
+// ── «+» de Gestiones del mes (Dashboard): registrar una gestión eligiendo el contacto ahí mismo ──
+function _niModoBuscador(on){
+  const a = document.getElementById('ni-buscador-area'), info = document.getElementById('ni-contacto-info');
+  if(a) a.style.display = on ? '' : 'none';
+  if(info) info.style.display = on ? 'none' : '';
+  const res = document.getElementById('ni-resultados'); if(res){ res.style.display = 'none'; res.innerHTML = ''; }
+  const inp = document.getElementById('ni-buscador'); if(inp) inp.value = '';
+}
+async function abrirNuevaGestionDashboard(){
+  NI_EDIT_ID = null;
+  document.getElementById('ni-titulo').textContent = 'Nueva gestión';
+  const b = document.getElementById('ni-btn-guardar'); if(b) b.textContent = 'Registrar gestión';
+  document.getElementById('ni-contacto-id').value = '';
+  document.getElementById('ni-medio').value = '';
+  document.getElementById('ni-resultado').value = '';
+  document.getElementById('ni-pipeline').value = '';
+  document.getElementById('ni-notas').value = '';
+  document.getElementById('ni-fecha').value = _hoyISO();
+  _niModoBuscador(true);
+  document.getElementById('modalNuevaInteraccion').classList.add('show');
+  setTimeout(() => document.getElementById('ni-buscador').focus(), 80);
+  // Lista de contactos para buscar: la de la memoria, si no la guardada, si no se pide al servidor
+  if(!(CACHE.vTodos && CACHE.vTodos.length)){
+    try {
+      const raw = localStorage.getItem('crm_cache_contactos_v2_' + USUARIO);
+      if(raw){ const cc = JSON.parse(raw); if(cc && cc.contactos && cc.contactos.length) CACHE.vTodos = cc.contactos; }
+    } catch(e){}
+  }
+  if(!(CACHE.vTodos && CACHE.vTodos.length)){
+    const r = await fetchAPI('crm_contactos', { solicitante: USUARIO });
+    if(r && r.ok) CACHE.vTodos = r.contactos || [];
+    const inp = document.getElementById('ni-buscador');
+    if(inp && inp.value) buscarContactosGestion(inp.value);
+  }
+}
+function buscarContactosGestion(q){
+  q = String(q || '').trim().toLowerCase();
+  const cont = document.getElementById('ni-resultados');
+  if(q.length < 2){ cont.style.display = 'none'; cont.innerHTML = ''; return; }
+  const lista = CACHE.vTodos || [];
+  if(!lista.length){ cont.innerHTML = '<div style="padding:12px;color:var(--text-3);font-size:13px;text-align:center;">Cargando contactos…</div>'; cont.style.display = ''; return; }
+  const score = c => {
+    const nom = String(c.nombre||'').toLowerCase(), ins = String(c.institucion||'').toLowerCase(), em = String(c.email||'').toLowerCase();
+    let s = 0;
+    if(nom.indexOf(q) === 0) s += 100; else if(nom.indexOf(q) >= 0) s += 50;
+    if(ins.indexOf(q) === 0) s += 30; else if(ins.indexOf(q) >= 0) s += 15;
+    if(em.indexOf(q) >= 0) s += 10;
+    return s;
+  };
+  const resultados = lista.map(c => ({ c: c, s: score(c) })).filter(x => x.s > 0).sort((a,b) => b.s - a.s).slice(0, 10).map(x => x.c);
+  if(!resultados.length){
+    cont.innerHTML = '<div style="padding:12px;color:var(--text-3);font-size:13px;text-align:center;">Sin coincidencias</div>';
+    cont.style.display = ''; return;
+  }
+  cont.innerHTML = resultados.map(c =>
+    '<div onclick="seleccionarContactoGestion(\'' + esc(c.id) + '\')" style="padding:9px 14px;cursor:pointer;border-bottom:1px solid var(--border-subtle);" onmouseover="this.style.background=\'var(--surface-selected, #f7f3ee)\'" onmouseout="this.style.background=\'transparent\'">' +
+      '<div style="font-size:14px;color:var(--text-1);font-weight:600;">' + esc(c.nombre || c.institucion || '(sin nombre)') + '</div>' +
+      '<div style="font-size:11.5px;color:var(--text-3);margin-top:2px;">' + esc(c.institucion || '') + (c.email ? ' · ' + esc(c.email) : '') + '</div>' +
+    '</div>'
+  ).join('');
+  cont.style.display = '';
+}
+function seleccionarContactoGestion(id){
+  const c = (CACHE.vTodos || []).find(x => String(x.id) === String(id));
+  if(!c) return;
+  document.getElementById('ni-contacto-id').value = c.id;
+  document.getElementById('ni-contacto-nombre').innerHTML = esc(c.nombre || c.institucion || '(sin nombre)') +
+    ' <a href="javascript:void(0)" onclick="_niModoBuscador(true);document.getElementById(\'ni-contacto-id\').value=\'\';setTimeout(function(){document.getElementById(\'ni-buscador\').focus()},50)" style="font-size:12px;font-weight:700;margin-left:6px;">Cambiar</a>';
+  document.getElementById('ni-contacto-inst').textContent = [c.institucion, c.cargo].filter(Boolean).join(' · ');
+  document.getElementById('ni-buscador-area').style.display = 'none';
+  document.getElementById('ni-contacto-info').style.display = '';
+  setTimeout(() => document.getElementById('ni-medio').focus(), 60);
 }
 
 // Abre el modal en modo EDICIÓN, pre-llenado con los datos de la interacción.
@@ -16165,6 +16249,7 @@ function editarInteraccion(refId, contactoId){
   if (mm) fIso = mm[1] + '-' + mm[2] + '-' + mm[3];
   else { mm = f.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/); if (mm) fIso = mm[3] + '-' + ('0'+mm[2]).slice(-2) + '-' + ('0'+mm[1]).slice(-2); }
   document.getElementById('ni-fecha').value = fIso;
+  _niModoBuscador(false);
   document.getElementById('ni-contacto-nombre').textContent = 'Editar interacción';
   document.getElementById('ni-contacto-inst').textContent = '';
   NI_EDIT_ID = refId;
@@ -16190,6 +16275,7 @@ async function guardarNuevaInteraccion(){
   const pipeline = document.getElementById('ni-pipeline').value;
   const notas = document.getElementById('ni-notas').value.trim();
 
+  if(!id && !NI_EDIT_ID){ alert('Elige con quién fue la gestión'); const _bq = document.getElementById('ni-buscador'); if(_bq && _bq.offsetParent) _bq.focus(); return; }
   if(!medio){ alert('Selecciona el tipo de interacción'); document.getElementById('ni-medio').focus(); return; }
   if(!notas && !resultado){ alert('Agrega resultado o notas para describir la interacción'); document.getElementById('ni-notas').focus(); return; }
 

@@ -298,7 +298,7 @@ button.sec.peligro:hover{background:#FDECEA}
 // a un archivo chico que se pide SIN caché; si no calza con la que trae adentro, se
 // recarga sola con una dirección nueva y esa sí llega fresca.
 // AL PUBLICAR UN CAMBIO: subir VERSION acá Y en version.json (el mismo número).
-var VERSION = "2026-10-30-1";
+var VERSION = "2026-11-10-1";
 
 (function comprobarVersion(){
   fetch("version.json?t=" + Date.now(), { cache:"no-store" })
@@ -1313,6 +1313,264 @@ document.addEventListener("DOMContentLoaded", function(){
       pintarIndice();
     });
 });
+
+/*__MODO_MELANIE_INI__*/
+/* ── MODO MELANIE (10-nov-2026) ─────────────────────────────────────────────
+   La selección que llega de PreciosProductosMelanie.html trae modo:"melanie".
+   Rayen: por cada producto de la página web, Melanie elige «Valor página web» o
+   «Valor transferencia página web» (ninguno se puede editar); en los de
+   proveedores va el precio de su lista, tampoco editable. Antes de seguir tiene
+   que contestar Sí o No a «¿Tienes autorización para entregar valores diferentes
+   a los publicados en la página web?». Si dice Sí, en cada producto aparece una
+   casilla para escribir el valor autorizado. Sin márgenes, sin costos y sin
+   correos de aviso.
+   ES UN MODO APARTE: solo se enciende con modo:"melanie". Para Rayen y para los
+   demás ejecutivos la pantalla sigue exactamente igual (cargarSeleccion,
+   refrescar y abrirEnCotizador se llaman igual que antes). */
+var MODO_MEL = false;
+var MEL_AUT = null;   // null = sin contestar · true = Sí · false = No
+(function(){
+  function plata(n){ return "$" + Math.round(Number(n) || 0).toLocaleString("es-CL"); }
+  function esc(s){ return String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+  // El valor con IVA de una línea según lo elegido.
+  function valorMel(L){
+    if (MEL_AUT === true && L.autorizado > 0) return L.autorizado;
+    if (L.tipo === "web") return L.elige === "tr" ? L.pt : L.pw;
+    return L.precioLista;
+  }
+  window.__valorMel = valorMel;
+
+  function estilos(){
+    if (document.getElementById("estiloMel")) return;
+    var st = document.createElement("style");
+    st.id = "estiloMel";
+    st.textContent = [
+      "body.modo-mel #barraClave,body.modo-mel #avisoMin,body.modo-mel #avisoMinPie,body.modo-mel #bloqueControl,body.modo-mel #linkSalas,body.modo-mel #filaCosto,body.modo-mel #filaMargen{display:none!important}",
+      "body.modo-mel .aviso.aviso-am{background:var(--info-bg);color:var(--info-tx)}",
+      "body.modo-mel .aviso-catres{background:#E6F1FB!important;color:#042C53!important;border-left-color:#06B3FD!important}",
+      ".mel-preg{border:2px solid var(--sky);border-radius:12px;padding:14px 16px;margin-bottom:14px;background:#F2FAFF}",
+      ".mel-preg.ok{border-color:var(--linea);background:#fff}",
+      ".mel-preg .q{font-size:15px;font-weight:800;color:var(--navy);margin:0 0 4px}",
+      ".mel-preg .q-pie{font-size:12.5px;color:#5B6472;margin:0 0 10px}",
+      ".mel-sn{display:flex;gap:10px;flex-wrap:wrap}",
+      ".mel-sn button{min-width:96px;padding:10px 18px;border-radius:9px;border:1.5px solid var(--navy);background:#fff;color:var(--navy);font-family:inherit;font-size:14px;font-weight:800;cursor:pointer}",
+      ".mel-sn button.on{background:var(--navy);color:#fff}",
+      ".mel-todos{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px;font-size:12.5px;color:#5B6472}",
+      ".mel-todos button{padding:6px 11px;border-radius:7px;border:1px solid var(--linea);background:#fff;color:var(--navy);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer}",
+      ".mel-todos button:hover{background:var(--hover)}",
+      ".mel-op{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px;border:1px solid var(--linea);border-radius:8px;margin-bottom:5px;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--texto);background:#fff;white-space:normal;text-align:left}",
+      ".mel-op input{margin:0 6px 0 0;accent-color:#001A60}",
+      ".mel-op b{font-size:14px;font-weight:800;color:var(--navy);white-space:nowrap}",
+      ".mel-op.on{border-color:var(--sky);background:#ECF8FF}",
+      ".mel-op.apagado{opacity:.5}",
+      ".mel-fijo{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px;border:1px solid var(--linea);border-radius:8px;font-size:12.5px;font-weight:600;background:#fff}",
+      ".mel-fijo b{font-size:14px;font-weight:800;color:var(--navy)}",
+      ".mel-aut{width:100%;padding:7px 8px;font-family:inherit;font-size:14.5px;font-weight:800;text-align:right;color:var(--navy);border:1.5px solid var(--sky);border-radius:7px;background:#fff;font-variant-numeric:tabular-nums}",
+      ".mel-aut:focus{outline:2px solid var(--sky);outline-offset:1px}",
+      ".mel-falta{font-size:13px;font-weight:700;color:var(--navy);background:#E6F6FE;border:1px solid #B8E4FB;border-radius:8px;padding:9px 12px;margin-top:10px}",
+      "#btnAbrir:disabled{opacity:.45;cursor:default;transform:none;box-shadow:none}",
+      "td.n.mel-total{font-size:15px;font-weight:800;color:var(--navy)}"
+    ].join("\n");
+    document.head.appendChild(st);
+  }
+
+  // La pregunta obligatoria, arriba de la tabla.
+  function pregunta(){
+    var caja = document.getElementById("melPregunta");
+    if (!caja) {
+      caja = document.createElement("div");
+      caja.id = "melPregunta"; caja.className = "mel-preg";
+      caja.innerHTML =
+        '<p class="q">¿Tienes autorización para entregar valores diferentes a los publicados en la página web?</p>' +
+        '<p class="q-pie" id="melPreguntaPie">Marca Sí o No para seguir.</p>' +
+        '<div class="mel-sn"><button type="button" data-aut="si">Sí</button><button type="button" data-aut="no">No</button></div>';
+      var tabla = document.getElementById("cardTabla");
+      var cab = tabla.querySelector(".cab-tabla");
+      cab.parentNode.insertBefore(caja, cab.nextSibling);
+      caja.addEventListener("click", function(e){
+        var b = e.target.closest("[data-aut]"); if (!b) return;
+        MEL_AUT = (b.getAttribute("data-aut") === "si");
+        refrescar();
+      });
+      var todos = document.createElement("div");
+      todos.id = "melTodos"; todos.className = "mel-todos";
+      todos.innerHTML = '<span>En los productos de la página web:</span>' +
+        '<button type="button" data-todos="web">Valor página web en todos</button>' +
+        '<button type="button" data-todos="tr">Valor transferencia en todos</button>';
+      caja.parentNode.insertBefore(todos, caja.nextSibling);
+      todos.addEventListener("click", function(e){
+        var b = e.target.closest("[data-todos]"); if (!b) return;
+        var k = b.getAttribute("data-todos");
+        LINEAS.forEach(function(L){ if (L.tipo === "web") L.elige = k; });
+        refrescar();
+      });
+    }
+    caja.classList.toggle("ok", MEL_AUT !== null);
+    [].forEach.call(caja.querySelectorAll("[data-aut]"), function(b){
+      var si = b.getAttribute("data-aut") === "si";
+      b.classList.toggle("on", MEL_AUT !== null && MEL_AUT === si);
+    });
+    document.getElementById("melPreguntaPie").textContent =
+      MEL_AUT === null ? "Marca Sí o No para seguir." :
+      MEL_AUT ? "Escribe en cada producto el valor que tienes autorizado (con IVA). Si lo dejas vacío, va el valor que marcaste." :
+                "Se cotiza con los valores publicados.";
+    var hayWeb = LINEAS.some(function(L){ return L.tipo === "web"; });
+    document.getElementById("melTodos").style.display = hayWeb ? "" : "none";
+  }
+
+  function cabecera(){
+    var thead = document.querySelector("#cardTabla thead tr");
+    thead.innerHTML =
+      '<th class="th-prod">Producto</th>' +
+      '<th style="width:60px" class="c">Cant.</th>' +
+      '<th style="width:280px;text-align:left">Valor unidad (IVA incl.)</th>' +
+      (MEL_AUT === true ? '<th style="width:150px">Valor autorizado</th>' : '') +
+      '<th style="width:130px">Total</th>';
+  }
+
+  function refrescarMel(){
+    estilos();
+    pregunta();
+    cabecera();
+    var tb = document.getElementById("tbody");
+    tb.innerHTML = "";
+    FILAS = [];
+    var subNeto = 0;
+    LINEAS.forEach(function(L, i){
+      var iva = valorMel(L);
+      var netoUn = iva > 0 ? netoDesde(iva) : 0;
+      subNeto += netoUn * L.cant;
+      var celdaValor;
+      if (L.tipo === "web") {
+        var apagado = (MEL_AUT === true && L.autorizado > 0) ? " apagado" : "";
+        celdaValor =
+          '<label class="mel-op' + (L.elige !== "tr" ? " on" : "") + apagado + '"><span><input type="radio" name="mel' + i + '" data-elige="web" data-i="' + i + '"' + (L.elige !== "tr" ? " checked" : "") + '>Valor página web</span><b>' + plata(L.pw) + '</b></label>' +
+          '<label class="mel-op' + (L.elige === "tr" ? " on" : "") + apagado + '"><span><input type="radio" name="mel' + i + '" data-elige="tr" data-i="' + i + '"' + (L.elige === "tr" ? " checked" : "") + '>Valor transferencia página web</span><b>' + plata(L.pt) + '</b></label>' +
+          (L.url ? '<a class="web-si" href="' + esc(L.url) + '" target="_blank" rel="noopener" style="font-size:11.5px">ver en la página web</a>' : '');
+      } else {
+        celdaValor = '<div class="mel-fijo"><span>Precio de lista</span><b>' + plata(L.precioLista) + '</b></div>';
+      }
+      var celdaAut = (MEL_AUT === true)
+        ? '<td class="n"><input class="mel-aut" type="text" inputmode="numeric" autocomplete="off" data-aut-i="' + i + '" value="' + (L.autorizado > 0 ? Math.round(L.autorizado).toLocaleString("es-CL") : '') + '" placeholder="Escribe el valor"></td>'
+        : '';
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        '<td class="td-prod"><div class="fila-prod">' +
+          (L.img ? '<img class="foto" src="' + esc(L.img) + '" alt="">' : '<div class="sinfoto">sin foto</div>') +
+          '<div class="prod-txt">' +
+            '<div class="linea-cod"><span class="num">' + (i + 1) + '</span>' + (L.codigo ? '<span class="cod">' + esc(L.codigo) + '</span>' : '') + '</div>' +
+            '<div class="nom">' + esc(L.nombre) + '</div>' +
+            (L.desc ? '<div class="desc">' + esc(L.desc) + '</div>' : '') +
+          '</div></div></td>' +
+        '<td class="c"><input class="cant-in" type="number" step="1" min="1" max="9999" data-i="' + i + '" value="' + L.cant + '"></td>' +
+        '<td>' + celdaValor + '</td>' +
+        celdaAut +
+        '<td class="n mel-total">' + (netoUn ? plata(netoUn * L.cant * 1.19) : '—') + '</td>';
+      tb.appendChild(tr);
+      FILAS.push({ nombre:L.nombre, codigo:L.codigo, desc:L.desc, cant:String(L.cant),
+                   precio:String(netoUn), modo:"neto", img:L.img });
+    });
+
+    [].forEach.call(tb.querySelectorAll("input[data-elige]"), function(r){
+      r.addEventListener("change", function(){
+        LINEAS[Number(r.getAttribute("data-i"))].elige = r.getAttribute("data-elige");
+        refrescar();
+      });
+    });
+    [].forEach.call(tb.querySelectorAll(".mel-aut"), function(inp){
+      inp.addEventListener("change", function(){
+        var i = Number(inp.getAttribute("data-aut-i"));
+        var v = Math.round(Number(String(inp.value).replace(/[^0-9]/g, "")));
+        LINEAS[i].autorizado = (isFinite(v) && v > 0) ? v : null;
+        refrescar();
+      });
+    });
+    [].forEach.call(tb.querySelectorAll(".cant-in"), function(inp){
+      inp.addEventListener("change", function(){
+        var i = Number(inp.getAttribute("data-i"));
+        var v = Math.round(Number(inp.value));
+        if (!isFinite(v) || v < 1 || v > 9999) { refrescar(); return; }
+        LINEAS[i].cant = v;
+        refrescar();
+      });
+    });
+
+    document.getElementById("tNeto").textContent  = CLP(subNeto);
+    document.getElementById("filaInst").style.display = "none";
+    document.getElementById("tIva").textContent   = CLP(subNeto * 0.19);
+    document.getElementById("tTotal").textContent = CLP(subNeto * 1.19);
+    document.getElementById("cardTabla").style.display = "block";
+    document.getElementById("cardAcciones").style.display = "block";
+
+    var btn = document.getElementById("btnAbrir");
+    btn.disabled = (MEL_AUT === null);
+    var falta = document.getElementById("melFalta");
+    if (!falta) {
+      falta = document.createElement("div");
+      falta.id = "melFalta"; falta.className = "mel-falta";
+      falta.textContent = "Antes de seguir, contesta arriba si tienes autorización para entregar valores diferentes a los publicados en la página web.";
+      btn.parentNode.parentNode.insertBefore(falta, btn.parentNode);
+    }
+    falta.style.display = (MEL_AUT === null) ? "" : "none";
+    document.getElementById("mensaje").innerHTML = "";
+  }
+
+  function cargaMel(datos){
+    MODO_MEL = true;
+    MEL_AUT = null;
+    document.body.classList.add("modo-mel");
+    document.getElementById("btnVaciar").style.display = "";
+    document.getElementById("titulo").textContent = datos.titulo || "Mi selección";
+    document.title = (datos.titulo || "Mi selección") + " — Precotización";
+    document.getElementById("subtitulo").textContent =
+      datos.productos.length + (datos.productos.length === 1 ? " producto" : " productos") + ", en el orden en que los marcaste.";
+    DATOS = { titulo: datos.titulo, productos: [] };
+    COSTOS = {}; MOSTRAR_COSTO = false; MARGEN_MIN = null; BASE = null; CLIENTE = null;
+    LINEAS = datos.productos.map(function(p){
+      var web = p.tipo === "web" && Number(p.pw) > 0 && Number(p.pt) > 0;
+      return {
+        codigo: p.codigo || "", nombre: p.nombre || "(producto sin nombre)", desc: p.desc || "",
+        cant: Math.max(1, Number(p.cant) || 1), img: p.img || "",
+        tipo: web ? "web" : "lista",
+        pw: web ? Math.round(Number(p.pw)) : 0, pt: web ? Math.round(Number(p.pt)) : 0,
+        url: (web && p.web && p.web.url) ? p.web.url : "",
+        precioLista: Math.round(Number(p.precio) || 0),
+        elige: "web", autorizado: null, esSala: false, lp: [], web: null, stock: null
+      };
+    }).filter(function(L){ return (L.tipo === "web") || L.precioLista > 0; });
+    refrescar();
+  }
+
+  if (typeof cargarSeleccion === "function") {
+    var _carga = cargarSeleccion;
+    cargarSeleccion = function(){
+      var d = null;
+      try { d = JSON.parse(localStorage.getItem("oc_precotizacion") || "null"); } catch(e){ d = null; }
+      if (!d || d.modo !== "melanie" || !d.productos || !d.productos.length) return _carga.apply(this, arguments);
+      return cargaMel(d);
+    };
+  }
+  if (typeof refrescar === "function") {
+    var _ref = refrescar;
+    refrescar = function(){
+      if (MODO_MEL) return refrescarMel.apply(this, arguments);
+      return _ref.apply(this, arguments);
+    };
+  }
+  if (typeof abrirEnCotizador === "function") {
+    var _abrir = abrirEnCotizador;
+    abrirEnCotizador = function(){
+      if (MODO_MEL && MEL_AUT === null) {
+        var f = document.getElementById("melFalta"); if (f) f.style.display = "";
+        var q = document.getElementById("melPregunta"); if (q) q.scrollIntoView({ behavior:"smooth", block:"center" });
+        return;
+      }
+      return _abrir.apply(this, arguments);
+    };
+  }
+})();
+/*__MODO_MELANIE_FIN__*/
 
 /*__AVISO_CATRES_INI__*/
 /* Aviso de plazo de entrega de nuestros dos catres. 2-sep-2026, pedido de Rayen:

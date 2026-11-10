@@ -168,6 +168,13 @@ input,select,textarea{font-family:inherit; font-size:14px;}
 .side-tab.admin svg{color:var(--purple);}
 
 .main{ overflow-y:auto; padding:28px 32px; }
+.aa-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:16px; margin-top:16px; }
+.aa-card{ display:flex; flex-direction:column; gap:10px; padding:20px; border-radius:14px; background:#fff; border:1px solid #dbe3f0; border-top:4px solid #2FC1FF; text-decoration:none; color:#001A60; transition:box-shadow .15s, transform .15s; }
+.aa-card:hover{ box-shadow:0 6px 18px rgba(0,26,96,.12); transform:translateY(-2px); }
+.aa-card .aa-et{ font:700 11px Manrope,sans-serif; letter-spacing:.08em; text-transform:uppercase; color:#5b6b8c; }
+.aa-card .aa-nom{ font:800 20px Montserrat,Manrope,sans-serif; }
+.aa-card .aa-btn{ align-self:flex-start; margin-top:4px; padding:8px 14px; border-radius:9px; background:#001A60; color:#fff; font:700 13px Manrope,sans-serif; }
+.aa-vacio{ padding:20px; border-radius:14px; border:1px dashed #b9c6dc; color:#5b6b8c; font:500 14px Manrope,sans-serif; }
 .view{ display:none; }
 .view.act{ display:block; }
 
@@ -2284,6 +2291,10 @@ body{
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
         Métricas
       </div>
+      <div class="side-tab" data-view="vAnalisisAnual" id="navAnalisisAnual" onclick="goView('vAnalisisAnual')">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 6-6"/></svg>
+        Análisis anual
+      </div>
 
       <div class="side-section admin" id="secAdmin" style="display:none;">Administración</div>
       <div class="side-tab admin" data-view="vLeads" id="navLeads" onclick="goView('vLeads')" style="display:none;">
@@ -2886,6 +2897,15 @@ body{
         <div id="ventasMesBar" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:14px 0;"></div>
         <div id="ventasMesBody"><div class="loading-state"><div class="spinner"></div>Cargando…</div></div>
         <div id="ventasMesCom" style="margin-top:22px;"></div>
+      </div>
+
+      <!-- ═══ Análisis anual (cada ejecutivo ve el suyo; Rayen ve todos) ═══ -->
+      <div class="view" id="vAnalisisAnual">
+        <div class="sec-head">
+          <h1>Análisis anual</h1>
+          <p>Tu año 2026: ventas, margen, clientes y metas para 2027.</p>
+        </div>
+        <div id="analisisAnualBody" class="aa-grid"></div>
       </div>
 
       <!-- ═══ Métricas ═══ -->
@@ -4818,6 +4838,34 @@ function toggleHerramientas(){
   g.style.display = abierto ? 'none' : '';
   if(ch) ch.textContent = abierto ? '▸' : '▾';
 }
+// Análisis anual 2026: una página por persona en claude.ai. Cada página es privada:
+// solo la abre quien Rayen haya invitado desde «Compartir». Acá cada uno ve SOLO su tarjeta;
+// Rayen en modo Admin ve las cuatro.
+const ANALISIS_ANUAL = [
+  { clave: 'roberto',     nombre: 'Roberto',     url: 'https://claude.ai/artifact/8iSAF7WqesgB75qpAr9GuG' },
+  { clave: 'maximiliano', nombre: 'Maximiliano', url: 'https://claude.ai/artifact/UaSFDAMDDxfJ65DmLV7jnf' },
+  { clave: 'german',      nombre: 'Germán',      url: 'https://claude.ai/artifact/2V5u2xBrHztRUHZQuqCHDD' },
+  { clave: 'rayen',       nombre: 'Rayen',       url: 'https://claude.ai/artifact/5bg3XkBRRExXfnSzQcUDh4' }
+];
+function cargarAnalisisAnual(){
+  const cont = document.getElementById('analisisAnualBody');
+  if(!cont) return;
+  const quien = _busqNorm(String(USUARIO || '').split(' ')[0]);
+  const verTodos = ROL === 'admin' && getModoVista() !== 'ejecutiva';
+  const lista = verTodos ? ANALISIS_ANUAL : ANALISIS_ANUAL.filter(a => a.clave === quien);
+  if(!lista.length){
+    cont.innerHTML = '<div class="aa-vacio">Todavía no hay un análisis anual para ti.</div>';
+    return;
+  }
+  cont.innerHTML = lista.map(a =>
+    '<a class="aa-card" href="' + a.url + '" target="_blank" rel="noopener">' +
+      '<span class="aa-et">Análisis anual 2026</span>' +
+      '<span class="aa-nom">' + a.nombre + '</span>' +
+      '<span class="aa-btn">Abrir análisis</span>' +
+    '</a>'
+  ).join('');
+}
+
 function goView(id){
   document.querySelectorAll('.side-tab').forEach(t => t.classList.toggle('act', t.dataset.view === id));
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('act', v.id === id));
@@ -4840,6 +4888,7 @@ function goView(id){
     case 'vRegistroXimena':  cargarRegistroXimena(); break;
     case 'vXimenaRev':       cargarXimenaRev(); break;
     case 'vMetricas':        cargarMetricas(); break;
+    case 'vAnalisisAnual':   cargarAnalisisAnual(); break;
     case 'vSalaMultisensorial': cargarSalaMultisensorial(); break;
     case 'vAyudasTecnicas':  cargarAyudasTecnicas(); break;
     case 'vCoaching':        cargarCoaching(); break;

@@ -4600,6 +4600,7 @@ function lgDo(){
     err.style.display = 'block';
     return;
   }
+  if(_crmSinAcceso(u)){ err.textContent = 'Este usuario ya no tiene acceso.'; err.style.display = 'block'; return; }
   localStorage.setItem(KEY_USER, u);
   localStorage.setItem(KEY_PASS, p);
   localStorage.setItem(KEY_OK,   '1');
@@ -18575,9 +18576,13 @@ async function correrMigracion(dryRun){
 // ════════════════════════════════════════════════════════════════════════════
 // BOOTSTRAP
 // ════════════════════════════════════════════════════════════════════════════
+// Personas que ya no están en la empresa: aunque su navegador tenga la sesión guardada, no entran.
+const CRM_SIN_ACCESO = ['william', 'william marin', 'stephanie neira'];
+function _crmSinAcceso(u){ const n = String(u||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim(); return CRM_SIN_ACCESO.indexOf(n) >= 0; }
 (function(){
   const u = localStorage.getItem(KEY_USER);
   const ok = localStorage.getItem(KEY_OK);
+  if(u && _crmSinAcceso(u)){ localStorage.removeItem(KEY_OK); localStorage.removeItem(KEY_PASS); localStorage.removeItem(KEY_USER); document.getElementById('loginMask').style.display = ''; return; }
   if(u && ok){ initApp(u); }
   else{ document.getElementById('loginMask').style.display = ''; }
 })();

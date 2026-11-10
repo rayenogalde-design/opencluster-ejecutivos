@@ -174,6 +174,16 @@ input,select,textarea{font-family:inherit; font-size:14px;}
 .aa-card .aa-et{ font:700 11px Manrope,sans-serif; letter-spacing:.08em; text-transform:uppercase; color:#5b6b8c; }
 .aa-card .aa-nom{ font:800 20px Montserrat,Manrope,sans-serif; }
 .aa-card .aa-btn{ align-self:flex-start; margin-top:4px; padding:8px 14px; border-radius:9px; background:#001A60; color:#fff; font:700 13px Manrope,sans-serif; }
+.aa-sec{ margin:26px 0 0; font:800 15px Montserrat,Manrope,sans-serif; color:#001A60; display:flex; align-items:center; gap:10px; }
+.aa-sec:first-child{ margin-top:6px; }
+.aa-sec::after{ content:""; flex:1; height:1px; background:#dbe3f0; }
+.aa-sec + .aa-grid{ margin-top:12px; }
+.aa-card.aa-web{ border-top-color:#001A60; background:linear-gradient(135deg,#fff 0%,#eef8fe 100%); position:relative; overflow:hidden; }
+.aa-card.aa-web .aa-ico{ width:42px; height:42px; border-radius:12px; background:#08ACF2; color:#fff; display:flex; align-items:center; justify-content:center; }
+.aa-card.aa-web .aa-ico svg{ width:22px; height:22px; }
+.aa-card.aa-web .aa-txt{ font:500 13px Manrope,sans-serif; color:#3d4f73; line-height:1.45; }
+.aa-card.aa-web .aa-pills{ display:flex; flex-wrap:wrap; gap:6px; }
+.aa-card.aa-web .aa-pill{ padding:3px 10px; border-radius:999px; background:#dff3fd; color:#001A60; font:700 11.5px Manrope,sans-serif; }
 .aa-vacio{ padding:20px; border-radius:14px; border:1px dashed #b9c6dc; color:#5b6b8c; font:500 14px Manrope,sans-serif; }
 .view{ display:none; }
 .view.act{ display:block; }
@@ -2906,7 +2916,7 @@ body{
           <h1>Análisis anual</h1>
           <p>Tu año 2026: ventas, margen, clientes y metas para 2027.</p>
         </div>
-        <div id="analisisAnualBody" class="aa-grid"></div>
+        <div id="analisisAnualBody"></div>
       </div>
 
       <!-- ═══ Métricas ═══ -->
@@ -4853,6 +4863,12 @@ const ANALISIS_ANUAL = [
   { clave: 'german',      nombre: 'Germán',      url: 'https://claude.ai/artifact/2V5u2xBrHztRUHZQuqCHDD' },
   { clave: 'rayen',       nombre: 'Rayen',       url: 'https://claude.ai/artifact/5bg3XkBRRExXfnSzQcUDh4' }
 ];
+// Informes del año que solo ve Rayen (modo Admin), debajo de los ejecutivos.
+const INFORMES_ANUALES = [
+  { titulo: 'Webinars PIE 2026', url: 'https://claude.ai/artifact/5ygz6LvxCxdLGUCsCgwBeC',
+    texto: 'Las 5 ediciones del año: regiones, quiénes asistieron, qué necesitan las escuelas, licencias TD Snap y candidatos para 2027.',
+    pills: ['5 ediciones', '546 inscritos', 'Candidatos 2027'] }
+];
 function cargarAnalisisAnual(){
   const cont = document.getElementById('analisisAnualBody');
   if(!cont) return;
@@ -4863,13 +4879,28 @@ function cargarAnalisisAnual(){
     cont.innerHTML = '<div class="aa-vacio">Todavía no hay un análisis anual para ti.</div>';
     return;
   }
-  cont.innerHTML = lista.map(a =>
+  const ejecutivos = lista.map(a =>
     '<a class="aa-card" href="' + a.url + '" target="_blank" rel="noopener">' +
       '<span class="aa-et">Análisis anual 2026</span>' +
       '<span class="aa-nom">' + a.nombre + '</span>' +
       '<span class="aa-btn">Abrir análisis</span>' +
     '</a>'
   ).join('');
+  if(!verTodos){ cont.innerHTML = '<div class="aa-grid">' + ejecutivos + '</div>'; return; }
+  const icoWeb = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M10 8.5v5l4-2.5z"/><path d="M8 21h8M12 17v4"/></svg>';
+  const informes = INFORMES_ANUALES.map(i =>
+    '<a class="aa-card aa-web" href="' + i.url + '" target="_blank" rel="noopener">' +
+      '<span class="aa-ico">' + icoWeb + '</span>' +
+      '<span class="aa-et">Informe del año</span>' +
+      '<span class="aa-nom">' + i.titulo + '</span>' +
+      '<span class="aa-txt">' + i.texto + '</span>' +
+      '<span class="aa-pills">' + i.pills.map(p => '<span class="aa-pill">' + p + '</span>').join('') + '</span>' +
+      '<span class="aa-btn">Abrir informe</span>' +
+    '</a>'
+  ).join('');
+  cont.innerHTML =
+    '<div class="aa-sec">Ejecutivos</div><div class="aa-grid">' + ejecutivos + '</div>' +
+    '<div class="aa-sec">Webinars</div><div class="aa-grid">' + informes + '</div>';
 }
 
 function goView(id){

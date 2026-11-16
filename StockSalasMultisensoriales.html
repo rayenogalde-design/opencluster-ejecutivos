@@ -2555,14 +2555,13 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
     <div class="panelhead">
       <div>
         <h2>Costo y margen</h2>
-        <p class="sug">Cada producto de la tarifa de Qinera con lo que te cuesta, a cuánto lo vendes y cuánto te queda. Los costos <strong>no están en esta página</strong>: se leen del archivo de tu computador y no salen de este navegador.</p>
+        <p class="sug">Cada producto de la tarifa de Qinera con lo que te cuesta, a cuánto lo vendes y cuánto te queda.</p>
       </div>
     </div>
     <div id="mgp-sincostos" style="display:none;">
       <div class="costos-caja">
-        <div class="costos-caja-t">Primero hay que cargar tus costos</div>
-        <p class="costos-caja-p">Se cargan una sola vez y quedan guardados en este computador. Están en la pestaña <strong>Comparar cotizaciones</strong>, botón <strong>Cargar mis costos</strong>.</p>
-        <button type="button" class="btn-secundario" id="mgp-ir-costos">Ir a cargar mis costos</button>
+        <div class="costos-caja-t">No se pudieron leer los costos</div>
+        <p class="costos-caja-p">Recarga la página con Ctrl+Shift+R.</p>
       </div>
     </div>
     <div id="mgp-cuerpo" style="display:none;">
@@ -2655,11 +2654,10 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
 <script src="LicitacionesData.js"></script>
 <script src="SpecsLicitacion.js"></script>
 <script src="EspecificacionesTecnicas.js"></script>
-<!-- Los costos de Rayen, CIFRADOS (AES-256-GCM). Aquí no hay ni una cifra legible: se abren en
-     su navegador con la misma clave de su vista de administradora. Los genera
-     Claude Files\genera_costos_salas_cifrados.js — para cambiar un costo se edita el .txt de
-     origen y se vuelve a correr. Ver la memoria «costos-nunca-publicos». -->
-<script src="CostosSalasCifrados.js"></script>
+<!-- Los costos de salas que usa esta página, EN CLARO. Rayen, 16-nov-2026: «me interesa poder ver
+     la información. No pidas clave, no pidas nada… me da lo mismo si alguien lo ve». Los genera
+     Claude Files/genera_costos_salas_stock.js desde las mismas fuentes de siempre. -->
+<script src="CostosSalasStock.js"></script>
 <script>
   // 19-ago-2026 — RESTAURADOS por error de borrado: q168 (OCTECH 574, Soporte silla de ruedas Monty 3D Plus),
   // q179 (OCTECH 553, TD Navio Maxi), q68 (OCTECH 548, Specs Switch/Conmutador Spec) van CON precio de transferencia
@@ -3405,17 +3403,10 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
     const nOtros = Object.keys(MIS_COSTOS_OTROS).length;
     cont.innerHTML = (n
       ? '<span class="costos-ok">Tarifa de Qinera: ' + n + ' productos</span> '
-      : '<span class="costos-no">Tarifa de Qinera: sin cargar</span> ')
+      : '<span class="costos-no">Tarifa de Qinera: no se pudo leer</span> ')
       + (nOtros
-      ? '<span class="costos-ok">Los demás (tu vista de administradora): ' + nOtros + ' productos</span> '
-      : '<span class="costos-no">Los demás: sin cargar — los columpios, sacos y computadores van a salir "sin costo"</span> ')
-      + ((n || nOtros) ? '<button type="button" class="costos-mini" id="costos-quitar">Quitar de este computador</button>' : '')
-      + (recordado ? '<br>' + recordado : '');
-    const q = document.getElementById('costos-quitar');
-    if (q) q.onclick = function(){
-      if (!confirm('¿Quitar los DOS archivos de costos guardados en este computador (la tarifa de Qinera y los demás)? Podrás volver a cargarlos cuando quieras.')) return;
-      _costosBorrar(); _otrosBorrar(); _costosEstado(); _mgpPintar();
-    };
+      ? '<span class="costos-ok">Los demás productos de sala: ' + nOtros + '</span> '
+      : '<span class="costos-no">Los demás: no se pudieron leer — los columpios, sacos y computadores van a salir "sin costo"</span> ');
   }
   // Conecta el boton y el selector de archivo. Se llama en cada repintado del comparador.
   function _wireCargarCostos(){
@@ -3577,56 +3568,30 @@ try { window.ocNorm = ocNorm; window.ocPalabras = ocPalabras; window.ocCalza = o
       });
       inp.value = '';
     };
-    // ── LOS COSTOS YA VIENEN DENTRO DE LA PÁGINA, CIFRADOS ──────────────────
-    // Rayen, 14-sep-2026: «quiero dejar de cargar los costos a cada rato, es muy molesto…
-    // déjame todo ahí cargado, cualquier cambio lo haces tú automático, nada de andar
-    // cargando archivos». Van en CostosSalasCifrados.js, cifrados con la MISMA clave de su
-    // vista de administradora: si ya la abrió en este computador, esto se desbloquea solo y
-    // no le pide nada. En claro no pueden ir — el repositorio es público.
-    // Si algo falla, no pasa nada: sigue existiendo el botón de cargar los archivos a mano.
-    const CLAVE_GUARDADA = 'oct_clave_MisCostosYMargenes_PRIVADA.html';
-    function _b64a(s){ const b = atob(s); const u = new Uint8Array(b.length);
-                       for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
-    async function _costosAbrirPaquete(clave){
-      const p = window.OCT_COSTOS_SALAS;
-      const mat = await crypto.subtle.importKey('raw', new TextEncoder().encode(clave), 'PBKDF2', false, ['deriveKey']);
-      const llave = await crypto.subtle.deriveKey(
-        { name: 'PBKDF2', salt: _b64a(p.sal), iterations: p.iter, hash: 'SHA-256' },
-        mat, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
-      const plano = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: _b64a(p.iv) }, llave, _b64a(p.datos));
-      return JSON.parse(new TextDecoder().decode(plano));
-    }
-    async function _costosDeLaPagina(){
-      const p = window.OCT_COSTOS_SALAS;
-      if (!p || !p.datos || !window.crypto || !crypto.subtle) return;
-      let clave = null;
-      try { clave = localStorage.getItem(CLAVE_GUARDADA); } catch(e){}
-      let d = null;
-      if (clave) { try { d = await _costosAbrirPaquete(clave); } catch(e){ d = null; } }
-      if (!d) {
-        // Solo se le pregunta si de verdad no hay costos: si ya los tiene cargados a mano,
-        // no tiene por qué aparecerle un cuadro de clave al abrir la página.
-        if (Object.keys(MIS_COSTOS).length) return;
-        const escrita = prompt('Tus costos vienen dentro de esta página, cerrados con tu clave.\n\n' +
-                               'Escribe la misma clave de "Mis Costos y Márgenes" y no te la vuelvo a pedir en este computador.');
-        if (!escrita) return;
-        try { d = await _costosAbrirPaquete(escrita); }
-        catch(e){ alert('Esa clave no abre los costos. Puedes cargarlos a mano con el botón de más abajo.'); return; }
-        try { localStorage.setItem(CLAVE_GUARDADA, escrita); } catch(e){}
-      }
-      [d.tarifa, d.fuera, d.adm].forEach(function(t){ if (t) { try { _costosAplicarUno(t); } catch(e){} } });
-      _costosEstado(); _mgpPintar();
-      if (typeof renderComparacionCotizaciones === 'function') { try { renderComparacionCotizaciones(); } catch(e){} }
-      if (typeof _pintarVendidas === 'function') { try { _pintarVendidas(); } catch(e){} }
-    }
-    _costosDeLaPagina();
-
     // Mostrar en el estado si ya hay un archivo recordado.
     _costosHandleLeer().then(function(h){ if (h) { COSTOS_HANDLE = h; _costosEstado(); _mgpPintar(); } });
     _costosEstado(); _mgpPintar();
   }
   _costosCargar();
   _otrosCargar();
+  // ── LOS COSTOS VIENEN CON LA PÁGINA (Rayen, 16-nov-2026) ─────────────────
+  // «No pidas clave, no pidas nada… lo que quiero es poder verlos yo cuando lo necesito».
+  // CostosSalasStock.js trae la tarifa de Qinera, los de fuera de la tarifa y los productos de
+  // sala de su vista de administradora. Se aplican al arrancar, en TODA la página (Costo y
+  // margen, Vendidas, Comparar cotizaciones), abra la página como abra. Mandan sobre lo que
+  // hubiera quedado cargado a mano en este navegador.
+  function _costosDeLaPagina(){
+    const p = window.OCT_COSTOS_SALAS_STOCK;
+    if (!p) return false;
+    const t = p.tarifa ? _costosParsear(p.tarifa) : {};
+    if (Object.keys(t).length) { MIS_COSTOS = t; _costosIndexar(); }
+    const otros = {};
+    [p.fuera ? _otrosParsearTxt(p.fuera) : null, p.adm ? _otrosParsearVistaADM(p.adm) : null]
+      .forEach(function(o){ if (o) Object.keys(o).forEach(function(k){ otros[k] = o[k]; }); });
+    if (Object.keys(otros).length) { MIS_COSTOS_OTROS = otros; _otrosIndexar(); }
+    return true;
+  }
+  _costosDeLaPagina();
   _mgpWire();
   const _btnGan = document.getElementById('cotiz-excel-ganancias');
   if (_btnGan) _btnGan.addEventListener('click', () => {
@@ -4560,7 +4525,7 @@ function _refrescarVistasStock(){
     }
     if (!seleccionadas || !seleccionadas.length) { alert('Marca al menos una cotización.'); return; }
     if (!Object.keys(MIS_COSTOS).length) {
-      alert('Primero hay que cargar tus costos en este computador: botón "Cargar mis costos", más abajo en esta misma pestaña.');
+      alert('No se pudieron leer los costos. Recarga la página con Ctrl+Shift+R.');
       return;
     }
     const pct = n => Math.round(n * 10) / 10;
@@ -4801,10 +4766,8 @@ function _refrescarVistasStock(){
       return;
     }
     if (!Object.keys(MIS_COSTOS).length) {
-      cont.innerHTML = '<div class="costos-caja"><div class="costos-caja-t">Faltan tus costos para calcular el margen</div>' +
-        '<p class="costos-caja-p">Las ventas están registradas, pero sin tus archivos de costos no puedo decirte cuánto ganaste. ' +
-        'Cárgalos en la pestaña <strong>Comparar cotizaciones</strong>, botón <strong>Cargar mis costos</strong> — son dos: la tarifa de ' +
-        'Qinera y tu vista de administradora.</p></div>';
+      cont.innerHTML = '<div class="costos-caja"><div class="costos-caja-t">No se pudieron leer los costos</div>' +
+        '<p class="costos-caja-p">Recarga la página con Ctrl+Shift+R.</p></div>';
       return;
     }
 
@@ -4877,7 +4840,7 @@ function _refrescarVistasStock(){
             '<button type="button" class="vend-ver">Ver el detalle</button>' +
           '</div>' +
           (v.m.sinCosto.length
-            ? '<div class="vend-aviso">' + v.m.sinCosto.length + ' sin costo en tu archivo: la ganancia sale más alta que la real.</div>' : '') +
+            ? '<div class="vend-aviso">' + v.m.sinCosto.length + ' sin costo: la ganancia sale más alta que la real.</div>' : '') +
           // Rayen, 11-sep-2026: «la misma información que me aparecía al tocar la cotización
           // cuando la marcaba al 90%, con todos sus costos, los productos, los márgenes y todo
           // eso, quiero que me aparezca aquí en la parte de vendidas». Mismas cifras y misma
@@ -5036,13 +4999,6 @@ function _refrescarVistasStock(){
         _mgpPintar();
       });
     });
-    const ir = document.getElementById('mgp-ir-costos');
-    if (ir) ir.addEventListener('click', () => {
-      const btn = document.querySelector('.tabbtn[data-tab="stock-comparar"]');
-      if (btn) btn.click();
-      const caja = document.getElementById('costos-cargar');
-      if (caja) caja.scrollIntoView({ behavior:'smooth', block:'center' });
-    });
   }
 
   // ── MARGEN DE LA VENTA (Rayen 2026-08-28) ─────────────────────────────────
@@ -5167,13 +5123,12 @@ function _refrescarVistasStock(){
     const hayQin = Object.keys(MIS_COSTOS).length > 0;
     const hayOtros = Object.keys(MIS_COSTOS_OTROS).length > 0;
     if (hayQin && hayOtros) return '';
-    const donde = ' Se cargan más abajo en esta misma pestaña, botón <strong>Cargar mis costos</strong>. ' +
-      'No viven en esta página (está publicada en internet): se leen de tus archivos y se quedan solo en este navegador.';
+    const donde = ' Recarga la página con Ctrl+Shift+R.';
     if (!hayQin && !hayOtros)
-      return 'Faltan tus <strong>dos archivos de costos</strong>: la tarifa de Qinera y tu vista de administradora.' + donde;
+      return 'No se pudieron leer los costos.' + donde;
     if (!hayQin)
-      return 'Tienes cargada tu vista de administradora, pero <strong>falta la tarifa de Qinera</strong>, que es la de casi todos los productos de sala. Sin ella el margen saldría inventado, así que no lo muestro.' + donde;
-    return 'Tienes cargada la tarifa de Qinera, pero <strong>falta tu vista de administradora</strong>: sin ella los columpios, los sacos, el balancín y los computadores salen "sin costo" y el margen queda más alto que el real.' + donde;
+      return 'Falta la <strong>tarifa de Qinera</strong>, que es la de casi todos los productos de sala. Sin ella el margen saldría inventado, así que no lo muestro.' + donde;
+    return 'Faltan los costos de lo que no es de Qinera: los columpios, los sacos, el balancín y los computadores salen "sin costo" y el margen queda más alto que el real.' + donde;
   }
   // ── MARGEN DE LAS COTIZACIONES MARCADAS (Rayen 9-sep-2026) ────────────────
   // "Necesito que los márgenes aparezcan muy claros cuando tengo cotizaciones al 90% y al 50%
@@ -6380,27 +6335,10 @@ function _refrescarVistasStock(){
       stockDisponibleGrid +
       '<h3 style="margin-top:1.4rem;">Faltantes para el próximo pedido</h3>' +
       '<p class="nivel-nota">Productos donde estas cotizaciones piden más de lo que hay en stock — con foto y SKU para armar el pedido nuevo.</p>' +
-      // Costos para el Excel del pedido. No viven en esta página (es pública): se cargan del
-      // computador de Rayen y quedan guardados solo en su navegador.
+      // Costos (Rayen 16-nov-2026): vienen con la página, ya no se cargan archivos.
       '<div class="costos-caja">' +
         '<div class="costos-caja-t">Tus costos: el margen y el Excel del pedido</div>' +
-        '<p class="costos-caja-p">Los costos <strong>no están en esta página</strong> (está publicada en internet). Se cargan una vez desde tus archivos y quedan guardados en este computador: de ahí en adelante el margen de cada cotización y el Excel del pedido salen con lo que te cuesta cada producto.</p>' +
-        '<p class="costos-caja-p">Son <strong>dos archivos</strong> y conviene cargar los dos: la <strong>tarifa de Qinera</strong> (los 334 productos que le compras a ellos) y tu <strong>vista de administradora</strong> (todo lo demás — los columpios, los sacos, el balancín, los computadores). Con uno solo, lo del otro sale <em>sin costo</em> y el margen queda mal. Se pueden elegir los dos de una vez: en el buscador de archivos, clic en uno y <strong>Ctrl+clic</strong> en el otro.</p>' +
-        '<button type="button" class="btn-secundario" id="costos-cargar">Cargar mis costos</button> ' +
-        // Rayen 2026-08-17: buscar el archivo carpeta por carpeta es lento (lo buscó en
-        // OpenCluster\\Productos, donde no está). Con la ruta copiada se pega en el campo
-        // "Nombre" del buscador de archivos y se abre directo.
-        '<button type="button" class="btn-secundario" id="costos-otro">Elegir otro archivo</button> ' +
-        '<button type="button" class="btn-secundario" id="costos-ruta">Copiar las rutas</button>' +
-        '<input type="file" id="costos-archivo" multiple accept=".txt,.tsv,.csv,.html,.htm,text/plain,text/html" style="display:none;">' +
         '<div id="costos-estado" class="costos-estado"></div>' +
-        // Rayen 17-ago-2026: la primera vez hay que ir a buscarlo una sola vez; después el
-        // navegador se queda con el archivo y "Cargar mis costos" lo relee sin preguntar nada.
-        '<p class="costos-caja-p" style="margin-top:0.5rem;"><strong>La primera vez</strong> hay que ir a buscarlos una sola vez: aprieta <strong>Copiar las rutas</strong>, después <strong>Cargar mis costos</strong>, y en el buscador de archivos pega una ruta con Ctrl+V en el campo <em>Nombre</em> y dale Abrir; repite para la otra. Son estos:</p>' +
-        '<p class="costos-caja-p" style="margin:0.2rem 0 0;">1. La tarifa de Qinera:<br><code>' + COSTOS_RUTA + '</code></p>' +
-        '<p class="costos-caja-p" style="margin:0.35rem 0 0;">2. Tu vista de administradora (todo lo que no es de Qinera):<br><code>' + COSTOS_OTROS_RUTA_ADM + '</code></p>' +
-        '<p class="costos-caja-p" style="margin:0.35rem 0 0;">3. Y este, con los 3 que no están en ninguna de las dos (kit de bola de espejos, escalera grande, columpio cuddle):<br><code>' + COSTOS_OTROS_RUTA_TXT + '</code></p>' +
-        '<p class="costos-caja-p" style="margin-top:0.4rem;"><strong>Después</strong> quedan recordados: apretar <strong>Cargar mis costos</strong> los relee todos de una, sin buscar nada. Si algún día cambia alguno, usa <strong>Elegir otro archivo</strong>.</p>' +
       '</div>' +
       botonCorreo +
       // Agregar productos a mano (Rayen 2026-08-17): el pedido no es solo lo que piden las
@@ -6421,6 +6359,7 @@ function _refrescarVistasStock(){
       faltantesGrid + _cajaEnabler(seleccionadas);
     _wireDragPrioridad();
     _wireCargarCostos();
+    _costosEstado();
     _wireExtras(seleccionadas);
     // [data-ficha] ya no se conecta acá — lo cubre la delegación global en document (más abajo en
     // el script), que lee data-stock-extra igual que antes. Sigue el wiring propio de

@@ -3365,6 +3365,25 @@ body{
         </div>
       </div>
 
+      <!-- ════ Etiquetas del contacto (sellos FNDR / Gestor SENADIS + etiquetas libres) — visible para todos ════ -->
+      <div id="nc-etiquetas-box" style="background:#F5F3FF; border:1px solid #C4B5FD; border-radius:12px; padding:12px 16px; margin-bottom:18px;">
+        <div style="font-size:12px; font-weight:800; color:#5B21B6; text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px;">Etiquetas</div>
+        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:13.5px; font-weight:700; color:#5B21B6; margin-bottom:6px;">
+          <input type="checkbox" id="nc-gestor-senadis" style="width:18px; height:18px; accent-color:#7C3AED;">
+          Gestor SENADIS — lo capacitamos, no es un cliente de cotización
+        </label>
+        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:13.5px; font-weight:700; color:#5B21B6; margin-bottom:6px;">
+          <input type="checkbox" id="nc-fndr-nuestro" onchange="if(this.checked) document.getElementById('nc-fndr-ellos').checked=false" style="width:18px; height:18px; accent-color:#7C3AED;">
+          FNDR · Proyecto nuestro — lo armamos o postulamos con ellos
+        </label>
+        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:13.5px; font-weight:700; color:#5B21B6; margin-bottom:10px;">
+          <input type="checkbox" id="nc-fndr-ellos" onchange="if(this.checked) document.getElementById('nc-fndr-nuestro').checked=false" style="width:18px; height:18px; accent-color:#7C3AED;">
+          FNDR · Postulan ellos — ellos postulan, nosotros cotizamos
+        </label>
+        <label style="font-size:12px; color:#5B21B6; font-weight:700; display:block; margin-bottom:4px;">Agregar etiqueta</label>
+        <input type="text" id="nc-etiquetas-libres" placeholder="Ej: VIP, Sur de Chile (separa con comas)" style="width:100%; box-sizing:border-box; border:1px solid var(--smoke); border-radius:8px; padding:8px 10px; font-family:inherit; font-size:13px;">
+      </div>
+
       <div style="margin-bottom:16px;">
         <label style="font-size:12px; font-weight:800; color:var(--ink); text-transform:uppercase; letter-spacing:.5px; display:block; margin-bottom:8px;">Tipo de contacto <span style="color:var(--ruby);">*</span></label>
         <div style="display:flex; gap:10px;">
@@ -14020,6 +14039,26 @@ async function guardarEdicionContacto(){
 // ════════════════════════════════════════════════════════════════════════════
 // MODAL NUEVO CONTACTO
 // ════════════════════════════════════════════════════════════════════════════
+function _ncEsGestor(){ const g = document.getElementById('nc-gestor-senadis'); return !!(g && g.checked); }
+// Devuelve las etiquetas previas + las marcadas en el formulario, sin repetir.
+function _ncTagsMarcadas(previas){
+  const out = (previas || []).slice();
+  const tiene = t => out.some(x => String(x).toLowerCase() === t.toLowerCase());
+  const lu = document.getElementById('nc-lead-urgente');
+  if (lu && lu.checked && !tiene('Lead urgente')) out.push('Lead urgente');
+  const marcado = k => { const el = document.getElementById(k); return !!(el && el.checked); };
+  const agregar = t => { if (t && !tiene(t)) out.push(t); };
+  if (_ncEsGestor()) agregar(SELLO_TAGS.gestor);
+  // FNDR: solo uno. Si se marca uno, se quita el otro de las previas.
+  if (marcado('nc-fndr-nuestro') || marcado('nc-fndr-ellos')){
+    const otro = marcado('nc-fndr-nuestro') ? SELLO_TAGS.fndr_ellos : SELLO_TAGS.fndr_nuestro;
+    for (let i = out.length - 1; i >= 0; i--) if (_selloNorm(out[i]) === _selloNorm(otro)) out.splice(i, 1);
+    agregar(marcado('nc-fndr-nuestro') ? SELLO_TAGS.fndr_nuestro : SELLO_TAGS.fndr_ellos);
+  }
+  const libres = document.getElementById('nc-etiquetas-libres');
+  if (libres) parsearEtiquetas(libres.value).forEach(agregar);
+  return out;
+}
 function abrirModalNuevoContacto(opts){
   opts = opts || {};
   // Reset form
@@ -14039,7 +14078,9 @@ function abrirModalNuevoContacto(opts){
     window.__ncLeadImg = null;
     const lu = document.getElementById('nc-lead-urgente'); if(lu) lu.checked = false;
     const luf = document.getElementById('nc-lead-urgente-fecha'); if(luf) luf.style.display='none';
-    const ld = document.getElementById('nc-lead-deadline'); if(ld) ld.value=''; }
+    const ld = document.getElementById('nc-lead-deadline'); if(ld) ld.value='';
+    ['nc-gestor-senadis','nc-fndr-nuestro','nc-fndr-ellos'].forEach(function(k){ const el = document.getElementById(k); if(el) el.checked = false; });
+    const el2 = document.getElementById('nc-etiquetas-libres'); if(el2) el2.value = ''; }
   // La bandeja de leads (pegar + lead urgente) es SOLO para el admin (Rayen), y
   // solo cuando está actuando como admin. Así, si Rayen previsualiza en modo
   // EJECUTIVA, ve exactamente lo mismo que un ejecutivo (sin esta caja). Los
@@ -14256,6 +14297,8 @@ async function guardarNuevoContacto(forzar){
     if (selEj && selEj.value) data.ejecutivo_asignado = selEj.value;
   }
   if (forzar === true) data.confirmar_crear_aunque_haya_duplicados = true;
+  // Gestor SENADIS: no es cliente de cotización → sin cadencia automática de venta.
+  if (_ncEsGestor()) data.cadencia = false;
 
   const esInstitucion = document.getElementById('nc-tipo-institucion').checked;
   data.tipo_contacto = esInstitucion ? 'Institución' : 'Persona Natural';
@@ -14344,8 +14387,12 @@ async function guardarNuevoContacto(forzar){
       const hora = dlVal.slice(11,16);
       const pet = (document.getElementById('nc-notas') && document.getElementById('nc-notas').value || '').trim();
       await fetchAPI('crm_actualizar_proxima', { id: r.id, fecha: fechaDia, nota: 'LEAD URGENTE' + (hora?(' — límite '+hora+'h'):'') + (pet?(' · '+pet):''), solicitante: USUARIO });
-      await fetchAPI('crm_actualizar_etiquetas', { id: r.id, etiquetas: ['Lead urgente'], solicitante: USUARIO });
     }
+  } catch(e){}
+  // Etiquetas marcadas en el formulario (Lead urgente / Gestor SENADIS), en una sola llamada.
+  try {
+    const tagsNc = _ncTagsMarcadas([]);
+    if (r.id && tagsNc.length) await fetchAPI('crm_actualizar_etiquetas', { id: r.id, etiquetas: tagsNc, solicitante: USUARIO });
   } catch(e){}
 
   cerrarModalNuevoContacto();
@@ -14558,8 +14605,13 @@ async function confirmarUnificar(){
       if(!dlVal){ const d=new Date(Date.now()+24*3600*1000); const p=(n)=>String(n).padStart(2,'0'); dlVal=d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes()); }
       const hora = dlVal.slice(11,16);
       await fetchAPI('crm_actualizar_proxima', { id: ex.id, fecha: dlVal.slice(0,10), nota: 'LEAD URGENTE' + (hora?(' — límite '+hora+'h'):''), solicitante: USUARIO });
-      await fetchAPI('crm_actualizar_etiquetas', { id: ex.id, etiquetas: ['Lead urgente'], solicitante: USUARIO });
     }
+  } catch(e){}
+  // Etiquetas marcadas (Lead urgente / Gestor SENADIS) se SUMAN a las que la ficha ya tenía.
+  try {
+    const previas = parsearEtiquetas(ex.etiquetas);
+    const tagsU = _ncTagsMarcadas(previas);
+    if (tagsU.join('|') !== previas.join('|')) await fetchAPI('crm_actualizar_etiquetas', { id: ex.id, etiquetas: tagsU, solicitante: USUARIO });
   } catch(e){}
   cerrarUnificar();
   cerrarModalNuevoContacto();

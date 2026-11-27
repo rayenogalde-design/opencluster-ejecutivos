@@ -370,7 +370,7 @@ window.SALAS_ESPECIFICACIONES = {
  },
  "BJ-EDA": {
   "n": "Difusor de aromaterapia",
-  "oc": "OC-0927",
+  "oc": "OC-0926",
   "fam": "Difusor de aromaterapia",
   "que": "Transforma el agua y los aceites esenciales en un vapor aromático mediante tecnología ultrasónica. Favorece la calma, el bienestar y la regulación emocional.",
   "trab": "Estimulación olfativa, regulación y relajación. El olor es un canal de memoria y de anticipación muy potente, y permite asociar un aroma a una rutina o a una actividad concreta.",
